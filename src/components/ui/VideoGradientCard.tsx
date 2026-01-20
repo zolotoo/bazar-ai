@@ -2,7 +2,7 @@
 import React, { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { cn } from "../../utils/cn";
-import { Eye, Heart, Sparkles, Plus, Play } from "lucide-react";
+import { Eye, Heart, Sparkles, Plus, Play, ArrowRight } from "lucide-react";
 
 export interface VideoGradientCardProps {
   thumbnailUrl: string;
@@ -46,48 +46,29 @@ export const VideoGradientCard = ({
 }: VideoGradientCardProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
-  const [rotation, setRotation] = useState({ x: 0, y: 0 });
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (cardRef.current) {
-      const rect = cardRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left - rect.width / 2;
-      const y = e.clientY - rect.top - rect.height / 2;
-      const rotateX = -(y / rect.height) * 6;
-      const rotateY = (x / rect.width) * 6;
-      setRotation({ x: rotateX, y: rotateY });
-    }
-  };
-
-  const handleMouseLeave = () => {
-    setIsHovered(false);
-    setRotation({ x: 0, y: 0 });
-  };
 
   return (
     <div
       draggable={!!onDragStart}
       onDragStart={onDragStart}
+      className="group"
     >
       <motion.div
         ref={cardRef}
         className={cn(
-          "relative rounded-[24px] overflow-hidden cursor-pointer group",
+          "relative rounded-2xl overflow-hidden cursor-pointer",
           className
         )}
         style={{
-          transformStyle: "preserve-3d",
+          aspectRatio: "9/16",
           boxShadow: isHovered 
-            ? "0 -8px 60px 4px rgba(251, 146, 60, 0.35), 0 25px 50px -12px rgba(0, 0, 0, 0.25)"
-            : "0 -5px 40px 2px rgba(251, 146, 60, 0.2), 0 10px 25px -5px rgba(0, 0, 0, 0.15)",
-          aspectRatio: "10/16",
+            ? "0 25px 50px -12px rgba(0, 0, 0, 0.4)"
+            : "0 10px 25px -5px rgba(0, 0, 0, 0.2)",
         }}
         initial={{ y: 0 }}
         animate={{
-          y: isHovered ? -6 : 0,
-          rotateX: rotation.x,
-          rotateY: rotation.y,
-          scale: isHovered ? 1.02 : 1,
+          y: isHovered ? -4 : 0,
+          scale: isHovered ? 1.03 : 1,
         }}
         transition={{
           type: "spring",
@@ -95,159 +76,72 @@ export const VideoGradientCard = ({
           damping: 25
         }}
         onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={handleMouseLeave}
-        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setIsHovered(false)}
         onClick={onClick}
       >
-      {/* Background image */}
-      <div className="absolute inset-0 z-0">
-        <img
-          src={thumbnailUrl}
-          alt=""
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            e.currentTarget.src = 'https://via.placeholder.com/270x360?text=Video';
+        {/* Background image with parallax */}
+        <motion.div 
+          className="absolute inset-0 z-0 bg-cover bg-center"
+          style={{ 
+            backgroundImage: `url(${thumbnailUrl})`,
+          }}
+          animate={{
+            scale: isHovered ? 1.08 : 1,
+          }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        />
+
+        {/* Gradient overlay - серый/тёмный как на референсе */}
+        <div
+          className="absolute inset-0 z-10"
+          style={{
+            background: `linear-gradient(to top, 
+              rgba(30, 30, 35, 0.98) 0%, 
+              rgba(40, 40, 48, 0.85) 25%, 
+              rgba(50, 50, 60, 0.5) 45%, 
+              rgba(60, 60, 70, 0.2) 60%, 
+              transparent 75%
+            )`,
           }}
         />
-      </div>
 
-      {/* Glass reflection overlay */}
-      <motion.div
-        className="absolute inset-0 z-[35] pointer-events-none"
-        style={{
-          background: "linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0) 70%, rgba(255,255,255,0.08) 100%)",
-        }}
-        animate={{
-          opacity: isHovered ? 0.9 : 0.6,
-        }}
-        transition={{ duration: 0.3 }}
-      />
-
-      {/* Dark gradient overlay */}
-      <motion.div
-        className="absolute inset-0 z-[5]"
-        style={{
-          background: "linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.35) 50%, rgba(0,0,0,0.85) 100%)",
-        }}
-        animate={{
-          opacity: isHovered ? 0.95 : 1,
-        }}
-      />
-
-      {/* Noise texture */}
-      <div
-        className="absolute inset-0 opacity-10 mix-blend-overlay z-10 pointer-events-none"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='5' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-        }}
-      />
-
-      {/* Orange glow effect */}
-      <motion.div
-        className="absolute bottom-0 left-0 right-0 h-2/3 z-20 pointer-events-none"
-        style={{
-          background: `
-            radial-gradient(ellipse at bottom right, rgba(251, 146, 60, 0.5) -10%, rgba(245, 158, 11, 0) 70%),
-            radial-gradient(ellipse at bottom left, rgba(249, 115, 22, 0.5) -10%, rgba(234, 88, 12, 0) 70%)
-          `,
-          filter: "blur(30px)",
-        }}
-        animate={{
-          opacity: isHovered ? 0.9 : 0.7,
-          y: isHovered ? rotation.x * 0.3 : 0,
-        }}
-        transition={{ duration: 0.3 }}
-      />
-
-      {/* Central glow */}
-      <motion.div
-        className="absolute bottom-0 left-0 right-0 h-1/2 z-[21] pointer-events-none"
-        style={{
-          background: "radial-gradient(circle at bottom center, rgba(251, 146, 60, 0.6) -20%, rgba(249, 115, 22, 0) 60%)",
-          filter: "blur(35px)",
-        }}
-        animate={{
-          opacity: isHovered ? 0.85 : 0.65,
-        }}
-      />
-
-      {/* Bottom border glow */}
-      <motion.div
-        className="absolute bottom-0 left-0 right-0 h-[2px] z-25 pointer-events-none"
-        style={{
-          background: "linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0.05) 100%)",
-        }}
-        animate={{
-          boxShadow: isHovered
-            ? "0 0 15px 3px rgba(251, 146, 60, 0.9), 0 0 25px 5px rgba(249, 115, 22, 0.7)"
-            : "0 0 10px 2px rgba(251, 146, 60, 0.7), 0 0 20px 4px rgba(249, 115, 22, 0.5)",
-          opacity: isHovered ? 1 : 0.85,
-        }}
-        transition={{ duration: 0.3 }}
-      />
-
-      {/* Edge glows */}
-      <motion.div
-        className="absolute bottom-0 left-0 h-1/4 w-[1px] z-25 rounded-full pointer-events-none"
-        style={{
-          background: "linear-gradient(to top, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 80%)",
-        }}
-        animate={{
-          boxShadow: isHovered
-            ? "0 0 15px 3px rgba(251, 146, 60, 0.8)"
-            : "0 0 10px 2px rgba(251, 146, 60, 0.6)",
-        }}
-      />
-      <motion.div
-        className="absolute bottom-0 right-0 h-1/4 w-[1px] z-25 rounded-full pointer-events-none"
-        style={{
-          background: "linear-gradient(to top, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 80%)",
-        }}
-        animate={{
-          boxShadow: isHovered
-            ? "0 0 15px 3px rgba(251, 146, 60, 0.8)"
-            : "0 0 10px 2px rgba(251, 146, 60, 0.6)",
-        }}
-      />
-
-      {/* Content */}
-      <div className="relative flex flex-col h-full p-4 z-40">
-        {/* Top badges */}
-        <div className="flex items-center justify-between">
-          {/* Viral badge */}
-          <motion.div
-            className={cn(
-              "px-2.5 py-1 rounded-full backdrop-blur-md flex items-center gap-1.5 shadow-lg",
-              viralCoef > 10 ? "bg-emerald-500/90 text-white" : 
-              viralCoef > 5 ? "bg-amber-500/90 text-white" :
-              viralCoef > 0 ? "bg-white/90 text-slate-700" :
-              "bg-black/40 text-white/70"
-            )}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.1 }}
-          >
-            <Sparkles className="w-3 h-3" />
-            <span className="text-xs font-bold">{viralCoef > 0 ? viralCoef : '—'}</span>
-          </motion.div>
-          
-          {/* Date badge */}
-          {date && (
+        {/* Content */}
+        <div className="relative flex flex-col justify-end h-full p-5 z-20 text-white">
+          {/* Top badges - абсолютное позиционирование */}
+          <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
+            {/* Viral badge */}
             <motion.div
-              className="px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md text-white text-xs font-semibold shadow-lg"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.15 }}
+              className={cn(
+                "px-2.5 py-1 rounded-full backdrop-blur-sm flex items-center gap-1.5",
+                viralCoef > 10 ? "bg-emerald-500/90 text-white" : 
+                viralCoef > 5 ? "bg-amber-500/90 text-white" :
+                viralCoef > 0 ? "bg-white/90 text-slate-700" :
+                "bg-black/30 text-white/80"
+              )}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
             >
-              {date}
+              <Sparkles className="w-3 h-3" />
+              <span className="text-xs font-bold">{viralCoef > 0 ? viralCoef : '—'}</span>
             </motion.div>
-          )}
-        </div>
+            
+            {/* Date badge */}
+            {date && (
+              <motion.div
+                className="px-2.5 py-1 rounded-full bg-black/30 backdrop-blur-sm text-white/90 text-xs font-medium"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+              >
+                {date}
+              </motion.div>
+            )}
+          </div>
 
-        {/* Play button on hover */}
-        <div className="flex-1 flex items-center justify-center">
+          {/* Play button on hover - центр карточки */}
           <motion.div
-            className="w-14 h-14 rounded-full bg-white/95 flex items-center justify-center shadow-2xl pointer-events-none"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full bg-white/95 flex items-center justify-center shadow-2xl pointer-events-none z-30"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ 
               opacity: isHovered ? 1 : 0, 
@@ -257,57 +151,38 @@ export const VideoGradientCard = ({
           >
             <Play className="w-6 h-6 text-slate-800 ml-1" fill="currentColor" />
           </motion.div>
-        </div>
 
-        {/* Bottom content */}
-        <motion.div
-          animate={{
-            rotateX: isHovered ? -rotation.x * 0.2 : 0,
-            rotateY: isHovered ? -rotation.y * 0.2 : 0
-          }}
-          transition={{ duration: 0.3 }}
-        >
-          {/* Username */}
-          {username && (
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="text-sm font-semibold text-white truncate drop-shadow-lg">
-                @{username}
-              </span>
+          {/* Bottom content */}
+          <div>
+            {/* Username with verified badge */}
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="text-xl font-bold tracking-tight">
+                @{username || 'instagram'}
+              </h3>
               {viralCoef > 5 && (
-                <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
                 </div>
               )}
             </div>
-          )}
 
-          {/* Caption */}
-          {caption && (
-            <p className="text-white/80 text-xs leading-relaxed line-clamp-2 mb-3 drop-shadow">
-              {caption.slice(0, 60)}{caption.length > 60 ? '...' : ''}
+            {/* Stats line */}
+            <p className="text-sm text-white/70 font-medium mb-4">
+              {viewCount !== undefined && <>{formatNumber(viewCount)} views</>}
+              {viewCount !== undefined && likeCount !== undefined && ' • '}
+              {likeCount !== undefined && <>{formatNumber(likeCount)} likes</>}
             </p>
-          )}
 
-          {/* Stats and action row */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 text-white/90">
-              {viewCount !== undefined && (
-                <div className="flex items-center gap-1">
-                  <Eye className="w-3.5 h-3.5" />
-                  <span className="text-xs font-medium">{formatNumber(viewCount)}</span>
-                </div>
-              )}
-              {likeCount !== undefined && (
-                <div className="flex items-center gap-1">
-                  <Heart className="w-3.5 h-3.5" />
-                  <span className="text-xs font-medium">{formatNumber(likeCount)}</span>
-                </div>
-              )}
-            </div>
+            {/* Caption - показываем только если есть */}
+            {caption && (
+              <p className="text-white/60 text-xs leading-relaxed line-clamp-2 mb-4">
+                {caption.slice(0, 80)}{caption.length > 80 ? '...' : ''}
+              </p>
+            )}
 
-            {/* Add button */}
+            {/* Action button - стиль как на референсе */}
             {(onAdd || onFolderMenuToggle) && (
               <div className="relative">
                 <motion.button
@@ -316,15 +191,29 @@ export const VideoGradientCard = ({
                     onFolderMenuToggle?.() || onAdd?.();
                   }}
                   className={cn(
-                    "w-9 h-9 rounded-full flex items-center justify-center transition-all shadow-lg",
-                    showFolderMenu 
-                      ? "bg-orange-500 text-white rotate-45" 
-                      : "bg-white/95 text-slate-800 hover:bg-orange-500 hover:text-white"
+                    "w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-300",
+                    "bg-white/10 backdrop-blur-md border border-white/20",
+                    "hover:bg-white/20 hover:border-white/30",
+                    showFolderMenu && "bg-white/25 border-white/40"
                   )}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  <Plus className="w-5 h-5" />
+                  <span className="text-sm font-semibold tracking-wide">
+                    {showFolderMenu ? 'Выберите папку' : 'Добавить'}
+                  </span>
+                  <motion.div
+                    animate={{ 
+                      rotate: showFolderMenu ? 45 : 0,
+                      x: isHovered && !showFolderMenu ? 3 : 0 
+                    }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {showFolderMenu ? (
+                      <Plus className="h-4 w-4" />
+                    ) : (
+                      <ArrowRight className="h-4 w-4" />
+                    )}
+                  </motion.div>
                 </motion.button>
                 
                 {/* Folder menu */}
@@ -332,9 +221,8 @@ export const VideoGradientCard = ({
               </div>
             )}
           </div>
-        </motion.div>
-      </div>
-    </motion.div>
+        </div>
+      </motion.div>
     </div>
   );
 };

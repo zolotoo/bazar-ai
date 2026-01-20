@@ -267,34 +267,25 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
     }
 
     try {
-      // Параллельный поиск: основной запрос + хэштег + смежные темы
+      // Параллельный поиск: основной запрос + хэштег
       const cleanQuery = queryToSearch.trim();
       const hashtagQuery = cleanQuery.replace(/^#/, '').replace(/\s+/g, '');
       
-      // Генерируем смежные запросы (варианты хэштегов)
-      const relatedQueries = generateRelatedQueries(cleanQuery);
-      
-      // Запускаем все запросы параллельно
-      const searchPromises = [
+      // Запускаем оба запроса параллельно
+      const [keywordResults, hashtagResults] = await Promise.all([
         searchInstagramVideos(cleanQuery),
         // Ищем по хэштегу только если запрос не начинается с #
         cleanQuery.startsWith('#') ? Promise.resolve([]) : getHashtagReels(hashtagQuery),
-        // Смежные хэштеги
-        ...relatedQueries.map(q => getHashtagReels(q).catch(() => [])),
-      ];
-      
-      const results = await Promise.all(searchPromises);
+      ]);
       
       // Объединяем результаты, убираем дубликаты по shortcode
-      const existingCodes = new Set<string>();
-      const allResults: InstagramSearchResult[] = [];
+      const allResults = [...keywordResults];
+      const existingCodes = new Set(keywordResults.map(r => r.shortcode));
       
-      for (const resultSet of results) {
-        for (const reel of resultSet) {
-          if (!existingCodes.has(reel.shortcode)) {
-            allResults.push(reel);
-            existingCodes.add(reel.shortcode);
-          }
+      for (const reel of hashtagResults) {
+        if (!existingCodes.has(reel.shortcode)) {
+          allResults.push(reel);
+          existingCodes.add(reel.shortcode);
         }
       }
       
@@ -308,9 +299,8 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
         setError('Видео не найдены');
         setViewMode('carousel');
       } else {
-        const extraCount = allResults.length - (results[0]?.length || 0);
         toast.success(`Найдено ${allResults.length} видео`, {
-          description: extraCount > 0 ? `+${extraCount} по смежным темам` : undefined,
+          description: hashtagResults.length > 0 ? `+${hashtagResults.length} по #${hashtagQuery}` : undefined,
         });
       }
     } catch (err) {
@@ -321,27 +311,6 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
       setLoading(false);
     }
   }, [query, addToHistory]);
-
-  // Генерация смежных запросов для расширенного поиска
-  const generateRelatedQueries = (query: string): string[] => {
-    const cleanQuery = query.toLowerCase().replace(/^#/, '').replace(/\s+/g, '');
-    const related: string[] = [];
-    
-    // Добавляем вариации
-    if (cleanQuery.length > 3) {
-      // Версия с "reels" в конце
-      related.push(`${cleanQuery}reels`);
-      // Версия с "viral" в конце
-      related.push(`${cleanQuery}viral`);
-      // Версия с "тренд" для русских запросов
-      if (/[а-яё]/i.test(cleanQuery)) {
-        related.push(`${cleanQuery}тренд`);
-      }
-    }
-    
-    // Ограничиваем количество доп. запросов
-    return related.slice(0, 2);
-  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !loading) {
