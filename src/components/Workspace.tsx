@@ -5,6 +5,7 @@ import { Sparkles, Star, FileText, CheckCircle, Trash2, ExternalLink, ChevronLef
 import { cn } from '../utils/cn';
 import { AnimatedFolder3D, FolderVideo } from './ui/Folder3D';
 import { VideoGradientCard } from './ui/VideoGradientCard';
+import { VideoDetailPage } from './VideoDetailPage';
 
 
 // Расчёт коэффициента виральности
@@ -78,6 +79,7 @@ export function Workspace() {
   const [draggedVideo, setDraggedVideo] = useState<ZoneVideo | null>(null);
   const [dropTargetZone, setDropTargetZone] = useState<string | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<FolderConfig | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<ZoneVideo | null>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -132,6 +134,30 @@ export function Workspace() {
       <div className="h-full flex items-center justify-center">
         <div className="text-slate-400 text-lg">Загрузка...</div>
       </div>
+    );
+  }
+
+  // Детальная страница видео
+  if (selectedVideo) {
+    return (
+      <VideoDetailPage
+        video={{
+          id: selectedVideo.id,
+          title: selectedVideo.title,
+          preview_url: selectedVideo.preview_url,
+          url: selectedVideo.url,
+          view_count: selectedVideo.view_count,
+          like_count: selectedVideo.like_count,
+          comment_count: selectedVideo.comment_count,
+          owner_username: selectedVideo.owner_username,
+          taken_at: selectedVideo.taken_at,
+          transcript_id: (selectedVideo as any).transcript_id,
+          transcript_status: (selectedVideo as any).transcript_status,
+          transcript_text: (selectedVideo as any).transcript_text,
+          download_url: (selectedVideo as any).download_url,
+        }}
+        onBack={() => setSelectedVideo(null)}
+      />
     );
   }
 
@@ -199,13 +225,24 @@ export function Workspace() {
                       viewCount={video.view_count}
                       likeCount={video.like_count}
                       viralCoef={viralCoef}
+                      onClick={() => setSelectedVideo(video)}
                       onDragStart={() => setDraggedVideo(video)}
                       folderMenu={
                         <div className="absolute bottom-12 right-0 bg-white rounded-2xl shadow-2xl p-2 min-w-[140px] z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setSelectedVideo(video); }}
+                            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-orange-50 transition-colors text-left"
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+                              <FileText className="w-4 h-4 text-orange-600" />
+                            </div>
+                            <span className="text-sm font-medium text-slate-700">Работать</span>
+                          </button>
                           <a
                             href={video.url}
                             target="_blank"
                             rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
                             className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-blue-50 transition-colors text-left"
                           >
                             <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -214,7 +251,7 @@ export function Workspace() {
                             <span className="text-sm font-medium text-slate-700">Открыть</span>
                           </a>
                           <button
-                            onClick={() => handleDeleteVideo(video.id, isInboxFolder)}
+                            onClick={(e) => { e.stopPropagation(); handleDeleteVideo(video.id, isInboxFolder); }}
                             className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-red-50 transition-colors text-left"
                           >
                             <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
