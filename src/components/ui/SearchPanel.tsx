@@ -46,13 +46,8 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
       setReels([]);
       setQuery('');
       
-      // Если нет сохранённых видео пользователя — загружаем популярные из общей базы
-      if (incomingVideos.length === 0) {
-        loadPopularFromDatabase();
-      } else {
-        setViewMode('carousel');
-        setActiveIndex(Math.floor(incomingVideos.length / 2));
-      }
+      // Всегда загружаем популярные видео из общей базы для карусели
+      loadPopularFromDatabase();
     }
   }, [isOpen]);
 
@@ -61,16 +56,14 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
     setViewMode('loading');
     setLoading(true);
     try {
-      // Берём видео за последний месяц, сортируем по просмотрам
-      const oneMonthAgo = new Date();
-      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-      
+      // Берём все видео, сортируем по просмотрам (без ограничения по дате)
       const { data, error } = await supabase
         .from('saved_videos')
         .select('*')
-        .gte('added_at', oneMonthAgo.toISOString())
-        .order('view_count', { ascending: false })
-        .limit(20);
+        .order('view_count', { ascending: false, nullsFirst: false })
+        .limit(30);
+
+      console.log('[Search] Loaded videos from DB:', data?.length || 0);
 
       if (error) {
         console.error('Error loading popular videos:', error);
@@ -98,7 +91,7 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
         setViewMode('trending');
         setActiveIndex(Math.floor(popular.length / 2));
       } else {
-        // Если в базе пусто — показываем пустую карусель
+        // Если в базе совсем пусто — показываем empty state
         setViewMode('carousel');
       }
     } catch (err) {
