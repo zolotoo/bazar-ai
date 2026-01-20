@@ -10,7 +10,7 @@ import { useAuth } from './hooks/useAuth';
 import { useInboxVideos } from './hooks/useInboxVideos';
 import { 
   Video, Settings, Search, LayoutGrid, GitBranch, Clock, User, LogOut, 
-  Link, Radar, ChevronLeft, ChevronRight, Plus, FolderOpen, Trash2
+  Link, Radar, ChevronLeft, ChevronRight, Plus, FolderOpen
 } from 'lucide-react';
 import { cn } from './utils/cn';
 import { Toaster, toast } from 'sonner';
