@@ -129,8 +129,11 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
   const [radarUsername, setRadarUsername] = useState('');
   const { incomingVideos } = useFlowStore();
   const { addVideoToInbox } = useInboxVideos();
-  const { history: searchHistory, addToHistory, refetch: refetchHistory } = useSearchHistory();
+  const { history: searchHistory, addToHistory, refetch: refetchHistory, getTodayCache, getAllResultsByQuery } = useSearchHistory();
   const { addVideoToWorkspace } = useWorkspaceZones();
+  
+  // Минимум просмотров для показа в поиске
+  const MIN_VIEWS = 30000;
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Конфигурация папок
@@ -257,18 +260,49 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
     const queryToSearch = searchQuery || query;
     if (!queryToSearch.trim()) return;
 
-    setViewMode('loading');
-    setLoading(true);
-    setError(null);
-    setReels([]);
+    const cleanQuery = queryToSearch.trim();
     
     if (searchQuery) {
       setQuery(searchQuery);
     }
 
+    // Проверяем кэш - если запрос был сегодня, используем кэш + добавляем старые результаты
+    const cachedResults = getTodayCache(cleanQuery);
+    const historicalResults = getAllResultsByQuery(cleanQuery);
+    
+    if (cachedResults && cachedResults.length > 0) {
+      console.log('[Search] Using cached results from today:', cachedResults.length);
+      
+      // Объединяем кэш с историческими результатами
+      const existingCodes = new Set(cachedResults.map(r => r.shortcode));
+      const combinedResults = [...cachedResults];
+      
+      for (const reel of historicalResults) {
+        if (reel.shortcode && !existingCodes.has(reel.shortcode)) {
+          combinedResults.push(reel);
+          existingCodes.add(reel.shortcode);
+        }
+      }
+      
+      // Фильтруем по минимуму просмотров
+      const filteredResults = combinedResults.filter(r => (r.view_count || 0) >= MIN_VIEWS);
+      
+      setReels(filteredResults);
+      setViewMode('results');
+      
+      toast.success(`Из кэша: ${filteredResults.length} видео`, {
+        description: `Запрос уже был сегодня`,
+      });
+      return;
+    }
+
+    setViewMode('loading');
+    setLoading(true);
+    setError(null);
+    setReels([]);
+
     try {
       // Параллельный поиск по нескольким вариациям запроса
-      const cleanQuery = queryToSearch.trim();
       const hashtagQuery = cleanQuery.replace(/^#/, '').replace(/\s+/g, '');
       
       // Генерируем вариации для расширения поиска
@@ -290,6 +324,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
       const existingCodes = new Set<string>();
       const allResults: InstagramSearchResult[] = [];
       
+      // Добавляем новые результаты
       for (const resultSet of results) {
         for (const reel of resultSet) {
           if (reel.shortcode && !existingCodes.has(reel.shortcode)) {
@@ -299,26 +334,32 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
         }
       }
       
-      setReels(allResults);
+      // Добавляем исторические результаты по этому запросу
+      for (const reel of historicalResults) {
+        if (reel.shortcode && !existingCodes.has(reel.shortcode)) {
+          allResults.push(reel);
+          existingCodes.add(reel.shortcode);
+        }
+      }
+      
+      // Фильтруем по минимуму просмотров (30,000+)
+      const filteredResults = allResults.filter(r => (r.view_count || 0) >= MIN_VIEWS);
+      
+      setReels(filteredResults);
       setViewMode('results');
       
-      // Сохраняем в историю вместе с результатами
+      // Сохраняем в историю ВСЕ результаты (без фильтра), чтобы при повторном поиске их использовать
       addToHistory(cleanQuery, allResults);
       
-      if (allResults.length === 0) {
-        setError('Видео не найдены');
+      if (filteredResults.length === 0) {
+        setError('Видео с 30K+ просмотрами не найдены');
         setViewMode('carousel');
       } else {
-        const keywordCount = results[0]?.length || 0;
-        const hashtagCount = results[1]?.length || 0;
-        const variationCount = allResults.length - keywordCount - hashtagCount;
+        const totalFound = allResults.length;
+        const filtered = totalFound - filteredResults.length;
         
-        let description = '';
-        if (hashtagCount > 0) description += `#${hashtagQuery}: ${hashtagCount}`;
-        if (variationCount > 0) description += (description ? ' • ' : '') + `вариации: ${variationCount}`;
-        
-        toast.success(`Найдено ${allResults.length} видео`, {
-          description: description || undefined,
+        toast.success(`Найдено ${filteredResults.length} видео`, {
+          description: filtered > 0 ? `${filtered} скрыто (<30K просмотров)` : undefined,
         });
       }
     } catch (err) {
@@ -328,7 +369,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
     } finally {
       setLoading(false);
     }
-  }, [query, addToHistory]);
+  }, [query, addToHistory, getTodayCache, getAllResultsByQuery]);
 
   // Генерация вариаций поискового запроса
   const generateSearchVariations = (query: string): string[] => {

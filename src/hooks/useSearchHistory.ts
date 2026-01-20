@@ -140,6 +140,47 @@ export function useSearchHistory() {
     return entry?.results || [];
   }, [historyEntries]);
 
+  // Проверка есть ли свежий кэш (за сегодня)
+  const getTodayCache = useCallback((query: string): InstagramSearchResult[] | null => {
+    const normalizedQuery = query.trim().toLowerCase();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const entry = historyEntries.find(e => {
+      const entryDate = new Date(e.searchedAt);
+      entryDate.setHours(0, 0, 0, 0);
+      return e.query.toLowerCase() === normalizedQuery && entryDate.getTime() === today.getTime();
+    });
+    
+    if (entry && entry.results.length > 0) {
+      console.log('[SearchHistory] Found today cache for:', query, 'with', entry.results.length, 'results');
+      return entry.results;
+    }
+    
+    return null;
+  }, [historyEntries]);
+
+  // Получение всех результатов по запросу из всей истории (для объединения)
+  const getAllResultsByQuery = useCallback((query: string): InstagramSearchResult[] => {
+    const normalizedQuery = query.trim().toLowerCase();
+    const allResults: InstagramSearchResult[] = [];
+    const seenCodes = new Set<string>();
+    
+    // Собираем все результаты по этому запросу из истории
+    historyEntries
+      .filter(e => e.query.toLowerCase() === normalizedQuery)
+      .forEach(entry => {
+        entry.results.forEach(r => {
+          if (r.shortcode && !seenCodes.has(r.shortcode)) {
+            allResults.push(r);
+            seenCodes.add(r.shortcode);
+          }
+        });
+      });
+    
+    return allResults;
+  }, [historyEntries]);
+
   // Получение записи по ID
   const getEntryById = useCallback((id: string): SearchHistoryEntry | undefined => {
     return historyEntries.find(e => e.id === id);
@@ -161,6 +202,8 @@ export function useSearchHistory() {
     clearHistory,
     getResultsByQuery,
     getEntryById,
+    getTodayCache,
+    getAllResultsByQuery,
     refetch: fetchHistory,
   };
 }
