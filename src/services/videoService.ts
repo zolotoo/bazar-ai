@@ -1,6 +1,6 @@
-const RAPIDAPI_HOST = 'instagram-scraper-20251.p.rapidapi.com'; // Рабочий API для поиска reels
-const RAPIDAPI_KEY = '959a088626msh74020d3fb11ad19p1e067bjsnb273d9fac830';
-const RAPIDAPI_HOST_OLD = 'instagram-looter2.p.rapidapi.com'; // Для поиска хэштегов/пользователей (fallback)
+const RAPIDAPI_HOST = 'instagram-scraper-20251.p.rapidapi.com'; // Новый API
+const RAPIDAPI_KEY = '60b367f230mshd3ca48b7e1fa21cp18f206jsn57b97472bcca'; // Новый ключ
+const RAPIDAPI_HOST_OLD = 'instagram-looter2.p.rapidapi.com'; // Fallback API
 
 // На production используем Vercel serverless прокси, локально — Vite прокси
 const isDev = import.meta.env.DEV;
@@ -220,20 +220,94 @@ export async function searchInstagram(query: string): Promise<InstagramSearchRes
 }
 
 /**
- * Получает посты/реелсы пользователя через instagram-looter2
+ * Получает информацию о пользователе Instagram
+ * @param username - Имя пользователя
+ * @returns Информация о пользователе
+ */
+export async function getUserInfo(username: string): Promise<any | null> {
+  try {
+    const cleanUsername = username.replace(/^@/, '').trim();
+    
+    // Новый API endpoint для получения информации о пользователе
+    const endpoint = `https://${RAPIDAPI_HOST}/userinfo/?username_or_id=${encodeURIComponent(cleanUsername)}`;
+    
+    console.log('Fetching user info:', endpoint);
+    
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'X-RapidAPI-Host': RAPIDAPI_HOST,
+        'X-RapidAPI-Key': RAPIDAPI_KEY,
+      },
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log('User info response:', data);
+      return data;
+    }
+    
+    console.warn('Failed to fetch user info:', response.status);
+    return null;
+  } catch (error) {
+    console.error('Error fetching user info:', error);
+    return null;
+  }
+}
+
+/**
+ * Получает посты/реелсы пользователя
  * @param username - Имя пользователя
  * @returns Список видео/реелсов
  */
 export async function getUserReels(username: string): Promise<InstagramSearchResult[]> {
   try {
-    // Пробуем сначала новый API, потом старый
+    const cleanUsername = username.replace(/^@/, '').trim();
+    
+    // Сначала пробуем новый API с userinfo
+    try {
+      const userInfo = await getUserInfo(cleanUsername);
+      
+      if (userInfo) {
+        // Проверяем, есть ли посты/реелсы в ответе userinfo
+        let items: any[] = [];
+        
+        if (userInfo.edge_owner_to_timeline_media?.edges) {
+          items = userInfo.edge_owner_to_timeline_media.edges.map((e: any) => e.node);
+        } else if (userInfo.media?.edges) {
+          items = userInfo.media.edges.map((e: any) => e.node);
+        } else if (userInfo.posts && Array.isArray(userInfo.posts)) {
+          items = userInfo.posts;
+        } else if (userInfo.reels && Array.isArray(userInfo.reels)) {
+          items = userInfo.reels;
+        } else if (userInfo.items && Array.isArray(userInfo.items)) {
+          items = userInfo.items;
+        }
+        
+        if (items.length > 0) {
+          const reels = items
+            .filter((item: any) => {
+              const isVideo = item.is_video || item.type === 'video' || item.media_type === 2 || item.__typename === 'GraphVideo';
+              return isVideo;
+            })
+            .map((item: any) => transformSearchResult(item))
+            .filter((item): item is InstagramSearchResult => item !== null);
+          
+          if (reels.length > 0) {
+            console.log(`Found ${reels.length} reels from user ${cleanUsername}`);
+            return reels;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('New API failed, trying fallback:', e);
+    }
+
+    // Fallback: пробуем старые endpoints
     const endpoints = [
-      // Новый API (через прокси)
-      `${API_BASE_URL}/user/${encodeURIComponent(username)}`,
-      `${API_BASE_URL}/user/${encodeURIComponent(username)}/posts`,
-      `${API_BASE_URL}/user/${encodeURIComponent(username)}/media`,
-      // Старый API (fallback) - оставляем полный URL
-      `https://${RAPIDAPI_HOST_OLD}/api/instagram/user/${encodeURIComponent(username)}/posts`,
+      `${API_BASE_URL}/user/${encodeURIComponent(cleanUsername)}`,
+      `${API_BASE_URL}/user/${encodeURIComponent(cleanUsername)}/posts`,
+      `https://${RAPIDAPI_HOST_OLD}/api/instagram/user/${encodeURIComponent(cleanUsername)}/posts`,
     ];
 
     for (const endpoint of endpoints) {
@@ -280,7 +354,7 @@ export async function getUserReels(username: string): Promise<InstagramSearchRes
             .filter((item): item is InstagramSearchResult => item !== null);
           
           if (reels.length > 0) {
-            console.log(`Found ${reels.length} reels from user ${username}`);
+            console.log(`Found ${reels.length} reels from user ${cleanUsername}`);
             return reels;
           }
         }
@@ -290,7 +364,7 @@ export async function getUserReels(username: string): Promise<InstagramSearchRes
       }
     }
 
-    console.warn('No working endpoint found for user:', username);
+    console.warn('No working endpoint found for user:', cleanUsername);
     return [];
   } catch (error) {
     console.error('Error fetching user reels:', error);
