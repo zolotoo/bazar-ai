@@ -1,33 +1,24 @@
--- Создание таблицы проектов
+-- Таблица проектов
 CREATE TABLE IF NOT EXISTS projects (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   name TEXT NOT NULL,
   color TEXT DEFAULT '#f97316',
   icon TEXT DEFAULT 'folder',
-  folders JSONB DEFAULT '[]'::jsonb,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  folders JSONB DEFAULT '[]',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Индекс для быстрого поиска по user_id
+-- Индекс для быстрого поиска по пользователю
 CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);
 
--- RLS политики
-ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+-- Добавляем новые колонки в saved_videos для транскрибации
+ALTER TABLE saved_videos ADD COLUMN IF NOT EXISTS download_url TEXT;
+ALTER TABLE saved_videos ADD COLUMN IF NOT EXISTS transcript_id TEXT;
+ALTER TABLE saved_videos ADD COLUMN IF NOT EXISTS transcript_status TEXT DEFAULT NULL;
+ALTER TABLE saved_videos ADD COLUMN IF NOT EXISTS transcript_text TEXT;
 
--- Политика для чтения своих проектов
-CREATE POLICY "Users can read own projects" ON projects
-  FOR SELECT USING (true);
-
--- Политика для создания проектов
-CREATE POLICY "Users can create projects" ON projects
-  FOR INSERT WITH CHECK (true);
-
--- Политика для обновления своих проектов
-CREATE POLICY "Users can update own projects" ON projects
-  FOR UPDATE USING (true);
-
--- Политика для удаления своих проектов
-CREATE POLICY "Users can delete own projects" ON projects
-  FOR DELETE USING (true);
+-- Добавляем project_id для связи видео с проектом
+ALTER TABLE saved_videos ADD COLUMN IF NOT EXISTS project_id TEXT;
+ALTER TABLE saved_videos ADD COLUMN IF NOT EXISTS folder_id TEXT;
