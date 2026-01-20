@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { 
   ChevronLeft, Play, Eye, Heart, MessageCircle, Calendar, 
   Sparkles, FileText, Copy, ExternalLink, Loader2, Check,
-  Wand2, Languages, RefreshCw, ChevronDown
+  Wand2, Languages, RefreshCw, ChevronDown, Mic
 } from 'lucide-react';
 import { cn } from '../utils/cn';
-import { checkTranscriptionStatus } from '../services/transcriptionService';
+import { checkTranscriptionStatus, downloadAndTranscribe } from '../services/transcriptionService';
 import { supabase } from '../utils/supabase';
 import { toast } from 'sonner';
 import { useInboxVideos } from '../hooks/useInboxVideos';
@@ -79,6 +79,8 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
   const [showVideo, setShowVideo] = useState(false);
   const [showFolderMenu, setShowFolderMenu] = useState(false);
   const [currentFolderId, setCurrentFolderId] = useState(video.folder_id || null);
+  const [isStartingTranscription, setIsStartingTranscription] = useState(false);
+  const [localTranscriptId, setLocalTranscriptId] = useState(video.transcript_id);
   
   const { updateVideoFolder } = useInboxVideos();
   const { currentProject } = useProjectContext();
@@ -105,12 +107,67 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
     }
     setShowFolderMenu(false);
   };
+  
+  // Запуск транскрибации вручную
+  const handleStartTranscription = async () => {
+    if (!video.url) {
+      toast.error('URL видео не найден');
+      return;
+    }
+    
+    setIsStartingTranscription(true);
+    setTranscriptStatus('downloading');
+    toast.info('Запускаю транскрибацию...', { description: 'Это займёт несколько минут' });
+    
+    try {
+      // Обновляем статус в базе
+      await supabase
+        .from('saved_videos')
+        .update({ transcript_status: 'downloading' })
+        .eq('id', video.id);
+      
+      // Запускаем скачивание и транскрибацию
+      const result = await downloadAndTranscribe(video.url);
+      
+      if (!result.success) {
+        setTranscriptStatus('error');
+        toast.error('Ошибка транскрибации', { description: result.error });
+        await supabase
+          .from('saved_videos')
+          .update({ transcript_status: 'error' })
+          .eq('id', video.id);
+        return;
+      }
+      
+      // Сохраняем данные
+      await supabase
+        .from('saved_videos')
+        .update({ 
+          download_url: result.videoUrl,
+          transcript_id: result.transcriptId,
+          transcript_status: 'processing',
+        })
+        .eq('id', video.id);
+      
+      setLocalTranscriptId(result.transcriptId);
+      setTranscriptStatus('processing');
+      toast.success('Транскрибация запущена', { description: 'Ожидайте результат...' });
+      
+    } catch (err) {
+      console.error('Transcription error:', err);
+      setTranscriptStatus('error');
+      toast.error('Ошибка при запуске транскрибации');
+    } finally {
+      setIsStartingTranscription(false);
+    }
+  };
 
   // Polling для статуса транскрибации
   useEffect(() => {
-    if (video.transcript_id && transcriptStatus !== 'completed' && transcriptStatus !== 'error') {
+    const transcriptId = localTranscriptId || video.transcript_id;
+    if (transcriptId && transcriptStatus !== 'completed' && transcriptStatus !== 'error') {
       const interval = setInterval(async () => {
-        const result = await checkTranscriptionStatus(video.transcript_id!);
+        const result = await checkTranscriptionStatus(transcriptId);
         setTranscriptStatus(result.status);
         
         if (result.status === 'completed' && result.text) {
@@ -127,7 +184,7 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
 
       return () => clearInterval(interval);
     }
-  }, [video.transcript_id, video.id, transcriptStatus]);
+  }, [localTranscriptId, video.transcript_id, video.id, transcriptStatus]);
 
   const handleCopyTranscript = () => {
     const textToCopy = transcriptTab === 'original' ? transcript : translation;
@@ -479,14 +536,36 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
                 </div>
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-center">
-                  <FileText className="w-10 h-10 text-slate-300 mb-3" />
-                  <p className="text-slate-600 font-medium">Транскрибация недоступна</p>
-                  <p className="text-slate-400 text-sm">
+                  <Mic className="w-10 h-10 text-slate-300 mb-3" />
+                  <p className="text-slate-600 font-medium">
                     {transcriptStatus === 'error' 
-                      ? 'Произошла ошибка при обработке'
-                      : 'Добавьте видео в "Идеи" для обработки'
+                      ? 'Ошибка транскрибации'
+                      : 'Транскрибация не запущена'
                     }
                   </p>
+                  <p className="text-slate-400 text-sm mb-4">
+                    {transcriptStatus === 'error' 
+                      ? 'Попробуйте запустить заново'
+                      : 'Запустите для получения текста из видео'
+                    }
+                  </p>
+                  <button
+                    onClick={handleStartTranscription}
+                    disabled={isStartingTranscription}
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-medium hover:from-amber-400 hover:to-orange-400 transition-all shadow-md flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {isStartingTranscription ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Запускаю...
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="w-4 h-4" />
+                        Запустить транскрибацию
+                      </>
+                    )}
+                  </button>
                 </div>
               )}
             </div>
