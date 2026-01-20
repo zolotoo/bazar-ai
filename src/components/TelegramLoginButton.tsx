@@ -21,7 +21,36 @@ export function TelegramLoginButton({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Устанавливаем глобальный callback
+    // Проверяем URL на наличие данных авторизации Telegram
+    const params = new URLSearchParams(window.location.hash.slice(1) || window.location.search);
+    const telegramData: Record<string, string> = {};
+    
+    ['id', 'first_name', 'last_name', 'username', 'photo_url', 'auth_date', 'hash'].forEach(key => {
+      const value = params.get(key);
+      if (value) telegramData[key] = value;
+    });
+
+    // Если есть данные от Telegram — обрабатываем
+    if (telegramData.id && telegramData.hash) {
+      const user: TelegramUser = {
+        id: parseInt(telegramData.id),
+        first_name: telegramData.first_name || '',
+        last_name: telegramData.last_name,
+        username: telegramData.username,
+        photo_url: telegramData.photo_url,
+        auth_date: parseInt(telegramData.auth_date || '0'),
+        hash: telegramData.hash,
+      };
+      
+      // Очищаем URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
+      // Вызываем callback
+      onAuth(user);
+      return;
+    }
+
+    // Устанавливаем глобальный callback для widget
     window.onTelegramAuth = onAuth;
 
     // Создаём скрипт Telegram Widget
