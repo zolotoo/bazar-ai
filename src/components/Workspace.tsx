@@ -139,10 +139,11 @@ export function Workspace() {
   const [newFolderName, setNewFolderName] = useState('');
   const [draggedFolderIndex, setDraggedFolderIndex] = useState<number | null>(null);
   
-  // Преобразуем папки проекта в FolderConfig формат
+  // Преобразуем папки проекта в FolderConfig формат (исключая "Все видео" чтобы не дублировать)
   const projectFolders: FolderConfig[] = currentProject?.folders
     ?.slice()
     .sort((a, b) => a.order - b.order)
+    .filter(f => f.icon !== 'all') // Исключаем системную папку "Все видео"
     .map(f => ({
       id: f.id,
       title: f.name,
@@ -591,7 +592,7 @@ export function Workspace() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
-              <h1 className="text-4xl md:text-5xl font-serif italic text-neutral-900 tracking-tighter">
+              <h1 className="text-3xl md:text-4xl font-bold text-slate-800">
                 Рабочий стол
               </h1>
               {totalVideos > 0 && (
