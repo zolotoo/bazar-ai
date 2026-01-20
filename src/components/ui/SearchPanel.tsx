@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Search, X, ExternalLink, Plus, Eye, Heart, MessageCircle, ChevronLeft, ChevronRight, Sparkles, Play, Link, Loader2, Radar, UserPlus, Check } from 'lucide-react';
+import { Search, X, ExternalLink, Plus, Eye, Heart, MessageCircle, ChevronLeft, ChevronRight, Sparkles, Play, Link, Loader2, Radar, UserPlus, Check, Calendar } from 'lucide-react';
 import { TextShimmer } from './TextShimmer';
 import { VideoGradientCard } from './VideoGradientCard';
 import { GlassTabButton, GlassTabGroup } from './GlassTabButton';
@@ -957,6 +957,12 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                             <MessageCircle className="w-4 h-4" />
                             <span>{formatNumber(linkPreview.comment_count)}</span>
                           </div>
+                          {linkPreview.taken_at && (
+                            <div className="flex items-center gap-1.5">
+                              <Calendar className="w-4 h-4" />
+                              <span>{formatVideoDate(linkPreview.taken_at)}</span>
+                            </div>
+                          )}
                         </div>
 
                         {/* Viral coefficient */}
