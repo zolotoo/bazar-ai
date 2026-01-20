@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 interface SearchPanelProps {
   isOpen: boolean;
   onClose: () => void;
+  initialTab?: 'search' | 'link' | 'radar';
 }
 
 function formatNumber(num?: number): string {
@@ -110,7 +111,7 @@ function formatVideoDate(takenAt?: string | number | Date): string {
   return `${Math.floor(diffDays / 365)} г.`;
 }
 
-export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
+export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPanelProps) {
   const [query, setQuery] = useState('');
   const [reels, setReels] = useState<InstagramSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -120,7 +121,7 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [sortBy, setSortBy] = useState<SortOption>('views');
   const [selectedVideo, setSelectedVideo] = useState<InstagramSearchResult | null>(null);
-  const [activeTab, setActiveTab] = useState<SearchTab>('search');
+  const [activeTab, setActiveTab] = useState<SearchTab>(initialTab);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkLoading, setLinkLoading] = useState(false);
   const [showFolderSelect, setShowFolderSelect] = useState(false);
@@ -161,11 +162,12 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
       refetchHistory();
       setReels([]);
       setQuery('');
+      setActiveTab(initialTab);
       
       // Всегда загружаем популярные видео из общей базы для карусели
       loadPopularFromDatabase();
     }
-  }, [isOpen]);
+  }, [isOpen, initialTab]);
 
   // Загрузка популярных видео из общей базы данных (все пользователи)
   const loadPopularFromDatabase = async () => {
@@ -265,24 +267,34 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
     }
 
     try {
-      // Параллельный поиск: основной запрос + хэштег
+      // Параллельный поиск: основной запрос + хэштег + смежные темы
       const cleanQuery = queryToSearch.trim();
       const hashtagQuery = cleanQuery.replace(/^#/, '').replace(/\s+/g, '');
       
-      const [keywordResults, hashtagResults] = await Promise.all([
+      // Генерируем смежные запросы (варианты хэштегов)
+      const relatedQueries = generateRelatedQueries(cleanQuery);
+      
+      // Запускаем все запросы параллельно
+      const searchPromises = [
         searchInstagramVideos(cleanQuery),
         // Ищем по хэштегу только если запрос не начинается с #
         cleanQuery.startsWith('#') ? Promise.resolve([]) : getHashtagReels(hashtagQuery),
-      ]);
+        // Смежные хэштеги
+        ...relatedQueries.map(q => getHashtagReels(q).catch(() => [])),
+      ];
+      
+      const results = await Promise.all(searchPromises);
       
       // Объединяем результаты, убираем дубликаты по shortcode
-      const allResults = [...keywordResults];
-      const existingCodes = new Set(keywordResults.map(r => r.shortcode));
+      const existingCodes = new Set<string>();
+      const allResults: InstagramSearchResult[] = [];
       
-      for (const reel of hashtagResults) {
-        if (!existingCodes.has(reel.shortcode)) {
-          allResults.push(reel);
-          existingCodes.add(reel.shortcode);
+      for (const resultSet of results) {
+        for (const reel of resultSet) {
+          if (!existingCodes.has(reel.shortcode)) {
+            allResults.push(reel);
+            existingCodes.add(reel.shortcode);
+          }
         }
       }
       
@@ -296,8 +308,9 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
         setError('Видео не найдены');
         setViewMode('carousel');
       } else {
+        const extraCount = allResults.length - (results[0]?.length || 0);
         toast.success(`Найдено ${allResults.length} видео`, {
-          description: hashtagResults.length > 0 ? `+${hashtagResults.length} по #${hashtagQuery}` : undefined,
+          description: extraCount > 0 ? `+${extraCount} по смежным темам` : undefined,
         });
       }
     } catch (err) {
@@ -308,6 +321,27 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
       setLoading(false);
     }
   }, [query, addToHistory]);
+
+  // Генерация смежных запросов для расширенного поиска
+  const generateRelatedQueries = (query: string): string[] => {
+    const cleanQuery = query.toLowerCase().replace(/^#/, '').replace(/\s+/g, '');
+    const related: string[] = [];
+    
+    // Добавляем вариации
+    if (cleanQuery.length > 3) {
+      // Версия с "reels" в конце
+      related.push(`${cleanQuery}reels`);
+      // Версия с "viral" в конце
+      related.push(`${cleanQuery}viral`);
+      // Версия с "тренд" для русских запросов
+      if (/[а-яё]/i.test(cleanQuery)) {
+        related.push(`${cleanQuery}тренд`);
+      }
+    }
+    
+    // Ограничиваем количество доп. запросов
+    return related.slice(0, 2);
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !loading) {
@@ -331,7 +365,7 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
         commentCount: result.comment_count,
         ownerUsername: result.owner?.username,
       });
-      toast.success('Видео добавлено во входящие', {
+      toast.success('Видео добавлено в "Идеи"', {
         description: `@${result.owner?.username || 'instagram'}`,
       });
     } catch (err) {
@@ -363,7 +397,7 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
         });
         
         setLinkUrl('');
-        toast.success('Рилс добавлен', {
+        toast.success('Рилс добавлен в "Идеи"', {
           description: `@${reel.owner?.username || 'instagram'}`,
         });
       } else {

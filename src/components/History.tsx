@@ -129,7 +129,7 @@ export function History() {
   if (selectedEntry) {
     return (
       <div className="h-full overflow-hidden flex flex-col">
-        <div className="max-w-6xl mx-auto w-full p-6 pt-20 flex flex-col h-full">
+        <div className="max-w-6xl mx-auto w-full p-6 pt-6 flex flex-col h-full">
           {/* Header */}
           <div className="mb-6">
             <button
@@ -197,7 +197,7 @@ export function History() {
 
   return (
     <div className="h-full overflow-hidden flex flex-col">
-      <div className="max-w-5xl mx-auto w-full p-6 pt-20 flex flex-col h-full">
+      <div className="max-w-5xl mx-auto w-full p-6 pt-6 flex flex-col h-full">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-4xl md:text-5xl font-serif italic text-neutral-900 tracking-tighter">

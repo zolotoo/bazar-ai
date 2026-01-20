@@ -8,15 +8,17 @@ import { IncomingVideosDrawer } from './components/sidebar/IncomingVideosDrawer'
 import { SearchPanel } from './components/ui/SearchPanel';
 import { useAuth } from './hooks/useAuth';
 import { useInboxVideos } from './hooks/useInboxVideos';
-import { Video, Settings, Search, LayoutGrid, GitBranch, Clock, User, LogOut, Link, Radar } from 'lucide-react';
+import { Video, Settings, Search, LayoutGrid, GitBranch, Clock, User, LogOut, Link, Radar, Plus } from 'lucide-react';
 import { cn } from './utils/cn';
 import { Toaster } from 'sonner';
 
 type ViewMode = 'workspace' | 'canvas' | 'history' | 'profile';
+type SearchTab = 'search' | 'link' | 'radar';
 
 function App() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchTab, setSearchTab] = useState<SearchTab>('search');
   const { isAuthenticated, loading, logout } = useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>('workspace');
   
@@ -54,113 +56,120 @@ function App() {
         backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`
       }} />
 
-      {/* Top Bar */}
-      <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-5 py-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 shadow-lg shadow-orange-500/30">
-            <Video className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-lg text-slate-800 font-medium font-serif italic tracking-tighter">
-              Bazar AI
-            </h1>
-            <p className="text-[9px] text-slate-500 tracking-tight mt-[-2px]">Поиск вирусного контента</p>
-          </div>
+      {/* Left Sidebar */}
+      <div className="fixed left-0 top-0 bottom-0 w-16 z-40 flex flex-col items-center py-4 glass border-r border-slate-200/50">
+        {/* Logo */}
+        <div className="p-2 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 shadow-lg shadow-orange-500/30 mb-6">
+          <Video className="w-5 h-5 text-white" />
         </div>
-
-        {/* View Mode Switcher */}
-        <div className="flex items-center glass rounded-xl p-0.5">
+        
+        {/* Main Navigation */}
+        <div className="flex-1 flex flex-col items-center gap-2">
           <button
             onClick={() => setViewMode('workspace')}
             className={cn(
-              "px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 active:scale-95",
+              "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-95",
               viewMode === 'workspace' 
-                ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg" 
-                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg shadow-orange-500/30" 
+                : "text-slate-500 hover:text-slate-800 hover:bg-white/80"
             )}
+            title="Рабочий стол"
           >
-            <LayoutGrid className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Рабочий стол</span>
+            <LayoutGrid className="w-5 h-5" />
           </button>
           <button
             onClick={() => setViewMode('canvas')}
             className={cn(
-              "px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 active:scale-95",
+              "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-95",
               viewMode === 'canvas' 
-                ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg" 
-                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg shadow-orange-500/30" 
+                : "text-slate-500 hover:text-slate-800 hover:bg-white/80"
             )}
+            title="Холст"
           >
-            <GitBranch className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Холст</span>
+            <GitBranch className="w-5 h-5" />
           </button>
           <button
             onClick={() => setViewMode('history')}
             className={cn(
-              "px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 active:scale-95",
+              "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-95",
               viewMode === 'history' 
-                ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg" 
-                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg shadow-orange-500/30" 
+                : "text-slate-500 hover:text-slate-800 hover:bg-white/80"
             )}
+            title="История"
           >
-            <Clock className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">История</span>
+            <Clock className="w-5 h-5" />
+          </button>
+          
+          {/* Divider */}
+          <div className="w-8 h-px bg-slate-200 my-2" />
+          
+          {/* Search Actions */}
+          <button
+            onClick={() => { setSearchTab('search'); setIsSearchOpen(true); }}
+            className={cn(
+              "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-95",
+              "text-slate-500 hover:text-slate-800 hover:bg-white/80"
+            )}
+            title="Поиск"
+          >
+            <Search className="w-5 h-5" />
           </button>
           <button
-            onClick={() => setViewMode('profile')}
+            onClick={() => { setSearchTab('link'); setIsSearchOpen(true); }}
             className={cn(
-              "px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 active:scale-95",
-              viewMode === 'profile' 
-                ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg" 
-                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+              "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-95",
+              "text-slate-500 hover:text-slate-800 hover:bg-white/80"
             )}
+            title="Добавить по ссылке"
           >
-            <User className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Личный кабинет</span>
+            <Link className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => { setSearchTab('radar'); setIsSearchOpen(true); }}
+            className={cn(
+              "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-95",
+              "text-slate-500 hover:text-slate-800 hover:bg-white/80"
+            )}
+            title="Радар"
+          >
+            <Radar className="w-5 h-5" />
           </button>
         </div>
         
-        <div className="flex items-center gap-2">
+        {/* Bottom Actions */}
+        <div className="flex flex-col items-center gap-2 mt-auto">
           <button
-            onClick={() => setIsSearchOpen(true)}
-            className="glass-button px-3 py-2 rounded-xl text-slate-700 hover:text-slate-900 transition-all flex items-center gap-1.5 font-medium text-sm active:scale-95"
+            onClick={() => setViewMode('profile')}
+            className={cn(
+              "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-95",
+              viewMode === 'profile' 
+                ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg shadow-orange-500/30" 
+                : "text-slate-500 hover:text-slate-800 hover:bg-white/80"
+            )}
+            title="Личный кабинет"
           >
-            <Search className="w-4 h-4" />
-            <span className="hidden sm:inline">Поиск</span>
+            <User className="w-5 h-5" />
           </button>
-
-          <button
-            onClick={() => setIsSearchOpen(true)}
-            className="glass-button px-3 py-2 rounded-xl text-slate-700 hover:text-slate-900 transition-all flex items-center gap-1.5 font-medium text-sm active:scale-95"
+          <button 
+            className="w-11 h-11 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-white/80 transition-all active:scale-95"
+            title="Настройки"
           >
-            <Link className="w-4 h-4" />
-            <span className="hidden sm:inline">По ссылке</span>
+            <Settings className="w-5 h-5" />
           </button>
-
-          <button
-            onClick={() => setIsSearchOpen(true)}
-            className="glass-button px-3 py-2 rounded-xl text-slate-700 hover:text-slate-900 transition-all flex items-center gap-1.5 font-medium text-sm active:scale-95"
-          >
-            <Radar className="w-4 h-4" />
-            <span className="hidden sm:inline">Радар</span>
-          </button>
-          
-          <button className="glass-button p-2 rounded-xl text-slate-600 hover:text-slate-900 transition-all active:scale-95">
-            <Settings className="w-4 h-4" />
-          </button>
-
           <button 
             onClick={logout}
-            className="glass-button p-2 rounded-xl text-slate-600 hover:text-red-500 transition-all active:scale-95"
+            className="w-11 h-11 rounded-xl flex items-center justify-center text-slate-500 hover:text-red-500 hover:bg-red-50 transition-all active:scale-95"
             title="Выйти"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-5 h-5" />
           </button>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="w-full h-screen pt-[72px]">
+      <div className="w-full h-screen pl-16">
         {viewMode === 'workspace' && <Workspace />}
         {viewMode === 'canvas' && <FlowCanvas />}
         {viewMode === 'history' && <History />}
@@ -177,6 +186,7 @@ function App() {
       <SearchPanel
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
+        initialTab={searchTab}
       />
 
       {/* Toast notifications */}

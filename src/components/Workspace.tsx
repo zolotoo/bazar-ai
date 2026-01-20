@@ -142,7 +142,7 @@ export function Workspace() {
     
     return (
       <div className="h-full overflow-hidden flex flex-col bg-[#f5f5f5]">
-        <div className="max-w-6xl mx-auto w-full p-6 pt-20 flex flex-col h-full">
+        <div className="max-w-6xl mx-auto w-full p-6 pt-6 flex flex-col h-full">
           {/* Header */}
           <div className="mb-6">
             <button
@@ -237,7 +237,7 @@ export function Workspace() {
 
   return (
     <div className="h-full overflow-y-auto custom-scrollbar-light">
-      <div className="max-w-6xl mx-auto p-6 pt-20">
+      <div className="max-w-6xl mx-auto p-6 pt-6">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl md:text-5xl font-serif italic text-neutral-900 tracking-tighter">
