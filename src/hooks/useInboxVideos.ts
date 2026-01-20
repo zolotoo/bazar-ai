@@ -210,10 +210,8 @@ export function useInboxVideos() {
         setVideos(prev => [savedVideo, ...prev.filter(v => v.id !== localVideo.id)]);
         setIncomingVideos([savedVideo, ...useFlowStore.getState().incomingVideos.filter(v => v.id !== localVideo.id)]);
         
-        // Запускаем скачивание и транскрибацию только для папки "Идеи"
-        if (video.folderId === 'ideas') {
-          startVideoProcessing(data.id, video.url);
-        }
+        // Запускаем скачивание и транскрибацию для всех новых видео
+        startVideoProcessing(data.id, video.url);
         
         return savedVideo;
       }
