@@ -10,6 +10,7 @@ import { useInboxVideos } from '../../hooks/useInboxVideos';
 import { useSearchHistory } from '../../hooks/useSearchHistory';
 import { IncomingVideo } from '../../types';
 import { cn } from '../../utils/cn';
+import { supabase } from '../../utils/supabase';
 
 interface SearchPanelProps {
   isOpen: boolean;
@@ -45,9 +46,9 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
       setReels([]);
       setQuery('');
       
-      // Если нет сохранённых видео — загружаем трендовые
+      // Если нет сохранённых видео пользователя — загружаем популярные из общей базы
       if (incomingVideos.length === 0) {
-        loadTrendingVideos();
+        loadPopularFromDatabase();
       } else {
         setViewMode('carousel');
         setActiveIndex(Math.floor(incomingVideos.length / 2));
@@ -55,16 +56,53 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
     }
   }, [isOpen]);
 
-  const loadTrendingVideos = async () => {
+  // Загрузка популярных видео из общей базы данных (все пользователи)
+  const loadPopularFromDatabase = async () => {
     setViewMode('loading');
     setLoading(true);
     try {
-      const trending = await searchInstagramVideos('trending');
-      setReels(trending);
-      setViewMode('trending');
-      setActiveIndex(Math.floor(trending.length / 2));
+      // Берём видео за последний месяц, сортируем по просмотрам
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      
+      const { data, error } = await supabase
+        .from('saved_videos')
+        .select('*')
+        .gte('added_at', oneMonthAgo.toISOString())
+        .order('view_count', { ascending: false })
+        .limit(20);
+
+      if (error) {
+        console.error('Error loading popular videos:', error);
+        setViewMode('carousel');
+        return;
+      }
+
+      if (data && data.length > 0) {
+        // Преобразуем в формат InstagramSearchResult
+        const popular: InstagramSearchResult[] = data.map(video => ({
+          id: video.id,
+          shortcode: video.shortcode || video.video_id,
+          url: video.video_url || `https://instagram.com/reel/${video.shortcode}`,
+          thumbnail_url: video.thumbnail_url,
+          caption: video.caption,
+          view_count: video.view_count,
+          like_count: video.like_count,
+          comment_count: video.comment_count,
+          owner: {
+            username: video.owner_username,
+          },
+        }));
+        
+        setReels(popular);
+        setViewMode('trending');
+        setActiveIndex(Math.floor(popular.length / 2));
+      } else {
+        // Если в базе пусто — показываем пустую карусель
+        setViewMode('carousel');
+      }
     } catch (err) {
-      console.error('Failed to load trending:', err);
+      console.error('Failed to load popular videos:', err);
       setViewMode('carousel');
     } finally {
       setLoading(false);
