@@ -67,12 +67,18 @@ export function useProjects() {
 
       if (error) {
         console.error('Error fetching projects:', error);
-        // Создаем дефолтный проект если ничего нет
-        const defaultProject = await createProject('Мой проект');
-        if (defaultProject) {
-          setProjects([defaultProject]);
-          setCurrentProjectId(defaultProject.id);
-        }
+        // Создаем дефолтный проект локально если база не работает
+        const defaultProject: Project = {
+          id: `project-${Date.now()}`,
+          name: 'Мой проект',
+          color: '#f97316',
+          icon: 'folder',
+          folders: DEFAULT_FOLDERS.map((f, i) => ({ ...f, id: `folder-${Date.now()}-${i}` })),
+          createdAt: new Date(),
+        };
+        setProjects([defaultProject]);
+        setCurrentProjectId(defaultProject.id);
+        setLoading(false);
         return;
       }
 
@@ -96,14 +102,45 @@ export function useProjects() {
         }
       } else {
         // Создаем дефолтный проект
-        const defaultProject = await createProject('Мой проект');
-        if (defaultProject) {
-          setProjects([defaultProject]);
-          setCurrentProjectId(defaultProject.id);
+        const defaultProject: Project = {
+          id: `project-${Date.now()}`,
+          name: 'Мой проект',
+          color: '#f97316',
+          icon: 'folder',
+          folders: DEFAULT_FOLDERS.map((f, i) => ({ ...f, id: `folder-${Date.now()}-${i}` })),
+          createdAt: new Date(),
+        };
+        
+        // Пробуем сохранить в базу
+        try {
+          await supabase.from('projects').insert({
+            id: defaultProject.id,
+            user_id: userId,
+            name: defaultProject.name,
+            color: defaultProject.color,
+            icon: defaultProject.icon,
+            folders: defaultProject.folders,
+          });
+        } catch (e) {
+          console.error('Failed to save default project:', e);
         }
+        
+        setProjects([defaultProject]);
+        setCurrentProjectId(defaultProject.id);
       }
     } catch (err) {
       console.error('Failed to load projects:', err);
+      // Fallback - создаём локальный проект
+      const defaultProject: Project = {
+        id: `project-${Date.now()}`,
+        name: 'Мой проект',
+        color: '#f97316',
+        icon: 'folder',
+        folders: DEFAULT_FOLDERS.map((f, i) => ({ ...f, id: `folder-${Date.now()}-${i}` })),
+        createdAt: new Date(),
+      };
+      setProjects([defaultProject]);
+      setCurrentProjectId(defaultProject.id);
     } finally {
       setLoading(false);
     }
@@ -122,6 +159,8 @@ export function useProjects() {
       folders: DEFAULT_FOLDERS.map((f, i) => ({ ...f, id: `folder-${Date.now()}-${i}` })),
     };
 
+    const project: Project = { ...newProject, createdAt: new Date() };
+
     try {
       const { error } = await supabase
         .from('projects')
@@ -136,16 +175,15 @@ export function useProjects() {
 
       if (error) {
         console.error('Error creating project:', error);
-        return null;
+        // Всё равно добавляем в локальный state (fallback)
       }
-
-      const project: Project = { ...newProject, createdAt: new Date() };
-      setProjects(prev => [...prev, project]);
-      return project;
     } catch (err) {
       console.error('Failed to create project:', err);
-      return null;
     }
+    
+    // Всегда добавляем проект в state (даже если Supabase не работает)
+    setProjects(prev => [...prev, project]);
+    return project;
   }, [getUserId, projects.length]);
 
   // Обновление проекта
