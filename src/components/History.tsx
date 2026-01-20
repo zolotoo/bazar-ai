@@ -100,67 +100,90 @@ export function History() {
                 <p className="text-slate-500 text-sm">Этот поиск был выполнен до обновления</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
                 {selectedEntry.results.map((reel, idx) => {
                   const captionText = typeof reel.caption === 'string' ? reel.caption : 'Видео из Instagram';
+                  const thumbnailUrl = reel.thumbnail_url || reel.display_url || 'https://via.placeholder.com/270x360';
                   
                   return (
                     <div
                       key={`history-${reel.shortcode || reel.id}-${idx}`}
-                      className="group bg-gradient-to-b from-neutral-100 to-neutral-200 rounded-[2rem] overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                      className="group relative rounded-[1.75rem] overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
                     >
-                      {/* Image */}
-                      <div className="relative w-full" style={{ aspectRatio: '3/4' }}>
-                        <img
-                          src={reel.thumbnail_url || reel.display_url || 'https://via.placeholder.com/270x360'}
-                          alt=""
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.src = 'https://via.placeholder.com/270x360?text=Video';
-                          }}
-                        />
+                      {/* Blurred background */}
+                      <div 
+                        className="absolute inset-0 bg-cover bg-center"
+                        style={{ 
+                          backgroundImage: `url(${thumbnailUrl})`,
+                          filter: 'blur(20px) brightness(0.9)',
+                          transform: 'scale(1.1)'
+                        }}
+                      />
+                      
+                      {/* Content */}
+                      <div className="relative z-10">
+                        {/* Image */}
+                        <div className="relative w-full m-2 mb-0" style={{ aspectRatio: '3/4' }}>
+                          <img
+                            src={thumbnailUrl}
+                            alt=""
+                            className="w-[calc(100%-16px)] h-full object-cover rounded-[1.25rem]"
+                            onError={(e) => {
+                              e.currentTarget.src = 'https://via.placeholder.com/270x360?text=Video';
+                            }}
+                          />
+                          
+                          {/* Hover overlay */}
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleAddToInbox(reel)}
+                                className="p-2.5 rounded-full bg-white/95 text-slate-800 shadow-lg active:scale-95"
+                              >
+                                <Plus className="w-4 h-4" />
+                              </button>
+                              <a
+                                href={reel.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-2.5 rounded-full bg-white/95 text-slate-800 shadow-lg active:scale-95"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </a>
+                            </div>
+                          </div>
+                        </div>
                         
-                        {/* Hover overlay */}
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                        {/* Info section */}
+                        <div className="p-4 pt-3">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <h3 className="font-sans font-semibold text-slate-900 text-[15px] truncate italic">
+                              @{reel.owner?.username || 'instagram'}
+                            </h3>
+                          </div>
+                          
+                          <p className="font-sans text-slate-700 text-xs leading-relaxed line-clamp-2 mb-3">
+                            {captionText.slice(0, 50)}{captionText.length > 50 ? '...' : ''}
+                          </p>
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3 text-slate-600">
+                              <div className="flex items-center gap-1">
+                                <Eye className="w-3.5 h-3.5" />
+                                <span className="text-xs font-medium">{formatNumber(reel.view_count)}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Heart className="w-3.5 h-3.5" />
+                                <span className="text-xs font-medium">{formatNumber(reel.like_count)}</span>
+                              </div>
+                            </div>
+                            
                             <button
                               onClick={() => handleAddToInbox(reel)}
-                              className="p-2.5 rounded-full bg-white text-slate-800 shadow-lg active:scale-95"
+                              className="px-3 py-1.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-medium transition-all active:scale-95"
                             >
-                              <Plus className="w-4 h-4" />
+                              Follow +
                             </button>
-                            <a
-                              href={reel.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="p-2.5 rounded-full bg-white text-slate-800 shadow-lg active:scale-95"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Info section */}
-                      <div className="p-4">
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <h3 className="font-sans font-semibold text-slate-800 text-sm truncate">
-                            @{reel.owner?.username || 'instagram'}
-                          </h3>
-                        </div>
-                        
-                        <p className="font-sans text-slate-500 text-xs leading-relaxed line-clamp-2 mb-3">
-                          {captionText.slice(0, 50)}{captionText.length > 50 ? '...' : ''}
-                        </p>
-                        
-                        <div className="flex items-center gap-3 text-slate-500">
-                          <div className="flex items-center gap-1">
-                            <Eye className="w-3.5 h-3.5" />
-                            <span className="text-xs font-medium">{formatNumber(reel.view_count)}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Heart className="w-3.5 h-3.5" />
-                            <span className="text-xs font-medium">{formatNumber(reel.like_count)}</span>
                           </div>
                         </div>
                       </div>
@@ -329,72 +352,86 @@ export function History() {
                   <p className="text-slate-500 text-sm">Добавьте видео через поиск</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
                   {incomingVideos.map((video, idx) => {
                     const videoData = video as any;
+                    const thumbnailUrl = video.previewUrl || 'https://via.placeholder.com/270x360';
                     
                     return (
                       <div
                         key={`saved-${video.id}-${idx}`}
-                        className="group bg-gradient-to-b from-neutral-100 to-neutral-200 rounded-[2rem] overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                        className="group relative rounded-[1.75rem] overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
                       >
-                        {/* Image */}
-                        <div className="relative w-full" style={{ aspectRatio: '3/4' }}>
-                          <img
-                            src={video.previewUrl || 'https://via.placeholder.com/270x360'}
-                            alt=""
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.src = 'https://via.placeholder.com/270x360?text=Video';
-                            }}
-                          />
-                          
-                          {/* Date badge */}
-                          <div className="absolute top-3 left-3 z-10">
-                            <div className="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-sm flex items-center gap-1.5 shadow-md">
-                              <Calendar className="w-3 h-3 text-slate-500" />
-                              <span className="text-[10px] font-medium text-slate-600">
-                                {formatDate(video.receivedAt)}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          {/* Hover overlay */}
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                              <button
-                                onClick={() => removeVideo(video.id)}
-                                className="p-2.5 rounded-full bg-red-500 text-white shadow-lg active:scale-95"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                              <a
-                                href={video.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="p-2.5 rounded-full bg-white text-slate-800 shadow-lg active:scale-95"
-                              >
-                                <ExternalLink className="w-4 h-4" />
-                              </a>
-                            </div>
-                          </div>
-                        </div>
+                        {/* Blurred background */}
+                        <div 
+                          className="absolute inset-0 bg-cover bg-center"
+                          style={{ 
+                            backgroundImage: `url(${thumbnailUrl})`,
+                            filter: 'blur(20px) brightness(0.9)',
+                            transform: 'scale(1.1)'
+                          }}
+                        />
                         
-                        {/* Info section */}
-                        <div className="p-4">
-                          <h3 className="font-sans font-semibold text-slate-800 text-sm leading-tight line-clamp-2 mb-2">
-                            {video.title?.slice(0, 45)}...
-                          </h3>
-                          
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3 text-slate-500">
-                              <div className="flex items-center gap-1">
-                                <Eye className="w-3.5 h-3.5" />
-                                <span className="text-xs font-medium">{formatNumber(videoData.view_count)}</span>
+                        {/* Content */}
+                        <div className="relative z-10">
+                          {/* Image */}
+                          <div className="relative w-full m-2 mb-0" style={{ aspectRatio: '3/4' }}>
+                            <img
+                              src={thumbnailUrl}
+                              alt=""
+                              className="w-[calc(100%-16px)] h-full object-cover rounded-[1.25rem]"
+                              onError={(e) => {
+                                e.currentTarget.src = 'https://via.placeholder.com/270x360?text=Video';
+                              }}
+                            />
+                            
+                            {/* Date badge */}
+                            <div className="absolute top-2 left-2 z-10">
+                              <div className="px-2 py-0.5 rounded-full bg-white/95 backdrop-blur-sm flex items-center gap-1 shadow-md">
+                                <Calendar className="w-2.5 h-2.5 text-slate-500" />
+                                <span className="text-[9px] font-medium text-slate-600">
+                                  {formatDate(video.receivedAt)}
+                                </span>
                               </div>
-                              <div className="flex items-center gap-1">
-                                <Heart className="w-3.5 h-3.5" />
-                                <span className="text-xs font-medium">{formatNumber(videoData.like_count)}</span>
+                            </div>
+                            
+                            {/* Hover overlay */}
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => removeVideo(video.id)}
+                                  className="p-2.5 rounded-full bg-red-500 text-white shadow-lg active:scale-95"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                                <a
+                                  href={video.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-2.5 rounded-full bg-white/95 text-slate-800 shadow-lg active:scale-95"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Info section */}
+                          <div className="p-4 pt-3">
+                            <h3 className="font-sans font-semibold text-slate-900 text-sm leading-tight line-clamp-2 mb-2 italic">
+                              {video.title?.slice(0, 45)}...
+                            </h3>
+                            
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3 text-slate-600">
+                                <div className="flex items-center gap-1">
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span className="text-xs font-medium">{formatNumber(videoData.view_count)}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Heart className="w-3.5 h-3.5" />
+                                  <span className="text-xs font-medium">{formatNumber(videoData.like_count)}</span>
+                                </div>
                               </div>
                             </div>
                           </div>

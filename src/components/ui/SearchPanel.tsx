@@ -726,6 +726,8 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                     const scale = isActive ? 1 : Math.max(0.75, 1 - absOffset * 0.12);
                     const opacity = isActive ? 1 : Math.max(0.5, 1 - absOffset * 0.25);
 
+                    const thumbnailUrl = reel.thumbnail_url || reel.display_url || 'https://via.placeholder.com/200x300';
+                    
                     return (
                       <div
                         key={`carousel-${reel.shortcode || reel.id}-${index}`}
@@ -743,70 +745,83 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                         }}
                       >
                         <div className={cn(
-                          'w-[200px] bg-gradient-to-b from-neutral-100 to-neutral-200 rounded-[1.75rem] overflow-hidden shadow-2xl',
+                          'w-[210px] rounded-[1.75rem] overflow-hidden shadow-2xl relative',
                           isActive && 'ring-4 ring-orange-400/50'
                         )}>
-                          {/* Image */}
-                          <div className="relative w-full" style={{ aspectRatio: '3/4' }}>
-                            <img
-                              src={reel.thumbnail_url || reel.display_url || 'https://via.placeholder.com/200x267'}
-                              alt=""
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.currentTarget.src = 'https://via.placeholder.com/200x267?text=Video';
-                              }}
-                            />
-                            
-                            {/* Viral badge */}
-                            {viralCoef > 0 && (
-                              <div className="absolute top-2.5 left-2.5 z-10">
-                                <div className={cn(
-                                  "px-2 py-1 rounded-full backdrop-blur-md flex items-center gap-1 shadow-lg",
-                                  viralCoef > 10 ? "bg-emerald-500 text-white" : 
-                                  viralCoef > 5 ? "bg-amber-500 text-white" :
-                                  "bg-white/90 text-slate-700"
-                                )}>
-                                  <Sparkles className="w-2.5 h-2.5" />
-                                  <span className="text-[10px] font-bold">{viralCoef}</span>
-                                </div>
-                              </div>
-                            )}
-                            
-                            {/* Play button on active */}
-                            {isActive && (
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/10">
-                                <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
-                                  <Play className="w-5 h-5 text-slate-800 ml-0.5" fill="currentColor" />
-                                </div>
-                              </div>
-                            )}
-                          </div>
+                          {/* Blurred background */}
+                          <div 
+                            className="absolute inset-0 bg-cover bg-center"
+                            style={{ 
+                              backgroundImage: `url(${thumbnailUrl})`,
+                              filter: 'blur(20px) brightness(0.85)',
+                              transform: 'scale(1.1)'
+                            }}
+                          />
                           
-                          {/* Info section */}
-                          <div className="px-3 py-3">
-                            {/* Username with verified */}
-                            <div className="flex items-center gap-1 mb-0.5">
-                              <p className="font-sans text-[11px] font-semibold text-slate-800 truncate">
-                                @{reel.owner?.username || 'instagram'}
-                              </p>
-                              {viralCoef > 5 && (
-                                <div className="w-3.5 h-3.5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-                                  <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
+                          {/* Content */}
+                          <div className="relative z-10">
+                            {/* Image */}
+                            <div className="relative w-full p-2 pb-0" style={{ aspectRatio: '3/4' }}>
+                              <img
+                                src={thumbnailUrl}
+                                alt=""
+                                className="w-full h-full object-cover rounded-[1.25rem]"
+                                onError={(e) => {
+                                  e.currentTarget.src = 'https://via.placeholder.com/200x267?text=Video';
+                                }}
+                              />
+                              
+                              {/* Viral badge */}
+                              {viralCoef > 0 && (
+                                <div className="absolute top-4 left-4 z-10">
+                                  <div className={cn(
+                                    "px-2 py-0.5 rounded-full backdrop-blur-md flex items-center gap-1 shadow-lg",
+                                    viralCoef > 10 ? "bg-emerald-500 text-white" : 
+                                    viralCoef > 5 ? "bg-amber-500 text-white" :
+                                    "bg-white/90 text-slate-700"
+                                  )}>
+                                    <Sparkles className="w-2.5 h-2.5" />
+                                    <span className="text-[10px] font-bold">{viralCoef}</span>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Play button on active */}
+                              {isActive && (
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <div className="w-12 h-12 rounded-full bg-white/95 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+                                    <Play className="w-5 h-5 text-slate-800 ml-0.5" fill="currentColor" />
+                                  </div>
                                 </div>
                               )}
                             </div>
                             
-                            {/* Stats row */}
-                            <div className="flex items-center gap-2.5 text-slate-500">
-                              <div className="flex items-center gap-0.5">
-                                <Eye className="w-3 h-3" />
-                                <span className="text-[10px] font-medium">{formatNumber(reel.view_count)}</span>
+                            {/* Info section */}
+                            <div className="px-3 py-3">
+                              {/* Username with verified */}
+                              <div className="flex items-center gap-1 mb-0.5">
+                                <p className="font-sans text-[12px] font-semibold text-slate-900 truncate italic">
+                                  @{reel.owner?.username || 'instagram'}
+                                </p>
+                                {viralCoef > 5 && (
+                                  <div className="w-3.5 h-3.5 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
+                                    <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  </div>
+                                )}
                               </div>
-                              <div className="flex items-center gap-0.5">
-                                <Heart className="w-3 h-3" />
-                                <span className="text-[10px] font-medium">{formatNumber(reel.like_count)}</span>
+                              
+                              {/* Stats row */}
+                              <div className="flex items-center gap-2.5 text-slate-600">
+                                <div className="flex items-center gap-0.5">
+                                  <Eye className="w-3 h-3" />
+                                  <span className="text-[10px] font-medium">{formatNumber(reel.view_count)}</span>
+                                </div>
+                                <div className="flex items-center gap-0.5">
+                                  <Heart className="w-3 h-3" />
+                                  <span className="text-[10px] font-medium">{formatNumber(reel.like_count)}</span>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -973,10 +988,11 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
                   {sortedReels.map((reel, idx) => {
                     const viralCoef = calculateViralCoefficient(reel.view_count, reel.taken_at);
                     const captionText = typeof reel.caption === 'string' ? reel.caption : 'Видео из Instagram';
+                    const thumbnailUrl = reel.thumbnail_url || reel.display_url || 'https://via.placeholder.com/270x360';
                     
                     return (
                       <div
@@ -984,86 +1000,98 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                         draggable
                         onDragStart={(e) => handleDragStart(e, reel)}
                         onClick={() => setSelectedVideo(reel)}
-                        className="group bg-gradient-to-b from-neutral-100 to-neutral-200 rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                        className="group relative rounded-[1.75rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
                       >
-                        {/* Image section - takes most of the card */}
-                        <div className="relative w-full" style={{ aspectRatio: '3/4' }}>
-                          <img
-                            src={reel.thumbnail_url || reel.display_url || 'https://via.placeholder.com/270x360'}
-                            alt=""
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.src = 'https://via.placeholder.com/270x360?text=Video';
-                            }}
-                          />
-                          
-                          {/* Viral coefficient badge (top left) */}
-                          {viralCoef > 0 && (
-                            <div className="absolute top-3 left-3 z-10">
-                              <div className={cn(
-                                "px-2.5 py-1 rounded-full backdrop-blur-md flex items-center gap-1.5 shadow-lg",
-                                viralCoef > 10 ? "bg-emerald-500 text-white" : 
-                                viralCoef > 5 ? "bg-amber-500 text-white" :
-                                "bg-white/90 text-slate-700"
-                              )}>
-                                <Sparkles className="w-3 h-3" />
-                                <span className="text-xs font-bold">{viralCoef}</span>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Play button on hover */}
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
-                            <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-2xl">
-                              <Play className="w-6 h-6 text-slate-800 ml-1" fill="currentColor" />
-                            </div>
-                          </div>
-                        </div>
+                        {/* Background blurred image for the whole card */}
+                        <div 
+                          className="absolute inset-0 bg-cover bg-center"
+                          style={{ 
+                            backgroundImage: `url(${thumbnailUrl})`,
+                            filter: 'blur(20px) brightness(0.9)',
+                            transform: 'scale(1.1)'
+                          }}
+                        />
                         
-                        {/* Info section - like reference card */}
-                        <div className="p-4 bg-gradient-to-b from-neutral-100 to-neutral-200">
-                          {/* Title with verified badge style */}
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <h3 className="font-sans font-semibold text-slate-800 text-sm truncate">
-                              @{reel.owner?.username || 'instagram'}
-                            </h3>
-                            {viralCoef > 5 && (
-                              <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-                                <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                </svg>
+                        {/* Card content */}
+                        <div className="relative z-10">
+                          {/* Image section */}
+                          <div className="relative w-full m-2 mb-0" style={{ aspectRatio: '3/4' }}>
+                            <img
+                              src={thumbnailUrl}
+                              alt=""
+                              className="w-[calc(100%-16px)] h-full object-cover rounded-[1.25rem]"
+                              onError={(e) => {
+                                e.currentTarget.src = 'https://via.placeholder.com/270x360?text=Video';
+                              }}
+                            />
+                            
+                            {/* Viral coefficient badge (top left) */}
+                            {viralCoef > 0 && (
+                              <div className="absolute top-2 left-2 z-10">
+                                <div className={cn(
+                                  "px-2 py-0.5 rounded-full backdrop-blur-md flex items-center gap-1 shadow-lg",
+                                  viralCoef > 10 ? "bg-emerald-500 text-white" : 
+                                  viralCoef > 5 ? "bg-amber-500 text-white" :
+                                  "bg-white/90 text-slate-700"
+                                )}>
+                                  <Sparkles className="w-2.5 h-2.5" />
+                                  <span className="text-[10px] font-bold">{viralCoef}</span>
+                                </div>
                               </div>
                             )}
-                          </div>
-                          
-                          {/* Description */}
-                          <p className="font-sans text-slate-500 text-xs leading-relaxed line-clamp-2 mb-3">
-                            {captionText.slice(0, 60)}{captionText.length > 60 ? '...' : ''}
-                          </p>
-                          
-                          {/* Stats and follow button row */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3 text-slate-500">
-                              <div className="flex items-center gap-1">
-                                <Eye className="w-3.5 h-3.5" />
-                                <span className="text-xs font-medium">{formatNumber(reel.view_count)}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Heart className="w-3.5 h-3.5" />
-                                <span className="text-xs font-medium">{formatNumber(reel.like_count)}</span>
+                            
+                            {/* Play button on hover */}
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="w-12 h-12 rounded-full bg-white/95 flex items-center justify-center shadow-2xl">
+                                <Play className="w-5 h-5 text-slate-800 ml-0.5" fill="currentColor" />
                               </div>
                             </div>
+                          </div>
+                          
+                          {/* Info section with blurred background */}
+                          <div className="p-4 pt-3">
+                            {/* Username with verified badge */}
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <h3 className="font-sans font-semibold text-slate-900 text-[15px] truncate italic">
+                                @{reel.owner?.username || 'instagram'}
+                              </h3>
+                              {viralCoef > 5 && (
+                                <div className="w-4 h-4 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
+                                  <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                </div>
+                              )}
+                            </div>
                             
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleAddToCanvas(reel);
-                              }}
-                              className="px-3 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium transition-all flex items-center gap-1 active:scale-95"
-                            >
-                              <Plus className="w-3 h-3" />
-                              Сохранить
-                            </button>
+                            {/* Description */}
+                            <p className="font-sans text-slate-700 text-xs leading-relaxed line-clamp-2 mb-3">
+                              {captionText.slice(0, 55)}{captionText.length > 55 ? '...' : ''}
+                            </p>
+                            
+                            {/* Stats and follow button row */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3 text-slate-600">
+                                <div className="flex items-center gap-1">
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span className="text-xs font-medium">{formatNumber(reel.view_count)}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Heart className="w-3.5 h-3.5" />
+                                  <span className="text-xs font-medium">{formatNumber(reel.like_count)}</span>
+                                </div>
+                              </div>
+                              
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAddToCanvas(reel);
+                                }}
+                                className="px-3 py-1.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-medium transition-all flex items-center gap-1 active:scale-95"
+                              >
+                                Follow +
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>

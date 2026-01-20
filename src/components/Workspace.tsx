@@ -258,97 +258,116 @@ export function Workspace() {
                 <p className="text-slate-500 text-sm">Перетащите видео сюда из поиска</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5 pb-6">
-                {folderVideos.map((video, idx) => (
-                  <div
-                    key={`folder-${video.id}-${idx}`}
-                    draggable
-                    onDragStart={() => setDraggedVideo(video)}
-                    className="group bg-gradient-to-b from-neutral-100 to-neutral-200 rounded-[2rem] overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-grab active:cursor-grabbing"
-                  >
-                    {/* Image */}
-                    <div className="relative w-full" style={{ aspectRatio: '3/4' }}>
-                      <img
-                        src={video.preview_url || 'https://via.placeholder.com/270x360'}
-                        alt=""
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.src = 'https://via.placeholder.com/270x360?text=Video';
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 pb-6">
+                {folderVideos.map((video, idx) => {
+                  const thumbnailUrl = video.preview_url || 'https://via.placeholder.com/270x360';
+                  
+                  return (
+                    <div
+                      key={`folder-${video.id}-${idx}`}
+                      draggable
+                      onDragStart={() => setDraggedVideo(video)}
+                      className="group relative rounded-[1.75rem] overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-grab active:cursor-grabbing"
+                    >
+                      {/* Blurred background */}
+                      <div 
+                        className="absolute inset-0 bg-cover bg-center"
+                        style={{ 
+                          backgroundImage: `url(${thumbnailUrl})`,
+                          filter: 'blur(20px) brightness(0.9)',
+                          transform: 'scale(1.1)'
                         }}
                       />
                       
-                      {/* Move to folder dropdown - only show if not in inbox */}
-                      {!isInboxFolder && (
-                        <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                          <select
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => {
-                              e.stopPropagation();
-                              const newZoneId = e.target.value === 'null' ? null : e.target.value;
-                              moveVideoToZone(video.id, newZoneId);
+                      {/* Content */}
+                      <div className="relative z-10">
+                        {/* Image */}
+                        <div className="relative w-full m-2 mb-0" style={{ aspectRatio: '3/4' }}>
+                          <img
+                            src={thumbnailUrl}
+                            alt=""
+                            className="w-[calc(100%-16px)] h-full object-cover rounded-[1.25rem]"
+                            onError={(e) => {
+                              e.currentTarget.src = 'https://via.placeholder.com/270x360?text=Video';
                             }}
-                            value={video.zone_id || 'null'}
-                            className="px-2 py-1 rounded-full bg-white/95 text-slate-600 text-[10px] font-medium shadow-lg cursor-pointer outline-none"
-                          >
-                            {folderConfigs.map(f => (
-                              <option key={f.id || 'null'} value={f.id || 'null'}>
-                                {f.title}
-                              </option>
-                            ))}
-                          </select>
+                          />
+                          
+                          {/* Move to folder dropdown - only show if not in inbox */}
+                          {!isInboxFolder && (
+                            <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                              <select
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  const newZoneId = e.target.value === 'null' ? null : e.target.value;
+                                  moveVideoToZone(video.id, newZoneId);
+                                }}
+                                value={video.zone_id || 'null'}
+                                className="px-2 py-0.5 rounded-full bg-white/95 text-slate-600 text-[9px] font-medium shadow-lg cursor-pointer outline-none"
+                              >
+                                {folderConfigs.map(f => (
+                                  <option key={f.id || 'null'} value={f.id || 'null'}>
+                                    {f.title}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                          
+                          {/* Hover overlay with actions */}
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteVideo(video.id, isInboxFolder);
+                                }}
+                                className="p-2.5 rounded-full bg-red-500 text-white shadow-lg active:scale-95"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                              <a
+                                href={video.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="p-2.5 rounded-full bg-white/95 text-slate-800 shadow-lg active:scale-95"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </a>
+                            </div>
+                          </div>
                         </div>
-                      )}
-                      
-                      {/* Hover overlay with actions */}
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteVideo(video.id, isInboxFolder);
-                            }}
-                            className="p-2.5 rounded-full bg-red-500 text-white shadow-lg active:scale-95"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                          <a
-                            href={video.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="p-2.5 rounded-full bg-white text-slate-800 shadow-lg active:scale-95"
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                          </a>
+                        
+                        {/* Info section */}
+                        <div className="p-4 pt-3">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <h3 className="font-sans font-semibold text-slate-900 text-[15px] truncate italic">
+                              @{video.owner_username || 'instagram'}
+                            </h3>
+                          </div>
+                          
+                          <p className="font-sans text-slate-700 text-xs leading-relaxed line-clamp-2 mb-3">
+                            {video.title?.slice(0, 50)}...
+                          </p>
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3 text-slate-600">
+                              <div className="flex items-center gap-1">
+                                <Eye className="w-3.5 h-3.5" />
+                                <span className="text-xs font-medium">{formatNumber(video.view_count)}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Heart className="w-3.5 h-3.5" />
+                                <span className="text-xs font-medium">{formatNumber(video.like_count)}</span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
-                    
-                    {/* Info section */}
-                    <div className="p-4">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <h3 className="font-sans font-semibold text-slate-800 text-sm truncate">
-                          @{video.owner_username || 'instagram'}
-                        </h3>
-                      </div>
-                      
-                      <p className="font-sans text-slate-500 text-xs leading-relaxed line-clamp-2 mb-3">
-                        {video.title?.slice(0, 50)}...
-                      </p>
-                      
-                      <div className="flex items-center gap-3 text-slate-500">
-                        <div className="flex items-center gap-1">
-                          <Eye className="w-3.5 h-3.5" />
-                          <span className="text-xs font-medium">{formatNumber(video.view_count)}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Heart className="w-3.5 h-3.5" />
-                          <span className="text-xs font-medium">{formatNumber(video.like_count)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
