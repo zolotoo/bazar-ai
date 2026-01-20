@@ -70,6 +70,40 @@ type SortOption = 'views' | 'likes' | 'viral' | 'date';
 // View mode: 'carousel' for saved videos, 'trending' for trending videos, 'results' for search
 type ViewMode = 'carousel' | 'loading' | 'results' | 'trending';
 
+// Форматирование даты видео
+function formatVideoDate(takenAt?: string | number | Date): string {
+  if (!takenAt) return '';
+  
+  let videoDate: Date;
+  
+  if (takenAt instanceof Date) {
+    videoDate = takenAt;
+  } else if (typeof takenAt === 'string') {
+    if (takenAt.includes('T') || takenAt.includes('-')) {
+      videoDate = new Date(takenAt);
+    } else {
+      videoDate = new Date(Number(takenAt) * 1000);
+    }
+  } else if (typeof takenAt === 'number') {
+    videoDate = takenAt > 1e12 ? new Date(takenAt) : new Date(takenAt * 1000);
+  } else {
+    return '';
+  }
+  
+  if (isNaN(videoDate.getTime())) return '';
+  
+  const now = new Date();
+  const diffTime = now.getTime() - videoDate.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) return 'Сегодня';
+  if (diffDays === 1) return 'Вчера';
+  if (diffDays < 7) return `${diffDays} дн.`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} нед.`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)} мес.`;
+  return `${Math.floor(diffDays / 365)} г.`;
+}
+
 export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
   const [query, setQuery] = useState('');
   const [reels, setReels] = useState<InstagramSearchResult[]>([]);
@@ -84,6 +118,7 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
   const [linkUrl, setLinkUrl] = useState('');
   const [linkLoading, setLinkLoading] = useState(false);
   const [showFolderSelect, setShowFolderSelect] = useState(false);
+  const [cardFolderSelect, setCardFolderSelect] = useState<string | null>(null); // ID карточки с открытым меню папок
   const { incomingVideos } = useFlowStore();
   const { addVideoToInbox } = useInboxVideos();
   const { history: searchHistory, addToHistory, refetch: refetchHistory } = useSearchHistory();
@@ -199,6 +234,15 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
       setTimeout(() => setLoadingProgress(0), 300);
     }
   }, [loading]);
+
+  // Close folder menu on outside click
+  useEffect(() => {
+    if (cardFolderSelect) {
+      const handleClickOutside = () => setCardFolderSelect(null);
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [cardFolderSelect]);
 
   const handleSearch = useCallback(async (searchQuery?: string) => {
     const queryToSearch = searchQuery || query;
@@ -738,6 +782,7 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                     const absOffset = Math.abs(offset);
                     const isActive = index === activeIndex;
                     const viralCoef = calculateViralCoefficient(reel.view_count, reel.taken_at);
+                    const dateText = formatVideoDate(reel.taken_at);
                     
                     if (absOffset > 3) return null;
 
@@ -766,65 +811,64 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                         }}
                       >
                         <div className={cn(
-                          'w-[210px] rounded-[1.75rem] overflow-hidden shadow-2xl relative',
+                          'w-[200px] rounded-[1.5rem] overflow-hidden shadow-2xl relative',
                           isActive && 'ring-4 ring-orange-400/50'
                         )}>
-                          {/* Blurred background */}
-                          <div 
-                            className="absolute inset-0 bg-cover bg-center"
-                            style={{ 
-                              backgroundImage: `url(${thumbnailUrl})`,
-                              filter: 'blur(20px) brightness(0.85)',
-                              transform: 'scale(1.1)'
-                            }}
-                          />
-                          
-                          {/* Content */}
-                          <div className="relative z-10">
-                            {/* Image */}
-                            <div className="relative w-full p-2 pb-0" style={{ aspectRatio: '3/4' }}>
-                              <img
-                                src={thumbnailUrl}
-                                alt=""
-                                className="w-full h-full object-cover rounded-[1.25rem]"
-                                onError={(e) => {
-                                  e.currentTarget.src = 'https://via.placeholder.com/200x267?text=Video';
-                                }}
-                              />
-                              
-                            {/* Viral badge - always show */}
-                            <div className="absolute top-4 left-4 z-10">
+                          {/* Image with gradient overlay */}
+                          <div className="relative w-full" style={{ aspectRatio: '3/4' }}>
+                            <img
+                              src={thumbnailUrl}
+                              alt=""
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = 'https://via.placeholder.com/200x267?text=Video';
+                              }}
+                            />
+                            
+                            {/* Dark gradient overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                            
+                            {/* Viral badge */}
+                            <div className="absolute top-3 left-3 z-10">
                               <div className={cn(
                                 "px-2 py-0.5 rounded-full backdrop-blur-md flex items-center gap-1 shadow-lg",
                                 viralCoef > 10 ? "bg-emerald-500 text-white" : 
                                 viralCoef > 5 ? "bg-amber-500 text-white" :
                                 viralCoef > 0 ? "bg-white/90 text-slate-700" :
-                                "bg-slate-200/90 text-slate-500"
+                                "bg-black/40 text-white/70"
                               )}>
                                 <Sparkles className="w-2.5 h-2.5" />
                                 <span className="text-[10px] font-bold">{viralCoef > 0 ? viralCoef : '—'}</span>
                               </div>
                             </div>
-                              
-                              {/* Play button on active */}
-                              {isActive && (
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                  <div className="w-12 h-12 rounded-full bg-white/95 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
-                                    <Play className="w-5 h-5 text-slate-800 ml-0.5" fill="currentColor" />
-                                  </div>
-                                </div>
-                              )}
-                            </div>
                             
-                            {/* Info section */}
-                            <div className="px-3 py-3">
+                            {/* Date badge */}
+                            {dateText && (
+                              <div className="absolute top-3 right-3 z-10">
+                                <div className="px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md text-white/90 text-[10px] font-medium">
+                                  {dateText}
+                                </div>
+                              </div>
+                            )}
+                              
+                            {/* Play button on active */}
+                            {isActive && (
+                              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <div className="w-12 h-12 rounded-full bg-white/95 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+                                  <Play className="w-5 h-5 text-slate-800 ml-0.5" fill="currentColor" />
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Bottom info */}
+                            <div className="absolute bottom-0 left-0 right-0 p-3">
                               {/* Username with verified */}
-                              <div className="flex items-center gap-1 mb-0.5">
-                                <p className="font-sans text-[12px] font-semibold text-slate-900 truncate italic">
+                              <div className="flex items-center gap-1 mb-1">
+                                <p className="text-[12px] font-semibold text-white truncate drop-shadow-lg">
                                   @{reel.owner?.username || 'instagram'}
                                 </p>
                                 {viralCoef > 5 && (
-                                  <div className="w-3.5 h-3.5 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
+                                  <div className="w-3.5 h-3.5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
                                     <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
                                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                     </svg>
@@ -833,7 +877,7 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                               </div>
                               
                               {/* Stats row */}
-                              <div className="flex items-center gap-2.5 text-slate-600">
+                              <div className="flex items-center gap-2.5 text-white/90">
                                 <div className="flex items-center gap-0.5">
                                   <Eye className="w-3 h-3" />
                                   <span className="text-[10px] font-medium">{formatNumber(reel.view_count)}</span>
@@ -1013,69 +1057,71 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                     const viralCoef = calculateViralCoefficient(reel.view_count, reel.taken_at);
                     const captionText = typeof reel.caption === 'string' ? reel.caption : 'Видео из Instagram';
                     const thumbnailUrl = reel.thumbnail_url || reel.display_url || 'https://via.placeholder.com/270x360';
+                    const cardId = `grid-${reel.shortcode || reel.id}-${idx}`;
+                    const dateText = formatVideoDate(reel.taken_at);
+                    const isMenuOpen = cardFolderSelect === cardId;
                     
                     return (
                       <div
-                        key={`grid-${reel.shortcode || reel.id}-${idx}`}
+                        key={cardId}
                         draggable
                         onDragStart={(e) => handleDragStart(e, reel)}
-                        onClick={() => setSelectedVideo(reel)}
-                        className="group relative rounded-[1.75rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                        onClick={() => !isMenuOpen && setSelectedVideo(reel)}
+                        className="group relative rounded-[1.5rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer hover:scale-[1.02] active:scale-[0.98] bg-white"
                       >
-                        {/* Background blurred image for the whole card */}
-                        <div 
-                          className="absolute inset-0 bg-cover bg-center"
-                          style={{ 
-                            backgroundImage: `url(${thumbnailUrl})`,
-                            filter: 'blur(20px) brightness(0.9)',
-                            transform: 'scale(1.1)'
-                          }}
-                        />
-                        
-                        {/* Card content */}
-                        <div className="relative z-10">
-                          {/* Image section */}
-                          <div className="relative w-full m-2 mb-0" style={{ aspectRatio: '3/4' }}>
-                            <img
-                              src={thumbnailUrl}
-                              alt=""
-                              className="w-[calc(100%-16px)] h-full object-cover rounded-[1.25rem]"
-                              onError={(e) => {
-                                e.currentTarget.src = 'https://via.placeholder.com/270x360?text=Video';
-                              }}
-                            />
-                            
-                            {/* Viral coefficient badge (top left) - always show */}
-                            <div className="absolute top-2 left-2 z-10">
-                              <div className={cn(
-                                "px-2 py-0.5 rounded-full backdrop-blur-md flex items-center gap-1 shadow-lg",
-                                viralCoef > 10 ? "bg-emerald-500 text-white" : 
-                                viralCoef > 5 ? "bg-amber-500 text-white" :
-                                viralCoef > 0 ? "bg-white/90 text-slate-700" :
-                                "bg-slate-200/90 text-slate-500"
-                              )}>
-                                <Sparkles className="w-2.5 h-2.5" />
-                                <span className="text-[10px] font-bold">{viralCoef > 0 ? viralCoef : '—'}</span>
-                              </div>
-                            </div>
-                            
-                            {/* Play button on hover */}
-                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                              <div className="w-12 h-12 rounded-full bg-white/95 flex items-center justify-center shadow-2xl">
-                                <Play className="w-5 h-5 text-slate-800 ml-0.5" fill="currentColor" />
-                              </div>
+                        {/* Image section */}
+                        <div className="relative w-full" style={{ aspectRatio: '3/4' }}>
+                          <img
+                            src={thumbnailUrl}
+                            alt=""
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = 'https://via.placeholder.com/270x360?text=Video';
+                            }}
+                          />
+                          
+                          {/* Dark gradient overlay for text readability */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                          
+                          {/* Viral coefficient badge (top left) */}
+                          <div className="absolute top-3 left-3 z-10">
+                            <div className={cn(
+                              "px-2.5 py-1 rounded-full backdrop-blur-md flex items-center gap-1.5 shadow-lg",
+                              viralCoef > 10 ? "bg-emerald-500 text-white" : 
+                              viralCoef > 5 ? "bg-amber-500 text-white" :
+                              viralCoef > 0 ? "bg-white/90 text-slate-700" :
+                              "bg-black/40 text-white/70"
+                            )}>
+                              <Sparkles className="w-3 h-3" />
+                              <span className="text-xs font-bold">{viralCoef > 0 ? viralCoef : '—'}</span>
                             </div>
                           </div>
                           
-                          {/* Info section with blurred background */}
-                          <div className="p-4 pt-3">
+                          {/* Date badge (top right) */}
+                          {dateText && (
+                            <div className="absolute top-3 right-3 z-10">
+                              <div className="px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-md text-white/90 text-xs font-medium">
+                                {dateText}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Play button on hover */}
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                            <div className="w-14 h-14 rounded-full bg-white/95 flex items-center justify-center shadow-2xl">
+                              <Play className="w-6 h-6 text-slate-800 ml-1" fill="currentColor" />
+                            </div>
+                          </div>
+                          
+                          {/* Bottom info overlay */}
+                          <div className="absolute bottom-0 left-0 right-0 p-4">
                             {/* Username with verified badge */}
                             <div className="flex items-center gap-1.5 mb-1">
-                              <h3 className="font-sans font-semibold text-slate-900 text-[15px] truncate italic">
+                              <h3 className="font-semibold text-white text-sm truncate drop-shadow-lg">
                                 @{reel.owner?.username || 'instagram'}
                               </h3>
                               {viralCoef > 5 && (
-                                <div className="w-4 h-4 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0">
+                                <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
                                   <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                   </svg>
@@ -1084,13 +1130,13 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                             </div>
                             
                             {/* Description */}
-                            <p className="font-sans text-slate-700 text-xs leading-relaxed line-clamp-2 mb-3">
-                              {captionText.slice(0, 55)}{captionText.length > 55 ? '...' : ''}
+                            <p className="text-white/80 text-xs leading-relaxed line-clamp-2 mb-3 drop-shadow">
+                              {captionText.slice(0, 60)}{captionText.length > 60 ? '...' : ''}
                             </p>
                             
-                            {/* Stats and follow button row */}
+                            {/* Stats and add button row */}
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3 text-slate-600">
+                              <div className="flex items-center gap-3 text-white/90">
                                 <div className="flex items-center gap-1">
                                   <Eye className="w-3.5 h-3.5" />
                                   <span className="text-xs font-medium">{formatNumber(reel.view_count)}</span>
@@ -1101,15 +1147,68 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                                 </div>
                               </div>
                               
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleAddToCanvas(reel);
-                                }}
-                                className="px-3 py-1.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-medium transition-all flex items-center gap-1 active:scale-95"
-                              >
-                                Follow +
-                              </button>
+                              {/* Add button with folder menu */}
+                              <div className="relative">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setCardFolderSelect(isMenuOpen ? null : cardId);
+                                  }}
+                                  className={cn(
+                                    "w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-lg",
+                                    isMenuOpen 
+                                      ? "bg-orange-500 text-white rotate-45" 
+                                      : "bg-white text-slate-800 hover:bg-orange-500 hover:text-white"
+                                  )}
+                                >
+                                  <Plus className="w-5 h-5" />
+                                </button>
+                                
+                                {/* Folder selection menu */}
+                                {isMenuOpen && (
+                                  <div 
+                                    className="absolute bottom-12 right-0 bg-white rounded-2xl shadow-2xl p-2 min-w-[160px] z-50 animate-in fade-in slide-in-from-bottom-2 duration-200"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <button
+                                      onClick={() => {
+                                        handleAddToCanvas(reel);
+                                        setCardFolderSelect(null);
+                                      }}
+                                      className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-orange-50 transition-colors text-left"
+                                    >
+                                      <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+                                        <Plus className="w-4 h-4 text-orange-600" />
+                                      </div>
+                                      <span className="text-sm font-medium text-slate-700">Входящие</span>
+                                    </button>
+                                    
+                                    <div className="h-px bg-slate-100 my-1" />
+                                    
+                                    {folderConfigs.map((folder) => {
+                                      const FolderIcon = folder.icon;
+                                      return (
+                                        <button
+                                          key={folder.id}
+                                          onClick={() => {
+                                            handleAddToFolder(reel, folder.id);
+                                            setCardFolderSelect(null);
+                                          }}
+                                          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-colors text-left"
+                                        >
+                                          <div 
+                                            className="w-8 h-8 rounded-lg flex items-center justify-center"
+                                            style={{ backgroundColor: `${folder.color}20` }}
+                                          >
+                                            <FolderIcon className="w-4 h-4" style={{ color: folder.color }} />
+                                          </div>
+                                          <span className="text-sm font-medium text-slate-700">{folder.title}</span>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
