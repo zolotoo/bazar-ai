@@ -124,6 +124,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
   const [activeTab, setActiveTab] = useState<SearchTab>(initialTab);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkLoading, setLinkLoading] = useState(false);
+  const [linkPreview, setLinkPreview] = useState<InstagramSearchResult | null>(null);
   const [showFolderSelect, setShowFolderSelect] = useState(false);
   const [cardFolderSelect, setCardFolderSelect] = useState<string | null>(null);
   const [radarUsername, setRadarUsername] = useState('');
@@ -497,31 +498,20 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
     }
   };
 
-  // Обработка ссылки на рилс
+  // Обработка ссылки на рилс - показать превью
   const handleParseLink = async () => {
     if (!linkUrl.trim()) return;
     
     setLinkLoading(true);
+    setLinkPreview(null);
     try {
       const reel = await getReelByUrl(linkUrl);
       
       if (reel) {
-        // Добавляем в inbox
-        const captionText = typeof reel.caption === 'string' ? reel.caption.slice(0, 200) : 'Видео из Instagram';
-        
-        await addVideoToInbox({
-          title: captionText,
-          previewUrl: reel.thumbnail_url || reel.display_url || '',
-          url: reel.url,
-          viewCount: reel.view_count,
-          likeCount: reel.like_count,
-          commentCount: reel.comment_count,
-          ownerUsername: reel.owner?.username,
-        });
-        
-        setLinkUrl('');
-        toast.success('Рилс добавлен в "Идеи"', {
-          description: `@${reel.owner?.username || 'instagram'}`,
+        // Показываем превью карточки
+        setLinkPreview(reel);
+        toast.success('Видео найдено!', {
+          description: 'Нажмите "Добавить в Идеи" для сохранения',
         });
       } else {
         toast.error('Не удалось получить данные рилса');
@@ -531,6 +521,34 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
       toast.error('Ошибка при добавлении ссылки');
     } finally {
       setLinkLoading(false);
+    }
+  };
+
+  // Добавление видео из превью в "Идеи"
+  const handleAddLinkPreviewToIdeas = async () => {
+    if (!linkPreview) return;
+    
+    try {
+      const captionText = typeof linkPreview.caption === 'string' ? linkPreview.caption.slice(0, 200) : 'Видео из Instagram';
+      
+      await addVideoToInbox({
+        title: captionText,
+        previewUrl: linkPreview.thumbnail_url || linkPreview.display_url || '',
+        url: linkPreview.url,
+        viewCount: linkPreview.view_count,
+        likeCount: linkPreview.like_count,
+        commentCount: linkPreview.comment_count,
+        ownerUsername: linkPreview.owner?.username,
+      });
+      
+      setLinkUrl('');
+      setLinkPreview(null);
+      toast.success('Добавлено в папку "Идеи"', {
+        description: `@${linkPreview.owner?.username || 'instagram'} • ${formatNumber(linkPreview.view_count)} просмотров`,
+      });
+    } catch (err) {
+      console.error('Ошибка добавления:', err);
+      toast.error('Ошибка при добавлении в Идеи');
     }
   };
 
@@ -760,44 +778,136 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
 
             {/* Link Tab Content */}
             {activeTab === 'link' && (
-              <div className="glass rounded-2xl p-5 shadow-xl shadow-orange-500/10">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
-                    <Link className="w-5 h-5 text-white" />
+              <div className="space-y-4">
+                <div className="glass rounded-2xl p-5 shadow-xl shadow-orange-500/10">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
+                      <Link className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-800">Добавить по ссылке</h3>
+                      <p className="text-xs text-slate-500">Вставьте ссылку на рилс Instagram</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-800">Добавить по ссылке</h3>
-                    <p className="text-xs text-slate-500">Вставьте ссылку на рилс Instagram</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={linkUrl}
+                      onChange={(e) => setLinkUrl(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleParseLink()}
+                      placeholder="https://instagram.com/reel/ABC123..."
+                      className="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-white/80 outline-none focus:ring-2 focus:ring-orange-500/30 text-sm"
+                    />
+                    <button
+                      onClick={handleParseLink}
+                      disabled={!linkUrl.trim() || linkLoading}
+                      className={cn(
+                        "px-5 py-3 rounded-xl font-medium text-sm transition-all active:scale-95 flex items-center gap-2",
+                        "bg-gradient-to-r from-orange-500 to-amber-600 text-white",
+                        "hover:from-orange-400 hover:to-amber-500",
+                        "disabled:opacity-40 disabled:cursor-not-allowed",
+                        "shadow-lg shadow-orange-500/30"
+                      )}
+                    >
+                      {linkLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Search className="w-4 h-4" />
+                      )}
+                      Найти
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={linkUrl}
-                    onChange={(e) => setLinkUrl(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleParseLink()}
-                    placeholder="https://instagram.com/reel/ABC123..."
-                    className="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-white/80 outline-none focus:ring-2 focus:ring-orange-500/30 text-sm"
-                  />
-                  <button
-                    onClick={handleParseLink}
-                    disabled={!linkUrl.trim() || linkLoading}
-                    className={cn(
-                      "px-5 py-3 rounded-xl font-medium text-sm transition-all active:scale-95 flex items-center gap-2",
-                      "bg-gradient-to-r from-orange-500 to-amber-600 text-white",
-                      "hover:from-orange-400 hover:to-amber-500",
-                      "disabled:opacity-40 disabled:cursor-not-allowed",
-                      "shadow-lg shadow-orange-500/30"
-                    )}
-                  >
-                    {linkLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Plus className="w-4 h-4" />
-                    )}
-                    Добавить
-                  </button>
-                </div>
+
+                {/* Link Preview Card */}
+                {linkPreview && (
+                  <div className="glass rounded-2xl p-5 shadow-xl shadow-orange-500/10 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    <div className="flex gap-5">
+                      {/* Video Thumbnail */}
+                      <div className="relative w-48 flex-shrink-0">
+                        <div className="aspect-[9/16] rounded-xl overflow-hidden shadow-lg">
+                          <img
+                            src={linkPreview.thumbnail_url || linkPreview.display_url}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                          {/* Play overlay */}
+                          <a
+                            href={linkPreview.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 hover:opacity-100 transition-opacity"
+                          >
+                            <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shadow-xl">
+                              <Play className="w-5 h-5 text-slate-800 ml-0.5" fill="currentColor" />
+                            </div>
+                          </a>
+                        </div>
+                      </div>
+
+                      {/* Video Info */}
+                      <div className="flex-1 flex flex-col">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
+                            {(linkPreview.owner?.username || 'U')[0].toUpperCase()}
+                          </div>
+                          <span className="text-sm font-medium text-slate-800">@{linkPreview.owner?.username || 'instagram'}</span>
+                        </div>
+
+                        <p className="text-sm text-slate-600 line-clamp-3 mb-4">
+                          {typeof linkPreview.caption === 'string' ? linkPreview.caption.slice(0, 200) : 'Видео из Instagram'}
+                        </p>
+
+                        {/* Stats */}
+                        <div className="flex items-center gap-4 text-sm text-slate-500 mb-4">
+                          <div className="flex items-center gap-1.5">
+                            <Eye className="w-4 h-4" />
+                            <span>{formatNumber(linkPreview.view_count)}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Heart className="w-4 h-4" />
+                            <span>{formatNumber(linkPreview.like_count)}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <MessageCircle className="w-4 h-4" />
+                            <span>{formatNumber(linkPreview.comment_count)}</span>
+                          </div>
+                        </div>
+
+                        {/* Viral coefficient */}
+                        <div className="flex items-center gap-2 mb-4">
+                          <SparklesIcon className="w-4 h-4 text-amber-500" />
+                          <span className="text-sm text-slate-600">
+                            Виральность: <span className="font-semibold text-amber-600">
+                              {calculateViralCoefficient(linkPreview.view_count, linkPreview.taken_at).toFixed(1)}
+                            </span>
+                          </span>
+                        </div>
+
+                        <div className="mt-auto flex items-center gap-2">
+                          <button
+                            onClick={handleAddLinkPreviewToIdeas}
+                            className={cn(
+                              "flex-1 px-5 py-3 rounded-xl font-medium text-sm transition-all active:scale-95 flex items-center justify-center gap-2",
+                              "bg-gradient-to-r from-orange-500 to-amber-600 text-white",
+                              "hover:from-orange-400 hover:to-amber-500",
+                              "shadow-lg shadow-orange-500/30"
+                            )}
+                          >
+                            <Plus className="w-4 h-4" />
+                            Добавить в Идеи
+                          </button>
+                          <button
+                            onClick={() => setLinkPreview(null)}
+                            className="px-4 py-3 rounded-xl font-medium text-sm text-slate-600 hover:bg-slate-100 transition-colors"
+                          >
+                            Отмена
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
