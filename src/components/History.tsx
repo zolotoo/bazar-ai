@@ -47,6 +47,40 @@ function calculateViralCoefficient(views?: number, takenAt?: string | number | D
   return Math.round((views / (diffDays * 1000)) * 100) / 100;
 }
 
+// Форматирование даты видео
+function formatVideoDate(takenAt?: string | number | Date): string {
+  if (!takenAt) return '';
+  
+  let videoDate: Date;
+  
+  if (takenAt instanceof Date) {
+    videoDate = takenAt;
+  } else if (typeof takenAt === 'string') {
+    if (takenAt.includes('T') || takenAt.includes('-')) {
+      videoDate = new Date(takenAt);
+    } else {
+      videoDate = new Date(Number(takenAt) * 1000);
+    }
+  } else if (typeof takenAt === 'number') {
+    videoDate = takenAt > 1e12 ? new Date(takenAt) : new Date(takenAt * 1000);
+  } else {
+    return '';
+  }
+  
+  if (isNaN(videoDate.getTime())) return '';
+  
+  const now = new Date();
+  const diffTime = now.getTime() - videoDate.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) return 'Сегодня';
+  if (diffDays === 1) return 'Вчера';
+  if (diffDays < 7) return `${diffDays} дн.`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} нед.`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)} мес.`;
+  return `${Math.floor(diffDays / 365)} г.`;
+}
+
 function formatDate(date: Date): string {
   const now = new Date();
   const diff = now.getTime() - date.getTime();
@@ -141,84 +175,79 @@ export function History() {
                   const captionText = typeof reel.caption === 'string' ? reel.caption : 'Видео из Instagram';
                   const thumbnailUrl = reel.thumbnail_url || reel.display_url || 'https://via.placeholder.com/270x360';
                   const viralCoef = calculateViralCoefficient(reel.view_count, reel.taken_at);
+                  const dateText = formatVideoDate(reel.taken_at);
                   
                   return (
                     <div
                       key={`history-${reel.shortcode || reel.id}-${idx}`}
-                      className="group relative rounded-[1.75rem] overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                      className="group relative rounded-[1.5rem] overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] bg-white"
                     >
-                      {/* Blurred background */}
-                      <div 
-                        className="absolute inset-0 bg-cover bg-center"
-                        style={{ 
-                          backgroundImage: `url(${thumbnailUrl})`,
-                          filter: 'blur(20px) brightness(0.9)',
-                          transform: 'scale(1.1)'
-                        }}
-                      />
-                      
-                      {/* Content */}
-                      <div className="relative z-10">
-                        {/* Image */}
-                        <div className="relative w-full m-2 mb-0" style={{ aspectRatio: '3/4' }}>
-                          <img
-                            src={thumbnailUrl}
-                            alt=""
-                            className="w-[calc(100%-16px)] h-full object-cover rounded-[1.25rem]"
-                            onError={(e) => {
-                              e.currentTarget.src = 'https://via.placeholder.com/270x360?text=Video';
-                            }}
-                          />
-                          
-                          {/* Viral coefficient badge */}
-                          <div className="absolute top-2 left-2 z-10">
-                            <div className={cn(
-                              "px-2 py-0.5 rounded-full backdrop-blur-md flex items-center gap-1 shadow-lg",
-                              viralCoef > 10 ? "bg-emerald-500 text-white" : 
-                              viralCoef > 5 ? "bg-amber-500 text-white" :
-                              viralCoef > 0 ? "bg-white/90 text-slate-700" :
-                              "bg-slate-200/90 text-slate-500"
-                            )}>
-                              <Sparkles className="w-2.5 h-2.5" />
-                              <span className="text-[10px] font-bold">{viralCoef > 0 ? viralCoef : '—'}</span>
-                            </div>
-                          </div>
-                          
-                          {/* Hover overlay */}
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleAddToInbox(reel)}
-                                className="p-2.5 rounded-full bg-white/95 text-slate-800 shadow-lg active:scale-95"
-                              >
-                                <Plus className="w-4 h-4" />
-                              </button>
-                              <a
-                                href={reel.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="p-2.5 rounded-full bg-white/95 text-slate-800 shadow-lg active:scale-95"
-                              >
-                                <ExternalLink className="w-4 h-4" />
-                              </a>
-                            </div>
+                      {/* Image section */}
+                      <div className="relative w-full" style={{ aspectRatio: '3/4' }}>
+                        <img
+                          src={thumbnailUrl}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = 'https://via.placeholder.com/270x360?text=Video';
+                          }}
+                        />
+                        
+                        {/* Dark gradient overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                        
+                        {/* Viral coefficient badge (top left) */}
+                        <div className="absolute top-3 left-3 z-10">
+                          <div className={cn(
+                            "px-2.5 py-1 rounded-full backdrop-blur-md flex items-center gap-1.5 shadow-lg",
+                            viralCoef > 10 ? "bg-emerald-500 text-white" : 
+                            viralCoef > 5 ? "bg-amber-500 text-white" :
+                            viralCoef > 0 ? "bg-white/90 text-slate-700" :
+                            "bg-black/40 text-white/70"
+                          )}>
+                            <Sparkles className="w-3 h-3" />
+                            <span className="text-xs font-bold">{viralCoef > 0 ? viralCoef : '—'}</span>
                           </div>
                         </div>
                         
-                        {/* Info section */}
-                        <div className="p-4 pt-3">
+                        {/* Date badge (top right) */}
+                        <div className="absolute top-3 right-3 z-10">
+                          <div className="px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-sm font-semibold shadow-lg">
+                            {dateText || '—'}
+                          </div>
+                        </div>
+                        
+                        {/* Hover overlay with actions */}
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                          <div className="w-14 h-14 rounded-full bg-white/95 flex items-center justify-center shadow-2xl">
+                            <Plus className="w-6 h-6 text-slate-800" />
+                          </div>
+                        </div>
+                        
+                        {/* Bottom info overlay */}
+                        <div className="absolute bottom-0 left-0 right-0 p-4">
+                          {/* Username */}
                           <div className="flex items-center gap-1.5 mb-1">
-                            <h3 className="font-sans font-semibold text-slate-900 text-[15px] truncate italic">
+                            <h3 className="font-semibold text-white text-sm truncate drop-shadow-lg">
                               @{reel.owner?.username || 'instagram'}
                             </h3>
+                            {viralCoef > 5 && (
+                              <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                                <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                            )}
                           </div>
                           
-                          <p className="font-sans text-slate-700 text-xs leading-relaxed line-clamp-2 mb-3">
-                            {captionText.slice(0, 50)}{captionText.length > 50 ? '...' : ''}
+                          {/* Description */}
+                          <p className="text-white/80 text-xs leading-relaxed line-clamp-2 mb-3 drop-shadow">
+                            {captionText.slice(0, 60)}{captionText.length > 60 ? '...' : ''}
                           </p>
                           
+                          {/* Stats and add button */}
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3 text-slate-600">
+                            <div className="flex items-center gap-3 text-white/90">
                               <div className="flex items-center gap-1">
                                 <Eye className="w-3.5 h-3.5" />
                                 <span className="text-xs font-medium">{formatNumber(reel.view_count)}</span>
@@ -230,10 +259,13 @@ export function History() {
                             </div>
                             
                             <button
-                              onClick={() => handleAddToInbox(reel)}
-                              className="px-3 py-1.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-medium transition-all active:scale-95"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddToInbox(reel);
+                              }}
+                              className="w-9 h-9 rounded-full bg-white text-slate-800 hover:bg-orange-500 hover:text-white flex items-center justify-center transition-all active:scale-95 shadow-lg"
                             >
-                              Follow +
+                              <Plus className="w-5 h-5" />
                             </button>
                           </div>
                         </div>
@@ -408,78 +440,65 @@ export function History() {
                     const videoData = video as any;
                     const thumbnailUrl = video.previewUrl || 'https://via.placeholder.com/270x360';
                     const viralCoef = calculateViralCoefficient(videoData.view_count, videoData.taken_at || videoData.receivedAt?.toISOString());
+                    const dateText = formatVideoDate(videoData.taken_at || video.receivedAt);
                     
                     return (
                       <div
                         key={`saved-${video.id}-${idx}`}
-                        className="group relative rounded-[1.75rem] overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                        className="group relative rounded-[1.5rem] overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] bg-white"
                       >
-                        {/* Blurred background */}
-                        <div 
-                          className="absolute inset-0 bg-cover bg-center"
-                          style={{ 
-                            backgroundImage: `url(${thumbnailUrl})`,
-                            filter: 'blur(20px) brightness(0.9)',
-                            transform: 'scale(1.1)'
-                          }}
-                        />
-                        
-                        {/* Content */}
-                        <div className="relative z-10">
-                          {/* Image */}
-                          <div className="relative w-full m-2 mb-0" style={{ aspectRatio: '3/4' }}>
-                            <img
-                              src={thumbnailUrl}
-                              alt=""
-                              className="w-[calc(100%-16px)] h-full object-cover rounded-[1.25rem]"
-                              onError={(e) => {
-                                e.currentTarget.src = 'https://via.placeholder.com/270x360?text=Video';
-                              }}
-                            />
-                            
-                            {/* Viral coefficient badge */}
-                            <div className="absolute top-2 left-2 z-10">
-                              <div className={cn(
-                                "px-2 py-0.5 rounded-full backdrop-blur-md flex items-center gap-1 shadow-lg",
-                                viralCoef > 10 ? "bg-emerald-500 text-white" : 
-                                viralCoef > 5 ? "bg-amber-500 text-white" :
-                                viralCoef > 0 ? "bg-white/90 text-slate-700" :
-                                "bg-slate-200/90 text-slate-500"
-                              )}>
-                                <Sparkles className="w-2.5 h-2.5" />
-                                <span className="text-[10px] font-bold">{viralCoef > 0 ? viralCoef : '—'}</span>
-                              </div>
-                            </div>
-                            
-                            {/* Hover overlay */}
-                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => removeVideo(video.id)}
-                                  className="p-2.5 rounded-full bg-red-500 text-white shadow-lg active:scale-95"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                                <a
-                                  href={video.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="p-2.5 rounded-full bg-white/95 text-slate-800 shadow-lg active:scale-95"
-                                >
-                                  <ExternalLink className="w-4 h-4" />
-                                </a>
-                              </div>
+                        {/* Image section */}
+                        <div className="relative w-full" style={{ aspectRatio: '3/4' }}>
+                          <img
+                            src={thumbnailUrl}
+                            alt=""
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = 'https://via.placeholder.com/270x360?text=Video';
+                            }}
+                          />
+                          
+                          {/* Dark gradient overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                          
+                          {/* Viral coefficient badge (top left) */}
+                          <div className="absolute top-3 left-3 z-10">
+                            <div className={cn(
+                              "px-2.5 py-1 rounded-full backdrop-blur-md flex items-center gap-1.5 shadow-lg",
+                              viralCoef > 10 ? "bg-emerald-500 text-white" : 
+                              viralCoef > 5 ? "bg-amber-500 text-white" :
+                              viralCoef > 0 ? "bg-white/90 text-slate-700" :
+                              "bg-black/40 text-white/70"
+                            )}>
+                              <Sparkles className="w-3 h-3" />
+                              <span className="text-xs font-bold">{viralCoef > 0 ? viralCoef : '—'}</span>
                             </div>
                           </div>
                           
-                          {/* Info section */}
-                          <div className="p-4 pt-3">
-                            <h3 className="font-sans font-semibold text-slate-900 text-sm leading-tight line-clamp-2 mb-2 italic">
-                              {video.title?.slice(0, 45)}...
-                            </h3>
+                          {/* Date badge (top right) */}
+                          <div className="absolute top-3 right-3 z-10">
+                            <div className="px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-sm font-semibold shadow-lg">
+                              {dateText || '—'}
+                            </div>
+                          </div>
+                          
+                          {/* Bottom info overlay */}
+                          <div className="absolute bottom-0 left-0 right-0 p-4">
+                            {/* Username */}
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <h3 className="font-semibold text-white text-sm truncate drop-shadow-lg">
+                                @{videoData.owner_username || 'instagram'}
+                              </h3>
+                            </div>
                             
+                            {/* Description */}
+                            <p className="text-white/80 text-xs leading-relaxed line-clamp-2 mb-3 drop-shadow">
+                              {video.title?.slice(0, 60)}...
+                            </p>
+                            
+                            {/* Stats and buttons */}
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3 text-slate-600">
+                              <div className="flex items-center gap-3 text-white/90">
                                 <div className="flex items-center gap-1">
                                   <Eye className="w-3.5 h-3.5" />
                                   <span className="text-xs font-medium">{formatNumber(videoData.view_count)}</span>
@@ -488,6 +507,27 @@ export function History() {
                                   <Heart className="w-3.5 h-3.5" />
                                   <span className="text-xs font-medium">{formatNumber(videoData.like_count)}</span>
                                 </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-2">
+                                <a
+                                  href={video.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white hover:text-slate-800 flex items-center justify-center transition-all active:scale-95"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </a>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeVideo(video.id);
+                                  }}
+                                  className="w-8 h-8 rounded-full bg-red-500/80 backdrop-blur-sm text-white hover:bg-red-500 flex items-center justify-center transition-all active:scale-95"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
                               </div>
                             </div>
                           </div>
