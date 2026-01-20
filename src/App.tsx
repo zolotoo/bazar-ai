@@ -7,6 +7,7 @@ import { ProfilePage } from './components/ProfilePage';
 import { IncomingVideosDrawer } from './components/sidebar/IncomingVideosDrawer';
 import { SearchPanel } from './components/ui/SearchPanel';
 import { useAuth } from './hooks/useAuth';
+import { useInboxVideos } from './hooks/useInboxVideos';
 import { Menu, Video, Settings, Search, LayoutGrid, GitBranch, Clock, User, LogOut } from 'lucide-react';
 import { cn } from './utils/cn';
 
@@ -15,8 +16,11 @@ type ViewMode = 'workspace' | 'canvas' | 'history' | 'profile';
 function App() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const { user, isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>('workspace');
+  
+  // Загружаем сохранённые видео при старте
+  useInboxVideos();
 
   // Если не авторизован — показываем Landing Page
   if (!isAuthenticated) {

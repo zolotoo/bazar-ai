@@ -2,7 +2,6 @@ import { useAuth } from '../hooks/useAuth';
 import { useSearchHistory } from '../hooks/useSearchHistory';
 import { useFlowStore } from '../stores/flowStore';
 import { 
-  User, 
   LogOut, 
   Search, 
   Video, 
