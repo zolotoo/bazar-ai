@@ -108,7 +108,12 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
 
       if (data && data.length > 0) {
         // Преобразуем в формат InstagramSearchResult
-        const popular: InstagramSearchResult[] = data.map(video => ({
+        // Убираем дубликаты по shortcode
+        const uniqueData = data.filter((video, index, self) => 
+          index === self.findIndex(v => v.shortcode === video.shortcode || v.video_id === video.video_id)
+        );
+        
+        const popular: InstagramSearchResult[] = uniqueData.map(video => ({
           id: video.id,
           shortcode: video.shortcode || video.video_id,
           url: video.video_url || `https://instagram.com/reel/${video.shortcode}`,
@@ -117,6 +122,8 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
           view_count: video.view_count,
           like_count: video.like_count,
           comment_count: video.comment_count,
+          // Используем taken_at если есть, иначе конвертируем added_at в timestamp
+          taken_at: video.taken_at?.toString() || (new Date(video.added_at).getTime() / 1000).toString(),
           owner: {
             username: video.owner_username,
           },
@@ -552,7 +559,7 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
           {viewMode === 'trending' && reels.length > 0 && (
             <div className="h-full flex flex-col items-center justify-center">
               {/* 3D Carousel */}
-              <div className="relative w-full flex items-center justify-center" style={{ height: '450px' }}>
+              <div className="relative w-full flex items-center justify-center" style={{ height: '480px' }}>
                 <button
                   onClick={() => setActiveIndex(prev => (prev > 0 ? prev - 1 : reels.length - 1))}
                   className="absolute left-8 z-20 p-3 rounded-full bg-white/70 hover:bg-white text-slate-500 hover:text-slate-700 transition-all shadow-lg"
@@ -575,7 +582,7 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                     
                     if (absOffset > 3) return null;
 
-                    const translateX = offset * 180;
+                    const translateX = offset * 190;
                     const translateZ = isActive ? 80 : -absOffset * 80;
                     const rotateY = offset * -12;
                     const scale = isActive ? 1 : Math.max(0.75, 1 - absOffset * 0.12);
@@ -583,12 +590,12 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
 
                     return (
                       <div
-                        key={reel.id}
+                        key={`${reel.id}-${index}`}
                         onClick={() => isActive ? setSelectedVideo(reel) : setActiveIndex(index)}
                         draggable={isActive}
                         onDragStart={(e) => isActive && handleDragStart(e, reel)}
                         className={cn(
-                          'absolute transition-all duration-500 ease-out cursor-pointer',
+                          'absolute transition-all duration-500 ease-out cursor-pointer group',
                           isActive && 'cursor-grab active:cursor-grabbing z-10'
                         )}
                         style={{
@@ -598,8 +605,8 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                         }}
                       >
                         <div className={cn(
-                          'w-[200px] rounded-3xl overflow-hidden shadow-2xl',
-                          isActive && 'ring-4 ring-white/80'
+                          'w-[210px] rounded-3xl overflow-hidden shadow-2xl',
+                          isActive && 'ring-4 ring-orange-400/50'
                         )}>
                           <div className="relative w-full" style={{ aspectRatio: '9/16' }}>
                             <img
@@ -611,44 +618,57 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                               }}
                             />
                             
-                            {/* Viral coefficient badge */}
-                            <div className="absolute top-2 left-2">
+                            {/* Top gradient overlay with darkening */}
+                            <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-transparent" />
+                            
+                            {/* Viral coefficient badge - top left */}
+                            <div className="absolute top-3 left-3 z-10">
                               <div className={cn(
-                                "px-2 py-1 rounded-full backdrop-blur-sm flex items-center gap-1 shadow-md",
-                                viralCoef > 10 ? "bg-emerald-500/90 text-white" : 
-                                viralCoef > 0 ? "bg-white/90 text-slate-700" :
-                                "bg-slate-500/80 text-white"
+                                "px-2.5 py-1.5 rounded-xl backdrop-blur-md flex items-center gap-1.5 shadow-lg border",
+                                viralCoef > 10 ? "bg-emerald-500/80 text-white border-emerald-400/50" : 
+                                viralCoef > 5 ? "bg-amber-500/80 text-white border-amber-400/50" :
+                                viralCoef > 0 ? "bg-white/80 text-slate-700 border-white/50" :
+                                "bg-black/40 text-white/90 border-white/20"
                               )}>
-                                <Sparkles className="w-2.5 h-2.5" />
-                                <span className="text-[10px] font-semibold font-sans">{viralCoef || '—'}</span>
+                                <Sparkles className="w-3 h-3" />
+                                <span className="text-xs font-bold font-sans">{viralCoef || '—'}</span>
                               </div>
                             </div>
                             
                             {/* Play button on active */}
                             {isActive && (
                               <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-xl opacity-80 group-hover:opacity-100">
-                                  <Play className="w-5 h-5 text-slate-800 ml-0.5" fill="currentColor" />
+                                <div className="w-14 h-14 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+                                  <Play className="w-6 h-6 text-orange-500 ml-1" fill="currentColor" />
                                 </div>
                               </div>
                             )}
                             
-                            {/* Bottom glass panel */}
+                            {/* Bottom panel with gradient overlay */}
                             <div className="absolute bottom-0 left-0 right-0">
-                              <div className="h-16 bg-gradient-to-t from-white/95 via-white/50 to-transparent" />
-                              <div className="bg-white/80 backdrop-blur-xl px-2.5 py-2 -mt-8">
-                                <p className="font-sans text-[11px] text-slate-500 mb-1.5 truncate">
+                              {/* Gradient from image to panel */}
+                              <div className="h-32 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                              
+                              {/* Info overlay on dark gradient */}
+                              <div className="absolute bottom-0 left-0 right-0 px-3 pb-3">
+                                {/* Username */}
+                                <p className="font-sans text-[12px] text-white/90 font-medium mb-2 truncate">
                                   @{reel.owner?.username || 'instagram'}
                                 </p>
-                                <div className="flex items-center gap-1.5">
-                                  <div className="flex-1 bg-slate-100 rounded px-1.5 py-1 text-center">
-                                    <span className="font-sans text-[9px] font-semibold text-slate-700">{formatNumber(reel.view_count)}</span>
+                                
+                                {/* Stats with colored icons */}
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 bg-white/20 backdrop-blur-sm rounded-lg px-2 py-1.5 flex items-center justify-center gap-1">
+                                    <Eye className="w-3 h-3 text-blue-400" />
+                                    <span className="font-sans text-[10px] font-bold text-white">{formatNumber(reel.view_count)}</span>
                                   </div>
-                                  <div className="flex-1 bg-slate-100 rounded px-1.5 py-1 text-center">
-                                    <span className="font-sans text-[9px] font-semibold text-slate-700">{formatNumber(reel.like_count)}</span>
+                                  <div className="flex-1 bg-white/20 backdrop-blur-sm rounded-lg px-2 py-1.5 flex items-center justify-center gap-1">
+                                    <Heart className="w-3 h-3 text-rose-400" />
+                                    <span className="font-sans text-[10px] font-bold text-white">{formatNumber(reel.like_count)}</span>
                                   </div>
-                                  <div className="flex-1 bg-slate-100 rounded px-1.5 py-1 text-center">
-                                    <span className="font-sans text-[9px] font-semibold text-slate-700">{formatNumber(reel.comment_count)}</span>
+                                  <div className="flex-1 bg-white/20 backdrop-blur-sm rounded-lg px-2 py-1.5 flex items-center justify-center gap-1">
+                                    <MessageCircle className="w-3 h-3 text-emerald-400" />
+                                    <span className="font-sans text-[10px] font-bold text-white">{formatNumber(reel.comment_count)}</span>
                                   </div>
                                 </div>
                               </div>
@@ -663,7 +683,7 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
 
               {/* Active reel info - simplified */}
               {reels[activeIndex] && (
-                <div className="w-full max-w-md mt-4">
+                <div className="w-full max-w-md mt-2">
                   <div className="bg-white/80 backdrop-blur-xl rounded-2xl px-5 py-3 shadow-lg border border-white/50">
                     <div className="flex items-center gap-4">
                       <div className="flex-1 min-w-0">
@@ -679,7 +699,7 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleAddToCanvas(reels[activeIndex])}
-                          className="p-2.5 rounded-xl bg-orange-100 hover:bg-orange-200 text-orange-600 transition-all"
+                          className="p-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white transition-all shadow-lg shadow-orange-500/30"
                         >
                           <Plus className="w-4 h-4" />
                         </button>
@@ -698,22 +718,22 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
               )}
 
               {/* Dots */}
-              <div className="flex items-center justify-center gap-1 mt-4">
-                {reels.slice(0, Math.min(reels.length, 12)).map((_, index) => (
+              <div className="flex items-center justify-center gap-1.5 mt-3">
+                {reels.slice(0, Math.min(reels.length, 15)).map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setActiveIndex(index)}
                     className={cn(
-                      'h-1.5 rounded-full transition-all',
+                      'h-2 rounded-full transition-all',
                       index === activeIndex 
-                        ? 'w-6 bg-slate-600' 
-                        : 'w-1.5 bg-slate-300 hover:bg-slate-400'
+                        ? 'w-8 bg-gradient-to-r from-orange-500 to-amber-500' 
+                        : 'w-2 bg-slate-300 hover:bg-slate-400'
                     )}
                   />
                 ))}
               </div>
 
-              <p className="font-sans text-slate-400 text-xs mt-4">
+              <p className="font-sans text-slate-400 text-xs mt-3">
                 Популярные видео • Нажмите для просмотра • ← →
               </p>
             </div>
@@ -818,14 +838,14 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {sortedReels.map((reel) => {
+                  {sortedReels.map((reel, idx) => {
                     const takenDate = reel.taken_at ? new Date(Number(reel.taken_at) * 1000) : null;
                     const dateStr = takenDate ? takenDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) : null;
                     const viralCoef = calculateViralCoefficient(reel.view_count, reel.taken_at);
                     
                     return (
                       <div
-                        key={reel.id}
+                        key={`${reel.id}-${idx}`}
                         draggable
                         onDragStart={(e) => handleDragStart(e, reel)}
                         onClick={() => setSelectedVideo(reel)}
@@ -841,72 +861,75 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                             }}
                           />
                           
+                          {/* Top gradient overlay with darkening */}
+                          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-transparent" />
+                          
                           {/* Viral coefficient badge (top left) */}
-                          <div className="absolute top-3 left-3">
+                          <div className="absolute top-3 left-3 z-10">
                             <div className={cn(
-                              "px-2.5 py-1 rounded-full backdrop-blur-sm flex items-center gap-1.5 shadow-md",
-                              viralCoef > 10 ? "bg-emerald-500/90 text-white" : 
-                              viralCoef > 5 ? "bg-amber-500/90 text-white" :
-                              viralCoef > 0 ? "bg-white/90 text-slate-700" :
-                              "bg-slate-500/80 text-white"
+                              "px-2.5 py-1.5 rounded-xl backdrop-blur-md flex items-center gap-1.5 shadow-lg border",
+                              viralCoef > 10 ? "bg-emerald-500/80 text-white border-emerald-400/50" : 
+                              viralCoef > 5 ? "bg-amber-500/80 text-white border-amber-400/50" :
+                              viralCoef > 0 ? "bg-white/80 text-slate-700 border-white/50" :
+                              "bg-black/40 text-white/90 border-white/20"
                             )}>
                               <Sparkles className="w-3 h-3" />
-                              <span className="text-xs font-semibold font-sans">{viralCoef || '—'}</span>
+                              <span className="text-xs font-bold font-sans">{viralCoef || '—'}</span>
                             </div>
                           </div>
                           
                           {/* Play button on hover (center) */}
                           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="w-14 h-14 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-xl">
-                              <Play className="w-6 h-6 text-slate-800 ml-1" fill="currentColor" />
+                            <div className="w-14 h-14 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center shadow-2xl">
+                              <Play className="w-6 h-6 text-orange-500 ml-1" fill="currentColor" />
                             </div>
                           </div>
                           
                           {/* Add button on hover (top right) */}
-                          <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleAddToCanvas(reel);
                               }}
-                              className="p-2 rounded-full bg-white/90 hover:bg-white text-orange-500 transition-all shadow-lg"
+                              className="p-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white transition-all shadow-lg"
                             >
                               <Plus className="w-4 h-4" />
                             </button>
                           </div>
                           
-                          {/* Bottom glass panel - gradient transition */}
+                          {/* Bottom panel with dark gradient */}
                           <div className="absolute bottom-0 left-0 right-0">
-                            {/* Gradient overlay for smooth transition */}
-                            <div className="h-24 bg-gradient-to-t from-white/95 via-white/60 to-transparent" />
+                            {/* Gradient overlay */}
+                            <div className="h-36 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
                             
-                            {/* Glass info panel */}
-                            <div className="bg-white/80 backdrop-blur-xl px-3 py-3 -mt-12">
-                              {/* Title - Inter font, smaller */}
-                              <h3 className="font-sans font-medium text-slate-900 text-sm leading-tight line-clamp-1 mb-1">
+                            {/* Info on gradient */}
+                            <div className="absolute bottom-0 left-0 right-0 px-3 pb-3">
+                              {/* Title */}
+                              <h3 className="font-sans font-semibold text-white text-sm leading-tight line-clamp-1 mb-1">
                                 {typeof reel.caption === 'string' 
-                                  ? reel.caption.slice(0, 25) + (reel.caption.length > 25 ? '...' : '')
+                                  ? reel.caption.slice(0, 30) + (reel.caption.length > 30 ? '...' : '')
                                   : 'Видео'}
                               </h3>
                               
                               {/* Date and username */}
-                              <p className="font-sans text-slate-500 text-[11px] mb-2">
+                              <p className="font-sans text-white/70 text-[11px] mb-2.5">
                                 {dateStr && `${dateStr} • `}@{reel.owner?.username || 'instagram'}
                               </p>
                               
-                              {/* Stats row - separate indicators */}
+                              {/* Stats row with colored icons */}
                               <div className="flex items-center gap-2">
-                                <div className="flex-1 bg-slate-100 rounded-lg px-2 py-1.5 text-center">
-                                  <Eye className="w-3 h-3 text-slate-400 mx-auto mb-0.5" />
-                                  <span className="font-sans text-[10px] font-semibold text-slate-700 block">{formatNumber(reel.view_count)}</span>
+                                <div className="flex-1 bg-white/15 backdrop-blur-sm rounded-lg px-2 py-1.5 flex items-center justify-center gap-1.5">
+                                  <Eye className="w-3.5 h-3.5 text-blue-400" />
+                                  <span className="font-sans text-[11px] font-bold text-white">{formatNumber(reel.view_count)}</span>
                                 </div>
-                                <div className="flex-1 bg-slate-100 rounded-lg px-2 py-1.5 text-center">
-                                  <Heart className="w-3 h-3 text-slate-400 mx-auto mb-0.5" />
-                                  <span className="font-sans text-[10px] font-semibold text-slate-700 block">{formatNumber(reel.like_count)}</span>
+                                <div className="flex-1 bg-white/15 backdrop-blur-sm rounded-lg px-2 py-1.5 flex items-center justify-center gap-1.5">
+                                  <Heart className="w-3.5 h-3.5 text-rose-400" />
+                                  <span className="font-sans text-[11px] font-bold text-white">{formatNumber(reel.like_count)}</span>
                                 </div>
-                                <div className="flex-1 bg-slate-100 rounded-lg px-2 py-1.5 text-center">
-                                  <MessageCircle className="w-3 h-3 text-slate-400 mx-auto mb-0.5" />
-                                  <span className="font-sans text-[10px] font-semibold text-slate-700 block">{formatNumber(reel.comment_count)}</span>
+                                <div className="flex-1 bg-white/15 backdrop-blur-sm rounded-lg px-2 py-1.5 flex items-center justify-center gap-1.5">
+                                  <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
+                                  <span className="font-sans text-[11px] font-bold text-white">{formatNumber(reel.comment_count)}</span>
                                 </div>
                               </div>
                             </div>
