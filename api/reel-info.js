@@ -34,53 +34,52 @@ export default async function handler(req, res) {
 
   console.log('Fetching reel info for shortcode:', code);
 
-  // Пробуем Instagram Scraper Stable API
+  // Используем instagram-scraper2 API - он возвращает view_count!
   try {
-    const stableApiUrl = `https://instagram-scraper-stable-api.p.rapidapi.com/get_media_data_v2.php?media_code=${code}`;
-    console.log('Trying instagram-scraper-stable:', stableApiUrl);
+    const scraperUrl = `https://instagram-scraper2.p.rapidapi.com/media_info?short_code=${code}`;
+    console.log('Trying instagram-scraper2:', scraperUrl);
     
-    const stableResponse = await fetch(stableApiUrl, {
+    const response = await fetch(scraperUrl, {
       method: 'GET',
       headers: {
-        'x-rapidapi-host': 'instagram-scraper-stable-api.p.rapidapi.com',
+        'x-rapidapi-host': 'instagram-scraper2.p.rapidapi.com',
         'x-rapidapi-key': RAPIDAPI_KEY,
       },
     });
 
-    console.log('Stable API status:', stableResponse.status);
+    console.log('instagram-scraper2 status:', response.status);
     
-    if (stableResponse.ok) {
-      const data = await stableResponse.json();
-      console.log('Stable API response:', JSON.stringify(data).slice(0, 1000));
+    if (response.ok) {
+      const data = await response.json();
+      const media = data?.data?.shortcode_media;
       
-      if (data && !data.error) {
-        // Парсим ответ от stable API
+      if (media) {
+        console.log('instagram-scraper2 found media');
+        
         const result = {
           success: true,
           shortcode: code,
           url: url || `https://www.instagram.com/reel/${code}/`,
-          thumbnail_url: data.thumbnail_url || data.display_url || data.image_versions2?.candidates?.[0]?.url || '',
-          caption: typeof data.caption === 'string' ? data.caption : (data.caption?.text || ''),
-          view_count: data.play_count || data.video_view_count || data.view_count || 0,
-          like_count: data.like_count || data.likes_count || 0,
-          comment_count: data.comment_count || data.comments_count || 0,
-          taken_at: data.taken_at || data.taken_at_timestamp,
+          thumbnail_url: media.thumbnail_src || media.display_url || '',
+          caption: media.edge_media_to_caption?.edges?.[0]?.node?.text || '',
+          view_count: media.video_view_count || 0,
+          like_count: media.edge_media_preview_like?.count || 0,
+          comment_count: media.edge_media_to_comment?.count || 0,
+          taken_at: media.taken_at_timestamp,
           owner: {
-            username: data.user?.username || data.owner?.username || '',
-            full_name: data.user?.full_name || data.owner?.full_name || '',
+            username: media.owner?.username || '',
+            full_name: media.owner?.full_name || '',
           },
-          is_video: true,
-          api_used: 'instagram-scraper-stable',
+          is_video: media.__typename === 'GraphVideo',
+          api_used: 'instagram-scraper2',
         };
         
-        if (result.view_count || result.like_count || result.thumbnail_url) {
-          console.log('Extracted from stable API:', result);
-          return res.status(200).json(result);
-        }
+        console.log('Extracted from instagram-scraper2:', result);
+        return res.status(200).json(result);
       }
     }
   } catch (e) {
-    console.warn('Stable API error:', e.message);
+    console.warn('instagram-scraper2 error:', e.message);
   }
 
   // Fallback APIs
@@ -89,12 +88,6 @@ export default async function handler(req, res) {
       name: 'instagram-scraper-20251',
       host: 'instagram-scraper-20251.p.rapidapi.com',
       url: `https://instagram-scraper-20251.p.rapidapi.com/v1/media/${code}`,
-      method: 'GET',
-    },
-    {
-      name: 'instagram-looter2',
-      host: 'instagram-looter2.p.rapidapi.com',
-      url: `https://instagram-looter2.p.rapidapi.com/media/${code}`,
       method: 'GET',
     },
   ];

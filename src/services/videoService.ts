@@ -400,7 +400,7 @@ export async function getHashtagReels(hashtag: string): Promise<InstagramSearchR
 
 /**
  * Получает информацию о рилсе по URL или shortcode
- * Использует instagram120 API который возвращает meta данные
+ * Использует instagram-scraper2 API который возвращает view_count
  */
 export async function getReelByUrl(urlOrShortcode: string): Promise<InstagramSearchResult | null> {
   try {
@@ -415,7 +415,41 @@ export async function getReelByUrl(urlOrShortcode: string): Promise<InstagramSea
     
     console.log('Fetching reel info for URL:', url);
     
-    // Используем download-video API который возвращает meta данные
+    // Используем reel-info API который возвращает view_count
+    try {
+      const infoResponse = await fetch('/api/reel-info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, shortcode }),
+      });
+      
+      if (infoResponse.ok) {
+        const data = await infoResponse.json();
+        console.log('Reel info API response:', data);
+        
+        if (data.success) {
+          return {
+            id: shortcode,
+            shortcode: shortcode,
+            url: data.url || url,
+            thumbnail_url: data.thumbnail_url || '',
+            display_url: data.thumbnail_url || '',
+            caption: data.caption || 'Видео из Instagram',
+            view_count: data.view_count,
+            like_count: data.like_count,
+            comment_count: data.comment_count,
+            taken_at: data.taken_at ? String(data.taken_at) : undefined,
+            owner: data.owner,
+            is_video: true,
+            is_reel: true,
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('Reel info API failed:', e);
+    }
+    
+    // Fallback: используем download-video API для thumbnail
     const response = await fetch('/api/download-video', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -432,11 +466,7 @@ export async function getReelByUrl(urlOrShortcode: string): Promise<InstagramSea
     
     if (data.rawResponse && Array.isArray(data.rawResponse) && data.rawResponse.length > 0) {
       const item = data.rawResponse[0];
-      
-      // Извлекаем данные из meta
       const meta = item.meta || {};
-      
-      console.log('Meta data from API:', meta);
       
       return {
         id: shortcode,
@@ -445,27 +475,13 @@ export async function getReelByUrl(urlOrShortcode: string): Promise<InstagramSea
         thumbnail_url: item.pictureUrl || data.thumbnailUrl || '',
         display_url: item.pictureUrl || '',
         caption: meta.title || 'Видео из Instagram',
-        // instagram120 API не возвращает view_count, но возвращает лайки и комментарии
-        view_count: meta.viewCount || meta.videoViewCount || meta.play_count,
+        view_count: meta.viewCount || meta.videoViewCount,
         like_count: meta.likeCount,
         comment_count: meta.commentCount,
         taken_at: meta.takenAt ? String(meta.takenAt) : undefined,
         owner: {
           username: meta.username || '',
         },
-        is_video: true,
-        is_reel: true,
-      };
-    }
-    
-    // Если нет данных но есть videoUrl - создаём минимальный объект
-    if (data.videoUrl) {
-      return {
-        id: shortcode,
-        shortcode: shortcode,
-        url: url,
-        thumbnail_url: data.thumbnailUrl || '',
-        caption: 'Видео из Instagram',
         is_video: true,
         is_reel: true,
       };
