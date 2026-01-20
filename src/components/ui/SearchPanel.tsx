@@ -477,11 +477,13 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
     }
   };
 
-  const handleAddToCanvas = async (result: InstagramSearchResult) => {
+  const handleAddToCanvas = async (result: InstagramSearchResult, folderId: string = 'ideas') => {
     let captionText = typeof result.caption === 'string' ? result.caption : '';
     if (captionText.length > 200) {
       captionText = captionText.substring(0, 200) + '...';
     }
+    
+    const folderName = folderConfigs.find(f => f.id === folderId)?.title || 'Идеи';
     
     try {
       await addVideoToInbox({
@@ -492,9 +494,11 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
         likeCount: result.like_count,
         commentCount: result.comment_count,
         ownerUsername: result.owner?.username,
+        projectId: currentProjectId || undefined,
+        folderId: folderId,
       });
-      toast.success('Видео добавлено в "Идеи"', {
-        description: `@${result.owner?.username || 'instagram'}`,
+      toast.success(`Добавлено в "${folderName}"`, {
+        description: `Проект: ${currentProjectName} • @${result.owner?.username || 'instagram'}`,
       });
     } catch (err) {
       console.error('Ошибка сохранения видео:', err);
@@ -1347,10 +1351,11 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                       </div>
                       <div className="flex gap-2">
                         <button
-                          onClick={() => handleAddToCanvas(reels[activeIndex])}
-                          className="p-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white transition-all shadow-lg shadow-orange-500/30"
+                          onClick={() => handleAddToCanvas(reels[activeIndex], 'ideas')}
+                          className="px-3 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white transition-all shadow-lg shadow-orange-500/30 flex items-center gap-1.5 text-sm font-medium"
                         >
                           <Plus className="w-4 h-4" />
+                          В Идеи
                         </button>
                         <a
                           href={reels[activeIndex].url}
@@ -1734,13 +1739,13 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                   <div className="flex gap-3 mt-auto">
                     <button
                       onClick={() => {
-                        handleAddToCanvas(selectedVideo);
+                        handleAddToCanvas(selectedVideo, 'ideas');
                         setSelectedVideo(null);
                       }}
                       className="flex-1 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-medium flex items-center justify-center gap-2 hover:from-orange-400 hover:to-amber-400 transition-all shadow-lg shadow-orange-500/30 active:scale-95"
                     >
                       <Plus className="w-5 h-5" />
-                      Во входящие
+                      В Идеи
                     </button>
                     <button
                       onClick={() => setShowFolderSelect(!showFolderSelect)}

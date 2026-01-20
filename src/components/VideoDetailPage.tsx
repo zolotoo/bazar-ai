@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   ChevronLeft, Play, Eye, Heart, MessageCircle, Calendar, 
   Sparkles, FileText, Copy, ExternalLink, Loader2, Check,
-  Wand2
+  Wand2, Languages, RefreshCw
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { checkTranscriptionStatus } from '../services/transcriptionService';
@@ -44,13 +44,25 @@ function formatDate(dateStr?: string): string {
   return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+function calculateViralCoefficient(views?: number, takenAt?: string): number {
+  if (!views) return 0;
+  const daysOld = takenAt ? Math.max(1, (Date.now() - Number(takenAt) * 1000) / (1000 * 60 * 60 * 24)) : 30;
+  return Math.round((views / daysOld) / 100) / 10;
+}
+
 export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
-  const [activeTab, setActiveTab] = useState<'transcript' | 'script'>('transcript');
+  const [transcriptTab, setTranscriptTab] = useState<'original' | 'translation'>('original');
   const [transcript, setTranscript] = useState(video.transcript_text || '');
+  const [translation, setTranslation] = useState('');
   const [transcriptStatus, setTranscriptStatus] = useState(video.transcript_status || 'pending');
   const [script, setScript] = useState('');
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [copiedTranscript, setCopiedTranscript] = useState(false);
+  const [copiedScript, setCopiedScript] = useState(false);
+  const [showVideo, setShowVideo] = useState(false);
+
+  const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at);
 
   // Polling для статуса транскрибации
   useEffect(() => {
@@ -61,7 +73,6 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
         
         if (result.status === 'completed' && result.text) {
           setTranscript(result.text);
-          // Сохраняем в БД
           await supabase
             .from('saved_videos')
             .update({ transcript_text: result.text, transcript_status: 'completed' })
@@ -77,10 +88,34 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
   }, [video.transcript_id, video.id, transcriptStatus]);
 
   const handleCopyTranscript = () => {
-    navigator.clipboard.writeText(transcript);
-    setCopied(true);
-    toast.success('Транскрибация скопирована');
-    setTimeout(() => setCopied(false), 2000);
+    const textToCopy = transcriptTab === 'original' ? transcript : translation;
+    navigator.clipboard.writeText(textToCopy);
+    setCopiedTranscript(true);
+    toast.success('Скопировано');
+    setTimeout(() => setCopiedTranscript(false), 2000);
+  };
+
+  const handleCopyScript = () => {
+    navigator.clipboard.writeText(script);
+    setCopiedScript(true);
+    toast.success('Сценарий скопирован');
+    setTimeout(() => setCopiedScript(false), 2000);
+  };
+
+  const handleTranslate = async () => {
+    if (!transcript) {
+      toast.error('Сначала дождитесь транскрибации');
+      return;
+    }
+    
+    setIsTranslating(true);
+    // TODO: Интеграция с API перевода
+    setTimeout(() => {
+      setTranslation(`[Перевод на русский]\n\n${transcript.split(' ').slice(0, 20).join(' ')}...\n\n(Здесь будет полный перевод текста)`);
+      setIsTranslating(false);
+      setTranscriptTab('translation');
+      toast.success('Текст переведён');
+    }, 1500);
   };
 
   const handleGenerateScript = async () => {
@@ -92,267 +127,360 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
     setIsGeneratingScript(true);
     // TODO: Интеграция с AI для генерации сценария
     setTimeout(() => {
-      setScript(`# Сценарий на основе видео\n\n## Хук (0-3 сек)\n"${transcript.slice(0, 50)}..."\n\n## Основная часть\n[Ваш контент здесь]\n\n## Призыв к действию\n[CTA]`);
+      setScript(`# Сценарий на основе видео
+
+## Хук (0-3 сек)
+"${transcript.slice(0, 50)}..."
+
+## Основная часть
+[Ваш контент здесь]
+
+## Призыв к действию
+[CTA]`);
       setIsGeneratingScript(false);
-      setActiveTab('script');
       toast.success('Сценарий сгенерирован');
     }, 2000);
   };
 
   const thumbnailUrl = video.preview_url || 'https://via.placeholder.com/400x600';
+  
+  // Извлекаем video ID из URL для embed
+  const getInstagramEmbedUrl = (url?: string) => {
+    if (!url) return null;
+    const match = url.match(/reel\/([^\/\?]+)/);
+    if (match) {
+      return `https://www.instagram.com/reel/${match[1]}/embed`;
+    }
+    return null;
+  };
+
+  const embedUrl = getInstagramEmbedUrl(video.url);
 
   return (
     <div className="h-full overflow-hidden flex flex-col bg-[#f5f5f5]">
-      <div className="max-w-6xl mx-auto w-full p-6 flex flex-col h-full">
+      <div className="w-full h-full p-6 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="mb-6">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 text-slate-500 hover:text-slate-700 mb-4 transition-colors active:scale-95"
-          >
-            <ChevronLeft className="w-5 h-5" />
-            <span className="text-sm font-medium">Назад</span>
-          </button>
-          
-          <h1 className="text-2xl md:text-3xl font-serif italic text-neutral-900 tracking-tighter">
-            Работа с видео
-          </h1>
-          <p className="text-neutral-500 text-sm">
-            @{video.owner_username || 'instagram'}
-          </p>
+        <div className="mb-4 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={onBack}
+              className="flex items-center gap-2 text-slate-500 hover:text-slate-700 transition-colors active:scale-95"
+            >
+              <ChevronLeft className="w-5 h-5" />
+              <span className="text-sm font-medium">Назад</span>
+            </button>
+            
+            <div>
+              <h1 className="text-xl font-semibold text-neutral-900">
+                Работа с видео
+              </h1>
+              <p className="text-neutral-500 text-sm">
+                @{video.owner_username || 'instagram'}
+              </p>
+            </div>
+          </div>
+
+          {/* Status badge */}
+          <div>
+            {transcriptStatus === 'processing' || transcriptStatus === 'downloading' ? (
+              <div className="px-4 py-2 rounded-full bg-amber-100 text-amber-700 text-sm font-medium flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Обработка видео...
+              </div>
+            ) : transcriptStatus === 'completed' ? (
+              <div className="px-4 py-2 rounded-full bg-emerald-100 text-emerald-700 text-sm font-medium flex items-center gap-2">
+                <Check className="w-4 h-4" />
+                Транскрибация готова
+              </div>
+            ) : transcriptStatus === 'error' ? (
+              <div className="px-4 py-2 rounded-full bg-red-100 text-red-700 text-sm font-medium">
+                Ошибка обработки
+              </div>
+            ) : (
+              <div className="px-4 py-2 rounded-full bg-slate-100 text-slate-600 text-sm font-medium">
+                Ожидает обработки
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Main content */}
-        <div className="flex-1 flex gap-6 overflow-hidden">
+        {/* Main content - 3 columns */}
+        <div className="flex-1 flex gap-4 overflow-hidden min-h-0">
           {/* Left: Video preview */}
-          <div className="w-72 flex-shrink-0 flex flex-col gap-4">
+          <div className="w-64 flex-shrink-0 flex flex-col gap-3 overflow-y-auto custom-scrollbar-light">
             {/* Video card */}
-            <div className="relative rounded-2xl overflow-hidden shadow-xl group">
-              <img
-                src={thumbnailUrl}
-                alt=""
-                className="w-full aspect-[9/16] object-cover"
-              />
-              
-              {/* Play button overlay */}
-              <a
-                href={video.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <div className="w-16 h-16 rounded-full bg-white/95 flex items-center justify-center shadow-2xl">
-                  <Play className="w-7 h-7 text-slate-800 ml-1" fill="currentColor" />
+            <div className="relative rounded-2xl overflow-hidden shadow-xl bg-black">
+              {showVideo && embedUrl ? (
+                <div className="aspect-[9/16] w-full">
+                  <iframe
+                    src={embedUrl}
+                    className="w-full h-full"
+                    frameBorder="0"
+                    scrolling="no"
+                    allowTransparency
+                    allowFullScreen
+                  />
                 </div>
-              </a>
-              
-              {/* Status badge */}
-              <div className="absolute top-3 left-3">
-                {transcriptStatus === 'processing' || transcriptStatus === 'downloading' ? (
-                  <div className="px-3 py-1.5 rounded-full bg-amber-500 text-white text-xs font-semibold flex items-center gap-1.5">
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    Обработка
-                  </div>
-                ) : transcriptStatus === 'completed' ? (
-                  <div className="px-3 py-1.5 rounded-full bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5">
-                    <Check className="w-3 h-3" />
-                    Готово
-                  </div>
-                ) : transcriptStatus === 'error' ? (
-                  <div className="px-3 py-1.5 rounded-full bg-red-500 text-white text-xs font-semibold">
-                    Ошибка
-                  </div>
-                ) : (
-                  <div className="px-3 py-1.5 rounded-full bg-slate-500 text-white text-xs font-semibold">
-                    Ожидание
-                  </div>
-                )}
-              </div>
+              ) : (
+                <div className="relative group">
+                  <img
+                    src={thumbnailUrl}
+                    alt=""
+                    className="w-full aspect-[9/16] object-cover"
+                  />
+                  
+                  {/* Play button overlay */}
+                  <button
+                    onClick={() => setShowVideo(true)}
+                    className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <div className="w-14 h-14 rounded-full bg-white/95 flex items-center justify-center shadow-2xl">
+                      <Play className="w-6 h-6 text-slate-800 ml-1" fill="currentColor" />
+                    </div>
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* Stats */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">Статистика</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-slate-500">
-                    <Eye className="w-4 h-4" />
-                    <span className="text-sm">Просмотры</span>
-                  </div>
-                  <span className="text-sm font-semibold text-slate-800">{formatNumber(video.view_count)}</span>
+            {/* Quick stats */}
+            <div className="bg-white rounded-xl p-3 shadow-sm">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-center gap-2 text-slate-600">
+                  <Eye className="w-4 h-4 text-slate-400" />
+                  <span className="text-sm font-medium">{formatNumber(video.view_count)}</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-slate-500">
-                    <Heart className="w-4 h-4" />
-                    <span className="text-sm">Лайки</span>
-                  </div>
-                  <span className="text-sm font-semibold text-slate-800">{formatNumber(video.like_count)}</span>
+                <div className="flex items-center gap-2 text-slate-600">
+                  <Heart className="w-4 h-4 text-slate-400" />
+                  <span className="text-sm font-medium">{formatNumber(video.like_count)}</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-slate-500">
-                    <MessageCircle className="w-4 h-4" />
-                    <span className="text-sm">Комментарии</span>
-                  </div>
-                  <span className="text-sm font-semibold text-slate-800">{formatNumber(video.comment_count)}</span>
+                <div className="flex items-center gap-2 text-slate-600">
+                  <MessageCircle className="w-4 h-4 text-slate-400" />
+                  <span className="text-sm font-medium">{formatNumber(video.comment_count)}</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-slate-500">
-                    <Calendar className="w-4 h-4" />
-                    <span className="text-sm">Дата</span>
-                  </div>
-                  <span className="text-sm font-semibold text-slate-800">{formatDate(video.taken_at)}</span>
+                <div className="flex items-center gap-2 text-slate-600">
+                  <Calendar className="w-4 h-4 text-slate-400" />
+                  <span className="text-sm font-medium">{formatDate(video.taken_at)}</span>
                 </div>
+              </div>
+              
+              <div className="mt-3 pt-3 border-t border-slate-100">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-slate-500">
                     <Sparkles className="w-4 h-4" />
                     <span className="text-sm">Виральность</span>
                   </div>
-                  <span className="text-sm font-semibold text-emerald-600">Высокая</span>
+                  <span className={cn(
+                    "text-sm font-bold",
+                    viralCoef > 10 ? "text-emerald-600" : viralCoef > 5 ? "text-amber-600" : "text-slate-600"
+                  )}>
+                    {viralCoef.toFixed(1)}K/день
+                  </span>
                 </div>
               </div>
             </div>
 
             {/* Actions */}
-            <div className="space-y-2">
-              <a
-                href={video.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium transition-colors"
-              >
-                <ExternalLink className="w-4 h-4" />
-                Открыть в Instagram
-              </a>
+            <a
+              href={video.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium transition-colors shadow-sm"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Открыть в Instagram
+            </a>
+          </div>
+
+          {/* Middle: Transcript */}
+          <div className="flex-1 flex flex-col min-w-0 bg-white rounded-2xl shadow-sm overflow-hidden">
+            {/* Transcript header */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-slate-400" />
+                <h3 className="font-semibold text-slate-800">Транскрибация</h3>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                {/* Tabs: Original / Translation */}
+                <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
+                  <button
+                    onClick={() => setTranscriptTab('original')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                      transcriptTab === 'original'
+                        ? "bg-white text-slate-800 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700"
+                    )}
+                  >
+                    Оригинал
+                  </button>
+                  <button
+                    onClick={() => setTranscriptTab('translation')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                      transcriptTab === 'translation'
+                        ? "bg-white text-slate-800 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700"
+                    )}
+                  >
+                    Перевод
+                  </button>
+                </div>
+
+                {transcript && (
+                  <>
+                    <button
+                      onClick={handleTranslate}
+                      disabled={isTranslating}
+                      className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-50"
+                      title="Перевести"
+                    >
+                      {isTranslating ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Languages className="w-4 h-4" />
+                      )}
+                    </button>
+                    <button
+                      onClick={handleCopyTranscript}
+                      className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
+                      title="Копировать"
+                    >
+                      {copiedTranscript ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+            
+            {/* Transcript content */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {transcriptStatus === 'processing' || transcriptStatus === 'downloading' ? (
+                <div className="h-full flex flex-col items-center justify-center text-center">
+                  <Loader2 className="w-10 h-10 text-amber-500 animate-spin mb-3" />
+                  <p className="text-slate-600 font-medium">Транскрибация в процессе...</p>
+                  <p className="text-slate-400 text-sm">Это займёт несколько минут</p>
+                </div>
+              ) : transcriptTab === 'original' && transcript ? (
+                <p className="text-slate-700 leading-relaxed whitespace-pre-wrap text-sm">{transcript}</p>
+              ) : transcriptTab === 'translation' && translation ? (
+                <p className="text-slate-700 leading-relaxed whitespace-pre-wrap text-sm">{translation}</p>
+              ) : transcriptTab === 'translation' && !translation ? (
+                <div className="h-full flex flex-col items-center justify-center text-center">
+                  <Languages className="w-10 h-10 text-slate-300 mb-3" />
+                  <p className="text-slate-600 font-medium">Перевод не выполнен</p>
+                  <button
+                    onClick={handleTranslate}
+                    disabled={!transcript || isTranslating}
+                    className="mt-3 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {isTranslating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Languages className="w-4 h-4" />}
+                    Перевести текст
+                  </button>
+                </div>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-center">
+                  <FileText className="w-10 h-10 text-slate-300 mb-3" />
+                  <p className="text-slate-600 font-medium">Транскрибация недоступна</p>
+                  <p className="text-slate-400 text-sm">
+                    {transcriptStatus === 'error' 
+                      ? 'Произошла ошибка при обработке'
+                      : 'Добавьте видео в "Идеи" для обработки'
+                    }
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Right: Transcript & Script */}
-          <div className="flex-1 flex flex-col min-w-0">
-            {/* Tabs */}
-            <div className="flex items-center gap-2 mb-4">
-              <button
-                onClick={() => setActiveTab('transcript')}
-                className={cn(
-                  "px-4 py-2 rounded-xl text-sm font-medium transition-all",
-                  activeTab === 'transcript'
-                    ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg"
-                    : "bg-white text-slate-600 hover:bg-slate-50"
+          {/* Right: Script */}
+          <div className="flex-1 flex flex-col min-w-0 bg-white rounded-2xl shadow-sm overflow-hidden">
+            {/* Script header */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Wand2 className="w-5 h-5 text-violet-500" />
+                <h3 className="font-semibold text-slate-800">Мой сценарий</h3>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                {!script && transcript && (
+                  <button
+                    onClick={handleGenerateScript}
+                    disabled={isGeneratingScript}
+                    className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-500 to-purple-600 text-white text-xs font-medium hover:from-violet-400 hover:to-purple-500 transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {isGeneratingScript ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Wand2 className="w-3.5 h-3.5" />
+                    )}
+                    Сгенерировать
+                  </button>
                 )}
-              >
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  Транскрибация
-                </div>
-              </button>
-              <button
-                onClick={() => setActiveTab('script')}
-                className={cn(
-                  "px-4 py-2 rounded-xl text-sm font-medium transition-all",
-                  activeTab === 'script'
-                    ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg"
-                    : "bg-white text-slate-600 hover:bg-slate-50"
+                
+                {script && (
+                  <>
+                    <button
+                      onClick={handleGenerateScript}
+                      disabled={isGeneratingScript}
+                      className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-50"
+                      title="Перегенерировать"
+                    >
+                      {isGeneratingScript ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4" />
+                      )}
+                    </button>
+                    <button
+                      onClick={handleCopyScript}
+                      className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
+                      title="Копировать"
+                    >
+                      {copiedScript ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </>
                 )}
-              >
-                <div className="flex items-center gap-2">
-                  <Wand2 className="w-4 h-4" />
-                  Мой сценарий
-                </div>
-              </button>
-              
-              <div className="flex-1" />
-              
-              {activeTab === 'transcript' && transcript && (
-                <button
-                  onClick={handleCopyTranscript}
-                  className="px-3 py-2 rounded-xl bg-white text-slate-600 hover:bg-slate-50 text-sm font-medium transition-colors flex items-center gap-2"
-                >
-                  {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                  {copied ? 'Скопировано' : 'Копировать'}
-                </button>
-              )}
-              
-              {activeTab === 'transcript' && transcript && (
-                <button
-                  onClick={handleGenerateScript}
-                  disabled={isGeneratingScript}
-                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white text-sm font-medium hover:from-violet-400 hover:to-purple-500 transition-all shadow-lg shadow-violet-500/30 flex items-center gap-2 disabled:opacity-50"
-                >
-                  {isGeneratingScript ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Wand2 className="w-4 h-4" />
-                  )}
-                  Создать сценарий
-                </button>
-              )}
+              </div>
             </div>
-
-            {/* Content area */}
-            <div className="flex-1 bg-white rounded-2xl shadow-sm overflow-hidden">
-              {activeTab === 'transcript' ? (
-                <div className="h-full flex flex-col">
-                  {transcriptStatus === 'processing' || transcriptStatus === 'downloading' ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-                      <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mb-4">
-                        <Loader2 className="w-8 h-8 text-amber-600 animate-spin" />
-                      </div>
-                      <h3 className="text-lg font-medium text-slate-800 mb-2">Транскрибация в процессе</h3>
-                      <p className="text-slate-500 text-sm max-w-md">
-                        Видео обрабатывается. Это может занять несколько минут в зависимости от длины видео.
-                      </p>
-                    </div>
-                  ) : transcript ? (
-                    <div className="flex-1 overflow-y-auto p-6">
-                      <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{transcript}</p>
-                    </div>
-                  ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-                      <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
-                        <FileText className="w-8 h-8 text-slate-400" />
-                      </div>
-                      <h3 className="text-lg font-medium text-slate-800 mb-2">Транскрибация недоступна</h3>
-                      <p className="text-slate-500 text-sm max-w-md">
-                        {transcriptStatus === 'error' 
-                          ? 'Произошла ошибка при обработке видео. Попробуйте ещё раз.'
-                          : 'Транскрибация будет доступна после обработки видео.'
-                        }
-                      </p>
-                    </div>
-                  )}
-                </div>
+            
+            {/* Script content */}
+            <div className="flex-1 overflow-hidden p-4">
+              {script ? (
+                <textarea
+                  value={script}
+                  onChange={(e) => setScript(e.target.value)}
+                  className="w-full h-full resize-none text-slate-700 text-sm leading-relaxed focus:outline-none"
+                  placeholder="Ваш сценарий..."
+                />
               ) : (
-                <div className="h-full flex flex-col">
-                  {script ? (
-                    <div className="flex-1 overflow-y-auto p-6">
-                      <textarea
-                        value={script}
-                        onChange={(e) => setScript(e.target.value)}
-                        className="w-full h-full resize-none text-slate-700 leading-relaxed focus:outline-none"
-                        placeholder="Ваш сценарий..."
-                      />
-                    </div>
+                <div className="h-full flex flex-col items-center justify-center text-center">
+                  <Wand2 className="w-10 h-10 text-violet-300 mb-3" />
+                  <p className="text-slate-600 font-medium">Создайте свой сценарий</p>
+                  <p className="text-slate-400 text-sm mb-4">
+                    На основе транскрибации или с нуля
+                  </p>
+                  {transcript ? (
+                    <button
+                      onClick={handleGenerateScript}
+                      disabled={isGeneratingScript}
+                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white text-sm font-medium hover:from-violet-400 hover:to-purple-500 transition-all shadow-lg shadow-violet-500/30 flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {isGeneratingScript ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Wand2 className="w-4 h-4" />
+                      )}
+                      Сгенерировать из транскрибации
+                    </button>
                   ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-                      <div className="w-16 h-16 rounded-2xl bg-violet-100 flex items-center justify-center mb-4">
-                        <Wand2 className="w-8 h-8 text-violet-500" />
-                      </div>
-                      <h3 className="text-lg font-medium text-slate-800 mb-2">Создайте свой сценарий</h3>
-                      <p className="text-slate-500 text-sm max-w-md mb-4">
-                        Используйте транскрибацию как основу и создайте свой уникальный сценарий с помощью AI.
-                      </p>
-                      <button
-                        onClick={handleGenerateScript}
-                        disabled={!transcript || isGeneratingScript}
-                        className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white font-medium hover:from-violet-400 hover:to-purple-500 transition-all shadow-lg shadow-violet-500/30 flex items-center gap-2 disabled:opacity-50"
-                      >
-                        {isGeneratingScript ? (
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                        ) : (
-                          <Wand2 className="w-5 h-5" />
-                        )}
-                        Сгенерировать из транскрибации
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => setScript('# Мой сценарий\n\n## Хук\n\n\n## Основная часть\n\n\n## CTA\n')}
+                      className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium transition-colors flex items-center gap-2"
+                    >
+                      <FileText className="w-4 h-4" />
+                      Начать с шаблона
+                    </button>
                   )}
                 </div>
               )}
