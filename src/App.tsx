@@ -16,11 +16,25 @@ type ViewMode = 'workspace' | 'canvas' | 'history' | 'profile';
 function App() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, loading, logout } = useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>('workspace');
   
   // Загружаем сохранённые видео при старте
   useInboxVideos();
+
+  // Пока проверяем авторизацию — показываем загрузку
+  if (loading) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center bg-[#f5f5f5]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-lg shadow-orange-500/30 animate-pulse">
+            <Video className="w-8 h-8 text-white" />
+          </div>
+          <p className="text-slate-500 text-sm">Загрузка...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Если не авторизован — показываем Landing Page
   if (!isAuthenticated) {
