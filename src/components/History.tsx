@@ -5,6 +5,7 @@ import { useInboxVideos } from '../hooks/useInboxVideos';
 import { InstagramSearchResult } from '../services/videoService';
 import { Search, Clock, Video, Eye, Heart, ExternalLink, Trash2, X, ChevronLeft, Plus, Sparkles } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { toast } from 'sonner';
 
 type TabType = 'queries' | 'videos';
 
@@ -16,14 +17,23 @@ function formatNumber(num?: number): string {
 }
 
 // Расчёт коэффициента виральности
-function calculateViralCoefficient(views?: number, takenAt?: string): number {
+function calculateViralCoefficient(views?: number, takenAt?: string | number | Date): number {
   if (!views || views < 30000 || !takenAt) return 0;
   
   let videoDate: Date;
-  if (takenAt.includes('T') || takenAt.includes('-')) {
-    videoDate = new Date(takenAt);
+  
+  if (takenAt instanceof Date) {
+    videoDate = takenAt;
+  } else if (typeof takenAt === 'string') {
+    if (takenAt.includes('T') || takenAt.includes('-')) {
+      videoDate = new Date(takenAt);
+    } else {
+      videoDate = new Date(Number(takenAt) * 1000);
+    }
+  } else if (typeof takenAt === 'number') {
+    videoDate = takenAt > 1e12 ? new Date(takenAt) : new Date(takenAt * 1000);
   } else {
-    videoDate = new Date(Number(takenAt) * 1000);
+    return 0;
   }
   
   if (isNaN(videoDate.getTime())) return 0;
@@ -76,8 +86,12 @@ export function History() {
         commentCount: reel.comment_count,
         ownerUsername: reel.owner?.username,
       });
+      toast.success('Видео добавлено', {
+        description: `@${reel.owner?.username || 'instagram'}`,
+      });
     } catch (err) {
       console.error('Ошибка сохранения видео:', err);
+      toast.error('Ошибка сохранения');
     }
   };
 

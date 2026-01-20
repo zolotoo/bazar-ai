@@ -14,6 +14,7 @@ import { IncomingVideo } from '../../types';
 import { cn } from '../../utils/cn';
 import { supabase } from '../../utils/supabase';
 import { FolderPlus, Star, Sparkles as SparklesIcon, FileText, CheckCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface SearchPanelProps {
   isOpen: boolean;
@@ -29,17 +30,27 @@ function formatNumber(num?: number): string {
 
 // Расчёт коэффициента виральности: views / (days * 1000)
 // Если просмотров < 30000 или дней = 0, то 0
-function calculateViralCoefficient(views?: number, takenAt?: string): number {
+function calculateViralCoefficient(views?: number, takenAt?: string | number | Date): number {
   if (!views || views < 30000 || !takenAt) return 0;
   
-  // Поддержка и timestamp и ISO даты
   let videoDate: Date;
-  if (takenAt.includes('T') || takenAt.includes('-')) {
-    // ISO формат: "2026-01-20T01:51:06.217499+00:00"
-    videoDate = new Date(takenAt);
+  
+  // Обработка разных типов
+  if (takenAt instanceof Date) {
+    videoDate = takenAt;
+  } else if (typeof takenAt === 'string') {
+    if (takenAt.includes('T') || takenAt.includes('-')) {
+      // ISO формат: "2026-01-20T01:51:06.217499+00:00"
+      videoDate = new Date(takenAt);
+    } else {
+      // Unix timestamp в секундах (строка)
+      videoDate = new Date(Number(takenAt) * 1000);
+    }
+  } else if (typeof takenAt === 'number') {
+    // Unix timestamp в секундах или миллисекундах
+    videoDate = takenAt > 1e12 ? new Date(takenAt) : new Date(takenAt * 1000);
   } else {
-    // Unix timestamp в секундах
-    videoDate = new Date(Number(takenAt) * 1000);
+    return 0;
   }
   
   // Проверка валидности даты
@@ -245,9 +256,12 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
         commentCount: result.comment_count,
         ownerUsername: result.owner?.username,
       });
-      console.log('Видео сохранено в Supabase');
+      toast.success('Видео добавлено во входящие', {
+        description: `@${result.owner?.username || 'instagram'}`,
+      });
     } catch (err) {
       console.error('Ошибка сохранения видео:', err);
+      toast.error('Ошибка сохранения видео');
     }
   };
 
@@ -275,12 +289,15 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
         
         setLinkUrl('');
         setShowLinkInput(false);
-        console.log('Рилс добавлен из ссылки');
+        toast.success('Рилс добавлен', {
+          description: `@${reel.owner?.username || 'instagram'}`,
+        });
       } else {
-        console.error('Не удалось получить данные рилса');
+        toast.error('Не удалось получить данные рилса');
       }
     } catch (err) {
       console.error('Ошибка парсинга ссылки:', err);
+      toast.error('Ошибка при добавлении ссылки');
     } finally {
       setLinkLoading(false);
     }
@@ -289,6 +306,7 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
   // Добавление видео в папку
   const handleAddToFolder = async (result: InstagramSearchResult, folderId: string) => {
     const captionText = typeof result.caption === 'string' ? result.caption.slice(0, 500) : 'Видео из Instagram';
+    const folderName = folderConfigs.find(f => f.id === folderId)?.title || 'папку';
     
     try {
       await addVideoToWorkspace({
@@ -303,9 +321,12 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
       });
       setShowFolderSelect(false);
       setSelectedVideo(null);
-      console.log(`Видео добавлено в папку ${folderId}`);
+      toast.success(`Добавлено в "${folderName}"`, {
+        description: `@${result.owner?.username || 'instagram'}`,
+      });
     } catch (err) {
       console.error('Ошибка добавления в папку:', err);
+      toast.error('Ошибка добавления в папку');
     }
   };
 

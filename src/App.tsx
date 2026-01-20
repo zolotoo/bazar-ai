@@ -10,6 +10,7 @@ import { useAuth } from './hooks/useAuth';
 import { useInboxVideos } from './hooks/useInboxVideos';
 import { Menu, Video, Settings, Search, LayoutGrid, GitBranch, Clock, User, LogOut } from 'lucide-react';
 import { cn } from './utils/cn';
+import { Toaster } from 'sonner';
 
 type ViewMode = 'workspace' | 'canvas' | 'history' | 'profile';
 
@@ -176,6 +177,19 @@ function App() {
       <SearchPanel
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
+      />
+
+      {/* Toast notifications */}
+      <Toaster 
+        position="bottom-right"
+        toastOptions={{
+          style: {
+            background: '#18181b',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '1rem',
+          },
+        }}
       />
     </div>
   );

@@ -12,14 +12,23 @@ function formatNumber(num?: number): string {
 }
 
 // Расчёт коэффициента виральности
-function calculateViralCoefficient(views?: number, takenAt?: string): number {
+function calculateViralCoefficient(views?: number, takenAt?: string | number | Date): number {
   if (!views || views < 30000 || !takenAt) return 0;
   
   let videoDate: Date;
-  if (takenAt.includes('T') || takenAt.includes('-')) {
-    videoDate = new Date(takenAt);
+  
+  if (takenAt instanceof Date) {
+    videoDate = takenAt;
+  } else if (typeof takenAt === 'string') {
+    if (takenAt.includes('T') || takenAt.includes('-')) {
+      videoDate = new Date(takenAt);
+    } else {
+      videoDate = new Date(Number(takenAt) * 1000);
+    }
+  } else if (typeof takenAt === 'number') {
+    videoDate = takenAt > 1e12 ? new Date(takenAt) : new Date(takenAt * 1000);
   } else {
-    videoDate = new Date(Number(takenAt) * 1000);
+    return 0;
   }
   
   if (isNaN(videoDate.getTime())) return 0;
