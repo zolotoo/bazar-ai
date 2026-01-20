@@ -51,8 +51,14 @@ export const VideoGradientCard = ({
     <div
       draggable={!!onDragStart}
       onDragStart={onDragStart}
-      className="group"
+      className="group relative"
     >
+      {/* Folder menu - вынесен наружу для корректного z-index */}
+      {showFolderMenu && folderMenu && (
+        <div className="absolute top-10 right-0 z-[100]">
+          {folderMenu}
+        </div>
+      )}
       <motion.div
         ref={cardRef}
         className={cn(
@@ -160,12 +166,6 @@ export const VideoGradientCard = ({
             )}
           </div>
 
-          {/* Folder menu - позиционируем от верхней кнопки */}
-          {showFolderMenu && folderMenu && (
-            <div className="absolute top-12 right-3 z-50">
-              {folderMenu}
-            </div>
-          )}
 
           {/* Bottom content */}
           <div>

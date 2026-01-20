@@ -315,15 +315,13 @@ export function Workspace() {
                         setMoveMenuVideoId(null);
                       }}
                       folderMenu={
-                        <div className="bg-white rounded-2xl shadow-2xl p-2 min-w-[180px] animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="bg-white rounded-xl shadow-2xl border border-slate-100 p-1.5 min-w-[140px] animate-in fade-in slide-in-from-top-2 duration-200">
                           <button
                             onClick={(e) => { e.stopPropagation(); setSelectedVideo(video); setCardMenuVideoId(null); }}
-                            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-orange-50 transition-colors text-left"
+                            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-orange-50 transition-colors text-left"
                           >
-                            <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
-                              <FileText className="w-4 h-4 text-orange-600" />
-                            </div>
-                            <span className="text-sm font-medium text-slate-700">Работать</span>
+                            <FileText className="w-4 h-4 text-orange-500" />
+                            <span className="text-sm text-slate-700">Работать</span>
                           </button>
                           
                           {/* Переместить в папку */}
@@ -333,18 +331,15 @@ export function Workspace() {
                                 e.stopPropagation(); 
                                 setMoveMenuVideoId(moveMenuVideoId === video.id ? null : video.id);
                               }}
-                              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-indigo-50 transition-colors text-left"
+                              className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-indigo-50 transition-colors text-left"
                             >
-                              <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
-                                <ArrowRightLeft className="w-4 h-4 text-indigo-600" />
-                              </div>
-                              <span className="text-sm font-medium text-slate-700">Переместить</span>
+                              <ArrowRightLeft className="w-4 h-4 text-indigo-500" />
+                              <span className="text-sm text-slate-700">Переместить</span>
                             </button>
                             
                             {/* Подменю с папками */}
                             {moveMenuVideoId === video.id && (
-                              <div className="absolute left-full top-0 ml-2 bg-white rounded-xl shadow-xl p-2 min-w-[160px] z-50 animate-in fade-in slide-in-from-left-2 duration-150">
-                                <p className="px-3 py-1.5 text-xs text-slate-400 font-medium">Переместить в:</p>
+                              <div className="absolute left-full top-0 ml-1 bg-white rounded-lg shadow-xl border border-slate-100 p-1.5 min-w-[140px] z-[110] animate-in fade-in slide-in-from-left-2 duration-150">
                                 {folderConfigs
                                   .filter(f => f.id !== selectedFolder?.id)
                                   .map(folder => (
@@ -355,20 +350,20 @@ export function Workspace() {
                                         handleMoveToFolder(video, folder.id || 'inbox');
                                         setCardMenuVideoId(null);
                                       }}
-                                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors text-left"
+                                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md hover:bg-slate-50 transition-colors text-left"
                                     >
                                       <div 
-                                        className="w-6 h-6 rounded-md flex items-center justify-center"
+                                        className="w-4 h-4 rounded flex items-center justify-center"
                                         style={{ backgroundColor: `${folder.color}20` }}
                                       >
-                                        {folder.iconType === 'inbox' && <Inbox className="w-3.5 h-3.5" style={{ color: folder.color }} />}
-                                        {folder.iconType === 'lightbulb' && <Lightbulb className="w-3.5 h-3.5" style={{ color: folder.color }} />}
-                                        {folder.iconType === 'file' && <FileText className="w-3.5 h-3.5" style={{ color: folder.color }} />}
-                                        {folder.iconType === 'camera' && <Camera className="w-3.5 h-3.5" style={{ color: folder.color }} />}
-                                        {folder.iconType === 'scissors' && <Scissors className="w-3.5 h-3.5" style={{ color: folder.color }} />}
-                                        {folder.iconType === 'check' && <Check className="w-3.5 h-3.5" style={{ color: folder.color }} />}
+                                        {folder.iconType === 'inbox' && <Inbox className="w-2.5 h-2.5" style={{ color: folder.color }} />}
+                                        {folder.iconType === 'lightbulb' && <Lightbulb className="w-2.5 h-2.5" style={{ color: folder.color }} />}
+                                        {folder.iconType === 'file' && <FileText className="w-2.5 h-2.5" style={{ color: folder.color }} />}
+                                        {folder.iconType === 'camera' && <Camera className="w-2.5 h-2.5" style={{ color: folder.color }} />}
+                                        {folder.iconType === 'scissors' && <Scissors className="w-2.5 h-2.5" style={{ color: folder.color }} />}
+                                        {folder.iconType === 'check' && <Check className="w-2.5 h-2.5" style={{ color: folder.color }} />}
                                       </div>
-                                      <span className="text-sm text-slate-700">{folder.title}</span>
+                                      <span className="text-xs text-slate-600">{folder.title}</span>
                                     </button>
                                   ))}
                               </div>
@@ -380,25 +375,24 @@ export function Workspace() {
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-blue-50 transition-colors text-left"
+                            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-blue-50 transition-colors text-left"
                           >
-                            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                              <ExternalLink className="w-4 h-4 text-blue-600" />
-                            </div>
-                            <span className="text-sm font-medium text-slate-700">Открыть</span>
+                            <ExternalLink className="w-4 h-4 text-blue-500" />
+                            <span className="text-sm text-slate-700">Открыть</span>
                           </a>
+                          
+                          <div className="h-px bg-slate-100 my-1" />
+                          
                           <button
                             onClick={(e) => { 
                               e.stopPropagation(); 
                               handleDeleteVideo(video.id, isInboxFolder); 
                               setCardMenuVideoId(null);
                             }}
-                            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-red-50 transition-colors text-left"
+                            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-red-50 transition-colors text-left"
                           >
-                            <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
-                              <Trash2 className="w-4 h-4 text-red-600" />
-                            </div>
-                            <span className="text-sm font-medium text-slate-700">Удалить</span>
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                            <span className="text-sm text-red-600">Удалить</span>
                           </button>
                         </div>
                       }
@@ -413,15 +407,25 @@ export function Workspace() {
     );
   }
 
+  // Подсчёт общего количества видео
+  const totalVideos = folderConfigs.reduce((sum, config) => sum + getFolderVideos(config.id).length, 0);
+
   return (
     <div className="h-full overflow-y-auto custom-scrollbar-light">
       <div className="max-w-6xl mx-auto p-6 pt-6">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl md:text-5xl font-serif italic text-neutral-900 tracking-tighter">
-            Рабочий стол
-          </h1>
-          <p className="text-neutral-500 text-base mt-1">
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-4xl md:text-5xl font-serif italic text-neutral-900 tracking-tighter">
+              Рабочий стол
+            </h1>
+            {totalVideos > 0 && (
+              <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-sm font-semibold">
+                {totalVideos} видео
+              </span>
+            )}
+          </div>
+          <p className="text-neutral-500 text-base">
             Организуй контент по категориям
           </p>
         </div>
