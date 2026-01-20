@@ -109,9 +109,9 @@ export function useProjects() {
   }, [getUserId]);
 
   // Создание проекта
-  const createProject = useCallback(async (name: string): Promise<Project | null> => {
+  const createProject = useCallback(async (name: string, customColor?: string): Promise<Project | null> => {
     const userId = getUserId();
-    const color = PROJECT_COLORS[projects.length % PROJECT_COLORS.length];
+    const color = customColor || PROJECT_COLORS[projects.length % PROJECT_COLORS.length];
     
     const newProject: Omit<Project, 'createdAt'> = {
       id: `project-${Date.now()}`,

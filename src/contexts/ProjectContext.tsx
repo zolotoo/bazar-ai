@@ -6,7 +6,7 @@ interface ProjectContextType {
   currentProject: Project | null;
   currentProjectId: string | null;
   loading: boolean;
-  createProject: (name: string) => Promise<Project | null>;
+  createProject: (name: string, color?: string) => Promise<Project | null>;
   updateProject: (projectId: string, updates: Partial<Pick<Project, 'name' | 'color' | 'icon' | 'folders'>>) => Promise<void>;
   deleteProject: (projectId: string) => Promise<void>;
   selectProject: (projectId: string) => void;

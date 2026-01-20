@@ -11,7 +11,7 @@ import { useInboxVideos } from './hooks/useInboxVideos';
 import { ProjectProvider, useProjectContext } from './contexts/ProjectContext';
 import { 
   Video, Settings, Search, LayoutGrid, GitBranch, Clock, User, LogOut, 
-  Link, Radar, ChevronLeft, ChevronRight, Plus, FolderOpen
+  Link, Radar, ChevronLeft, ChevronRight, Plus, FolderOpen, X, Palette, Sparkles
 } from 'lucide-react';
 import { cn } from './utils/cn';
 import { Toaster, toast } from 'sonner';
@@ -88,17 +88,175 @@ function SectionHeader({ title, isExpanded, onAdd }: SectionHeaderProps) {
 type ViewMode = 'workspace' | 'canvas' | 'history' | 'profile';
 type SearchTab = 'search' | 'link' | 'radar';
 
+// Цвета для проектов
+const PROJECT_COLORS = [
+  '#f97316', // orange
+  '#ef4444', // red
+  '#ec4899', // pink
+  '#8b5cf6', // violet
+  '#6366f1', // indigo
+  '#3b82f6', // blue
+  '#06b6d4', // cyan
+  '#10b981', // emerald
+  '#84cc16', // lime
+  '#eab308', // yellow
+];
+
+// Модальное окно создания проекта
+interface CreateProjectModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onCreate: (name: string, color: string) => void;
+}
+
+function CreateProjectModal({ isOpen, onClose, onCreate }: CreateProjectModalProps) {
+  const [name, setName] = useState('');
+  const [color, setColor] = useState(PROJECT_COLORS[0]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (name.trim()) {
+      onCreate(name.trim(), color);
+      setName('');
+      setColor(PROJECT_COLORS[0]);
+      onClose();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      
+      {/* Modal */}
+      <div className="relative w-full max-w-md mx-4 bg-white rounded-3xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-slate-800">Новый проект</h2>
+              <p className="text-sm text-slate-500">Создайте проект для организации контента</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {/* Name input */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Название проекта
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Например: Кулинарный блог"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all text-slate-800 placeholder:text-slate-400"
+              autoFocus
+            />
+          </div>
+
+          {/* Color picker */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              <div className="flex items-center gap-2">
+                <Palette className="w-4 h-4" />
+                Цвет проекта
+              </div>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {PROJECT_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setColor(c)}
+                  className={cn(
+                    "w-10 h-10 rounded-xl transition-all",
+                    color === c 
+                      ? "ring-2 ring-offset-2 ring-slate-400 scale-110" 
+                      : "hover:scale-105"
+                  )}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+            <p className="text-xs text-slate-500 mb-2">Предпросмотр</p>
+            <div className="flex items-center gap-3">
+              <div 
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ backgroundColor: color + '20' }}
+              >
+                <FolderOpen className="w-5 h-5" style={{ color }} />
+              </div>
+              <span className="font-medium text-slate-800">
+                {name || 'Название проекта'}
+              </span>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-3 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50 transition-colors"
+            >
+              Отмена
+            </button>
+            <button
+              type="submit"
+              disabled={!name.trim()}
+              className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-medium hover:from-orange-400 hover:to-amber-400 transition-all shadow-lg shadow-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Создать проект
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function AppContent() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTab, setSearchTab] = useState<SearchTab>('search');
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const { logout } = useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>('workspace');
   const { videos } = useInboxVideos();
   
   // Используем контекст проектов
   const { projects, currentProject, currentProjectId, selectProject, createProject, loading: projectsLoading } = useProjectContext();
+
+  // Создание проекта
+  const handleCreateProject = async (name: string, color: string) => {
+    const project = await createProject(name, color);
+    if (project) {
+      toast.success(`Проект "${name}" создан`);
+      selectProject(project.id);
+    }
+  };
 
   if (projectsLoading) {
     return (
@@ -214,41 +372,52 @@ function AppContent() {
           <SectionHeader 
             title="Проекты" 
             isExpanded={sidebarExpanded}
-            onAdd={async () => {
-              const name = prompt('Название проекта:');
-              if (name) {
-                const project = await createProject(name);
-                if (project) {
-                  toast.success(`Проект "${name}" создан`);
-                  selectProject(project.id);
-                }
-              }
-            }}
+            onAdd={() => setIsCreateProjectOpen(true)}
           />
           
           <div className="space-y-1">
-            {projects.map(project => (
+            {projects.length === 0 ? (
               <button
-                key={project.id}
-                onClick={() => selectProject(project.id)}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all",
-                  currentProjectId === project.id
-                    ? "bg-slate-100 text-slate-900"
-                    : "text-slate-600 hover:bg-slate-50"
-                )}
+                onClick={() => setIsCreateProjectOpen(true)}
+                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 hover:border-orange-300 hover:text-orange-500 transition-all"
               >
-                <div 
-                  className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: project.color + '20' }}
-                >
-                  <FolderOpen className="w-3.5 h-3.5" style={{ color: project.color }} />
-                </div>
-                {sidebarExpanded && (
-                  <span className="flex-1 text-sm font-medium text-left truncate">{project.name}</span>
-                )}
+                <Plus className="w-5 h-5" />
+                {sidebarExpanded && <span className="text-sm font-medium">Создать проект</span>}
               </button>
-            ))}
+            ) : (
+              projects.map(project => (
+                <button
+                  key={project.id}
+                  onClick={() => selectProject(project.id)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all",
+                    currentProjectId === project.id
+                      ? "bg-white shadow-sm border border-slate-100"
+                      : "text-slate-600 hover:bg-slate-50"
+                  )}
+                >
+                  <div 
+                    className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: (project.color || '#f97316') + '20' }}
+                  >
+                    <FolderOpen className="w-4 h-4" style={{ color: project.color || '#f97316' }} />
+                  </div>
+                  {sidebarExpanded && (
+                    <>
+                      <span className={cn(
+                        "flex-1 text-sm font-medium text-left truncate",
+                        currentProjectId === project.id ? "text-slate-800" : "text-slate-600"
+                      )}>
+                        {project.name}
+                      </span>
+                      {currentProjectId === project.id && (
+                        <div className="w-2 h-2 rounded-full bg-orange-500" />
+                      )}
+                    </>
+                  )}
+                </button>
+              ))
+            )}
           </div>
         </div>
         
@@ -301,6 +470,13 @@ function AppContent() {
         initialTab={searchTab}
         currentProjectId={currentProjectId}
         currentProjectName={currentProject?.name || 'Проект'}
+      />
+
+      {/* Create Project Modal */}
+      <CreateProjectModal
+        isOpen={isCreateProjectOpen}
+        onClose={() => setIsCreateProjectOpen(false)}
+        onCreate={handleCreateProject}
       />
 
       {/* Toast notifications */}
