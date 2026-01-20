@@ -2,8 +2,9 @@ const RAPIDAPI_HOST = 'instagram-scraper-20251.p.rapidapi.com'; // Рабочи�
 const RAPIDAPI_KEY = '959a088626msh74020d3fb11ad19p1e067bjsnb273d9fac830';
 const RAPIDAPI_HOST_OLD = 'instagram-looter2.p.rapidapi.com'; // Для поиска хэштегов/пользователей (fallback)
 
-// Используем прокси для локальной разработки, чтобы избежать CORS
-const API_BASE_URL = '/api-v1';
+// На production используем прямой URL, локально — прокси
+const isDev = import.meta.env.DEV;
+const API_BASE_URL = isDev ? '/api-v1' : `https://${RAPIDAPI_HOST}`;
 
 export interface InstagramSearchResult {
   id: string;

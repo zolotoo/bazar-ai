@@ -97,7 +97,7 @@ function App() {
             )}
           >
             <User className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">@{user?.telegram_username}</span>
+            <span className="hidden sm:inline">Личный кабинет</span>
           </button>
         </div>
         
