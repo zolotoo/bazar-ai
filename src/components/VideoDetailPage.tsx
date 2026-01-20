@@ -81,6 +81,8 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
   const [currentFolderId, setCurrentFolderId] = useState(video.folder_id || null);
   const [isStartingTranscription, setIsStartingTranscription] = useState(false);
   const [localTranscriptId, setLocalTranscriptId] = useState(video.transcript_id);
+  const [directVideoUrl, setDirectVideoUrl] = useState<string | null>(video.download_url || null);
+  const [isLoadingVideo, setIsLoadingVideo] = useState(false);
   
   const { updateVideoFolder } = useInboxVideos();
   const { currentProject } = useProjectContext();
@@ -159,6 +161,50 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
       toast.error('Ошибка при запуске транскрибации');
     } finally {
       setIsStartingTranscription(false);
+    }
+  };
+  
+  // Загрузка прямой ссылки на видео
+  const handleLoadVideo = async () => {
+    if (directVideoUrl) {
+      setShowVideo(true);
+      return;
+    }
+    
+    if (!video.url) {
+      toast.error('URL видео не найден');
+      return;
+    }
+    
+    setIsLoadingVideo(true);
+    
+    try {
+      const response = await fetch('/api/download-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: video.url }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.videoUrl) {
+        setDirectVideoUrl(data.videoUrl);
+        setShowVideo(true);
+        
+        // Сохраняем URL в базу для будущего использования
+        await supabase
+          .from('saved_videos')
+          .update({ download_url: data.videoUrl })
+          .eq('id', video.id);
+      } else {
+        toast.error('Не удалось загрузить видео');
+        console.error('Video download failed:', data);
+      }
+    } catch (err) {
+      console.error('Error loading video:', err);
+      toast.error('Ошибка загрузки видео');
+    } finally {
+      setIsLoadingVideo(false);
     }
   };
 
@@ -242,18 +288,6 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
   };
 
   const thumbnailUrl = video.preview_url || 'https://via.placeholder.com/400x600';
-  
-  // Извлекаем video ID из URL для embed
-  const getInstagramEmbedUrl = (url?: string) => {
-    if (!url) return null;
-    const match = url.match(/reel\/([^\/\?]+)/);
-    if (match) {
-      return `https://www.instagram.com/reel/${match[1]}/embed`;
-    }
-    return null;
-  };
-
-  const embedUrl = getInstagramEmbedUrl(video.url);
 
   return (
     <div className="h-full overflow-hidden flex flex-col bg-[#f5f5f5]">
@@ -307,34 +341,36 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
         <div className="flex-1 flex gap-4 overflow-hidden min-h-0">
           {/* Left: Video preview */}
           <div className="w-64 flex-shrink-0 flex flex-col gap-3 overflow-y-auto custom-scrollbar-light">
-            {/* Video card */}
-            <div className="relative rounded-2xl overflow-hidden shadow-xl bg-black">
-              {showVideo && embedUrl ? (
-                <div className="aspect-[9/16] w-full">
-                  <iframe
-                    src={embedUrl}
-                    className="w-full h-full"
-                    frameBorder="0"
-                    scrolling="no"
-                    allowTransparency
-                    allowFullScreen
-                  />
-                </div>
+            {/* Video card - 9:16 aspect ratio */}
+            <div className="relative rounded-2xl overflow-hidden shadow-xl bg-black aspect-[9/16]">
+              {showVideo && directVideoUrl ? (
+                <video
+                  src={directVideoUrl}
+                  className="w-full h-full object-cover"
+                  controls
+                  autoPlay
+                  playsInline
+                />
               ) : (
-                <div className="relative group">
+                <div className="relative group w-full h-full">
                   <img
                     src={thumbnailUrl}
                     alt=""
-                    className="w-full aspect-[9/16] object-cover"
+                    className="w-full h-full object-cover"
                   />
                   
                   {/* Play button overlay */}
                   <button
-                    onClick={() => setShowVideo(true)}
+                    onClick={handleLoadVideo}
+                    disabled={isLoadingVideo}
                     className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <div className="w-14 h-14 rounded-full bg-white/95 flex items-center justify-center shadow-2xl">
-                      <Play className="w-6 h-6 text-slate-800 ml-1" fill="currentColor" />
+                      {isLoadingVideo ? (
+                        <Loader2 className="w-6 h-6 text-slate-800 animate-spin" />
+                      ) : (
+                        <Play className="w-6 h-6 text-slate-800 ml-1" fill="currentColor" />
+                      )}
                     </div>
                   </button>
                 </div>
