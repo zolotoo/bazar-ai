@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { ArrowRight, ArrowLeft, Sparkles, TrendingUp, Video, Zap, Send, Loader2 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useAuth } from '../hooks/useAuth';
+import ScrollMorphHero from './ui/ScrollMorphHero';
 
 export function LandingPage() {
   const [showAuth, setShowAuth] = useState(false);
+  const [showHero, setShowHero] = useState(true);
   const [username, setUsername] = useState('');
   const [code, setCode] = useState('');
   const { sendCode, verifyCode, sendingCode, verifying, error, codeSent, resetAuth } = useAuth();
@@ -25,6 +27,28 @@ export function LandingPage() {
     setUsername('');
     setCode('');
   };
+
+  // Show hero animation on first visit
+  if (showHero && !showAuth) {
+    return (
+      <div className="relative w-full h-screen">
+        <ScrollMorphHero 
+          title="Найдите вирусный контент"
+          subtitle="ПРОКРУТИТЕ ВНИЗ"
+          activeTitle="Bazar AI"
+          activeSubtitle="Платформа для поиска трендового контента из Instagram. Анализируйте, сохраняйте и создавайте свой контент."
+        />
+        {/* Skip button */}
+        <button
+          onClick={() => setShowHero(false)}
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 px-6 py-3 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 text-white font-medium shadow-2xl shadow-orange-500/40 hover:shadow-orange-500/50 transition-all flex items-center gap-2 group"
+        >
+          Начать
+          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="relative w-full min-h-screen overflow-hidden bg-[#f5f5f5]">

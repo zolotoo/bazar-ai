@@ -290,3 +290,74 @@ body {
   perspective: 1000px;
   transform-style: preserve-3d;
 }
+
+/* Glass Tab Button Advanced Styles */
+.glass-tab-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.glass-tab-button {
+  position: relative;
+  z-index: 1;
+  border-radius: 0.75rem;
+  font-weight: 500;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-tab-button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+  pointer-events: none;
+}
+
+.glass-tab-button.active {
+  background: linear-gradient(135deg, #f97316 0%, #f59e0b 100%);
+  color: white;
+  box-shadow: 
+    0 4px 15px rgba(249, 115, 22, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.glass-tab-button.active::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 0.875rem;
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(245, 158, 11, 0.1));
+  filter: blur(8px);
+  z-index: -1;
+}
+
+.glass-tab-button:not(.active) {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  color: #475569;
+}
+
+.glass-tab-button:not(.active):hover {
+  background: rgba(255, 255, 255, 0.8);
+  color: #1e293b;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Glass Tab Group */
+.glass-tab-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 
+    0 4px 24px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}

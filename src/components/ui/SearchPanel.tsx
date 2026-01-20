@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Search, X, ExternalLink, Plus, Eye, Heart, MessageCircle, ChevronLeft, ChevronRight, Sparkles, Play, Link, Loader2 } from 'lucide-react';
+import { Search, X, ExternalLink, Plus, Eye, Heart, MessageCircle, ChevronLeft, ChevronRight, Sparkles, Play, Link, Loader2, Radar, UserPlus } from 'lucide-react';
 import { TextShimmer } from './TextShimmer';
+import { VideoGradientCard } from './VideoGradientCard';
+import { GlassTabButton, GlassTabGroup } from './GlassTabButton';
 import { 
   searchInstagramVideos,
   getReelByUrl,
@@ -71,6 +73,9 @@ type SortOption = 'views' | 'likes' | 'viral' | 'date';
 // View mode: 'carousel' for saved videos, 'trending' for trending videos, 'results' for search
 type ViewMode = 'carousel' | 'loading' | 'results' | 'trending';
 
+// Search tab type
+type SearchTab = 'search' | 'link' | 'radar';
+
 // Форматирование даты видео
 function formatVideoDate(takenAt?: string | number | Date): string {
   if (!takenAt) return '';
@@ -115,11 +120,12 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [sortBy, setSortBy] = useState<SortOption>('views');
   const [selectedVideo, setSelectedVideo] = useState<InstagramSearchResult | null>(null);
-  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [activeTab, setActiveTab] = useState<SearchTab>('search');
   const [linkUrl, setLinkUrl] = useState('');
   const [linkLoading, setLinkLoading] = useState(false);
   const [showFolderSelect, setShowFolderSelect] = useState(false);
-  const [cardFolderSelect, setCardFolderSelect] = useState<string | null>(null); // ID карточки с открытым меню папок
+  const [cardFolderSelect, setCardFolderSelect] = useState<string | null>(null);
+  const [radarUsername, setRadarUsername] = useState('');
   const { incomingVideos } = useFlowStore();
   const { addVideoToInbox } = useInboxVideos();
   const { history: searchHistory, addToHistory, refetch: refetchHistory } = useSearchHistory();
@@ -499,7 +505,7 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
       {/* Content */}
       <div className="relative w-full h-full flex flex-col">
         
-        {/* Header with Search */}
+        {/* Header with Tabs and Search */}
         <div className="flex-shrink-0 p-6 pb-4">
           <div className="max-w-2xl mx-auto">
             {/* Close button */}
@@ -521,53 +527,92 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
               </button>
             )}
 
-            {/* Search Bar */}
-            <div className="glass rounded-2xl shadow-xl shadow-orange-500/10">
-              <div className="flex items-center gap-3 px-5 py-3.5">
-                <Search className="w-5 h-5 text-orange-500" />
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Поиск видео в Instagram..."
-                  className="flex-1 bg-transparent text-slate-800 placeholder:text-slate-400 outline-none text-base tracking-tight"
-                />
-                <button
-                  onClick={() => setShowLinkInput(!showLinkInput)}
-                  className={cn(
-                    "p-2 rounded-xl transition-all active:scale-95",
-                    showLinkInput 
-                      ? "bg-orange-100 text-orange-600" 
-                      : "bg-slate-100 text-slate-500 hover:bg-orange-100 hover:text-orange-500"
-                  )}
-                  title="Добавить по ссылке"
+            {/* Glass Tab Buttons */}
+            <div className="flex justify-center mb-4">
+              <GlassTabGroup>
+                <GlassTabButton
+                  isActive={activeTab === 'search'}
+                  onClick={() => setActiveTab('search')}
+                  icon={<Search className="w-4 h-4" />}
                 >
-                  <Link className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => handleSearch()}
-                  disabled={!query.trim() || loading}
-                  className={cn(
-                    "px-4 py-2 rounded-xl font-medium text-sm transition-all active:scale-95",
-                    "bg-gradient-to-r from-orange-500 to-amber-600 text-white",
-                    "hover:from-orange-400 hover:to-amber-500",
-                    "disabled:opacity-40 disabled:cursor-not-allowed",
-                    "shadow-lg shadow-orange-500/30"
-                  )}
+                  Поиск
+                </GlassTabButton>
+                <GlassTabButton
+                  isActive={activeTab === 'link'}
+                  onClick={() => setActiveTab('link')}
+                  icon={<Link className="w-4 h-4" />}
                 >
-                  Найти
-                </button>
-              </div>
+                  По ссылке
+                </GlassTabButton>
+                <GlassTabButton
+                  isActive={activeTab === 'radar'}
+                  onClick={() => setActiveTab('radar')}
+                  icon={<Radar className="w-4 h-4" />}
+                >
+                  Радар
+                </GlassTabButton>
+              </GlassTabGroup>
             </div>
 
-            {/* Link Input Form */}
-            {showLinkInput && (
-              <div className="mt-3 glass rounded-2xl p-4 shadow-lg border border-orange-100">
-                <div className="flex items-center gap-2 mb-2">
-                  <Link className="w-4 h-4 text-orange-500" />
-                  <span className="text-sm font-medium text-slate-700">Добавить рилс по ссылке</span>
+            {/* Search Tab Content */}
+            {activeTab === 'search' && (
+              <>
+                <div className="glass rounded-2xl shadow-xl shadow-orange-500/10">
+                  <div className="flex items-center gap-3 px-5 py-3.5">
+                    <Search className="w-5 h-5 text-orange-500" />
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Поиск видео в Instagram..."
+                      className="flex-1 bg-transparent text-slate-800 placeholder:text-slate-400 outline-none text-base tracking-tight"
+                    />
+                    <button
+                      onClick={() => handleSearch()}
+                      disabled={!query.trim() || loading}
+                      className={cn(
+                        "px-4 py-2 rounded-xl font-medium text-sm transition-all active:scale-95",
+                        "bg-gradient-to-r from-orange-500 to-amber-600 text-white",
+                        "hover:from-orange-400 hover:to-amber-500",
+                        "disabled:opacity-40 disabled:cursor-not-allowed",
+                        "shadow-lg shadow-orange-500/30"
+                      )}
+                    >
+                      Найти
+                    </button>
+                  </div>
+                </div>
+
+                {/* History pills */}
+                {(viewMode === 'carousel' || viewMode === 'trending') && searchHistory.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-2 mt-3">
+                    {searchHistory.map((item, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleSearch(item)}
+                        className="px-3 py-1.5 rounded-full glass text-slate-600 hover:text-slate-800 text-sm font-medium transition-all"
+                      >
+                        {item}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Link Tab Content */}
+            {activeTab === 'link' && (
+              <div className="glass rounded-2xl p-5 shadow-xl shadow-orange-500/10">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
+                    <Link className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-800">Добавить по ссылке</h3>
+                    <p className="text-xs text-slate-500">Вставьте ссылку на рилс Instagram</p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <input
@@ -576,16 +621,17 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                     onChange={(e) => setLinkUrl(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleParseLink()}
                     placeholder="https://instagram.com/reel/ABC123..."
-                    className="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-white/80 outline-none focus:ring-2 focus:ring-orange-500/30 text-sm"
+                    className="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-white/80 outline-none focus:ring-2 focus:ring-orange-500/30 text-sm"
                   />
                   <button
                     onClick={handleParseLink}
                     disabled={!linkUrl.trim() || linkLoading}
                     className={cn(
-                      "px-4 py-2 rounded-xl font-medium text-sm transition-all active:scale-95 flex items-center gap-2",
+                      "px-5 py-3 rounded-xl font-medium text-sm transition-all active:scale-95 flex items-center gap-2",
                       "bg-gradient-to-r from-orange-500 to-amber-600 text-white",
                       "hover:from-orange-400 hover:to-amber-500",
-                      "disabled:opacity-40 disabled:cursor-not-allowed"
+                      "disabled:opacity-40 disabled:cursor-not-allowed",
+                      "shadow-lg shadow-orange-500/30"
                     )}
                   >
                     {linkLoading ? (
@@ -596,24 +642,74 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                     Добавить
                   </button>
                 </div>
-                <p className="text-xs text-slate-500 mt-2">
-                  Вставьте ссылку на рилс Instagram для добавления во входящие
-                </p>
               </div>
             )}
 
-            {/* History pills */}
-            {(viewMode === 'carousel' || viewMode === 'trending') && searchHistory.length > 0 && (
-              <div className="flex flex-wrap justify-center gap-2 mt-3">
-                {searchHistory.map((item, index) => (
+            {/* Radar Tab Content */}
+            {activeTab === 'radar' && (
+              <div className="glass rounded-2xl p-5 shadow-xl shadow-orange-500/10">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center relative">
+                    <Radar className="w-5 h-5 text-white" />
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-800">Радар профилей</h3>
+                    <p className="text-xs text-slate-500">Отслеживайте новые видео от авторов</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="relative flex-1">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">@</span>
+                    <input
+                      type="text"
+                      value={radarUsername}
+                      onChange={(e) => setRadarUsername(e.target.value)}
+                      placeholder="username"
+                      className="w-full pl-9 pr-4 py-3 rounded-xl border border-slate-200 bg-white/80 outline-none focus:ring-2 focus:ring-orange-500/30 text-sm"
+                    />
+                  </div>
                   <button
-                    key={index}
-                    onClick={() => handleSearch(item)}
-                    className="px-3 py-1.5 rounded-full glass text-slate-600 hover:text-slate-800 text-sm font-medium transition-all"
+                    onClick={() => {
+                      if (radarUsername.trim()) {
+                        toast.success(`@${radarUsername} добавлен в радар`, {
+                          description: 'Вы будете получать уведомления о новых видео',
+                        });
+                        setRadarUsername('');
+                      }
+                    }}
+                    disabled={!radarUsername.trim()}
+                    className={cn(
+                      "px-5 py-3 rounded-xl font-medium text-sm transition-all active:scale-95 flex items-center gap-2",
+                      "bg-gradient-to-r from-orange-500 to-amber-600 text-white",
+                      "hover:from-orange-400 hover:to-amber-500",
+                      "disabled:opacity-40 disabled:cursor-not-allowed",
+                      "shadow-lg shadow-orange-500/30"
+                    )}
                   >
-                    {item}
+                    <UserPlus className="w-4 h-4" />
+                    Добавить
                   </button>
-                ))}
+                </div>
+
+                {/* Tracked profiles placeholder */}
+                <div className="border-t border-slate-200/50 pt-4">
+                  <p className="text-xs text-slate-500 mb-3">Отслеживаемые профили</p>
+                  <div className="flex flex-wrap gap-2">
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/60 border border-slate-200/50">
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-pink-500 to-purple-600" />
+                      <span className="text-sm text-slate-700">@example_user</span>
+                      <button className="text-slate-400 hover:text-red-500 transition-colors">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <button className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-slate-300 text-slate-500 hover:border-orange-400 hover:text-orange-500 transition-all text-sm">
+                      <Plus className="w-4 h-4" />
+                      Добавить
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -1114,155 +1210,63 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                     const isMenuOpen = cardFolderSelect === cardId;
                     
                     return (
-                      <div
+                      <VideoGradientCard
                         key={cardId}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, reel)}
+                        thumbnailUrl={thumbnailUrl}
+                        username={reel.owner?.username || 'instagram'}
+                        caption={captionText}
+                        viewCount={reel.view_count}
+                        likeCount={reel.like_count}
+                        date={dateText || '—'}
+                        viralCoef={viralCoef}
                         onClick={() => !isMenuOpen && setSelectedVideo(reel)}
-                        className="group relative rounded-[1.5rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer hover:scale-[1.02] active:scale-[0.98] bg-white"
-                      >
-                        {/* Image section */}
-                        <div className="relative w-full" style={{ aspectRatio: '3/4' }}>
-                          <img
-                            src={thumbnailUrl}
-                            alt=""
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.src = 'https://via.placeholder.com/270x360?text=Video';
-                            }}
-                          />
-                          
-                          {/* Dark gradient overlay for text readability */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                          
-                          {/* Viral coefficient badge (top left) */}
-                          <div className="absolute top-3 left-3 z-10">
-                            <div className={cn(
-                              "px-2.5 py-1 rounded-full backdrop-blur-md flex items-center gap-1.5 shadow-lg",
-                              viralCoef > 10 ? "bg-emerald-500 text-white" : 
-                              viralCoef > 5 ? "bg-amber-500 text-white" :
-                              viralCoef > 0 ? "bg-white/90 text-slate-700" :
-                              "bg-black/40 text-white/70"
-                            )}>
-                              <Sparkles className="w-3 h-3" />
-                              <span className="text-xs font-bold">{viralCoef > 0 ? viralCoef : '—'}</span>
-                            </div>
-                          </div>
-                          
-                          {/* Date badge (top right) - always show */}
-                          <div className="absolute top-3 right-3 z-10">
-                            <div className="px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-sm font-semibold shadow-lg">
-                              {dateText || '—'}
-                            </div>
-                          </div>
-                          
-                          {/* Play button on hover */}
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                            <div className="w-14 h-14 rounded-full bg-white/95 flex items-center justify-center shadow-2xl">
-                              <Play className="w-6 h-6 text-slate-800 ml-1" fill="currentColor" />
-                            </div>
-                          </div>
-                          
-                          {/* Bottom info overlay */}
-                          <div className="absolute bottom-0 left-0 right-0 p-4">
-                            {/* Username with verified badge */}
-                            <div className="flex items-center gap-1.5 mb-1">
-                              <h3 className="font-semibold text-white text-sm truncate drop-shadow-lg">
-                                @{reel.owner?.username || 'instagram'}
-                              </h3>
-                              {viralCoef > 5 && (
-                                <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-                                  <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
-                                </div>
-                              )}
-                            </div>
-                            
-                            {/* Description */}
-                            <p className="text-white/80 text-xs leading-relaxed line-clamp-2 mb-3 drop-shadow">
-                              {captionText.slice(0, 60)}{captionText.length > 60 ? '...' : ''}
-                            </p>
-                            
-                            {/* Stats and add button row */}
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3 text-white/90">
-                                <div className="flex items-center gap-1">
-                                  <Eye className="w-3.5 h-3.5" />
-                                  <span className="text-xs font-medium">{formatNumber(reel.view_count)}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <Heart className="w-3.5 h-3.5" />
-                                  <span className="text-xs font-medium">{formatNumber(reel.like_count)}</span>
-                                </div>
+                        onDragStart={(e) => handleDragStart(e, reel)}
+                        showFolderMenu={isMenuOpen}
+                        onFolderMenuToggle={() => setCardFolderSelect(isMenuOpen ? null : cardId)}
+                        folderMenu={
+                          <div 
+                            className="absolute bottom-12 right-0 bg-white rounded-2xl shadow-2xl p-2 min-w-[160px] z-50 animate-in fade-in slide-in-from-bottom-2 duration-200"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              onClick={() => {
+                                handleAddToCanvas(reel);
+                                setCardFolderSelect(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-orange-50 transition-colors text-left"
+                            >
+                              <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+                                <Plus className="w-4 h-4 text-orange-600" />
                               </div>
-                              
-                              {/* Add button with folder menu */}
-                              <div className="relative">
+                              <span className="text-sm font-medium text-slate-700">Входящие</span>
+                            </button>
+                            
+                            <div className="h-px bg-slate-100 my-1" />
+                            
+                            {folderConfigs.map((folder) => {
+                              const FolderIcon = folder.icon;
+                              return (
                                 <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setCardFolderSelect(isMenuOpen ? null : cardId);
+                                  key={folder.id}
+                                  onClick={() => {
+                                    handleAddToFolder(reel, folder.id);
+                                    setCardFolderSelect(null);
                                   }}
-                                  className={cn(
-                                    "w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-lg",
-                                    isMenuOpen 
-                                      ? "bg-orange-500 text-white rotate-45" 
-                                      : "bg-white text-slate-800 hover:bg-orange-500 hover:text-white"
-                                  )}
+                                  className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-colors text-left"
                                 >
-                                  <Plus className="w-5 h-5" />
-                                </button>
-                                
-                                {/* Folder selection menu */}
-                                {isMenuOpen && (
                                   <div 
-                                    className="absolute bottom-12 right-0 bg-white rounded-2xl shadow-2xl p-2 min-w-[160px] z-50 animate-in fade-in slide-in-from-bottom-2 duration-200"
-                                    onClick={(e) => e.stopPropagation()}
+                                    className="w-8 h-8 rounded-lg flex items-center justify-center"
+                                    style={{ backgroundColor: `${folder.color}20` }}
                                   >
-                                    <button
-                                      onClick={() => {
-                                        handleAddToCanvas(reel);
-                                        setCardFolderSelect(null);
-                                      }}
-                                      className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-orange-50 transition-colors text-left"
-                                    >
-                                      <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
-                                        <Plus className="w-4 h-4 text-orange-600" />
-                                      </div>
-                                      <span className="text-sm font-medium text-slate-700">Входящие</span>
-                                    </button>
-                                    
-                                    <div className="h-px bg-slate-100 my-1" />
-                                    
-                                    {folderConfigs.map((folder) => {
-                                      const FolderIcon = folder.icon;
-                                      return (
-                                        <button
-                                          key={folder.id}
-                                          onClick={() => {
-                                            handleAddToFolder(reel, folder.id);
-                                            setCardFolderSelect(null);
-                                          }}
-                                          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-colors text-left"
-                                        >
-                                          <div 
-                                            className="w-8 h-8 rounded-lg flex items-center justify-center"
-                                            style={{ backgroundColor: `${folder.color}20` }}
-                                          >
-                                            <FolderIcon className="w-4 h-4" style={{ color: folder.color }} />
-                                          </div>
-                                          <span className="text-sm font-medium text-slate-700">{folder.title}</span>
-                                        </button>
-                                      );
-                                    })}
+                                    <FolderIcon className="w-4 h-4" style={{ color: folder.color }} />
                                   </div>
-                                )}
-                              </div>
-                            </div>
+                                  <span className="text-sm font-medium text-slate-700">{folder.title}</span>
+                                </button>
+                              );
+                            })}
                           </div>
-                        </div>
-                      </div>
+                        }
+                      />
                     );
                   })}
                 </div>

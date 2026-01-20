@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useWorkspaceZones, ZoneVideo } from '../hooks/useWorkspaceZones';
 import { useInboxVideos } from '../hooks/useInboxVideos';
-import { Plus, Sparkles, Star, FileText, CheckCircle, ArrowUpRight, Trash2, Eye, Heart, ExternalLink, FolderOpen, ChevronLeft } from 'lucide-react';
+import { Plus, Sparkles, Star, FileText, CheckCircle, Trash2, Eye, Heart, ExternalLink, ChevronLeft, FolderOpen } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { AnimatedFolder3D, FolderVideo } from './ui/Folder3D';
 
 function formatNumber(num?: number): string {
   if (num === undefined || num === null) return '0';
@@ -42,115 +43,15 @@ function calculateViralCoefficient(views?: number, takenAt?: string | number | D
   return Math.round((views / (diffDays * 1000)) * 100) / 100;
 }
 
-interface MiniVideoCardProps {
-  video: ZoneVideo;
-  index: number;
-}
-
-function MiniVideoCard({ video, index }: MiniVideoCardProps) {
-  const rotation = (index - 1) * 8;
-  const translateX = (index - 1) * 15;
-  const translateY = index === 1 ? 0 : 10;
-  
-  return (
-    <div
-      className="absolute w-20 h-28 rounded-xl overflow-hidden shadow-lg transition-all duration-300 group-hover:shadow-xl"
-      style={{
-        transform: `translateX(${translateX}px) translateY(${translateY}px) rotate(${rotation}deg)`,
-        zIndex: index === 1 ? 3 : 3 - Math.abs(index - 1),
-      }}
-    >
-      <img
-        src={video.preview_url || 'https://via.placeholder.com/80x112'}
-        alt=""
-        className="w-full h-full object-cover"
-        onError={(e) => {
-          e.currentTarget.src = 'https://via.placeholder.com/80x112?text=V';
-        }}
-      />
-    </div>
-  );
-}
-
-interface FolderCardProps {
-  title: string;
-  videos: ZoneVideo[];
-  color: string;
-  icon: React.ReactNode;
-  zoneId: string | null;
-  onDragOver: (e: React.DragEvent) => void;
-  onDrop: (e: React.DragEvent, zoneId: string | null) => void;
-  isDropTarget: boolean;
-  onDragEnter: () => void;
-  onClick: () => void;
-}
-
-function FolderCard({ title, videos, color, icon, zoneId, onDragOver, onDrop, isDropTarget, onDragEnter, onClick }: FolderCardProps) {
-  const previewVideos = videos.slice(0, 3);
-  
-  return (
-    <div
-      onDragOver={onDragOver}
-      onDragEnter={onDragEnter}
-      onDrop={(e) => onDrop(e, zoneId)}
-      onClick={onClick}
-      className={cn(
-        "group relative bg-white rounded-3xl p-6 transition-all duration-300 cursor-pointer",
-        "hover:shadow-xl hover:shadow-black/5 hover:scale-[1.01] active:scale-[0.98]",
-        isDropTarget && "ring-2 ring-orange-500 shadow-xl shadow-orange-500/20 scale-[1.02]"
-      )}
-    >
-      {/* Folder illustration with video previews */}
-      <div className="relative w-full h-40 mb-6 flex items-center justify-center">
-        <div 
-          className="absolute inset-x-4 bottom-0 h-28 rounded-2xl"
-          style={{ backgroundColor: `${color}15` }}
-        />
-        
-        <div 
-          className="absolute inset-x-0 bottom-0 h-20 rounded-2xl backdrop-blur-md"
-          style={{ backgroundColor: `${color}08` }}
-        />
-        
-        <div className="relative h-28 w-32 mt-2">
-          {previewVideos.length > 0 ? (
-            previewVideos.map((video, index) => (
-              <MiniVideoCard key={video.id} video={video} index={index} />
-            ))
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div 
-                className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                style={{ backgroundColor: `${color}20` }}
-              >
-                {icon}
-              </div>
-            </div>
-          )}
-        </div>
-        
-        <div 
-          className="absolute bottom-2 right-2 w-10 h-10 rounded-full flex items-center justify-center transition-all group-hover:scale-110"
-          style={{ backgroundColor: color }}
-        >
-          <ArrowUpRight className="w-5 h-5 text-white" />
-        </div>
-      </div>
-      
-      <h3 className="text-xl font-medium text-neutral-900 tracking-tight mb-1">
-        {title}
-      </h3>
-      
-      <div className="inline-flex items-center gap-2">
-        <span 
-          className="text-sm font-medium px-3 py-1 rounded-full"
-          style={{ backgroundColor: `${color}15`, color }}
-        >
-          {videos.length} видео
-        </span>
-      </div>
-    </div>
-  );
+// Конвертация ZoneVideo в FolderVideo для 3D папки
+function toFolderVideos(videos: ZoneVideo[]): FolderVideo[] {
+  return videos.map(v => ({
+    id: v.id,
+    image: v.preview_url || 'https://via.placeholder.com/64x96',
+    title: v.owner_username ? `@${v.owner_username}` : v.title?.slice(0, 20) || 'Video',
+    views: v.view_count,
+    likes: v.like_count,
+  }));
 }
 
 interface FolderConfig {
@@ -435,25 +336,34 @@ export function Workspace() {
           </p>
         </div>
 
-        {/* Folder Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {/* Folder Grid - 3D Folders */}
+        <div 
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 justify-items-center"
+        >
           {folderConfigs.map((config) => {
             const folderVideos = getFolderVideos(config.id);
+            const folder3DVideos = toFolderVideos(folderVideos);
             
             return (
-              <FolderCard
+              <div
                 key={config.id || 'incoming'}
-                title={config.title}
-                videos={folderVideos}
-                color={config.color}
-                icon={iconMap[config.iconType]}
-                zoneId={config.id}
                 onDragOver={handleDragOver}
-                onDrop={handleDrop}
-                isDropTarget={dropTargetZone === (config.id || 'unassigned')}
                 onDragEnter={() => handleDragEnter(config.id)}
-                onClick={() => setSelectedFolder(config)}
-              />
+                onDrop={(e) => handleDrop(e, config.id)}
+                className={cn(
+                  "transition-all duration-300",
+                  dropTargetZone === (config.id || 'unassigned') && "scale-105 ring-2 ring-orange-500 rounded-2xl"
+                )}
+              >
+                <AnimatedFolder3D
+                  title={config.title}
+                  videos={folder3DVideos}
+                  count={folderVideos.length}
+                  color={config.color}
+                  icon={iconMap[config.iconType]}
+                  onClick={() => setSelectedFolder(config)}
+                />
+              </div>
             );
           })}
         </div>
