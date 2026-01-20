@@ -1,47 +1,29 @@
-import { useState, useEffect } from 'react';
-import { ArrowRight, Search, Sparkles, TrendingUp, Video, Zap } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowRight, ArrowLeft, Sparkles, TrendingUp, Video, Zap, Send, Loader2 } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { useAuth } from '../hooks/useAuth';
 
-interface LandingPageProps {
-  onEnter: () => void;
-  onOpenSearch: () => void;
-}
+export function LandingPage() {
+  const [showAuth, setShowAuth] = useState(false);
+  const [username, setUsername] = useState('');
+  const [code, setCode] = useState('');
+  const { sendCode, verifyCode, sendingCode, verifying, error, codeSent, resetAuth } = useAuth();
 
-export function LandingPage({ onEnter, onOpenSearch }: LandingPageProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [typingText, setTypingText] = useState('');
-  const placeholders = [
-    'Найти вирусные рилсы про маркетинг...',
-    'Топовые видео про стартапы...',
-    'Трендовые рилсы про AI...',
-    'Популярные видео про бизнес...',
-  ];
-  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const handleSendCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await sendCode(username);
+  };
 
-  useEffect(() => {
-    const text = placeholders[placeholderIndex];
-    let charIndex = 0;
-    setTypingText('');
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await verifyCode(code);
+  };
 
-    const typeInterval = setInterval(() => {
-      if (charIndex < text.length) {
-        setTypingText(text.slice(0, charIndex + 1));
-        charIndex++;
-      } else {
-        clearInterval(typeInterval);
-        setTimeout(() => {
-          setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
-        }, 2000);
-      }
-    }, 50);
-
-    return () => clearInterval(typeInterval);
-  }, [placeholderIndex]);
-
-  const handleSearch = () => {
-    if (searchQuery.trim()) {
-      onOpenSearch();
-    }
+  const handleBack = () => {
+    resetAuth();
+    setShowAuth(false);
+    setUsername('');
+    setCode('');
   };
 
   return (
@@ -58,83 +40,213 @@ export function LandingPage({ onEnter, onOpenSearch }: LandingPageProps) {
 
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 py-16">
-        {/* Badge */}
-        <div className="mb-6 px-4 py-1.5 rounded-full glass">
-          <span className="text-sm text-orange-600 font-semibold tracking-wide">
-            ✨ AI ПОИСК КОНТЕНТА
-          </span>
-        </div>
+        {!showAuth ? (
+          // Landing content
+          <>
+            {/* Badge */}
+            <div className="mb-6 px-4 py-1.5 rounded-full glass">
+              <span className="text-sm text-orange-600 font-semibold tracking-wide">
+                AI-ПОИСК КОНТЕНТА
+              </span>
+            </div>
 
-        {/* Main Heading */}
-        <h1 className="text-center mb-5">
-          <span className="block text-5xl md:text-7xl font-serif italic text-neutral-900 tracking-tighter">
-            Найди
-          </span>
-          <span className="block text-5xl md:text-7xl font-light text-orange-500 tracking-tight">
-            свой контент
-          </span>
-        </h1>
+            {/* Main Heading */}
+            <h1 className="text-center mb-5">
+              <span className="block text-5xl md:text-7xl font-serif italic text-neutral-900 tracking-tighter">
+                Найди
+              </span>
+              <span className="block text-5xl md:text-7xl font-light text-orange-500 tracking-tight">
+                свой контент
+              </span>
+            </h1>
 
-        {/* Subtitle */}
-        <p className="text-center text-slate-600 text-base md:text-lg max-w-lg mb-2">
-          <span className="text-slate-800 font-semibold">Bazar AI</span> — персональный ассистент для поиска вирусного контента
-        </p>
-        <p className="text-center text-slate-500 text-sm max-w-md mb-8">
-          Ищи трендовые видео, сохраняй идеи, создавай сценарии
-        </p>
+            {/* Subtitle */}
+            <p className="text-center text-slate-600 text-base md:text-lg max-w-lg mb-2">
+              <span className="text-slate-800 font-semibold">Bazar AI</span> — персональный ассистент для поиска вирусного контента
+            </p>
+            <p className="text-center text-slate-500 text-sm max-w-md mb-10">
+              Ищи трендовые видео, сохраняй идеи, создавай сценарии
+            </p>
 
-        {/* CTA Button */}
-        <button
-          onClick={onEnter}
-          className={cn(
-            "group px-6 py-3 rounded-xl mb-10",
-            "bg-gradient-to-r from-orange-500 to-amber-600",
-            "hover:from-orange-400 hover:to-amber-500",
-            "text-white font-semibold text-sm",
-            "transition-all duration-300",
-            "shadow-2xl shadow-orange-900/60",
-            "flex items-center gap-2"
-          )}
-        >
-          НАЧАТЬ РАБОТУ
-          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-        </button>
+            {/* CTA Button */}
+            <button
+              onClick={() => setShowAuth(true)}
+              className={cn(
+                "group px-8 py-4 rounded-2xl mb-12",
+                "bg-gradient-to-r from-orange-500 to-amber-600",
+                "hover:from-orange-400 hover:to-amber-500",
+                "text-white font-semibold text-base",
+                "transition-all duration-300",
+                "shadow-2xl shadow-orange-500/40",
+                "flex items-center gap-3"
+              )}
+            >
+              НАЧАТЬ РАБОТУ
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </button>
 
-        {/* Search Bar */}
-        <div className="w-full max-w-xl mb-6">
-          <div className="glass rounded-xl shadow-xl shadow-orange-500/10">
-            <div className="flex items-center gap-3 px-5 py-3">
-              <Search className="w-5 h-5 text-orange-500" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder={typingText}
-                className="flex-1 bg-transparent text-slate-800 placeholder-slate-400 text-base outline-none"
-              />
-              <button
-                onClick={handleSearch}
-                className="p-2.5 rounded-lg bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 text-white transition-all shadow-lg shadow-orange-500/30"
-              >
-                <Search className="w-4 h-4" />
-              </button>
+            {/* Features */}
+            <div className="flex flex-wrap justify-center gap-5 md:gap-10">
+              <Feature icon={TrendingUp} label="Трендовые видео" />
+              <Feature icon={Sparkles} label="AI рекомендации" />
+              <Feature icon={Video} label="1M+ рилсов" />
+              <Feature icon={Zap} label="Мгновенный поиск" />
+            </div>
+          </>
+        ) : (
+          // Auth form
+          <div className="w-full max-w-md">
+            <button
+              onClick={handleBack}
+              className="flex items-center gap-2 text-slate-500 hover:text-slate-700 mb-6 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Назад
+            </button>
+
+            <div className="glass rounded-3xl p-8 shadow-xl">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-orange-500/30">
+                  <Video className="w-8 h-8 text-white" />
+                </div>
+                <h2 className="text-2xl font-serif italic text-neutral-900 mb-1">
+                  Вход в Bazar AI
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Авторизуйся через Telegram
+                </p>
+              </div>
+
+              {!codeSent ? (
+                // Step 1: Enter username
+                <form onSubmit={handleSendCode} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Telegram username
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">@</span>
+                      <input
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="username"
+                        className="w-full pl-9 pr-4 py-3 rounded-xl border border-slate-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  {error && (
+                    <div className="p-3 rounded-xl bg-red-50 border border-red-200">
+                      <p className="text-sm text-red-600">{error}</p>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={sendingCode || !username.trim()}
+                    className={cn(
+                      "w-full py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2",
+                      sendingCode || !username.trim()
+                        ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                        : "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40"
+                    )}
+                  >
+                    {sendingCode ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Отправка...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-5 h-5" />
+                        Получить код
+                      </>
+                    )}
+                  </button>
+
+                  {/* Bot hint */}
+                  <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
+                    <div className="flex items-start gap-3">
+                      <Sparkles className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-amber-800">Важно!</p>
+                        <p className="text-xs text-amber-600 mt-0.5">
+                          Сначала напишите /start боту{' '}
+                          <a 
+                            href="https://t.me/bazarai_bot" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="font-medium underline"
+                          >
+                            @bazarai_bot
+                          </a>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              ) : (
+                // Step 2: Enter code
+                <form onSubmit={handleVerifyCode} className="space-y-4">
+                  <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 mb-4">
+                    <p className="text-sm text-emerald-700">
+                      Код отправлен в Telegram на @{username.replace('@', '')}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Код из Telegram
+                    </label>
+                    <input
+                      type="text"
+                      value={code}
+                      onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="000000"
+                      maxLength={6}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all text-center text-2xl font-mono tracking-widest bg-white"
+                    />
+                  </div>
+
+                  {error && (
+                    <div className="p-3 rounded-xl bg-red-50 border border-red-200">
+                      <p className="text-sm text-red-600">{error}</p>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={verifying || code.length !== 6}
+                    className={cn(
+                      "w-full py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2",
+                      verifying || code.length !== 6
+                        ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                        : "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40"
+                    )}
+                  >
+                    {verifying ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Проверка...
+                      </>
+                    ) : (
+                      'Войти'
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => resetAuth()}
+                    className="w-full text-sm text-slate-500 hover:text-slate-700"
+                  >
+                    Изменить username
+                  </button>
+                </form>
+              )}
             </div>
           </div>
-        </div>
-
-        {/* Tagline */}
-        <p className="text-slate-500 text-xs mb-10">
-          Ищи тренды • Сохраняй идеи • Создавай контент
-        </p>
-
-        {/* Features */}
-        <div className="flex flex-wrap justify-center gap-5 md:gap-10">
-          <Feature icon={TrendingUp} label="Трендовые видео" />
-          <Feature icon={Sparkles} label="AI рекомендации" />
-          <Feature icon={Video} label="1M+ рилсов" />
-          <Feature icon={Zap} label="Мгновенный поиск" />
-        </div>
+        )}
       </div>
     </div>
   );

@@ -7,43 +7,20 @@ import { ProfilePage } from './components/ProfilePage';
 import { IncomingVideosDrawer } from './components/sidebar/IncomingVideosDrawer';
 import { SearchPanel } from './components/ui/SearchPanel';
 import { useAuth } from './hooks/useAuth';
-import { Menu, Video, Settings, Search, LayoutGrid, GitBranch, Home, Clock, User } from 'lucide-react';
+import { Menu, Video, Settings, Search, LayoutGrid, GitBranch, Clock, User, LogOut } from 'lucide-react';
 import { cn } from './utils/cn';
 
-type ViewMode = 'landing' | 'workspace' | 'canvas' | 'history' | 'profile';
+type ViewMode = 'workspace' | 'canvas' | 'history' | 'profile';
 
 function App() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const { user, isAuthenticated } = useAuth();
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    // Проверяем, был ли пользователь уже в приложении
-    const hasVisited = localStorage.getItem('hasVisitedApp');
-    return hasVisited ? 'workspace' : 'landing';
-  });
+  const { user, isAuthenticated, logout } = useAuth();
+  const [viewMode, setViewMode] = useState<ViewMode>('workspace');
 
-  const handleEnterApp = () => {
-    localStorage.setItem('hasVisitedApp', 'true');
-    setViewMode('workspace');
-  };
-
-  // Если landing page — показываем только её
-  if (viewMode === 'landing') {
-    return (
-      <>
-        <LandingPage 
-          onEnter={handleEnterApp} 
-          onOpenSearch={() => {
-            handleEnterApp();
-            setTimeout(() => setIsSearchOpen(true), 300);
-          }} 
-        />
-        <SearchPanel
-          isOpen={isSearchOpen}
-          onClose={() => setIsSearchOpen(false)}
-        />
-      </>
-    );
+  // Если не авторизован — показываем Landing Page
+  if (!isAuthenticated) {
+    return <LandingPage />;
   }
 
   return (
@@ -74,13 +51,6 @@ function App() {
 
         {/* View Mode Switcher */}
         <div className="flex items-center glass rounded-xl p-0.5">
-          <button
-            onClick={() => setViewMode('landing')}
-            className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 text-slate-600 hover:text-slate-900 hover:bg-white/50"
-          >
-            <Home className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Главная</span>
-          </button>
           <button
             onClick={() => setViewMode('workspace')}
             className={cn(
@@ -127,7 +97,7 @@ function App() {
             )}
           >
             <User className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{isAuthenticated ? `@${user?.telegram_username}` : 'Войти'}</span>
+            <span className="hidden sm:inline">@{user?.telegram_username}</span>
           </button>
         </div>
         
@@ -158,6 +128,14 @@ function App() {
           
           <button className="glass-button p-2 rounded-xl text-slate-600 hover:text-slate-900 transition-all">
             <Settings className="w-4 h-4" />
+          </button>
+
+          <button 
+            onClick={logout}
+            className="glass-button p-2 rounded-xl text-slate-600 hover:text-red-500 transition-all"
+            title="Выйти"
+          >
+            <LogOut className="w-4 h-4" />
           </button>
         </div>
       </div>
