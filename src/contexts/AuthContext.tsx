@@ -32,27 +32,38 @@ const generateCode = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
+// Синхронно читаем пользователя из localStorage при загрузке модуля
+const getInitialUser = (): User | null => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    console.log('[Auth] Initial localStorage check:', stored ? 'found user' : 'no user');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      console.log('[Auth] Parsed user:', parsed);
+      return parsed;
+    }
+  } catch (e) {
+    console.error('[Auth] Error reading localStorage:', e);
+    localStorage.removeItem(STORAGE_KEY);
+  }
+  return null;
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Инициализируем синхронно, чтобы избежать мигания
+  const [user, setUser] = useState<User | null>(getInitialUser);
+  const [loading, setLoading] = useState(false); // Уже не нужен loading, т.к. читаем синхронно
   const [sendingCode, setSendingCode] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [codeSent, setCodeSent] = useState(false);
   const [pendingUsername, setPendingUsername] = useState<string | null>(null);
 
-  // Загрузка пользователя из localStorage при старте
+  // Логируем состояние при каждом рендере
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        setUser(JSON.parse(stored));
-      } catch {
-        localStorage.removeItem(STORAGE_KEY);
-      }
-    }
-    setLoading(false);
-  }, []);
+    console.log('[Auth] Current user state:', user);
+    console.log('[Auth] isAuthenticated:', !!user);
+  }, [user]);
 
   // Отправка кода в Telegram
   const sendCode = useCallback(async (username: string) => {
@@ -186,8 +197,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
 
       // Сохраняем локально
+      console.log('[Auth] Saving user to localStorage:', userData);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+      
+      // Проверяем что сохранилось
+      const saved = localStorage.getItem(STORAGE_KEY);
+      console.log('[Auth] Verified saved data:', saved);
+      
       setUser(userData);
+      console.log('[Auth] User state updated');
 
       // Сохраняем в Supabase
       await supabase
