@@ -11,6 +11,28 @@ function formatNumber(num?: number): string {
   return num.toString();
 }
 
+// Расчёт коэффициента виральности
+function calculateViralCoefficient(views?: number, takenAt?: string): number {
+  if (!views || views < 30000 || !takenAt) return 0;
+  
+  let videoDate: Date;
+  if (takenAt.includes('T') || takenAt.includes('-')) {
+    videoDate = new Date(takenAt);
+  } else {
+    videoDate = new Date(Number(takenAt) * 1000);
+  }
+  
+  if (isNaN(videoDate.getTime())) return 0;
+  
+  const today = new Date();
+  const diffTime = today.getTime() - videoDate.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays <= 0) return 0;
+  
+  return Math.round((views / (diffDays * 1000)) * 100) / 100;
+}
+
 interface MiniVideoCardProps {
   video: ZoneVideo;
   index: number;
@@ -261,6 +283,7 @@ export function Workspace() {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 pb-6">
                 {folderVideos.map((video, idx) => {
                   const thumbnailUrl = video.preview_url || 'https://via.placeholder.com/270x360';
+                  const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at || video.created_at);
                   
                   return (
                     <div
@@ -292,9 +315,23 @@ export function Workspace() {
                             }}
                           />
                           
+                          {/* Viral coefficient badge */}
+                          <div className="absolute top-2 left-2 z-20">
+                            <div className={cn(
+                              "px-2 py-0.5 rounded-full backdrop-blur-md flex items-center gap-1 shadow-lg",
+                              viralCoef > 10 ? "bg-emerald-500 text-white" : 
+                              viralCoef > 5 ? "bg-amber-500 text-white" :
+                              viralCoef > 0 ? "bg-white/90 text-slate-700" :
+                              "bg-slate-200/90 text-slate-500"
+                            )}>
+                              <Sparkles className="w-2.5 h-2.5" />
+                              <span className="text-[10px] font-bold">{viralCoef > 0 ? viralCoef : '—'}</span>
+                            </div>
+                          </div>
+                          
                           {/* Move to folder dropdown - only show if not in inbox */}
                           {!isInboxFolder && (
-                            <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                               <select
                                 onClick={(e) => e.stopPropagation()}
                                 onChange={(e) => {

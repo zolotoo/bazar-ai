@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, ExternalLink, Loader2, Video, Eye, Heart, Sparkles } from 'lucide-react';
+import { X, ExternalLink, Loader2, Video, Eye, Heart, Sparkles, TrendingUp } from 'lucide-react';
 import { IncomingVideo } from '../../types';
 import { useFlowStore } from '../../stores/flowStore';
 import { useInboxVideos } from '../../hooks/useInboxVideos';
@@ -15,6 +15,28 @@ function formatNumber(num?: number): string {
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
   if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
   return num.toString();
+}
+
+// Расчёт коэффициента виральности
+function calculateViralCoefficient(views?: number, takenAt?: string): number {
+  if (!views || views < 30000 || !takenAt) return 0;
+  
+  let videoDate: Date;
+  if (takenAt.includes('T') || takenAt.includes('-')) {
+    videoDate = new Date(takenAt);
+  } else {
+    videoDate = new Date(Number(takenAt) * 1000);
+  }
+  
+  if (isNaN(videoDate.getTime())) return 0;
+  
+  const today = new Date();
+  const diffTime = today.getTime() - videoDate.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays <= 0) return 0;
+  
+  return Math.round((views / (diffDays * 1000)) * 100) / 100;
 }
 
 export function IncomingVideosDrawer({ isOpen, onClose }: IncomingVideosDrawerProps) {
@@ -88,9 +110,11 @@ export function IncomingVideosDrawer({ isOpen, onClose }: IncomingVideosDrawerPr
               </div>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {incomingVideos.map((video) => {
                 const videoData = video as any;
+                const thumbnailUrl = video.previewUrl || 'https://via.placeholder.com/320x400';
+                const viralCoef = calculateViralCoefficient(videoData.view_count, videoData.taken_at || videoData.receivedAt);
                 
                 return (
                   <div
@@ -98,67 +122,82 @@ export function IncomingVideosDrawer({ isOpen, onClose }: IncomingVideosDrawerPr
                     draggable
                     onDragStart={(e) => handleDragStart(e, video)}
                     className={cn(
-                      'group overflow-hidden rounded-3xl',
+                      'group relative overflow-hidden rounded-[1.75rem]',
                       'cursor-grab active:cursor-grabbing',
                       'shadow-lg hover:shadow-xl',
-                      'transition-all duration-300 hover:scale-[1.02]'
+                      'transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]'
                     )}
                   >
-                    <div className="relative aspect-[9/16] overflow-hidden">
-                      <img
-                        src={video.previewUrl || 'https://via.placeholder.com/320x500'}
-                        alt={video.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/320x500'; }}
-                      />
-                      
-                      {/* Top badge */}
-                      <div className="absolute top-3 left-3">
-                        <div className="px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-sm flex items-center gap-1.5 shadow-md">
-                          <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                          <span className="text-xs font-medium text-slate-700">Готово</span>
-                        </div>
-                      </div>
-
-                      {/* Bottom glass panel */}
-                      <div className="absolute bottom-0 left-0 right-0">
-                        {/* Avatar */}
-                        <div className="flex justify-center -mb-3 relative z-10">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 ring-2 ring-white flex items-center justify-center">
-                            <span className="text-white text-xs font-bold">
-                              {video.title?.charAt(0)?.toUpperCase() || 'V'}
-                            </span>
+                    {/* Blurred background */}
+                    <div 
+                      className="absolute inset-0 bg-cover bg-center"
+                      style={{ 
+                        backgroundImage: `url(${thumbnailUrl})`,
+                        filter: 'blur(20px) brightness(0.9)',
+                        transform: 'scale(1.1)'
+                      }}
+                    />
+                    
+                    {/* Content */}
+                    <div className="relative z-10">
+                      {/* Image */}
+                      <div className="relative m-2 mb-0" style={{ aspectRatio: '3/4' }}>
+                        <img
+                          src={thumbnailUrl}
+                          alt={video.title}
+                          className="w-full h-full object-cover rounded-[1.25rem]"
+                          onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/320x400?text=Video'; }}
+                        />
+                        
+                        {/* Viral coefficient badge */}
+                        <div className="absolute top-2 left-2 z-10">
+                          <div className={cn(
+                            "px-2 py-0.5 rounded-full backdrop-blur-md flex items-center gap-1 shadow-lg",
+                            viralCoef > 10 ? "bg-emerald-500 text-white" : 
+                            viralCoef > 5 ? "bg-amber-500 text-white" :
+                            viralCoef > 0 ? "bg-white/90 text-slate-700" :
+                            "bg-slate-200/90 text-slate-500"
+                          )}>
+                            <TrendingUp className="w-2.5 h-2.5" />
+                            <span className="text-[10px] font-bold">{viralCoef > 0 ? viralCoef : '—'}</span>
                           </div>
                         </div>
+                      </div>
+                      
+                      {/* Info section */}
+                      <div className="p-3 pt-2">
+                        {/* Username */}
+                        <h3 className="font-sans font-semibold text-slate-900 text-[13px] truncate italic mb-1">
+                          @{videoData.owner_username || 'instagram'}
+                        </h3>
                         
-                        {/* Glass info panel */}
-                        <div className="bg-white/70 backdrop-blur-xl p-4 pt-5">
-                          <h3 className="text-center font-semibold text-slate-900 text-sm leading-tight mb-1 line-clamp-2">
-                            {video.title?.slice(0, 40)}...
-                          </h3>
-                          
-                          {/* Stats */}
-                          <div className="flex items-center justify-center gap-3 text-slate-600 text-xs mt-2">
-                            <span className="flex items-center gap-1">
-                              <Eye className="w-3.5 h-3.5" />
+                        {/* Description */}
+                        <p className="font-sans text-slate-700 text-[11px] leading-relaxed line-clamp-2 mb-2">
+                          {video.title?.slice(0, 50)}...
+                        </p>
+                        
+                        {/* Stats and button row */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-slate-600">
+                            <span className="flex items-center gap-0.5 text-[10px]">
+                              <Eye className="w-3 h-3" />
                               {formatNumber(videoData.view_count)}
                             </span>
-                            <span className="flex items-center gap-1">
-                              <Heart className="w-3.5 h-3.5" />
+                            <span className="flex items-center gap-0.5 text-[10px]">
+                              <Heart className="w-3 h-3" />
                               {formatNumber(videoData.like_count)}
                             </span>
                           </div>
                           
-                          {/* Open button */}
                           <a
                             href={video.url}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-all"
+                            className="px-2.5 py-1 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-medium transition-all flex items-center gap-1 active:scale-95"
                           >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                            Открыть
+                            <ExternalLink className="w-2.5 h-2.5" />
+                            Open
                           </a>
                         </div>
                       </div>

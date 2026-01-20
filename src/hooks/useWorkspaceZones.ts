@@ -26,6 +26,8 @@ export interface ZoneVideo {
   comment_count?: number;
   owner_username?: string;
   status: string;
+  taken_at?: string;
+  created_at?: string;
 }
 
 // Дефолтные зоны

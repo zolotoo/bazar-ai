@@ -3,7 +3,7 @@ import { useSearchHistory, SearchHistoryEntry } from '../hooks/useSearchHistory'
 import { useFlowStore } from '../stores/flowStore';
 import { useInboxVideos } from '../hooks/useInboxVideos';
 import { InstagramSearchResult } from '../services/videoService';
-import { Search, Clock, Video, Eye, Heart, ExternalLink, Trash2, X, Calendar, ChevronLeft, Plus } from 'lucide-react';
+import { Search, Clock, Video, Eye, Heart, ExternalLink, Trash2, X, ChevronLeft, Plus, Sparkles } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 type TabType = 'queries' | 'videos';
@@ -13,6 +13,28 @@ function formatNumber(num?: number): string {
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
   if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
   return num.toString();
+}
+
+// Расчёт коэффициента виральности
+function calculateViralCoefficient(views?: number, takenAt?: string): number {
+  if (!views || views < 30000 || !takenAt) return 0;
+  
+  let videoDate: Date;
+  if (takenAt.includes('T') || takenAt.includes('-')) {
+    videoDate = new Date(takenAt);
+  } else {
+    videoDate = new Date(Number(takenAt) * 1000);
+  }
+  
+  if (isNaN(videoDate.getTime())) return 0;
+  
+  const today = new Date();
+  const diffTime = today.getTime() - videoDate.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays <= 0) return 0;
+  
+  return Math.round((views / (diffDays * 1000)) * 100) / 100;
 }
 
 function formatDate(date: Date): string {
@@ -104,6 +126,7 @@ export function History() {
                 {selectedEntry.results.map((reel, idx) => {
                   const captionText = typeof reel.caption === 'string' ? reel.caption : 'Видео из Instagram';
                   const thumbnailUrl = reel.thumbnail_url || reel.display_url || 'https://via.placeholder.com/270x360';
+                  const viralCoef = calculateViralCoefficient(reel.view_count, reel.taken_at);
                   
                   return (
                     <div
@@ -132,6 +155,20 @@ export function History() {
                               e.currentTarget.src = 'https://via.placeholder.com/270x360?text=Video';
                             }}
                           />
+                          
+                          {/* Viral coefficient badge */}
+                          <div className="absolute top-2 left-2 z-10">
+                            <div className={cn(
+                              "px-2 py-0.5 rounded-full backdrop-blur-md flex items-center gap-1 shadow-lg",
+                              viralCoef > 10 ? "bg-emerald-500 text-white" : 
+                              viralCoef > 5 ? "bg-amber-500 text-white" :
+                              viralCoef > 0 ? "bg-white/90 text-slate-700" :
+                              "bg-slate-200/90 text-slate-500"
+                            )}>
+                              <Sparkles className="w-2.5 h-2.5" />
+                              <span className="text-[10px] font-bold">{viralCoef > 0 ? viralCoef : '—'}</span>
+                            </div>
+                          </div>
                           
                           {/* Hover overlay */}
                           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -356,6 +393,7 @@ export function History() {
                   {incomingVideos.map((video, idx) => {
                     const videoData = video as any;
                     const thumbnailUrl = video.previewUrl || 'https://via.placeholder.com/270x360';
+                    const viralCoef = calculateViralCoefficient(videoData.view_count, videoData.taken_at || videoData.receivedAt?.toISOString());
                     
                     return (
                       <div
@@ -385,13 +423,17 @@ export function History() {
                               }}
                             />
                             
-                            {/* Date badge */}
+                            {/* Viral coefficient badge */}
                             <div className="absolute top-2 left-2 z-10">
-                              <div className="px-2 py-0.5 rounded-full bg-white/95 backdrop-blur-sm flex items-center gap-1 shadow-md">
-                                <Calendar className="w-2.5 h-2.5 text-slate-500" />
-                                <span className="text-[9px] font-medium text-slate-600">
-                                  {formatDate(video.receivedAt)}
-                                </span>
+                              <div className={cn(
+                                "px-2 py-0.5 rounded-full backdrop-blur-md flex items-center gap-1 shadow-lg",
+                                viralCoef > 10 ? "bg-emerald-500 text-white" : 
+                                viralCoef > 5 ? "bg-amber-500 text-white" :
+                                viralCoef > 0 ? "bg-white/90 text-slate-700" :
+                                "bg-slate-200/90 text-slate-500"
+                              )}>
+                                <Sparkles className="w-2.5 h-2.5" />
+                                <span className="text-[10px] font-bold">{viralCoef > 0 ? viralCoef : '—'}</span>
                               </div>
                             </div>
                             

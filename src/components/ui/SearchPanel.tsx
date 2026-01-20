@@ -771,20 +771,19 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                                 }}
                               />
                               
-                              {/* Viral badge */}
-                              {viralCoef > 0 && (
-                                <div className="absolute top-4 left-4 z-10">
-                                  <div className={cn(
-                                    "px-2 py-0.5 rounded-full backdrop-blur-md flex items-center gap-1 shadow-lg",
-                                    viralCoef > 10 ? "bg-emerald-500 text-white" : 
-                                    viralCoef > 5 ? "bg-amber-500 text-white" :
-                                    "bg-white/90 text-slate-700"
-                                  )}>
-                                    <Sparkles className="w-2.5 h-2.5" />
-                                    <span className="text-[10px] font-bold">{viralCoef}</span>
-                                  </div>
-                                </div>
-                              )}
+                            {/* Viral badge - always show */}
+                            <div className="absolute top-4 left-4 z-10">
+                              <div className={cn(
+                                "px-2 py-0.5 rounded-full backdrop-blur-md flex items-center gap-1 shadow-lg",
+                                viralCoef > 10 ? "bg-emerald-500 text-white" : 
+                                viralCoef > 5 ? "bg-amber-500 text-white" :
+                                viralCoef > 0 ? "bg-white/90 text-slate-700" :
+                                "bg-slate-200/90 text-slate-500"
+                              )}>
+                                <Sparkles className="w-2.5 h-2.5" />
+                                <span className="text-[10px] font-bold">{viralCoef > 0 ? viralCoef : '—'}</span>
+                              </div>
+                            </div>
                               
                               {/* Play button on active */}
                               {isActive && (
@@ -1025,20 +1024,19 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                               }}
                             />
                             
-                            {/* Viral coefficient badge (top left) */}
-                            {viralCoef > 0 && (
-                              <div className="absolute top-2 left-2 z-10">
-                                <div className={cn(
-                                  "px-2 py-0.5 rounded-full backdrop-blur-md flex items-center gap-1 shadow-lg",
-                                  viralCoef > 10 ? "bg-emerald-500 text-white" : 
-                                  viralCoef > 5 ? "bg-amber-500 text-white" :
-                                  "bg-white/90 text-slate-700"
-                                )}>
-                                  <Sparkles className="w-2.5 h-2.5" />
-                                  <span className="text-[10px] font-bold">{viralCoef}</span>
-                                </div>
+                            {/* Viral coefficient badge (top left) - always show */}
+                            <div className="absolute top-2 left-2 z-10">
+                              <div className={cn(
+                                "px-2 py-0.5 rounded-full backdrop-blur-md flex items-center gap-1 shadow-lg",
+                                viralCoef > 10 ? "bg-emerald-500 text-white" : 
+                                viralCoef > 5 ? "bg-amber-500 text-white" :
+                                viralCoef > 0 ? "bg-white/90 text-slate-700" :
+                                "bg-slate-200/90 text-slate-500"
+                              )}>
+                                <Sparkles className="w-2.5 h-2.5" />
+                                <span className="text-[10px] font-bold">{viralCoef > 0 ? viralCoef : '—'}</span>
                               </div>
-                            )}
+                            </div>
                             
                             {/* Play button on hover */}
                             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
