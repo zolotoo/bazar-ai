@@ -1,16 +1,11 @@
 import { useState } from 'react';
 import { useWorkspaceZones, ZoneVideo } from '../hooks/useWorkspaceZones';
 import { useInboxVideos } from '../hooks/useInboxVideos';
-import { Plus, Sparkles, Star, FileText, CheckCircle, Trash2, Eye, Heart, ExternalLink, ChevronLeft, FolderOpen } from 'lucide-react';
+import { Sparkles, Star, FileText, CheckCircle, Trash2, ExternalLink, ChevronLeft, FolderOpen, Plus } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { AnimatedFolder3D, FolderVideo } from './ui/Folder3D';
+import { VideoGradientCard } from './ui/VideoGradientCard';
 
-function formatNumber(num?: number): string {
-  if (num === undefined || num === null) return '0';
-  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-  return num.toString();
-}
 
 // Расчёт коэффициента виральности
 function calculateViralCoefficient(views?: number, takenAt?: string | number | Date): number {
@@ -62,11 +57,11 @@ interface FolderConfig {
 }
 
 const folderConfigs: FolderConfig[] = [
-  { id: null, title: 'Входящие', color: '#f97316', iconType: 'plus' },
-  { id: '1', title: 'Избранное', color: '#6366f1', iconType: 'star' },
-  { id: '2', title: 'В работе', color: '#f59e0b', iconType: 'sparkles' },
-  { id: '3', title: 'Сценарии', color: '#10b981', iconType: 'file' },
-  { id: '4', title: 'Завершено', color: '#8b5cf6', iconType: 'check' },
+  { id: null, title: 'Идеи', color: '#f97316', iconType: 'sparkles' },
+  { id: '1', title: 'Ожидает сценария', color: '#6366f1', iconType: 'file' },
+  { id: '2', title: 'Ожидает съёмок', color: '#f59e0b', iconType: 'star' },
+  { id: '3', title: 'Ожидает монтажа', color: '#10b981', iconType: 'sparkles' },
+  { id: '4', title: 'Готовое', color: '#8b5cf6', iconType: 'check' },
 ];
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -196,123 +191,40 @@ export function Workspace() {
                   const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at || video.created_at);
                   
                   return (
-                    <div
+                    <VideoGradientCard
                       key={`folder-${video.id}-${idx}`}
-                      draggable
+                      thumbnailUrl={thumbnailUrl}
+                      username={video.owner_username || 'instagram'}
+                      caption={video.title}
+                      viewCount={video.view_count}
+                      likeCount={video.like_count}
+                      viralCoef={viralCoef}
                       onDragStart={() => setDraggedVideo(video)}
-                      className="group relative rounded-[1.75rem] overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-grab active:cursor-grabbing"
-                    >
-                      {/* Blurred background */}
-                      <div 
-                        className="absolute inset-0 bg-cover bg-center"
-                        style={{ 
-                          backgroundImage: `url(${thumbnailUrl})`,
-                          filter: 'blur(20px) brightness(0.9)',
-                          transform: 'scale(1.1)'
-                        }}
-                      />
-                      
-                      {/* Content */}
-                      <div className="relative z-10">
-                        {/* Image */}
-                        <div className="relative w-full m-2 mb-0" style={{ aspectRatio: '3/4' }}>
-                          <img
-                            src={thumbnailUrl}
-                            alt=""
-                            className="w-[calc(100%-16px)] h-full object-cover rounded-[1.25rem]"
-                            onError={(e) => {
-                              e.currentTarget.src = 'https://via.placeholder.com/270x360?text=Video';
-                            }}
-                          />
-                          
-                          {/* Viral coefficient badge */}
-                          <div className="absolute top-2 left-2 z-20">
-                            <div className={cn(
-                              "px-2 py-0.5 rounded-full backdrop-blur-md flex items-center gap-1 shadow-lg",
-                              viralCoef > 10 ? "bg-emerald-500 text-white" : 
-                              viralCoef > 5 ? "bg-amber-500 text-white" :
-                              viralCoef > 0 ? "bg-white/90 text-slate-700" :
-                              "bg-slate-200/90 text-slate-500"
-                            )}>
-                              <Sparkles className="w-2.5 h-2.5" />
-                              <span className="text-[10px] font-bold">{viralCoef > 0 ? viralCoef : '—'}</span>
+                      folderMenu={
+                        <div className="absolute bottom-12 right-0 bg-white rounded-2xl shadow-2xl p-2 min-w-[140px] z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                          <a
+                            href={video.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-blue-50 transition-colors text-left"
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                              <ExternalLink className="w-4 h-4 text-blue-600" />
                             </div>
-                          </div>
-                          
-                          {/* Move to folder dropdown - only show if not in inbox */}
-                          {!isInboxFolder && (
-                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                              <select
-                                onClick={(e) => e.stopPropagation()}
-                                onChange={(e) => {
-                                  e.stopPropagation();
-                                  const newZoneId = e.target.value === 'null' ? null : e.target.value;
-                                  moveVideoToZone(video.id, newZoneId);
-                                }}
-                                value={video.zone_id || 'null'}
-                                className="px-2 py-0.5 rounded-full bg-white/95 text-slate-600 text-[9px] font-medium shadow-lg cursor-pointer outline-none"
-                              >
-                                {folderConfigs.map(f => (
-                                  <option key={f.id || 'null'} value={f.id || 'null'}>
-                                    {f.title}
-                                  </option>
-                                ))}
-                              </select>
+                            <span className="text-sm font-medium text-slate-700">Открыть</span>
+                          </a>
+                          <button
+                            onClick={() => handleDeleteVideo(video.id, isInboxFolder)}
+                            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-red-50 transition-colors text-left"
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
+                              <Trash2 className="w-4 h-4 text-red-600" />
                             </div>
-                          )}
-                          
-                          {/* Hover overlay with actions */}
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="flex gap-2">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteVideo(video.id, isInboxFolder);
-                                }}
-                                className="p-2.5 rounded-full bg-red-500 text-white shadow-lg active:scale-95"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                              <a
-                                href={video.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="p-2.5 rounded-full bg-white/95 text-slate-800 shadow-lg active:scale-95"
-                              >
-                                <ExternalLink className="w-4 h-4" />
-                              </a>
-                            </div>
-                          </div>
+                            <span className="text-sm font-medium text-slate-700">Удалить</span>
+                          </button>
                         </div>
-                        
-                        {/* Info section */}
-                        <div className="p-4 pt-3">
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <h3 className="font-sans font-semibold text-slate-900 text-[15px] truncate italic">
-                              @{video.owner_username || 'instagram'}
-                            </h3>
-                          </div>
-                          
-                          <p className="font-sans text-slate-700 text-xs leading-relaxed line-clamp-2 mb-3">
-                            {video.title?.slice(0, 50)}...
-                          </p>
-                          
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3 text-slate-600">
-                              <div className="flex items-center gap-1">
-                                <Eye className="w-3.5 h-3.5" />
-                                <span className="text-xs font-medium">{formatNumber(video.view_count)}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Heart className="w-3.5 h-3.5" />
-                                <span className="text-xs font-medium">{formatNumber(video.like_count)}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                      }
+                    />
                   );
                 })}
               </div>
@@ -336,9 +248,9 @@ export function Workspace() {
           </p>
         </div>
 
-        {/* Folder Grid - 3D Folders */}
+        {/* Folder Grid - 3D Folders - 3 columns */}
         <div 
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 justify-items-center"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center"
         >
           {folderConfigs.map((config) => {
             const folderVideos = getFolderVideos(config.id);

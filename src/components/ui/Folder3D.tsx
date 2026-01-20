@@ -241,9 +241,9 @@ export const AnimatedFolder3D: React.FC<AnimatedFolder3DProps> = ({
       </div>
       
       {/* Title and count */}
-      <div className="text-center relative z-40">
+      <div className="text-center relative z-40 -mt-1">
         <h3 
-          className="text-base font-bold text-slate-800 transition-all duration-500"
+          className="text-lg font-bold text-slate-800 transition-all duration-500"
           style={{ 
             transform: isHovered ? "translateY(2px)" : "translateY(0)",
           }}
@@ -251,7 +251,7 @@ export const AnimatedFolder3D: React.FC<AnimatedFolder3DProps> = ({
           {title}
         </h3>
         <p 
-          className="text-sm font-medium text-slate-500 transition-all duration-500"
+          className="text-xs font-medium text-slate-500 transition-all duration-500"
           style={{ opacity: isHovered ? 0.7 : 1 }}
         >
           {count} видео
@@ -260,9 +260,9 @@ export const AnimatedFolder3D: React.FC<AnimatedFolder3DProps> = ({
       
       {/* Hover hint */}
       <div 
-        className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-slate-400 transition-all duration-500"
+        className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center justify-center text-[8px] font-medium uppercase tracking-wider text-slate-400 transition-all duration-500"
         style={{ 
-          opacity: isHovered ? 0 : 0.6,
+          opacity: isHovered ? 0 : 0.5,
           transform: isHovered ? "translateY(10px)" : "translateY(0)",
         }}
       >

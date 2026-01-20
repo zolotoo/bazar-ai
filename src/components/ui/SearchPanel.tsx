@@ -134,10 +134,10 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
 
   // Конфигурация папок
   const folderConfigs = [
-    { id: '1', title: 'Избранное', color: '#6366f1', icon: Star },
-    { id: '2', title: 'В работе', color: '#f59e0b', icon: SparklesIcon },
-    { id: '3', title: 'Сценарии', color: '#10b981', icon: FileText },
-    { id: '4', title: 'Завершено', color: '#8b5cf6', icon: CheckCircle },
+    { id: '1', title: 'Ожидает сценария', color: '#6366f1', icon: FileText },
+    { id: '2', title: 'Ожидает съёмок', color: '#f59e0b', icon: Star },
+    { id: '3', title: 'Ожидает монтажа', color: '#10b981', icon: SparklesIcon },
+    { id: '4', title: 'Готовое', color: '#8b5cf6', icon: CheckCircle },
   ];
 
   // Сортировка видео

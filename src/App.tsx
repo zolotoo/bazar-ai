@@ -8,7 +8,7 @@ import { IncomingVideosDrawer } from './components/sidebar/IncomingVideosDrawer'
 import { SearchPanel } from './components/ui/SearchPanel';
 import { useAuth } from './hooks/useAuth';
 import { useInboxVideos } from './hooks/useInboxVideos';
-import { Menu, Video, Settings, Search, LayoutGrid, GitBranch, Clock, User, LogOut } from 'lucide-react';
+import { Video, Settings, Search, LayoutGrid, GitBranch, Clock, User, LogOut, Link, Radar } from 'lucide-react';
 import { cn } from './utils/cn';
 import { Toaster } from 'sonner';
 
@@ -130,19 +130,19 @@ function App() {
           </button>
 
           <button
-            onClick={() => setIsDrawerOpen(true)}
-            className={cn(
-              "relative px-3 py-2 rounded-xl active:scale-95",
-              "bg-gradient-to-r from-orange-500 to-amber-600",
-              "hover:from-orange-400 hover:to-amber-500",
-              "text-white transition-all",
-              "flex items-center gap-1.5 font-medium text-sm",
-              "shadow-lg shadow-orange-500/30"
-            )}
+            onClick={() => setIsSearchOpen(true)}
+            className="glass-button px-3 py-2 rounded-xl text-slate-700 hover:text-slate-900 transition-all flex items-center gap-1.5 font-medium text-sm active:scale-95"
           >
-            <Menu className="w-4 h-4" />
-            <span className="hidden sm:inline">Входящие</span>
-            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full" />
+            <Link className="w-4 h-4" />
+            <span className="hidden sm:inline">По ссылке</span>
+          </button>
+
+          <button
+            onClick={() => setIsSearchOpen(true)}
+            className="glass-button px-3 py-2 rounded-xl text-slate-700 hover:text-slate-900 transition-all flex items-center gap-1.5 font-medium text-sm active:scale-95"
+          >
+            <Radar className="w-4 h-4" />
+            <span className="hidden sm:inline">Радар</span>
           </button>
           
           <button className="glass-button p-2 rounded-xl text-slate-600 hover:text-slate-900 transition-all active:scale-95">
