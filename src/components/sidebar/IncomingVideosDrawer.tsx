@@ -87,7 +87,7 @@ export function IncomingVideosDrawer({ isOpen, onClose }: IncomingVideosDrawerPr
               <Video className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h2 className="text-base text-slate-800 font-serif italic tracking-tighter leading-none">Входящие</h2>
+              <h2 className="text-base text-slate-800 font-semibold leading-none">Входящие</h2>
               <p className="text-[10px] text-slate-500 leading-none mt-0.5">Перетащите на холст</p>
             </div>
           </div>
@@ -176,7 +176,7 @@ export function IncomingVideosDrawer({ isOpen, onClose }: IncomingVideosDrawerPr
                       {/* Info section */}
                       <div className="p-3 pt-2">
                         {/* Username */}
-                        <h3 className="font-sans font-semibold text-slate-900 text-[13px] truncate italic mb-1">
+                        <h3 className="font-semibold text-slate-900 text-[13px] truncate mb-1">
                           @{videoData.owner_username || 'instagram'}
                         </h3>
                         

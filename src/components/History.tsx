@@ -145,7 +145,7 @@ export function History() {
                 <Search className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl md:text-3xl font-serif italic text-neutral-900 tracking-tighter">
+                <h1 className="text-xl md:text-2xl font-bold text-slate-800">
                   "{selectedEntry.query}"
                 </h1>
                 <p className="text-neutral-500 text-sm">
@@ -200,7 +200,7 @@ export function History() {
       <div className="max-w-5xl mx-auto w-full p-6 pt-6 flex flex-col h-full">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-4xl md:text-5xl font-serif italic text-neutral-900 tracking-tighter">
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-800">
             История
           </h1>
           <p className="text-neutral-500 text-base mt-1">

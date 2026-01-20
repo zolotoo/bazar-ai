@@ -71,7 +71,7 @@ export function ProfilePage() {
               {user?.telegram_username?.[0]?.toUpperCase() || 'U'}
             </span>
           </div>
-          <h2 className="text-2xl font-serif italic text-neutral-900">
+          <h2 className="text-xl font-bold text-slate-800">
             @{user?.telegram_username}
           </h2>
           <div className="flex items-center gap-1 mt-2">

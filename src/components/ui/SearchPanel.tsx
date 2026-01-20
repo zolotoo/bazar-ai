@@ -1286,7 +1286,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
               <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-orange-500/20 to-amber-600/20 flex items-center justify-center mb-6">
                 <Search className="w-10 h-10 text-orange-500" />
               </div>
-              <h3 className="text-2xl font-serif italic text-neutral-900 mb-2">
+              <h3 className="text-xl font-bold text-slate-800 mb-2">
                 Начните поиск
               </h3>
               <p className="text-slate-500 text-center max-w-sm mb-6">

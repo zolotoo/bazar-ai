@@ -76,7 +76,7 @@ export function LandingPage() {
 
             {/* Main Heading */}
             <h1 className="text-center mb-5">
-              <span className="block text-5xl md:text-7xl font-serif italic text-neutral-900 tracking-tighter">
+              <span className="block text-5xl md:text-7xl font-bold text-slate-800">
                 Найди
               </span>
               <span className="block text-5xl md:text-7xl font-light text-orange-500 tracking-tight">
@@ -133,7 +133,7 @@ export function LandingPage() {
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-orange-500/30">
                   <Video className="w-8 h-8 text-white" />
                 </div>
-                <h2 className="text-2xl font-serif italic text-neutral-900 mb-1">
+                <h2 className="text-xl font-bold text-slate-800 mb-1">
                   Вход в Bazar AI
                 </h2>
                 <p className="text-sm text-slate-500">

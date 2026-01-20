@@ -274,7 +274,7 @@ export default function ScrollMorphHero({
                         initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
                         animate={introPhase === "circle" && morphValue < 0.5 ? { opacity: 1 - morphValue * 2, y: 0, filter: "blur(0px)" } : { opacity: 0, filter: "blur(10px)" }}
                         transition={{ duration: 1 }}
-                        className="text-2xl font-medium tracking-tight text-gray-800 md:text-4xl font-serif italic"
+                        className="text-2xl font-bold tracking-tight text-slate-800 md:text-4xl"
                     >
                         {title}
                     </motion.h1>
@@ -293,7 +293,7 @@ export default function ScrollMorphHero({
                     style={{ opacity: contentOpacity, y: contentY }}
                     className="absolute top-[10%] z-10 flex flex-col items-center justify-center text-center pointer-events-none px-4"
                 >
-                    <h2 className="text-3xl md:text-5xl font-semibold text-gray-900 tracking-tight mb-4 font-serif italic">
+                    <h2 className="text-3xl md:text-5xl font-bold text-slate-800 tracking-tight mb-4">
                         {activeTitle}
                     </h2>
                     <p className="text-sm md:text-base text-gray-600 max-w-lg leading-relaxed">

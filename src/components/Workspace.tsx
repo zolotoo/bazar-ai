@@ -349,7 +349,7 @@ export function Workspace() {
                   <FolderOpen className="w-7 h-7 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-3xl md:text-4xl font-serif italic text-neutral-900 tracking-tighter">
+                  <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
                     {selectedFolder.title}
                   </h1>
                   <p className="text-neutral-500 text-sm">

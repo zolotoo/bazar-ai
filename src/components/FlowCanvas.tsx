@@ -120,7 +120,7 @@ export function FlowCanvas() {
             <GitBranch className="w-4 h-4 text-orange-500" />
           </div>
           <div>
-            <h1 className="text-lg font-serif italic text-neutral-900 tracking-tighter">
+            <h1 className="text-lg font-bold text-slate-800">
               Холст сценариев
             </h1>
             <p className="text-neutral-500 text-[11px] mt-[-1px]">
@@ -137,7 +137,7 @@ export function FlowCanvas() {
             <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-white shadow-lg flex items-center justify-center">
               <Layers className="w-7 h-7 text-orange-500" />
             </div>
-            <h2 className="text-xl font-serif italic text-neutral-900 tracking-tighter mb-1">
+            <h2 className="text-lg font-bold text-slate-800 mb-1">
               Начни создавать
             </h2>
             <p className="text-neutral-500 text-sm max-w-xs">
