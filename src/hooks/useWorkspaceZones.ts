@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../utils/supabase';
+import { useAuth } from './useAuth';
 
 export interface WorkspaceZone {
   id: string;
@@ -27,18 +28,6 @@ export interface ZoneVideo {
   status: string;
 }
 
-// Получаем user_id из localStorage
-const getUserId = (): string => {
-  try {
-    const stored = localStorage.getItem('bazar-ai-user');
-    if (stored) {
-      const user = JSON.parse(stored);
-      return user.id || 'anonymous';
-    }
-  } catch {}
-  return 'anonymous';
-};
-
 // Дефолтные зоны
 const DEFAULT_ZONES: WorkspaceZone[] = [
   { id: 'incoming', name: 'Входящие', color: '#f97316', position_x: 0, position_y: 0, width: 300, height: 500, sort_order: 0 },
@@ -52,6 +41,15 @@ export function useWorkspaceZones() {
   const [zones] = useState<WorkspaceZone[]>(DEFAULT_ZONES);
   const [videos, setVideos] = useState<ZoneVideo[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  
+  // Получаем user_id из контекста авторизации
+  const getUserId = useCallback((): string => {
+    if (user?.telegram_username) {
+      return `tg-${user.telegram_username}`;
+    }
+    return 'anonymous';
+  }, [user]);
 
   // Загрузка видео из workspace_videos
   const fetchVideos = useCallback(async () => {
@@ -88,7 +86,7 @@ export function useWorkspaceZones() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getUserId]);
 
   // Перемещение видео в зону
   const moveVideoToZone = useCallback(async (videoId: string, zoneId: string | null) => {
@@ -109,7 +107,7 @@ export function useWorkspaceZones() {
       console.error('Error moving video:', err);
       fetchVideos();
     }
-  }, [fetchVideos]);
+  }, [fetchVideos, getUserId]);
 
   // Добавление видео в workspace
   const addVideoToWorkspace = useCallback(async (video: {
@@ -168,7 +166,7 @@ export function useWorkspaceZones() {
     } catch (err) {
       console.error('Error adding video to workspace:', err);
     }
-  }, []);
+  }, [getUserId]);
 
   // Удаление видео
   const deleteVideo = useCallback(async (videoId: string) => {
@@ -185,16 +183,19 @@ export function useWorkspaceZones() {
     } catch (err) {
       console.error('Error deleting video:', err);
     }
-  }, []);
+  }, [getUserId]);
 
   // Получение видео по зоне
   const getVideosByZone = useCallback((zoneId: string | null) => {
     return videos.filter(v => v.zone_id === zoneId);
   }, [videos]);
 
+  // Перезагружаем при смене пользователя
   useEffect(() => {
-    fetchVideos();
-  }, [fetchVideos]);
+    if (user) {
+      fetchVideos();
+    }
+  }, [user, fetchVideos]);
 
   return {
     zones,

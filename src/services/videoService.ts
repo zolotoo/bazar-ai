@@ -380,6 +380,86 @@ export async function getHashtagReels(hashtag: string): Promise<InstagramSearchR
 }
 
 /**
+ * Получает информацию о рилсе по URL или shortcode
+ */
+export async function getReelByUrl(urlOrShortcode: string): Promise<InstagramSearchResult | null> {
+  try {
+    const shortcode = extractShortcodeFromUrl(urlOrShortcode) || urlOrShortcode.trim();
+    
+    if (!shortcode) {
+      console.error('Invalid URL or shortcode:', urlOrShortcode);
+      return null;
+    }
+    
+    console.log('Fetching reel by shortcode:', shortcode);
+    
+    // Пробуем разные endpoints для получения информации о посте
+    const endpoints = [
+      `${API_BASE_URL}/media/${shortcode}`,
+      `${API_BASE_URL}/post/${shortcode}`,
+      `${API_BASE_URL}/reel/${shortcode}`,
+      `https://${RAPIDAPI_HOST_OLD}/api/instagram/media/${shortcode}`,
+      `https://${RAPIDAPI_HOST_OLD}/api/instagram/post/${shortcode}`,
+    ];
+    
+    for (const endpoint of endpoints) {
+      try {
+        const host = endpoint.includes(RAPIDAPI_HOST_OLD) ? RAPIDAPI_HOST_OLD : RAPIDAPI_HOST;
+        console.log('Trying media endpoint:', endpoint);
+        
+        const headers: Record<string, string> = isDev 
+          ? {
+              'X-RapidAPI-Host': host,
+              'X-RapidAPI-Key': RAPIDAPI_KEY,
+            }
+          : {};
+        
+        const response = await fetch(endpoint, {
+          method: 'GET',
+          headers,
+        });
+        
+        console.log(`Media endpoint ${endpoint} status:`, response.status);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Media endpoint response:', data);
+          
+          // Данные могут быть в разных форматах
+          const item = data.data || data.media || data.post || data;
+          
+          if (item && (item.shortcode || item.id)) {
+            const result = transformSearchResult(item);
+            if (result) {
+              // Если shortcode не был в ответе, используем тот что был в запросе
+              result.shortcode = result.shortcode || shortcode;
+              result.url = result.url || `https://www.instagram.com/reel/${shortcode}/`;
+              return result;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Error with endpoint:', e);
+        continue;
+      }
+    }
+    
+    // Если API не сработал, создаём минимальный объект
+    console.warn('No API returned data, creating minimal object');
+    return {
+      id: shortcode,
+      shortcode: shortcode,
+      url: `https://www.instagram.com/reel/${shortcode}/`,
+      thumbnail_url: '',
+      caption: 'Видео из Instagram',
+    };
+  } catch (error) {
+    console.error('Error fetching reel by URL:', error);
+    return null;
+  }
+}
+
+/**
  * Поиск ТОЛЬКО REELS в Instagram напрямую по ключевому слову
  * БЕЗ использования хэштегов - только прямые endpoints для reels
  */

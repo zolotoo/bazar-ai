@@ -72,7 +72,7 @@ function App() {
           <button
             onClick={() => setViewMode('workspace')}
             className={cn(
-              "px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5",
+              "px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 active:scale-95",
               viewMode === 'workspace' 
                 ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg" 
                 : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
@@ -84,7 +84,7 @@ function App() {
           <button
             onClick={() => setViewMode('canvas')}
             className={cn(
-              "px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5",
+              "px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 active:scale-95",
               viewMode === 'canvas' 
                 ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg" 
                 : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
@@ -96,7 +96,7 @@ function App() {
           <button
             onClick={() => setViewMode('history')}
             className={cn(
-              "px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5",
+              "px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 active:scale-95",
               viewMode === 'history' 
                 ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg" 
                 : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
@@ -108,7 +108,7 @@ function App() {
           <button
             onClick={() => setViewMode('profile')}
             className={cn(
-              "px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5",
+              "px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 active:scale-95",
               viewMode === 'profile' 
                 ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg" 
                 : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
@@ -122,7 +122,7 @@ function App() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsSearchOpen(true)}
-            className="glass-button px-3 py-2 rounded-xl text-slate-700 hover:text-slate-900 transition-all flex items-center gap-1.5 font-medium text-sm"
+            className="glass-button px-3 py-2 rounded-xl text-slate-700 hover:text-slate-900 transition-all flex items-center gap-1.5 font-medium text-sm active:scale-95"
           >
             <Search className="w-4 h-4" />
             <span className="hidden sm:inline">Поиск</span>
@@ -131,7 +131,7 @@ function App() {
           <button
             onClick={() => setIsDrawerOpen(true)}
             className={cn(
-              "relative px-3 py-2 rounded-xl",
+              "relative px-3 py-2 rounded-xl active:scale-95",
               "bg-gradient-to-r from-orange-500 to-amber-600",
               "hover:from-orange-400 hover:to-amber-500",
               "text-white transition-all",
@@ -144,13 +144,13 @@ function App() {
             <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full" />
           </button>
           
-          <button className="glass-button p-2 rounded-xl text-slate-600 hover:text-slate-900 transition-all">
+          <button className="glass-button p-2 rounded-xl text-slate-600 hover:text-slate-900 transition-all active:scale-95">
             <Settings className="w-4 h-4" />
           </button>
 
           <button 
             onClick={logout}
-            className="glass-button p-2 rounded-xl text-slate-600 hover:text-red-500 transition-all"
+            className="glass-button p-2 rounded-xl text-slate-600 hover:text-red-500 transition-all active:scale-95"
             title="Выйти"
           >
             <LogOut className="w-4 h-4" />

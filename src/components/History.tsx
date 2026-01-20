@@ -36,7 +36,7 @@ export function History() {
   const [selectedEntry, setSelectedEntry] = useState<SearchHistoryEntry | null>(null);
   const { historyEntries, removeFromHistory, clearHistory } = useSearchHistory();
   const { incomingVideos } = useFlowStore();
-  const { addVideoToInbox } = useInboxVideos();
+  const { addVideoToInbox, removeVideo } = useInboxVideos();
 
   const handleAddToInbox = async (reel: InstagramSearchResult) => {
     let captionText = typeof reel.caption === 'string' ? reel.caption : '';
@@ -100,76 +100,67 @@ export function History() {
                 <p className="text-slate-500 text-sm">Этот поиск был выполнен до обновления</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {selectedEntry.results.map((reel) => {
-                  const takenDate = reel.taken_at ? new Date(Number(reel.taken_at) * 1000) : null;
-                  const dateStr = takenDate ? takenDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) : null;
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5">
+                {selectedEntry.results.map((reel, idx) => {
+                  const captionText = typeof reel.caption === 'string' ? reel.caption : 'Видео из Instagram';
                   
                   return (
                     <div
-                      key={reel.id}
-                      className="group relative rounded-3xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+                      key={`history-${reel.shortcode || reel.id}-${idx}`}
+                      className="group bg-gradient-to-b from-neutral-100 to-neutral-200 rounded-[2rem] overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
                     >
-                      <div className="relative w-full" style={{ aspectRatio: '9/16' }}>
+                      {/* Image */}
+                      <div className="relative w-full" style={{ aspectRatio: '3/4' }}>
                         <img
-                          src={reel.thumbnail_url || reel.display_url || 'https://via.placeholder.com/270x480'}
+                          src={reel.thumbnail_url || reel.display_url || 'https://via.placeholder.com/270x360'}
                           alt=""
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            e.currentTarget.src = 'https://via.placeholder.com/270x480?text=Video';
+                            e.currentTarget.src = 'https://via.placeholder.com/270x360?text=Video';
                           }}
                         />
                         
-                        {/* Add button on hover */}
-                        <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => handleAddToInbox(reel)}
-                            className="p-2.5 rounded-full bg-white/90 hover:bg-white text-orange-500 transition-all shadow-lg"
-                          >
-                            <Plus className="w-4 h-4" />
-                          </button>
-                          <a
-                            href={reel.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-2.5 rounded-full bg-white/90 hover:bg-white text-slate-600 transition-all shadow-lg"
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                          </a>
+                        {/* Hover overlay */}
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                            <button
+                              onClick={() => handleAddToInbox(reel)}
+                              className="p-2.5 rounded-full bg-white text-slate-800 shadow-lg active:scale-95"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                            <a
+                              href={reel.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2.5 rounded-full bg-white text-slate-800 shadow-lg active:scale-95"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Info section */}
+                      <div className="p-4">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <h3 className="font-sans font-semibold text-slate-800 text-sm truncate">
+                            @{reel.owner?.username || 'instagram'}
+                          </h3>
                         </div>
                         
-                        {/* Bottom glass panel */}
-                        <div className="absolute bottom-0 left-0 right-0">
-                          <div className="flex justify-center -mb-3 relative z-10">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 ring-2 ring-white flex items-center justify-center">
-                              <span className="text-white text-xs font-bold">
-                                {reel.owner?.username?.[0]?.toUpperCase() || 'V'}
-                              </span>
-                            </div>
+                        <p className="font-sans text-slate-500 text-xs leading-relaxed line-clamp-2 mb-3">
+                          {captionText.slice(0, 50)}{captionText.length > 50 ? '...' : ''}
+                        </p>
+                        
+                        <div className="flex items-center gap-3 text-slate-500">
+                          <div className="flex items-center gap-1">
+                            <Eye className="w-3.5 h-3.5" />
+                            <span className="text-xs font-medium">{formatNumber(reel.view_count)}</span>
                           </div>
-                          
-                          <div className="bg-white/70 backdrop-blur-xl p-4 pt-5">
-                            <h3 className="text-center font-semibold text-slate-900 text-sm leading-tight mb-1 line-clamp-1">
-                              {typeof reel.caption === 'string' 
-                                ? reel.caption.slice(0, 30) + (reel.caption.length > 30 ? '...' : '')
-                                : 'Видео'}
-                            </h3>
-                            
-                            <p className="text-center text-slate-500 text-xs mb-2">
-                              {dateStr && `${dateStr} • `}
-                              @{reel.owner?.username || 'instagram'}
-                            </p>
-                            
-                            <div className="flex items-center justify-center gap-3 text-slate-600 text-xs">
-                              <span className="flex items-center gap-1">
-                                <Eye className="w-3.5 h-3.5" />
-                                {formatNumber(reel.view_count)}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Heart className="w-3.5 h-3.5" />
-                                {formatNumber(reel.like_count)}
-                              </span>
-                            </div>
+                          <div className="flex items-center gap-1">
+                            <Heart className="w-3.5 h-3.5" />
+                            <span className="text-xs font-medium">{formatNumber(reel.like_count)}</span>
                           </div>
                         </div>
                       </div>
@@ -338,71 +329,72 @@ export function History() {
                   <p className="text-slate-500 text-sm">Добавьте видео через поиск</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {incomingVideos.map((video) => {
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5">
+                  {incomingVideos.map((video, idx) => {
                     const videoData = video as any;
                     
                     return (
                       <div
-                        key={video.id}
-                        className="group relative rounded-3xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+                        key={`saved-${video.id}-${idx}`}
+                        className="group bg-gradient-to-b from-neutral-100 to-neutral-200 rounded-[2rem] overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
                       >
-                        <div className="relative w-full" style={{ aspectRatio: '9/16' }}>
+                        {/* Image */}
+                        <div className="relative w-full" style={{ aspectRatio: '3/4' }}>
                           <img
-                            src={video.previewUrl || 'https://via.placeholder.com/270x480'}
+                            src={video.previewUrl || 'https://via.placeholder.com/270x360'}
                             alt=""
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                              e.currentTarget.src = 'https://via.placeholder.com/270x480?text=Video';
+                              e.currentTarget.src = 'https://via.placeholder.com/270x360?text=Video';
                             }}
                           />
                           
                           {/* Date badge */}
-                          <div className="absolute top-3 left-3">
-                            <div className="px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-sm flex items-center gap-1.5 shadow-md">
+                          <div className="absolute top-3 left-3 z-10">
+                            <div className="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-sm flex items-center gap-1.5 shadow-md">
                               <Calendar className="w-3 h-3 text-slate-500" />
-                              <span className="text-xs font-medium text-slate-700">
+                              <span className="text-[10px] font-medium text-slate-600">
                                 {formatDate(video.receivedAt)}
                               </span>
                             </div>
                           </div>
                           
-                          {/* Actions on hover */}
-                          <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <a
-                              href={video.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="p-2.5 rounded-full bg-white/90 hover:bg-white text-slate-600 transition-all shadow-lg flex items-center justify-center"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                            </a>
-                          </div>
-                          
-                          {/* Bottom glass panel */}
-                          <div className="absolute bottom-0 left-0 right-0">
-                            <div className="flex justify-center -mb-3 relative z-10">
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 ring-2 ring-white flex items-center justify-center">
-                                <span className="text-white text-xs font-bold">
-                                  {video.title?.charAt(0)?.toUpperCase() || 'V'}
-                                </span>
-                              </div>
+                          {/* Hover overlay */}
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                              <button
+                                onClick={() => removeVideo(video.id)}
+                                className="p-2.5 rounded-full bg-red-500 text-white shadow-lg active:scale-95"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                              <a
+                                href={video.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-2.5 rounded-full bg-white text-slate-800 shadow-lg active:scale-95"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </a>
                             </div>
-                            
-                            <div className="bg-white/70 backdrop-blur-xl p-4 pt-5">
-                              <h3 className="text-center font-semibold text-slate-900 text-sm leading-tight mb-1 line-clamp-2">
-                                {video.title?.slice(0, 40)}...
-                              </h3>
-                              
-                              <div className="flex items-center justify-center gap-3 text-slate-600 text-xs mt-2">
-                                <span className="flex items-center gap-1">
-                                  <Eye className="w-3.5 h-3.5" />
-                                  {formatNumber(videoData.view_count)}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Heart className="w-3.5 h-3.5" />
-                                  {formatNumber(videoData.like_count)}
-                                </span>
+                          </div>
+                        </div>
+                        
+                        {/* Info section */}
+                        <div className="p-4">
+                          <h3 className="font-sans font-semibold text-slate-800 text-sm leading-tight line-clamp-2 mb-2">
+                            {video.title?.slice(0, 45)}...
+                          </h3>
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3 text-slate-500">
+                              <div className="flex items-center gap-1">
+                                <Eye className="w-3.5 h-3.5" />
+                                <span className="text-xs font-medium">{formatNumber(videoData.view_count)}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Heart className="w-3.5 h-3.5" />
+                                <span className="text-xs font-medium">{formatNumber(videoData.like_count)}</span>
                               </div>
                             </div>
                           </div>

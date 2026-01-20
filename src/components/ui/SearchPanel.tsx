@@ -1,16 +1,19 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Search, X, ExternalLink, Plus, Eye, Heart, MessageCircle, ChevronLeft, ChevronRight, Sparkles, ArrowUpDown, Play } from 'lucide-react';
+import { Search, X, ExternalLink, Plus, Eye, Heart, MessageCircle, ChevronLeft, ChevronRight, Sparkles, ArrowUpDown, Play, Link, Loader2 } from 'lucide-react';
 import { TextShimmer } from './TextShimmer';
 import { 
   searchInstagramVideos,
+  getReelByUrl,
   InstagramSearchResult
 } from '../../services/videoService';
 import { useFlowStore } from '../../stores/flowStore';
 import { useInboxVideos } from '../../hooks/useInboxVideos';
 import { useSearchHistory } from '../../hooks/useSearchHistory';
+import { useWorkspaceZones } from '../../hooks/useWorkspaceZones';
 import { IncomingVideo } from '../../types';
 import { cn } from '../../utils/cn';
 import { supabase } from '../../utils/supabase';
+import { FolderPlus, Star, Sparkles as SparklesIcon, FileText, CheckCircle } from 'lucide-react';
 
 interface SearchPanelProps {
   isOpen: boolean;
@@ -29,12 +32,24 @@ function formatNumber(num?: number): string {
 function calculateViralCoefficient(views?: number, takenAt?: string): number {
   if (!views || views < 30000 || !takenAt) return 0;
   
-  const videoDate = new Date(Number(takenAt) * 1000);
+  // Поддержка и timestamp и ISO даты
+  let videoDate: Date;
+  if (takenAt.includes('T') || takenAt.includes('-')) {
+    // ISO формат: "2026-01-20T01:51:06.217499+00:00"
+    videoDate = new Date(takenAt);
+  } else {
+    // Unix timestamp в секундах
+    videoDate = new Date(Number(takenAt) * 1000);
+  }
+  
+  // Проверка валидности даты
+  if (isNaN(videoDate.getTime())) return 0;
+  
   const today = new Date();
   const diffTime = today.getTime() - videoDate.getTime();
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
   
-  if (diffDays === 0) return 0;
+  if (diffDays <= 0) return 0;
   
   return Math.round((views / (diffDays * 1000)) * 100) / 100;
 }
@@ -54,10 +69,23 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [sortBy, setSortBy] = useState<SortOption>('views');
   const [selectedVideo, setSelectedVideo] = useState<InstagramSearchResult | null>(null);
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [showFolderSelect, setShowFolderSelect] = useState(false);
   const { incomingVideos } = useFlowStore();
   const { addVideoToInbox } = useInboxVideos();
   const { history: searchHistory, addToHistory, refetch: refetchHistory } = useSearchHistory();
+  const { addVideoToWorkspace } = useWorkspaceZones();
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Конфигурация папок
+  const folderConfigs = [
+    { id: '1', title: 'Избранное', color: '#6366f1', icon: Star },
+    { id: '2', title: 'В работе', color: '#f59e0b', icon: SparklesIcon },
+    { id: '3', title: 'Сценарии', color: '#10b981', icon: FileText },
+    { id: '4', title: 'Завершено', color: '#8b5cf6', icon: CheckCircle },
+  ];
 
   // Сортировка видео
   const sortedReels = [...reels].sort((a, b) => {
@@ -223,6 +251,64 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
     }
   };
 
+  // Обработка ссылки на рилс
+  const handleParseLink = async () => {
+    if (!linkUrl.trim()) return;
+    
+    setLinkLoading(true);
+    try {
+      const reel = await getReelByUrl(linkUrl);
+      
+      if (reel) {
+        // Добавляем в inbox
+        const captionText = typeof reel.caption === 'string' ? reel.caption.slice(0, 200) : 'Видео из Instagram';
+        
+        await addVideoToInbox({
+          title: captionText,
+          previewUrl: reel.thumbnail_url || reel.display_url || '',
+          url: reel.url,
+          viewCount: reel.view_count,
+          likeCount: reel.like_count,
+          commentCount: reel.comment_count,
+          ownerUsername: reel.owner?.username,
+        });
+        
+        setLinkUrl('');
+        setShowLinkInput(false);
+        console.log('Рилс добавлен из ссылки');
+      } else {
+        console.error('Не удалось получить данные рилса');
+      }
+    } catch (err) {
+      console.error('Ошибка парсинга ссылки:', err);
+    } finally {
+      setLinkLoading(false);
+    }
+  };
+
+  // Добавление видео в папку
+  const handleAddToFolder = async (result: InstagramSearchResult, folderId: string) => {
+    const captionText = typeof result.caption === 'string' ? result.caption.slice(0, 500) : 'Видео из Instagram';
+    
+    try {
+      await addVideoToWorkspace({
+        videoId: result.shortcode || result.id,
+        shortcode: result.shortcode,
+        thumbnailUrl: result.thumbnail_url || result.display_url,
+        caption: captionText,
+        ownerUsername: result.owner?.username,
+        viewCount: result.view_count,
+        likeCount: result.like_count,
+        zoneId: folderId,
+      });
+      setShowFolderSelect(false);
+      setSelectedVideo(null);
+      console.log(`Видео добавлено в папку ${folderId}`);
+    } catch (err) {
+      console.error('Ошибка добавления в папку:', err);
+    }
+  };
+
   const handleDragStart = async (e: React.DragEvent, result: InstagramSearchResult) => {
     let captionText = typeof result.caption === 'string' ? result.caption : '';
     if (captionText.length > 200) {
@@ -359,10 +445,22 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                   className="flex-1 bg-transparent text-slate-800 placeholder:text-slate-400 outline-none text-base tracking-tight"
                 />
                 <button
+                  onClick={() => setShowLinkInput(!showLinkInput)}
+                  className={cn(
+                    "p-2 rounded-xl transition-all active:scale-95",
+                    showLinkInput 
+                      ? "bg-orange-100 text-orange-600" 
+                      : "bg-slate-100 text-slate-500 hover:bg-orange-100 hover:text-orange-500"
+                  )}
+                  title="Добавить по ссылке"
+                >
+                  <Link className="w-5 h-5" />
+                </button>
+                <button
                   onClick={() => handleSearch()}
                   disabled={!query.trim() || loading}
                   className={cn(
-                    "px-4 py-2 rounded-xl font-medium text-sm transition-all",
+                    "px-4 py-2 rounded-xl font-medium text-sm transition-all active:scale-95",
                     "bg-gradient-to-r from-orange-500 to-amber-600 text-white",
                     "hover:from-orange-400 hover:to-amber-500",
                     "disabled:opacity-40 disabled:cursor-not-allowed",
@@ -373,6 +471,46 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                 </button>
               </div>
             </div>
+
+            {/* Link Input Form */}
+            {showLinkInput && (
+              <div className="mt-3 glass rounded-2xl p-4 shadow-lg border border-orange-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <Link className="w-4 h-4 text-orange-500" />
+                  <span className="text-sm font-medium text-slate-700">Добавить рилс по ссылке</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={linkUrl}
+                    onChange={(e) => setLinkUrl(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleParseLink()}
+                    placeholder="https://instagram.com/reel/ABC123..."
+                    className="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-white/80 outline-none focus:ring-2 focus:ring-orange-500/30 text-sm"
+                  />
+                  <button
+                    onClick={handleParseLink}
+                    disabled={!linkUrl.trim() || linkLoading}
+                    className={cn(
+                      "px-4 py-2 rounded-xl font-medium text-sm transition-all active:scale-95 flex items-center gap-2",
+                      "bg-gradient-to-r from-orange-500 to-amber-600 text-white",
+                      "hover:from-orange-400 hover:to-amber-500",
+                      "disabled:opacity-40 disabled:cursor-not-allowed"
+                    )}
+                  >
+                    {linkLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Plus className="w-4 h-4" />
+                    )}
+                    Добавить
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 mt-2">
+                  Вставьте ссылку на рилс Instagram для добавления во входящие
+                </p>
+              </div>
+            )}
 
             {/* History pills */}
             {(viewMode === 'carousel' || viewMode === 'trending') && searchHistory.length > 0 && (
@@ -590,7 +728,7 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
 
                     return (
                       <div
-                        key={`${reel.id}-${index}`}
+                        key={`carousel-${reel.shortcode || reel.id}-${index}`}
                         onClick={() => isActive ? setSelectedVideo(reel) : setActiveIndex(index)}
                         draggable={isActive}
                         onDragStart={(e) => isActive && handleDragStart(e, reel)}
@@ -605,72 +743,70 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                         }}
                       >
                         <div className={cn(
-                          'w-[210px] rounded-3xl overflow-hidden shadow-2xl',
+                          'w-[200px] bg-gradient-to-b from-neutral-100 to-neutral-200 rounded-[1.75rem] overflow-hidden shadow-2xl',
                           isActive && 'ring-4 ring-orange-400/50'
                         )}>
-                          <div className="relative w-full" style={{ aspectRatio: '9/16' }}>
+                          {/* Image */}
+                          <div className="relative w-full" style={{ aspectRatio: '3/4' }}>
                             <img
-                              src={reel.thumbnail_url || reel.display_url || 'https://via.placeholder.com/200x356'}
+                              src={reel.thumbnail_url || reel.display_url || 'https://via.placeholder.com/200x267'}
                               alt=""
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                e.currentTarget.src = 'https://via.placeholder.com/200x356?text=Video';
+                                e.currentTarget.src = 'https://via.placeholder.com/200x267?text=Video';
                               }}
                             />
                             
-                            {/* Top gradient overlay with darkening */}
-                            <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-transparent" />
-                            
-                            {/* Viral coefficient badge - top left */}
-                            <div className="absolute top-3 left-3 z-10">
-                              <div className={cn(
-                                "px-2.5 py-1.5 rounded-xl backdrop-blur-md flex items-center gap-1.5 shadow-lg border",
-                                viralCoef > 10 ? "bg-emerald-500/80 text-white border-emerald-400/50" : 
-                                viralCoef > 5 ? "bg-amber-500/80 text-white border-amber-400/50" :
-                                viralCoef > 0 ? "bg-white/80 text-slate-700 border-white/50" :
-                                "bg-black/40 text-white/90 border-white/20"
-                              )}>
-                                <Sparkles className="w-3 h-3" />
-                                <span className="text-xs font-bold font-sans">{viralCoef || '—'}</span>
-                              </div>
-                            </div>
-                            
-                            {/* Play button on active */}
-                            {isActive && (
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-14 h-14 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
-                                  <Play className="w-6 h-6 text-orange-500 ml-1" fill="currentColor" />
+                            {/* Viral badge */}
+                            {viralCoef > 0 && (
+                              <div className="absolute top-2.5 left-2.5 z-10">
+                                <div className={cn(
+                                  "px-2 py-1 rounded-full backdrop-blur-md flex items-center gap-1 shadow-lg",
+                                  viralCoef > 10 ? "bg-emerald-500 text-white" : 
+                                  viralCoef > 5 ? "bg-amber-500 text-white" :
+                                  "bg-white/90 text-slate-700"
+                                )}>
+                                  <Sparkles className="w-2.5 h-2.5" />
+                                  <span className="text-[10px] font-bold">{viralCoef}</span>
                                 </div>
                               </div>
                             )}
                             
-                            {/* Bottom panel with gradient overlay */}
-                            <div className="absolute bottom-0 left-0 right-0">
-                              {/* Gradient from image to panel */}
-                              <div className="h-32 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-                              
-                              {/* Info overlay on dark gradient */}
-                              <div className="absolute bottom-0 left-0 right-0 px-3 pb-3">
-                                {/* Username */}
-                                <p className="font-sans text-[12px] text-white/90 font-medium mb-2 truncate">
-                                  @{reel.owner?.username || 'instagram'}
-                                </p>
-                                
-                                {/* Stats with colored icons */}
-                                <div className="flex items-center gap-2">
-                                  <div className="flex-1 bg-white/20 backdrop-blur-sm rounded-lg px-2 py-1.5 flex items-center justify-center gap-1">
-                                    <Eye className="w-3 h-3 text-blue-400" />
-                                    <span className="font-sans text-[10px] font-bold text-white">{formatNumber(reel.view_count)}</span>
-                                  </div>
-                                  <div className="flex-1 bg-white/20 backdrop-blur-sm rounded-lg px-2 py-1.5 flex items-center justify-center gap-1">
-                                    <Heart className="w-3 h-3 text-rose-400" />
-                                    <span className="font-sans text-[10px] font-bold text-white">{formatNumber(reel.like_count)}</span>
-                                  </div>
-                                  <div className="flex-1 bg-white/20 backdrop-blur-sm rounded-lg px-2 py-1.5 flex items-center justify-center gap-1">
-                                    <MessageCircle className="w-3 h-3 text-emerald-400" />
-                                    <span className="font-sans text-[10px] font-bold text-white">{formatNumber(reel.comment_count)}</span>
-                                  </div>
+                            {/* Play button on active */}
+                            {isActive && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                                <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+                                  <Play className="w-5 h-5 text-slate-800 ml-0.5" fill="currentColor" />
                                 </div>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Info section */}
+                          <div className="px-3 py-3">
+                            {/* Username with verified */}
+                            <div className="flex items-center gap-1 mb-0.5">
+                              <p className="font-sans text-[11px] font-semibold text-slate-800 truncate">
+                                @{reel.owner?.username || 'instagram'}
+                              </p>
+                              {viralCoef > 5 && (
+                                <div className="w-3.5 h-3.5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                                  <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Stats row */}
+                            <div className="flex items-center gap-2.5 text-slate-500">
+                              <div className="flex items-center gap-0.5">
+                                <Eye className="w-3 h-3" />
+                                <span className="text-[10px] font-medium">{formatNumber(reel.view_count)}</span>
+                              </div>
+                              <div className="flex items-center gap-0.5">
+                                <Heart className="w-3 h-3" />
+                                <span className="text-[10px] font-medium">{formatNumber(reel.like_count)}</span>
                               </div>
                             </div>
                           </div>
@@ -837,102 +973,97 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5">
                   {sortedReels.map((reel, idx) => {
-                    const takenDate = reel.taken_at ? new Date(Number(reel.taken_at) * 1000) : null;
-                    const dateStr = takenDate ? takenDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) : null;
                     const viralCoef = calculateViralCoefficient(reel.view_count, reel.taken_at);
+                    const captionText = typeof reel.caption === 'string' ? reel.caption : 'Видео из Instagram';
                     
                     return (
                       <div
-                        key={`${reel.id}-${idx}`}
+                        key={`grid-${reel.shortcode || reel.id}-${idx}`}
                         draggable
                         onDragStart={(e) => handleDragStart(e, reel)}
                         onClick={() => setSelectedVideo(reel)}
-                        className="group relative rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer hover:scale-[1.02]"
+                        className="group bg-gradient-to-b from-neutral-100 to-neutral-200 rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
                       >
-                        <div className="relative w-full" style={{ aspectRatio: '9/16' }}>
+                        {/* Image section - takes most of the card */}
+                        <div className="relative w-full" style={{ aspectRatio: '3/4' }}>
                           <img
-                            src={reel.thumbnail_url || reel.display_url || 'https://via.placeholder.com/270x480'}
+                            src={reel.thumbnail_url || reel.display_url || 'https://via.placeholder.com/270x360'}
                             alt=""
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                              e.currentTarget.src = 'https://via.placeholder.com/270x480?text=Video';
+                              e.currentTarget.src = 'https://via.placeholder.com/270x360?text=Video';
                             }}
                           />
                           
-                          {/* Top gradient overlay with darkening */}
-                          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-transparent" />
-                          
                           {/* Viral coefficient badge (top left) */}
-                          <div className="absolute top-3 left-3 z-10">
-                            <div className={cn(
-                              "px-2.5 py-1.5 rounded-xl backdrop-blur-md flex items-center gap-1.5 shadow-lg border",
-                              viralCoef > 10 ? "bg-emerald-500/80 text-white border-emerald-400/50" : 
-                              viralCoef > 5 ? "bg-amber-500/80 text-white border-amber-400/50" :
-                              viralCoef > 0 ? "bg-white/80 text-slate-700 border-white/50" :
-                              "bg-black/40 text-white/90 border-white/20"
-                            )}>
-                              <Sparkles className="w-3 h-3" />
-                              <span className="text-xs font-bold font-sans">{viralCoef || '—'}</span>
+                          {viralCoef > 0 && (
+                            <div className="absolute top-3 left-3 z-10">
+                              <div className={cn(
+                                "px-2.5 py-1 rounded-full backdrop-blur-md flex items-center gap-1.5 shadow-lg",
+                                viralCoef > 10 ? "bg-emerald-500 text-white" : 
+                                viralCoef > 5 ? "bg-amber-500 text-white" :
+                                "bg-white/90 text-slate-700"
+                              )}>
+                                <Sparkles className="w-3 h-3" />
+                                <span className="text-xs font-bold">{viralCoef}</span>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Play button on hover */}
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                            <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-2xl">
+                              <Play className="w-6 h-6 text-slate-800 ml-1" fill="currentColor" />
                             </div>
                           </div>
-                          
-                          {/* Play button on hover (center) */}
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="w-14 h-14 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center shadow-2xl">
-                              <Play className="w-6 h-6 text-orange-500 ml-1" fill="currentColor" />
-                            </div>
+                        </div>
+                        
+                        {/* Info section - like reference card */}
+                        <div className="p-4 bg-gradient-to-b from-neutral-100 to-neutral-200">
+                          {/* Title with verified badge style */}
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <h3 className="font-sans font-semibold text-slate-800 text-sm truncate">
+                              @{reel.owner?.username || 'instagram'}
+                            </h3>
+                            {viralCoef > 5 && (
+                              <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                                <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                            )}
                           </div>
                           
-                          {/* Add button on hover (top right) */}
-                          <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                          {/* Description */}
+                          <p className="font-sans text-slate-500 text-xs leading-relaxed line-clamp-2 mb-3">
+                            {captionText.slice(0, 60)}{captionText.length > 60 ? '...' : ''}
+                          </p>
+                          
+                          {/* Stats and follow button row */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3 text-slate-500">
+                              <div className="flex items-center gap-1">
+                                <Eye className="w-3.5 h-3.5" />
+                                <span className="text-xs font-medium">{formatNumber(reel.view_count)}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Heart className="w-3.5 h-3.5" />
+                                <span className="text-xs font-medium">{formatNumber(reel.like_count)}</span>
+                              </div>
+                            </div>
+                            
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleAddToCanvas(reel);
                               }}
-                              className="p-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white transition-all shadow-lg"
+                              className="px-3 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium transition-all flex items-center gap-1 active:scale-95"
                             >
-                              <Plus className="w-4 h-4" />
+                              <Plus className="w-3 h-3" />
+                              Сохранить
                             </button>
-                          </div>
-                          
-                          {/* Bottom panel with dark gradient */}
-                          <div className="absolute bottom-0 left-0 right-0">
-                            {/* Gradient overlay */}
-                            <div className="h-36 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
-                            
-                            {/* Info on gradient */}
-                            <div className="absolute bottom-0 left-0 right-0 px-3 pb-3">
-                              {/* Title */}
-                              <h3 className="font-sans font-semibold text-white text-sm leading-tight line-clamp-1 mb-1">
-                                {typeof reel.caption === 'string' 
-                                  ? reel.caption.slice(0, 30) + (reel.caption.length > 30 ? '...' : '')
-                                  : 'Видео'}
-                              </h3>
-                              
-                              {/* Date and username */}
-                              <p className="font-sans text-white/70 text-[11px] mb-2.5">
-                                {dateStr && `${dateStr} • `}@{reel.owner?.username || 'instagram'}
-                              </p>
-                              
-                              {/* Stats row with colored icons */}
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 bg-white/15 backdrop-blur-sm rounded-lg px-2 py-1.5 flex items-center justify-center gap-1.5">
-                                  <Eye className="w-3.5 h-3.5 text-blue-400" />
-                                  <span className="font-sans text-[11px] font-bold text-white">{formatNumber(reel.view_count)}</span>
-                                </div>
-                                <div className="flex-1 bg-white/15 backdrop-blur-sm rounded-lg px-2 py-1.5 flex items-center justify-center gap-1.5">
-                                  <Heart className="w-3.5 h-3.5 text-rose-400" />
-                                  <span className="font-sans text-[11px] font-bold text-white">{formatNumber(reel.like_count)}</span>
-                                </div>
-                                <div className="flex-1 bg-white/15 backdrop-blur-sm rounded-lg px-2 py-1.5 flex items-center justify-center gap-1.5">
-                                  <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
-                                  <span className="font-sans text-[11px] font-bold text-white">{formatNumber(reel.comment_count)}</span>
-                                </div>
-                              </div>
-                            </div>
                           </div>
                         </div>
                       </div>
@@ -943,120 +1074,189 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
             </div>
           )}
 
-          {/* VIDEO DETAIL MODAL */}
+          {/* VIDEO DETAIL MODAL - Horizontal Layout */}
           {selectedVideo && (
             <div 
               className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
-              onClick={() => setSelectedVideo(null)}
+              onClick={() => { setSelectedVideo(null); setShowFolderSelect(false); }}
             >
               <div 
-                className="relative bg-white rounded-3xl overflow-hidden max-w-lg w-full max-h-[90vh] shadow-2xl"
+                className="relative bg-white rounded-3xl overflow-hidden max-w-4xl w-full max-h-[85vh] shadow-2xl flex flex-col md:flex-row"
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Close button */}
                 <button
-                  onClick={() => setSelectedVideo(null)}
-                  className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all"
+                  onClick={() => { setSelectedVideo(null); setShowFolderSelect(false); }}
+                  className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all active:scale-95"
                 >
                   <X className="w-5 h-5" />
                 </button>
 
-                {/* Video thumbnail */}
-                <div className="relative w-full" style={{ aspectRatio: '9/16', maxHeight: '60vh' }}>
-                  <img
-                    src={selectedVideo.thumbnail_url || selectedVideo.display_url || 'https://via.placeholder.com/400x711'}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                  
-                  {/* Play overlay */}
-                  <a
-                    href={selectedVideo.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors"
-                  >
-                    <div className="w-20 h-20 rounded-full bg-white/95 flex items-center justify-center shadow-2xl">
-                      <Play className="w-8 h-8 text-slate-800 ml-1" fill="currentColor" />
-                    </div>
-                  </a>
+                {/* Left side - Video thumbnail */}
+                <div className="relative w-full md:w-2/5 flex-shrink-0">
+                  <div className="relative w-full h-64 md:h-full md:min-h-[500px]">
+                    <img
+                      src={selectedVideo.thumbnail_url || selectedVideo.display_url || 'https://via.placeholder.com/400x711'}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                    
+                    {/* Dark gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent md:bg-gradient-to-r md:from-transparent md:via-transparent md:to-black/30" />
+                    
+                    {/* Play button */}
+                    <a
+                      href={selectedVideo.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="absolute inset-0 flex items-center justify-center group"
+                    >
+                      <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-white/95 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+                        <Play className="w-6 h-6 md:w-8 md:h-8 text-slate-800 ml-1" fill="currentColor" />
+                      </div>
+                    </a>
 
-                  {/* Viral coefficient */}
-                  <div className="absolute top-4 left-4">
-                    <div className={cn(
-                      "px-3 py-1.5 rounded-full backdrop-blur-sm flex items-center gap-2 shadow-lg",
-                      calculateViralCoefficient(selectedVideo.view_count, selectedVideo.taken_at) > 10 
-                        ? "bg-emerald-500 text-white" 
-                        : "bg-white/90 text-slate-700"
-                    )}>
-                      <Sparkles className="w-4 h-4" />
-                      <span className="font-sans font-bold">
-                        {calculateViralCoefficient(selectedVideo.view_count, selectedVideo.taken_at) || '—'}
-                      </span>
-                    </div>
+                    {/* Viral coefficient badge */}
+                    {(() => {
+                      const viralCoef = calculateViralCoefficient(selectedVideo.view_count, selectedVideo.taken_at);
+                      return (
+                        <div className="absolute top-4 left-4">
+                          <div className={cn(
+                            "px-3 py-1.5 rounded-xl backdrop-blur-md flex items-center gap-2 shadow-lg border",
+                            viralCoef > 10 ? "bg-emerald-500/90 text-white border-emerald-400/50" : 
+                            viralCoef > 5 ? "bg-amber-500/90 text-white border-amber-400/50" :
+                            viralCoef > 0 ? "bg-white/90 text-slate-700 border-white/50" :
+                            "bg-black/40 text-white/90 border-white/20"
+                          )}>
+                            <Sparkles className="w-4 h-4" />
+                            <span className="font-sans font-bold">{viralCoef || '—'}</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
 
-                {/* Info panel */}
-                <div className="p-5">
+                {/* Right side - Info panel */}
+                <div className="flex-1 p-6 flex flex-col overflow-y-auto">
+                  {/* Username and date */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
+                        <span className="text-white font-bold text-sm">
+                          {selectedVideo.owner?.username?.[0]?.toUpperCase() || 'V'}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-sans font-medium text-slate-800">@{selectedVideo.owner?.username || 'instagram'}</p>
+                        {selectedVideo.taken_at && (
+                          <p className="font-sans text-xs text-slate-500">
+                            {(() => {
+                              const d = selectedVideo.taken_at.includes?.('T') 
+                                ? new Date(selectedVideo.taken_at) 
+                                : new Date(Number(selectedVideo.taken_at) * 1000);
+                              return !isNaN(d.getTime()) ? d.toLocaleDateString('ru-RU', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric'
+                              }) : '';
+                            })()}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Stats row */}
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="flex-1 bg-slate-100 rounded-xl px-3 py-2.5 text-center">
-                      <Eye className="w-4 h-4 text-slate-400 mx-auto mb-1" />
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="flex-1 bg-blue-50 rounded-xl px-3 py-3 text-center">
+                      <Eye className="w-5 h-5 text-blue-500 mx-auto mb-1" />
                       <span className="font-sans text-sm font-bold text-slate-800 block">{formatNumber(selectedVideo.view_count)}</span>
                       <span className="font-sans text-[10px] text-slate-400">просмотров</span>
                     </div>
-                    <div className="flex-1 bg-slate-100 rounded-xl px-3 py-2.5 text-center">
-                      <Heart className="w-4 h-4 text-slate-400 mx-auto mb-1" />
+                    <div className="flex-1 bg-rose-50 rounded-xl px-3 py-3 text-center">
+                      <Heart className="w-5 h-5 text-rose-500 mx-auto mb-1" />
                       <span className="font-sans text-sm font-bold text-slate-800 block">{formatNumber(selectedVideo.like_count)}</span>
                       <span className="font-sans text-[10px] text-slate-400">лайков</span>
                     </div>
-                    <div className="flex-1 bg-slate-100 rounded-xl px-3 py-2.5 text-center">
-                      <MessageCircle className="w-4 h-4 text-slate-400 mx-auto mb-1" />
+                    <div className="flex-1 bg-emerald-50 rounded-xl px-3 py-3 text-center">
+                      <MessageCircle className="w-5 h-5 text-emerald-500 mx-auto mb-1" />
                       <span className="font-sans text-sm font-bold text-slate-800 block">{formatNumber(selectedVideo.comment_count)}</span>
                       <span className="font-sans text-[10px] text-slate-400">комментов</span>
                     </div>
                   </div>
 
                   {/* Caption */}
-                  <p className="font-sans text-slate-700 text-sm leading-relaxed mb-4 line-clamp-3">
-                    {typeof selectedVideo.caption === 'string' ? selectedVideo.caption : 'Без описания'}
-                  </p>
-
-                  {/* Meta info */}
-                  <div className="flex items-center justify-between text-sm text-slate-500 mb-4">
-                    <span className="font-sans">@{selectedVideo.owner?.username || 'instagram'}</span>
-                    {selectedVideo.taken_at && (
-                      <span className="font-sans">
-                        {new Date(Number(selectedVideo.taken_at) * 1000).toLocaleDateString('ru-RU', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric'
-                        })}
-                      </span>
-                    )}
+                  <div className="flex-1 mb-5">
+                    <p className="font-sans text-slate-500 text-xs mb-2">Описание</p>
+                    <p className="font-sans text-slate-700 text-sm leading-relaxed">
+                      {typeof selectedVideo.caption === 'string' 
+                        ? (selectedVideo.caption.length > 300 
+                            ? selectedVideo.caption.slice(0, 300) + '...' 
+                            : selectedVideo.caption)
+                        : 'Без описания'}
+                    </p>
                   </div>
 
+                  {/* Folder selection */}
+                  {showFolderSelect && (
+                    <div className="mb-4 p-4 bg-slate-50 rounded-2xl">
+                      <p className="font-sans text-sm font-medium text-slate-700 mb-3">Выберите папку</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {folderConfigs.map((folder) => {
+                          const Icon = folder.icon;
+                          return (
+                            <button
+                              key={folder.id}
+                              onClick={() => handleAddToFolder(selectedVideo, folder.id)}
+                              className="flex items-center gap-2 p-3 rounded-xl bg-white hover:bg-slate-100 transition-all active:scale-95 border border-slate-200"
+                            >
+                              <div 
+                                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                                style={{ backgroundColor: `${folder.color}20` }}
+                              >
+                                <Icon className="w-4 h-4" style={{ color: folder.color }} />
+                              </div>
+                              <span className="font-sans text-sm font-medium text-slate-700">{folder.title}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Action buttons */}
-                  <div className="flex gap-3">
+                  <div className="flex gap-3 mt-auto">
                     <button
                       onClick={() => {
                         handleAddToCanvas(selectedVideo);
                         setSelectedVideo(null);
                       }}
-                      className="flex-1 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-medium flex items-center justify-center gap-2 hover:from-orange-400 hover:to-amber-400 transition-all shadow-lg shadow-orange-500/30"
+                      className="flex-1 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-medium flex items-center justify-center gap-2 hover:from-orange-400 hover:to-amber-400 transition-all shadow-lg shadow-orange-500/30 active:scale-95"
                     >
                       <Plus className="w-5 h-5" />
-                      Сохранить
+                      Во входящие
+                    </button>
+                    <button
+                      onClick={() => setShowFolderSelect(!showFolderSelect)}
+                      className={cn(
+                        "px-4 py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all active:scale-95",
+                        showFolderSelect 
+                          ? "bg-indigo-500 text-white" 
+                          : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                      )}
+                    >
+                      <FolderPlus className="w-5 h-5" />
+                      <span className="hidden sm:inline">В папку</span>
                     </button>
                     <a
                       href={selectedVideo.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-5 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium flex items-center justify-center gap-2 transition-all"
+                      className="px-4 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium flex items-center justify-center gap-2 transition-all active:scale-95"
                     >
                       <ExternalLink className="w-5 h-5" />
-                      Открыть
+                      <span className="hidden sm:inline">Открыть</span>
                     </a>
                   </div>
                 </div>
