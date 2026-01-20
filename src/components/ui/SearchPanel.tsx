@@ -267,25 +267,35 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
     }
 
     try {
-      // Параллельный поиск: основной запрос + хэштег
+      // Параллельный поиск по нескольким вариациям запроса
       const cleanQuery = queryToSearch.trim();
       const hashtagQuery = cleanQuery.replace(/^#/, '').replace(/\s+/g, '');
       
-      // Запускаем оба запроса параллельно
-      const [keywordResults, hashtagResults] = await Promise.all([
+      // Генерируем вариации для расширения поиска
+      const variations = generateSearchVariations(cleanQuery);
+      
+      // Запускаем все запросы параллельно:
+      // 1. Основной поиск по ключевому слову
+      // 2. Поиск по хэштегу
+      // 3. Поиск по вариациям (reels, viral, тренд)
+      const searchPromises: Promise<InstagramSearchResult[]>[] = [
         searchInstagramVideos(cleanQuery),
-        // Ищем по хэштегу только если запрос не начинается с #
         cleanQuery.startsWith('#') ? Promise.resolve([]) : getHashtagReels(hashtagQuery),
-      ]);
+        ...variations.map(v => searchInstagramVideos(v).catch(() => [])),
+      ];
+      
+      const results = await Promise.all(searchPromises);
       
       // Объединяем результаты, убираем дубликаты по shortcode
-      const allResults = [...keywordResults];
-      const existingCodes = new Set(keywordResults.map(r => r.shortcode));
+      const existingCodes = new Set<string>();
+      const allResults: InstagramSearchResult[] = [];
       
-      for (const reel of hashtagResults) {
-        if (!existingCodes.has(reel.shortcode)) {
-          allResults.push(reel);
-          existingCodes.add(reel.shortcode);
+      for (const resultSet of results) {
+        for (const reel of resultSet) {
+          if (reel.shortcode && !existingCodes.has(reel.shortcode)) {
+            allResults.push(reel);
+            existingCodes.add(reel.shortcode);
+          }
         }
       }
       
@@ -299,8 +309,16 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
         setError('Видео не найдены');
         setViewMode('carousel');
       } else {
+        const keywordCount = results[0]?.length || 0;
+        const hashtagCount = results[1]?.length || 0;
+        const variationCount = allResults.length - keywordCount - hashtagCount;
+        
+        let description = '';
+        if (hashtagCount > 0) description += `#${hashtagQuery}: ${hashtagCount}`;
+        if (variationCount > 0) description += (description ? ' • ' : '') + `вариации: ${variationCount}`;
+        
         toast.success(`Найдено ${allResults.length} видео`, {
-          description: hashtagResults.length > 0 ? `+${hashtagResults.length} по #${hashtagQuery}` : undefined,
+          description: description || undefined,
         });
       }
     } catch (err) {
@@ -311,6 +329,26 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
       setLoading(false);
     }
   }, [query, addToHistory]);
+
+  // Генерация вариаций поискового запроса
+  const generateSearchVariations = (query: string): string[] => {
+    const cleanQuery = query.toLowerCase().replace(/^#/, '').trim();
+    const variations: string[] = [];
+    
+    if (cleanQuery.length >= 3) {
+      // Английские вариации
+      variations.push(`${cleanQuery} reels`);
+      variations.push(`${cleanQuery} viral`);
+      
+      // Для русских запросов добавляем русские вариации
+      if (/[а-яё]/i.test(cleanQuery)) {
+        variations.push(`${cleanQuery} тренд`);
+        variations.push(`${cleanQuery} рилс`);
+      }
+    }
+    
+    return variations;
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !loading) {
