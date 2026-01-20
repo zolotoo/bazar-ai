@@ -25,8 +25,47 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const SESSION_COOKIE = 'bazar-session';
+const SESSION_KEY = 'bazar-session';
 const BOT_TOKEN = '8367186792:AAHLr687MVkXV_DBwAYUaR0U74U-h0qbi6g';
+
+// Гибридное хранение: cookie + localStorage для надёжности
+const saveSession = (token: string) => {
+  setCookie(SESSION_KEY, token, 30);
+  try {
+    localStorage.setItem(SESSION_KEY, token);
+  } catch (e) {
+    console.log('[Auth] localStorage not available');
+  }
+};
+
+const getSession = (): string | null => {
+  // Сначала пробуем cookie
+  let token = getCookie(SESSION_KEY);
+  if (token) return token;
+  
+  // Fallback на localStorage
+  try {
+    token = localStorage.getItem(SESSION_KEY);
+    if (token) {
+      // Восстанавливаем cookie из localStorage
+      setCookie(SESSION_KEY, token, 30);
+      return token;
+    }
+  } catch (e) {
+    console.log('[Auth] localStorage not available');
+  }
+  
+  return null;
+};
+
+const clearSession = () => {
+  deleteCookie(SESSION_KEY);
+  try {
+    localStorage.removeItem(SESSION_KEY);
+  } catch (e) {
+    console.log('[Auth] localStorage not available');
+  }
+};
 
 const generateCode = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -36,19 +75,26 @@ const generateSessionToken = () => {
   return crypto.randomUUID() + '-' + Date.now();
 };
 
-// Cookie helpers
+// Cookie helpers - без Secure для совместимости с localhost
 const setCookie = (name: string, value: string, days: number = 30) => {
   const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toUTCString();
-  document.cookie = `${name}=${value}; expires=${expires}; path=/; SameSite=Lax; Secure`;
+  // Не используем Secure для localhost, SameSite=Lax для кросс-сайт совместимости
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const secureFlag = isLocalhost ? '' : '; Secure';
+  document.cookie = `${name}=${value}; expires=${expires}; path=/; SameSite=Lax${secureFlag}`;
+  console.log('[Auth] Cookie set:', name, 'value length:', value.length);
 };
 
 const getCookie = (name: string): string | null => {
   const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-  return match ? match[2] : null;
+  const value = match ? match[2] : null;
+  console.log('[Auth] Cookie get:', name, value ? 'found' : 'not found');
+  return value;
 };
 
 const deleteCookie = (name: string) => {
   document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+  console.log('[Auth] Cookie deleted:', name);
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -63,8 +109,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Проверяем сессию при загрузке
   useEffect(() => {
     const checkSession = async () => {
-      const sessionToken = getCookie(SESSION_COOKIE);
-      console.log('[Auth] Checking session cookie:', sessionToken ? 'found' : 'not found');
+      const sessionToken = getSession();
+      console.log('[Auth] Checking session:', sessionToken ? 'found' : 'not found');
       
       if (!sessionToken) {
         setLoading(false);
@@ -82,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (error || !data) {
           console.log('[Auth] Session invalid or expired');
-          deleteCookie(SESSION_COOKIE);
+          clearSession();
           setLoading(false);
           return;
         }
@@ -102,7 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       } catch (err) {
         console.error('[Auth] Session check error:', err);
-        deleteCookie(SESSION_COOKIE);
+        clearSession();
       } finally {
         setLoading(false);
       }
@@ -258,9 +304,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           user_agent: navigator.userAgent,
         });
 
-      // Сохраняем токен в cookie
-      setCookie(SESSION_COOKIE, sessionToken, 30);
-      console.log('[Auth] Session created and saved to cookie');
+      // Сохраняем токен
+      saveSession(sessionToken);
+      console.log('[Auth] Session created and saved');
 
       // Устанавливаем пользователя
       const userData: User = {
@@ -292,7 +338,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Выход
   const logout = useCallback(async () => {
-    const sessionToken = getCookie(SESSION_COOKIE);
+    const sessionToken = getSession();
     
     // Удаляем сессию из Supabase
     if (sessionToken) {
@@ -302,8 +348,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('token', sessionToken);
     }
     
-    // Удаляем cookie
-    deleteCookie(SESSION_COOKIE);
+    // Очищаем локальное хранение
+    clearSession();
     
     setUser(null);
     setCodeSent(false);
