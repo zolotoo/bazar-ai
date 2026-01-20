@@ -557,8 +557,13 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
       if (reel) {
         // Показываем превью карточки
         setLinkPreview(reel);
+        
+        // Сохраняем в историю поиска (ссылка как запрос)
+        const shortUrl = linkUrl.length > 50 ? linkUrl.slice(0, 47) + '...' : linkUrl;
+        addToHistory(`🔗 ${shortUrl}`, [reel]);
+        
         toast.success('Видео найдено!', {
-          description: 'Нажмите "Добавить в Идеи" для сохранения',
+          description: 'Выберите проект и папку для сохранения',
         });
       } else {
         toast.error('Не удалось получить данные рилса');
