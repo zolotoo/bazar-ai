@@ -36,6 +36,13 @@ export default async function handler(req, res) {
 
   // Пробуем разные API для получения статистики
   const apis = [
+    // Instagram Scraper Stable API - самый надёжный
+    {
+      name: 'instagram-scraper-stable',
+      host: 'instagram-scraper-stable-api.p.rapidapi.com',
+      url: `https://instagram-scraper-stable-api.p.rapidapi.com/get_media_data_v2.php?media_code=${code}`,
+      method: 'GET',
+    },
     {
       name: 'instagram-scraper-20251',
       host: 'instagram-scraper-20251.p.rapidapi.com',
@@ -43,21 +50,9 @@ export default async function handler(req, res) {
       method: 'GET',
     },
     {
-      name: 'instagram-scraper-20251-post',
-      host: 'instagram-scraper-20251.p.rapidapi.com', 
-      url: `https://instagram-scraper-20251.p.rapidapi.com/v1/post/${code}`,
-      method: 'GET',
-    },
-    {
       name: 'instagram-looter2',
       host: 'instagram-looter2.p.rapidapi.com',
       url: `https://instagram-looter2.p.rapidapi.com/media/${code}`,
-      method: 'GET',
-    },
-    {
-      name: 'instagram-bulk-scraper',
-      host: 'instagram-bulk-scraper-latest.p.rapidapi.com',
-      url: `https://instagram-bulk-scraper-latest.p.rapidapi.com/media_info/${code}`,
       method: 'GET',
     },
   ];
@@ -80,12 +75,40 @@ export default async function handler(req, res) {
       }
 
       const data = await response.json();
-      console.log(`${api.name} response keys:`, Object.keys(data));
+      console.log(`${api.name} response:`, JSON.stringify(data).slice(0, 500));
 
-      // Извлекаем данные из разных форматов ответа
+      // Для instagram-scraper-stable API
+      if (api.name === 'instagram-scraper-stable' && data) {
+        // Этот API возвращает данные напрямую
+        const result = {
+          success: true,
+          shortcode: code,
+          url: url || `https://www.instagram.com/reel/${code}/`,
+          thumbnail_url: data.thumbnail_url || data.display_url || data.image_versions2?.candidates?.[0]?.url || '',
+          caption: data.caption?.text || (typeof data.caption === 'string' ? data.caption : '') || '',
+          view_count: data.play_count || data.view_count || data.video_view_count || 0,
+          like_count: data.like_count || data.likes_count || 0,
+          comment_count: data.comment_count || data.comments_count || 0,
+          taken_at: data.taken_at || data.taken_at_timestamp,
+          owner: {
+            username: data.user?.username || data.owner?.username || '',
+            full_name: data.user?.full_name || data.owner?.full_name || '',
+          },
+          is_video: data.is_video !== false || data.media_type === 2,
+          api_used: api.name,
+        };
+        
+        // Проверяем что получили хоть какие-то данные
+        if (result.view_count || result.like_count || result.thumbnail_url) {
+          console.log('Extracted reel info:', result);
+          return res.status(200).json(result);
+        }
+      }
+
+      // Для других API - общий парсинг
       const item = data.data || data.media || data.post || data.graphql?.shortcode_media || data;
       
-      if (item) {
+      if (item && (item.play_count || item.view_count || item.like_count || item.thumbnail_url)) {
         const result = {
           success: true,
           shortcode: code,
