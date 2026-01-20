@@ -3,6 +3,8 @@ import { supabase } from '../utils/supabase';
 import { useFlowStore } from '../stores/flowStore';
 import { IncomingVideo } from '../types';
 import { useAuth } from './useAuth';
+import { downloadAndTranscribe, checkTranscriptionStatus } from '../services/transcriptionService';
+import { toast } from 'sonner';
 
 interface SavedVideo {
   id: string;
@@ -18,6 +20,11 @@ interface SavedVideo {
   comment_count?: number;
   taken_at?: number;
   added_at: string;
+  // Новые поля для транскрибации
+  download_url?: string;
+  transcript_id?: string;
+  transcript_status?: string;
+  transcript_text?: string;
 }
 
 /**
@@ -164,6 +171,10 @@ export function useInboxVideos() {
         // Заменяем локальное видео на сохранённое
         setVideos(prev => [savedVideo, ...prev.filter(v => v.id !== localVideo.id)]);
         setIncomingVideos([savedVideo, ...useFlowStore.getState().incomingVideos.filter(v => v.id !== localVideo.id)]);
+        
+        // Запускаем скачивание и транскрибацию в фоне
+        startVideoProcessing(data.id, video.url);
+        
         return savedVideo;
       }
 
@@ -173,6 +184,114 @@ export function useInboxVideos() {
       return localVideo;
     }
   }, [setIncomingVideos, transformVideo, getUserId]);
+
+  /**
+   * Запускает скачивание и транскрибацию видео в фоне
+   */
+  const startVideoProcessing = useCallback(async (videoDbId: string, instagramUrl: string) => {
+    console.log('[InboxVideos] Starting video processing for:', instagramUrl);
+    
+    try {
+      // Обновляем статус
+      await supabase
+        .from('saved_videos')
+        .update({ transcript_status: 'downloading' })
+        .eq('id', videoDbId);
+      
+      // Получаем ссылку на скачивание и запускаем транскрибацию
+      const result = await downloadAndTranscribe(instagramUrl);
+      
+      if (!result.success) {
+        console.error('[InboxVideos] Video processing failed:', result.error);
+        await supabase
+          .from('saved_videos')
+          .update({ transcript_status: 'error' })
+          .eq('id', videoDbId);
+        return;
+      }
+      
+      // Сохраняем данные о скачивании и транскрибации
+      await supabase
+        .from('saved_videos')
+        .update({ 
+          download_url: result.videoUrl,
+          transcript_id: result.transcriptId,
+          transcript_status: 'processing',
+        })
+        .eq('id', videoDbId);
+      
+      toast.success('Видео обрабатывается', {
+        description: 'Транскрибация запущена',
+      });
+      
+      // Запускаем проверку статуса транскрибации
+      if (result.transcriptId) {
+        pollTranscriptionStatus(videoDbId, result.transcriptId);
+      }
+    } catch (err) {
+      console.error('[InboxVideos] Video processing error:', err);
+    }
+  }, []);
+
+  /**
+   * Проверяет статус транскрибации с polling
+   */
+  const pollTranscriptionStatus = useCallback(async (videoDbId: string, transcriptId: string) => {
+    const maxAttempts = 60; // 5 минут при интервале 5 сек
+    let attempts = 0;
+    
+    const checkStatus = async () => {
+      attempts++;
+      
+      try {
+        const result = await checkTranscriptionStatus(transcriptId);
+        
+        if (result.status === 'completed') {
+          // Сохраняем результат
+          await supabase
+            .from('saved_videos')
+            .update({ 
+              transcript_status: 'completed',
+              transcript_text: result.text,
+            })
+            .eq('id', videoDbId);
+          
+          toast.success('Транскрибация завершена', {
+            description: result.text?.slice(0, 50) + '...',
+          });
+          
+          // Обновляем локальный список
+          fetchVideos();
+          return;
+        }
+        
+        if (result.status === 'error') {
+          await supabase
+            .from('saved_videos')
+            .update({ transcript_status: 'error' })
+            .eq('id', videoDbId);
+          
+          toast.error('Ошибка транскрибации');
+          return;
+        }
+        
+        // Продолжаем проверку
+        if (attempts < maxAttempts) {
+          setTimeout(checkStatus, 5000);
+        } else {
+          await supabase
+            .from('saved_videos')
+            .update({ transcript_status: 'timeout' })
+            .eq('id', videoDbId);
+        }
+      } catch (err) {
+        console.error('[InboxVideos] Poll error:', err);
+      }
+    };
+    
+    // Первая проверка через 10 секунд
+    setTimeout(checkStatus, 10000);
+  }, [fetchVideos]);
 
   /**
    * Удаляет видео из сохранённых

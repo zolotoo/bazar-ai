@@ -1,0 +1,254 @@
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../utils/supabase';
+import { useAuth } from './useAuth';
+
+export interface ProjectFolder {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+  order: number;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+  folders: ProjectFolder[];
+  createdAt: Date;
+}
+
+const DEFAULT_FOLDERS: Omit<ProjectFolder, 'id'>[] = [
+  { name: 'Идеи', color: '#f97316', icon: 'lightbulb', order: 0 },
+  { name: 'Ожидает сценария', color: '#6366f1', icon: 'file', order: 1 },
+  { name: 'Ожидает съёмок', color: '#f59e0b', icon: 'camera', order: 2 },
+  { name: 'Ожидает монтажа', color: '#10b981', icon: 'scissors', order: 3 },
+  { name: 'Готовое', color: '#8b5cf6', icon: 'check', order: 4 },
+];
+
+const PROJECT_COLORS = [
+  '#f97316', // orange
+  '#6366f1', // indigo
+  '#10b981', // emerald
+  '#f59e0b', // amber
+  '#8b5cf6', // violet
+  '#ec4899', // pink
+  '#14b8a6', // teal
+  '#ef4444', // red
+];
+
+export function useProjects() {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+
+  const getUserId = useCallback((): string => {
+    if (user?.telegram_username) {
+      return `tg-${user.telegram_username}`;
+    }
+    return 'anonymous';
+  }, [user]);
+
+  // Загрузка проектов
+  const fetchProjects = useCallback(async () => {
+    const userId = getUserId();
+    setLoading(true);
+    
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching projects:', error);
+        // Создаем дефолтный проект если ничего нет
+        const defaultProject = await createProject('Мой проект');
+        if (defaultProject) {
+          setProjects([defaultProject]);
+          setCurrentProjectId(defaultProject.id);
+        }
+        return;
+      }
+
+      if (data && data.length > 0) {
+        const loadedProjects: Project[] = data.map(p => ({
+          id: p.id,
+          name: p.name,
+          color: p.color || '#f97316',
+          icon: p.icon || 'folder',
+          folders: p.folders || DEFAULT_FOLDERS.map((f, i) => ({ ...f, id: `folder-${i}` })),
+          createdAt: new Date(p.created_at),
+        }));
+        setProjects(loadedProjects);
+        
+        // Устанавливаем текущий проект
+        const savedProjectId = localStorage.getItem('currentProjectId');
+        if (savedProjectId && loadedProjects.find(p => p.id === savedProjectId)) {
+          setCurrentProjectId(savedProjectId);
+        } else {
+          setCurrentProjectId(loadedProjects[0].id);
+        }
+      } else {
+        // Создаем дефолтный проект
+        const defaultProject = await createProject('Мой проект');
+        if (defaultProject) {
+          setProjects([defaultProject]);
+          setCurrentProjectId(defaultProject.id);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load projects:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [getUserId]);
+
+  // Создание проекта
+  const createProject = useCallback(async (name: string): Promise<Project | null> => {
+    const userId = getUserId();
+    const color = PROJECT_COLORS[projects.length % PROJECT_COLORS.length];
+    
+    const newProject: Omit<Project, 'createdAt'> = {
+      id: `project-${Date.now()}`,
+      name,
+      color,
+      icon: 'folder',
+      folders: DEFAULT_FOLDERS.map((f, i) => ({ ...f, id: `folder-${Date.now()}-${i}` })),
+    };
+
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .insert({
+          id: newProject.id,
+          user_id: userId,
+          name: newProject.name,
+          color: newProject.color,
+          icon: newProject.icon,
+          folders: newProject.folders,
+        });
+
+      if (error) {
+        console.error('Error creating project:', error);
+        return null;
+      }
+
+      const project: Project = { ...newProject, createdAt: new Date() };
+      setProjects(prev => [...prev, project]);
+      return project;
+    } catch (err) {
+      console.error('Failed to create project:', err);
+      return null;
+    }
+  }, [getUserId, projects.length]);
+
+  // Обновление проекта
+  const updateProject = useCallback(async (projectId: string, updates: Partial<Pick<Project, 'name' | 'color' | 'icon' | 'folders'>>) => {
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update(updates)
+        .eq('id', projectId);
+
+      if (error) {
+        console.error('Error updating project:', error);
+        return;
+      }
+
+      setProjects(prev => prev.map(p => 
+        p.id === projectId ? { ...p, ...updates } : p
+      ));
+    } catch (err) {
+      console.error('Failed to update project:', err);
+    }
+  }, []);
+
+  // Удаление проекта
+  const deleteProject = useCallback(async (projectId: string) => {
+    if (projects.length <= 1) {
+      console.warn('Cannot delete the last project');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', projectId);
+
+      if (error) {
+        console.error('Error deleting project:', error);
+        return;
+      }
+
+      setProjects(prev => {
+        const newProjects = prev.filter(p => p.id !== projectId);
+        if (currentProjectId === projectId && newProjects.length > 0) {
+          setCurrentProjectId(newProjects[0].id);
+        }
+        return newProjects;
+      });
+    } catch (err) {
+      console.error('Failed to delete project:', err);
+    }
+  }, [projects.length, currentProjectId]);
+
+  // Выбор текущего проекта
+  const selectProject = useCallback((projectId: string) => {
+    setCurrentProjectId(projectId);
+    localStorage.setItem('currentProjectId', projectId);
+  }, []);
+
+  // Добавление папки в проект
+  const addFolder = useCallback(async (projectId: string, folderName: string) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+
+    const newFolder: ProjectFolder = {
+      id: `folder-${Date.now()}`,
+      name: folderName,
+      color: PROJECT_COLORS[project.folders.length % PROJECT_COLORS.length],
+      icon: 'folder',
+      order: project.folders.length,
+    };
+
+    const updatedFolders = [...project.folders, newFolder];
+    await updateProject(projectId, { folders: updatedFolders });
+  }, [projects, updateProject]);
+
+  // Удаление папки из проекта
+  const removeFolder = useCallback(async (projectId: string, folderId: string) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+
+    const updatedFolders = project.folders.filter(f => f.id !== folderId);
+    await updateProject(projectId, { folders: updatedFolders });
+  }, [projects, updateProject]);
+
+  // Текущий проект
+  const currentProject = projects.find(p => p.id === currentProjectId) || null;
+
+  useEffect(() => {
+    if (user) {
+      fetchProjects();
+    }
+  }, [user, fetchProjects]);
+
+  return {
+    projects,
+    currentProject,
+    currentProjectId,
+    loading,
+    createProject,
+    updateProject,
+    deleteProject,
+    selectProject,
+    addFolder,
+    removeFolder,
+    refetch: fetchProjects,
+  };
+}
