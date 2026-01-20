@@ -34,15 +34,57 @@ export default async function handler(req, res) {
 
   console.log('Fetching reel info for shortcode:', code);
 
-  // Пробуем разные API для получения статистики
-  const apis = [
-    // Instagram Scraper Stable API - самый надёжный
-    {
-      name: 'instagram-scraper-stable',
-      host: 'instagram-scraper-stable-api.p.rapidapi.com',
-      url: `https://instagram-scraper-stable-api.p.rapidapi.com/get_media_data_v2.php?media_code=${code}`,
+  // Пробуем Instagram Scraper Stable API
+  try {
+    const stableApiUrl = `https://instagram-scraper-stable-api.p.rapidapi.com/get_media_data_v2.php?media_code=${code}`;
+    console.log('Trying instagram-scraper-stable:', stableApiUrl);
+    
+    const stableResponse = await fetch(stableApiUrl, {
       method: 'GET',
-    },
+      headers: {
+        'x-rapidapi-host': 'instagram-scraper-stable-api.p.rapidapi.com',
+        'x-rapidapi-key': RAPIDAPI_KEY,
+      },
+    });
+
+    console.log('Stable API status:', stableResponse.status);
+    
+    if (stableResponse.ok) {
+      const data = await stableResponse.json();
+      console.log('Stable API response:', JSON.stringify(data).slice(0, 1000));
+      
+      if (data && !data.error) {
+        // Парсим ответ от stable API
+        const result = {
+          success: true,
+          shortcode: code,
+          url: url || `https://www.instagram.com/reel/${code}/`,
+          thumbnail_url: data.thumbnail_url || data.display_url || data.image_versions2?.candidates?.[0]?.url || '',
+          caption: typeof data.caption === 'string' ? data.caption : (data.caption?.text || ''),
+          view_count: data.play_count || data.video_view_count || data.view_count || 0,
+          like_count: data.like_count || data.likes_count || 0,
+          comment_count: data.comment_count || data.comments_count || 0,
+          taken_at: data.taken_at || data.taken_at_timestamp,
+          owner: {
+            username: data.user?.username || data.owner?.username || '',
+            full_name: data.user?.full_name || data.owner?.full_name || '',
+          },
+          is_video: true,
+          api_used: 'instagram-scraper-stable',
+        };
+        
+        if (result.view_count || result.like_count || result.thumbnail_url) {
+          console.log('Extracted from stable API:', result);
+          return res.status(200).json(result);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Stable API error:', e.message);
+  }
+
+  // Fallback APIs
+  const apis = [
     {
       name: 'instagram-scraper-20251',
       host: 'instagram-scraper-20251.p.rapidapi.com',
