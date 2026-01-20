@@ -2,7 +2,7 @@
 import React, { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { cn } from "../../utils/cn";
-import { Eye, Heart, Sparkles, Plus, Play, ArrowRight } from "lucide-react";
+import { Sparkles, Plus, Play, ArrowRight } from "lucide-react";
 
 export interface VideoGradientCardProps {
   thumbnailUrl: string;

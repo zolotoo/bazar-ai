@@ -8,7 +8,7 @@ import { IncomingVideosDrawer } from './components/sidebar/IncomingVideosDrawer'
 import { SearchPanel } from './components/ui/SearchPanel';
 import { useAuth } from './hooks/useAuth';
 import { useInboxVideos } from './hooks/useInboxVideos';
-import { Video, Settings, Search, LayoutGrid, GitBranch, Clock, User, LogOut, Link, Radar, Plus } from 'lucide-react';
+import { Video, Settings, Search, LayoutGrid, GitBranch, Clock, User, LogOut, Link, Radar } from 'lucide-react';
 import { cn } from './utils/cn';
 import { Toaster } from 'sonner';
 
