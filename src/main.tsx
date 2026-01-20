@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
+import { AuthProvider } from './hooks/useAuth'
 import './styles/index.css'
 
 console.log('Main.tsx loaded');
@@ -14,7 +15,9 @@ console.log('Root element found, rendering app...');
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <App />
+    <AuthProvider>
+      <App />
+    </AuthProvider>
   </React.StrictMode>,
 );
 
