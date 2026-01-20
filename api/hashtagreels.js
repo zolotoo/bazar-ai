@@ -19,8 +19,8 @@ export default async function handler(req, res) {
   const RAPIDAPI_HOST = 'instagram-scraper-20251.p.rapidapi.com';
 
   try {
-    // Пробуем endpoint для хэштегов
-    const url = `https://${RAPIDAPI_HOST}/hashtag/${encodeURIComponent(hashtag)}/`;
+    // Пробуем endpoint для хэштегов с параметром count
+    const url = `https://${RAPIDAPI_HOST}/hashtag/${encodeURIComponent(hashtag)}/?count=50`;
     
     console.log('Fetching hashtag:', url);
     

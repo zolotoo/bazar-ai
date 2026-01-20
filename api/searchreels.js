@@ -19,7 +19,10 @@ export default async function handler(req, res) {
   const RAPIDAPI_HOST = 'instagram-scraper-20251.p.rapidapi.com';
 
   try {
-    const url = `https://${RAPIDAPI_HOST}/searchreels/?keyword=${encodeURIComponent(keyword)}&url_embed_safe=true`;
+    // Пробуем запросить больше результатов с разными параметрами
+    const url = `https://${RAPIDAPI_HOST}/searchreels/?keyword=${encodeURIComponent(keyword)}&url_embed_safe=true&count=50`;
+    
+    console.log('Fetching reels:', url);
     
     const response = await fetch(url, {
       method: 'GET',
@@ -30,6 +33,8 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
+    
+    console.log('Reels response items:', Array.isArray(data?.data) ? data.data.length : 'not array');
     
     return res.status(200).json(data);
   } catch (error) {
