@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Search, X, ExternalLink, Plus, Eye, Heart, MessageCircle, ChevronLeft, ChevronRight, Sparkles, Play, Link, Loader2, Radar, UserPlus } from 'lucide-react';
+import { Search, X, ExternalLink, Plus, Eye, Heart, MessageCircle, ChevronLeft, ChevronRight, Sparkles, Play, Link, Loader2, Radar, UserPlus, Check } from 'lucide-react';
 import { TextShimmer } from './TextShimmer';
 import { VideoGradientCard } from './VideoGradientCard';
 import { GlassTabButton, GlassTabGroup } from './GlassTabButton';
@@ -13,10 +13,11 @@ import { useFlowStore } from '../../stores/flowStore';
 import { useInboxVideos } from '../../hooks/useInboxVideos';
 import { useSearchHistory } from '../../hooks/useSearchHistory';
 import { useWorkspaceZones } from '../../hooks/useWorkspaceZones';
+import { useProjectContext } from '../../contexts/ProjectContext';
 import { IncomingVideo } from '../../types';
 import { cn } from '../../utils/cn';
 import { supabase } from '../../utils/supabase';
-import { FolderPlus, Star, Sparkles as SparklesIcon, FileText, CheckCircle } from 'lucide-react';
+import { FolderPlus, Star, Sparkles as SparklesIcon, FileText, CheckCircle, ChevronDown as ChevronDownIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface SearchPanelProps {
@@ -144,25 +145,50 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
   const [radarUsername, setRadarUsername] = useState('');
   const [isSpinning, setIsSpinning] = useState(false);
   const [_spinOffset, setSpinOffset] = useState(0);
+  const [showProjectSelect, setShowProjectSelect] = useState(false);
+  const [selectedProjectForAdd, setSelectedProjectForAdd] = useState<string | null>(currentProjectId || null);
   const { incomingVideos } = useFlowStore();
   const { addVideoToInbox } = useInboxVideos();
   const { history: searchHistory, addToHistory, refetch: refetchHistory, getTodayCache, getAllResultsByQuery } = useSearchHistory();
-  const { addVideoToWorkspace } = useWorkspaceZones();
+  useWorkspaceZones(); // keep hook for potential future use
+  const { projects, currentProject } = useProjectContext();
   
   // Минимум просмотров для показа в поиске
   const MIN_VIEWS = 30000;
   const inputRef = useRef<HTMLInputElement>(null);
   const spinIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Конфигурация папок для добавления
-  const folderConfigs = [
-    { id: 'inbox', title: 'Входящие', color: '#64748b', icon: FolderPlus },
-    { id: 'ideas', title: 'Идеи', color: '#f97316', icon: SparklesIcon },
-    { id: '1', title: 'Ожидает сценария', color: '#6366f1', icon: FileText },
-    { id: '2', title: 'Ожидает съёмок', color: '#f59e0b', icon: Star },
-    { id: '3', title: 'Ожидает монтажа', color: '#10b981', icon: SparklesIcon },
-    { id: '4', title: 'Готовое', color: '#8b5cf6', icon: CheckCircle },
-  ];
+  // Используем папки из выбранного проекта или текущего
+  const activeProjectId = selectedProjectForAdd || currentProjectId;
+  const activeProject = projects.find(p => p.id === activeProjectId) || currentProject;
+  const activeProjectName = activeProject?.name || currentProjectName;
+  
+  // Папки из проекта (или дефолтные)
+  const projectFolders = activeProject?.folders || [];
+  
+  // Маппинг иконок по названию
+  const getIconByName = (iconName: string) => {
+    const iconMap: Record<string, typeof SparklesIcon> = {
+      'lightbulb': SparklesIcon,
+      'file': FileText,
+      'camera': Star,
+      'scissors': SparklesIcon,
+      'check': CheckCircle,
+      'rejected': FolderPlus,
+      'all': FolderPlus,
+    };
+    return iconMap[iconName] || FolderPlus;
+  };
+  
+  // Конфигурация папок для добавления (из проекта), исключая "Все видео"
+  const folderConfigs = projectFolders
+    .filter(f => f.icon !== 'all') // "Все видео" - это отсутствие папки
+    .map(f => ({
+      id: f.id,
+      title: f.name,
+      color: f.color,
+      icon: getIconByName(f.icon),
+    }));
 
   // Сортировка видео
   const sortedReels = [...reels].sort((a, b) => {
@@ -545,9 +571,16 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
     }
   };
 
-  // Добавление видео из превью в "Идеи"
-  const handleAddLinkPreviewToIdeas = async () => {
+  // Добавление видео из превью в "Все видео" (без папки)
+  const handleAddLinkPreviewToAllVideos = async (folderId?: string) => {
     if (!linkPreview) return;
+    
+    // Проверяем что проект выбран
+    if (!activeProjectId) {
+      setShowProjectSelect(true);
+      toast.error('Сначала выберите проект');
+      return;
+    }
     
     try {
       const captionText = typeof linkPreview.caption === 'string' ? linkPreview.caption.slice(0, 200) : 'Видео из Instagram';
@@ -560,60 +593,57 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
         likeCount: linkPreview.like_count,
         commentCount: linkPreview.comment_count,
         ownerUsername: linkPreview.owner?.username,
-        projectId: currentProjectId || undefined,
-        folderId: 'ideas',
+        projectId: activeProjectId,
+        folderId: folderId, // undefined = "Все видео", или конкретная папка
         takenAt: linkPreview.taken_at,
       });
       
+      const folderName = folderId ? folderConfigs.find(f => f.id === folderId)?.title || 'папку' : 'Все видео';
+      
       setLinkUrl('');
       setLinkPreview(null);
-      toast.success('Добавлено в папку "Идеи"', {
-        description: `Проект: ${currentProjectName} • @${linkPreview.owner?.username || 'instagram'}`,
+      setShowProjectSelect(false);
+      toast.success(`Добавлено в "${folderName}"`, {
+        description: `Проект: ${activeProjectName} • @${linkPreview.owner?.username || 'instagram'}`,
       });
     } catch (err) {
       console.error('Ошибка добавления:', err);
-      toast.error('Ошибка при добавлении в Идеи');
+      toast.error('Ошибка при добавлении');
     }
   };
 
   // Добавление видео в папку
   const handleAddToFolder = async (result: InstagramSearchResult, folderId: string) => {
+    // Проверяем что проект выбран
+    if (!activeProjectId) {
+      setShowProjectSelect(true);
+      toast.error('Сначала выберите проект');
+      return;
+    }
+    
     const captionText = typeof result.caption === 'string' ? result.caption.slice(0, 500) : 'Видео из Instagram';
     const folderName = folderConfigs.find(f => f.id === folderId)?.title || 'папку';
     
     try {
-      // Для "Входящие" и "Идеи" используем addVideoToInbox
-      if (folderId === 'inbox' || folderId === 'ideas') {
-        await addVideoToInbox({
-          title: captionText,
-          previewUrl: result.thumbnail_url || result.display_url || '',
-          url: result.url,
-          viewCount: result.view_count,
-          likeCount: result.like_count,
-          commentCount: result.comment_count,
-          ownerUsername: result.owner?.username,
-          projectId: currentProjectId || undefined,
-          folderId: folderId,
-          takenAt: result.taken_at,
-        });
-      } else {
-        // Для остальных папок используем addVideoToWorkspace
-        await addVideoToWorkspace({
-          videoId: result.shortcode || result.id,
-          shortcode: result.shortcode,
-          thumbnailUrl: result.thumbnail_url || result.display_url,
-          caption: captionText,
-          ownerUsername: result.owner?.username,
-          viewCount: result.view_count,
-          likeCount: result.like_count,
-          zoneId: folderId,
-        });
-      }
+      // Всегда используем addVideoToInbox для сохранения в Supabase
+      await addVideoToInbox({
+        title: captionText,
+        previewUrl: result.thumbnail_url || result.display_url || '',
+        url: result.url,
+        viewCount: result.view_count,
+        likeCount: result.like_count,
+        commentCount: result.comment_count,
+        ownerUsername: result.owner?.username,
+        projectId: activeProjectId,
+        folderId: folderId,
+        takenAt: result.taken_at,
+      });
+      
       setShowFolderSelect(false);
       setSelectedVideo(null);
       setCardFolderSelect(null);
       toast.success(`Добавлено в "${folderName}"`, {
-        description: `Проект: ${currentProjectName} • @${result.owner?.username || 'instagram'}`,
+        description: `Проект: ${activeProjectName} • @${result.owner?.username || 'instagram'}`,
       });
     } catch (err) {
       console.error('Ошибка добавления в папку:', err);
@@ -934,22 +964,92 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                           </span>
                         </div>
 
+                        {/* Выбор проекта */}
+                        <div className="mb-4">
+                          <label className="text-xs text-slate-500 mb-1.5 block">Добавить в проект:</label>
+                          <div className="relative">
+                            <button
+                              onClick={() => setShowProjectSelect(!showProjectSelect)}
+                              className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors text-left"
+                            >
+                              <span className="text-sm font-medium text-slate-700">
+                                {activeProjectName || 'Выберите проект'}
+                              </span>
+                              <ChevronDownIcon className={cn(
+                                "w-4 h-4 text-slate-400 transition-transform",
+                                showProjectSelect && "rotate-180"
+                              )} />
+                            </button>
+                            {showProjectSelect && (
+                              <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-slate-200 z-50 py-1 max-h-48 overflow-auto">
+                                {projects.map(project => (
+                                  <button
+                                    key={project.id}
+                                    onClick={() => {
+                                      setSelectedProjectForAdd(project.id);
+                                      setShowProjectSelect(false);
+                                    }}
+                                    className={cn(
+                                      "w-full flex items-center gap-2 px-4 py-2.5 hover:bg-slate-50 transition-colors text-left",
+                                      activeProjectId === project.id && "bg-orange-50"
+                                    )}
+                                  >
+                                    <div 
+                                      className="w-3 h-3 rounded-full"
+                                      style={{ backgroundColor: project.color || '#f97316' }}
+                                    />
+                                    <span className="text-sm text-slate-700">{project.name}</span>
+                                    {activeProjectId === project.id && (
+                                      <Check className="w-4 h-4 text-orange-500 ml-auto" />
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Выбор папки */}
+                        <div className="mb-4">
+                          <label className="text-xs text-slate-500 mb-1.5 block">Выберите папку:</label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              onClick={() => handleAddLinkPreviewToAllVideos(undefined)}
+                              disabled={!activeProjectId}
+                              className={cn(
+                                "flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all text-left",
+                                "border-slate-200 hover:border-orange-300 hover:bg-orange-50",
+                                !activeProjectId && "opacity-50 cursor-not-allowed"
+                              )}
+                            >
+                              <FolderPlus className="w-4 h-4 text-slate-500" />
+                              <span className="text-sm text-slate-700">Все видео</span>
+                            </button>
+                            {folderConfigs.map((folder) => {
+                              const FolderIcon = folder.icon;
+                              return (
+                                <button
+                                  key={folder.id}
+                                  onClick={() => handleAddLinkPreviewToAllVideos(folder.id)}
+                                  disabled={!activeProjectId}
+                                  className={cn(
+                                    "flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all text-left",
+                                    "border-slate-200 hover:border-orange-300 hover:bg-orange-50",
+                                    !activeProjectId && "opacity-50 cursor-not-allowed"
+                                  )}
+                                >
+                                  <FolderIcon className="w-4 h-4" style={{ color: folder.color }} />
+                                  <span className="text-sm text-slate-700 truncate">{folder.title}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
                         <div className="mt-auto flex items-center gap-2">
                           <button
-                            onClick={handleAddLinkPreviewToIdeas}
-                            className={cn(
-                              "flex-1 px-5 py-3 rounded-xl font-medium text-sm transition-all active:scale-95 flex items-center justify-center gap-2",
-                              "bg-gradient-to-r from-orange-500 to-amber-600 text-white",
-                              "hover:from-orange-400 hover:to-amber-500",
-                              "shadow-lg shadow-orange-500/30"
-                            )}
-                          >
-                            <Plus className="w-4 h-4" />
-                            Добавить в Идеи
-                          </button>
-                          <button
                             onClick={() => setLinkPreview(null)}
-                            className="px-4 py-3 rounded-xl font-medium text-sm text-slate-600 hover:bg-slate-100 transition-colors"
+                            className="flex-1 px-4 py-3 rounded-xl font-medium text-sm text-slate-600 hover:bg-slate-100 transition-colors"
                           >
                             Отмена
                           </button>
