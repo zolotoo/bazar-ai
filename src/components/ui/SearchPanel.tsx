@@ -494,6 +494,32 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
             </div>
           )}
 
+          {/* EMPTY STATE - No videos in database */}
+          {(viewMode === 'carousel' || viewMode === 'trending') && incomingVideos.length === 0 && reels.length === 0 && !loading && (
+            <div className="h-full flex flex-col items-center justify-center px-6">
+              <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-orange-500/20 to-amber-600/20 flex items-center justify-center mb-6">
+                <Search className="w-10 h-10 text-orange-500" />
+              </div>
+              <h3 className="text-2xl font-serif italic text-neutral-900 mb-2">
+                Начните поиск
+              </h3>
+              <p className="text-slate-500 text-center max-w-sm mb-6">
+                Введите запрос в поисковую строку, чтобы найти вирусные видео из Instagram
+              </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {['нейросети', 'маркетинг', 'стартапы', 'бизнес', 'AI'].map(tag => (
+                  <button
+                    key={tag}
+                    onClick={() => handleSearch(tag)}
+                    className="px-4 py-2 rounded-full bg-white shadow-md text-slate-700 hover:text-orange-600 text-sm font-medium transition-all hover:shadow-lg"
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* TRENDING VIEW - Carousel with Instagram trending videos */}
           {viewMode === 'trending' && reels.length > 0 && (
             <div className="h-full flex flex-col items-center justify-center">
