@@ -2,18 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../utils/supabase';
 import { useFlowStore } from '../stores/flowStore';
 import { IncomingVideo } from '../types';
-
-// Получаем user_id из localStorage
-const getUserId = (): string => {
-  try {
-    const stored = localStorage.getItem('bazar-ai-user');
-    if (stored) {
-      const user = JSON.parse(stored);
-      return user.id || 'anonymous';
-    }
-  } catch {}
-  return 'anonymous';
-};
+import { useAuth } from './useAuth';
 
 interface SavedVideo {
   id: string;
@@ -39,6 +28,15 @@ export function useInboxVideos() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const { setIncomingVideos } = useFlowStore();
+  const { user } = useAuth();
+  
+  // Получаем user_id из контекста авторизации
+  const getUserId = useCallback((): string => {
+    if (user?.telegram_username) {
+      return `tg-${user.telegram_username}`;
+    }
+    return 'anonymous';
+  }, [user]);
 
   // Преобразование из БД в IncomingVideo
   const transformVideo = useCallback((video: SavedVideo): IncomingVideo & { 
@@ -61,6 +59,7 @@ export function useInboxVideos() {
   // Загрузка видео пользователя
   const fetchVideos = useCallback(async () => {
     const userId = getUserId();
+    console.log('[InboxVideos] Fetching videos for user:', userId);
     
     try {
       const { data, error: fetchError } = await supabase
@@ -68,6 +67,8 @@ export function useInboxVideos() {
         .select('*')
         .eq('user_id', userId)
         .order('added_at', { ascending: false });
+
+      console.log('[InboxVideos] Fetch result:', { count: data?.length, error: fetchError });
 
       if (fetchError) {
         console.error('Error fetching saved videos:', fetchError);
@@ -77,6 +78,7 @@ export function useInboxVideos() {
         const transformedVideos = data.map(transformVideo);
         setVideos(transformedVideos);
         setIncomingVideos(transformedVideos);
+        console.log('[InboxVideos] Loaded', transformedVideos.length, 'videos');
       }
     } catch (err) {
       console.error('Error loading saved videos:', err);
@@ -84,11 +86,14 @@ export function useInboxVideos() {
     } finally {
       setLoading(false);
     }
-  }, [setIncomingVideos, transformVideo]);
+  }, [setIncomingVideos, transformVideo, getUserId]);
 
+  // Перезагружаем видео при смене пользователя
   useEffect(() => {
-    fetchVideos();
-  }, [fetchVideos]);
+    if (user) {
+      fetchVideos();
+    }
+  }, [user, fetchVideos]);
 
   /**
    * Добавляет видео в сохранённые
@@ -167,7 +172,7 @@ export function useInboxVideos() {
       console.error('Error saving video:', err);
       return localVideo;
     }
-  }, [setIncomingVideos, transformVideo]);
+  }, [setIncomingVideos, transformVideo, getUserId]);
 
   /**
    * Удаляет видео из сохранённых
@@ -188,7 +193,7 @@ export function useInboxVideos() {
     } catch (err) {
       console.error('Error removing video:', err);
     }
-  }, [setIncomingVideos]);
+  }, [setIncomingVideos, getUserId]);
 
   /**
    * Для совместимости со старым кодом

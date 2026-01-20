@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../utils/supabase';
 import { InstagramSearchResult } from '../services/videoService';
+import { useAuth } from './useAuth';
 
 export interface SearchHistoryEntry {
   id: string;
@@ -10,21 +11,18 @@ export interface SearchHistoryEntry {
   resultsCount: number;
 }
 
-// Получаем user_id из localStorage
-const getUserId = (): string => {
-  try {
-    const stored = localStorage.getItem('bazar-ai-user');
-    if (stored) {
-      const user = JSON.parse(stored);
-      return user.id || 'anonymous';
-    }
-  } catch {}
-  return 'anonymous';
-};
-
 export function useSearchHistory() {
   const [historyEntries, setHistoryEntries] = useState<SearchHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  
+  // Получаем user_id из контекста авторизации
+  const getUserId = useCallback((): string => {
+    if (user?.telegram_username) {
+      return `tg-${user.telegram_username}`;
+    }
+    return 'anonymous';
+  }, [user]);
 
   // Простой список запросов для обратной совместимости
   const history = historyEntries.map(e => e.query);
@@ -32,6 +30,7 @@ export function useSearchHistory() {
   // Загрузка истории из Supabase
   const fetchHistory = useCallback(async () => {
     const userId = getUserId();
+    console.log('[SearchHistory] Fetching history for user:', userId);
     
     try {
       const { data, error } = await supabase
@@ -40,6 +39,8 @@ export function useSearchHistory() {
         .eq('user_id', userId)
         .order('searched_at', { ascending: false })
         .limit(50);
+
+      console.log('[SearchHistory] Fetch result:', { count: data?.length, error });
 
       if (error) {
         console.error('Error fetching search history:', error);
@@ -53,6 +54,7 @@ export function useSearchHistory() {
           resultsCount: item.results_count || 0,
         }));
         setHistoryEntries(entries);
+        console.log('[SearchHistory] Loaded', entries.length, 'entries');
       }
     } catch (err) {
       console.error('Error loading search history:', err);
@@ -60,7 +62,7 @@ export function useSearchHistory() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getUserId]);
 
   // Добавление запроса с результатами
   const addToHistory = useCallback(async (query: string, results: InstagramSearchResult[] = []) => {
@@ -68,6 +70,8 @@ export function useSearchHistory() {
     if (!trimmedQuery) return;
 
     const userId = getUserId();
+    console.log('[SearchHistory] Adding to history for user:', userId, 'query:', trimmedQuery);
+    
     const newEntry: SearchHistoryEntry = {
       id: `search-${Date.now()}`,
       query: trimmedQuery,
@@ -95,7 +99,7 @@ export function useSearchHistory() {
     } catch (err) {
       console.error('Error saving search history:', err);
     }
-  }, []);
+  }, [getUserId]);
 
   // Удаление запроса из истории
   const removeFromHistory = useCallback(async (query: string) => {
@@ -112,7 +116,7 @@ export function useSearchHistory() {
     } catch (err) {
       console.error('Error removing from history:', err);
     }
-  }, []);
+  }, [getUserId]);
 
   // Очистка всей истории
   const clearHistory = useCallback(async () => {
@@ -128,7 +132,7 @@ export function useSearchHistory() {
     } catch (err) {
       console.error('Error clearing history:', err);
     }
-  }, []);
+  }, [getUserId]);
 
   // Получение результатов по запросу
   const getResultsByQuery = useCallback((query: string): InstagramSearchResult[] => {
@@ -141,10 +145,12 @@ export function useSearchHistory() {
     return historyEntries.find(e => e.id === id);
   }, [historyEntries]);
 
-  // Загружаем историю при монтировании
+  // Загружаем историю при монтировании и смене пользователя
   useEffect(() => {
-    fetchHistory();
-  }, [fetchHistory]);
+    if (user) {
+      fetchHistory();
+    }
+  }, [user, fetchHistory]);
 
   return {
     history,
