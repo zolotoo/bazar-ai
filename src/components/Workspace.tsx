@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useWorkspaceZones, ZoneVideo } from '../hooks/useWorkspaceZones';
 import { useInboxVideos } from '../hooks/useInboxVideos';
-import { useProjectContext } from '../contexts/ProjectContext';
-import { Sparkles, Star, FileText, Trash2, ExternalLink, ChevronLeft, Plus, Inbox, Lightbulb, Camera, Scissors, Check, FolderOpen, ArrowRightLeft, ArrowDownUp } from 'lucide-react';
+import { useProjectContext, ProjectFolder } from '../contexts/ProjectContext';
+import { Sparkles, Star, FileText, Trash2, ExternalLink, ChevronLeft, Plus, Inbox, Lightbulb, Camera, Scissors, Check, FolderOpen, ArrowDownUp, Settings, GripVertical, X, Palette } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../utils/cn';
 import { AnimatedFolder3D, FolderVideo } from './ui/Folder3D';
@@ -65,6 +65,13 @@ interface FolderConfig {
   iconType: string;
 }
 
+// Цвета для папок
+const FOLDER_COLORS = [
+  '#64748b', '#f97316', '#6366f1', '#10b981', '#f59e0b', 
+  '#8b5cf6', '#ef4444', '#ec4899', '#14b8a6', '#84cc16'
+];
+
+// Дефолтные папки (используются если у проекта нет папок)
 const defaultFolderConfigs: FolderConfig[] = [
   { id: 'all', title: 'Все видео', color: '#64748b', iconType: 'all' },
   { id: 'ideas', title: 'Идеи', color: '#f97316', iconType: 'lightbulb' },
@@ -75,26 +82,51 @@ const defaultFolderConfigs: FolderConfig[] = [
   { id: 'rejected', title: 'Не подходит', color: '#ef4444', iconType: 'rejected' },
 ];
 
-// Папки для фильтрации (без "Все видео")
-const filterableFolders = defaultFolderConfigs.filter(f => f.id !== 'all');
-
-const iconMap: Record<string, React.ReactNode> = {
-  all: <Inbox className="w-8 h-8 text-slate-500" />,
-  lightbulb: <Lightbulb className="w-8 h-8 text-orange-500" />,
-  plus: <Plus className="w-8 h-8 text-orange-500" />,
-  star: <Star className="w-8 h-8 text-indigo-500" />,
-  sparkles: <Sparkles className="w-8 h-8 text-amber-500" />,
-  file: <FileText className="w-8 h-8 text-indigo-500" />,
-  camera: <Camera className="w-8 h-8 text-amber-500" />,
-  scissors: <Scissors className="w-8 h-8 text-emerald-500" />,
-  check: <Check className="w-8 h-8 text-violet-500" />,
-  rejected: <Trash2 className="w-8 h-8 text-red-500" />,
+// Иконки маппинг
+const getIconComponent = (iconType: string, color: string) => {
+  const iconClass = "w-8 h-8";
+  const style = { color };
+  
+  switch (iconType) {
+    case 'all': return <Inbox className={iconClass} style={style} />;
+    case 'lightbulb': return <Lightbulb className={iconClass} style={style} />;
+    case 'plus': return <Plus className={iconClass} style={style} />;
+    case 'star': return <Star className={iconClass} style={style} />;
+    case 'sparkles': return <Sparkles className={iconClass} style={style} />;
+    case 'file': return <FileText className={iconClass} style={style} />;
+    case 'camera': return <Camera className={iconClass} style={style} />;
+    case 'scissors': return <Scissors className={iconClass} style={style} />;
+    case 'check': return <Check className={iconClass} style={style} />;
+    case 'rejected': return <Trash2 className={iconClass} style={style} />;
+    default: return <FolderOpen className={iconClass} style={style} />;
+  }
 };
 
+// Доступные иконки для выбора
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _AVAILABLE_ICONS = [
+  { id: 'folder', name: 'Папка' },
+  { id: 'lightbulb', name: 'Идея' },
+  { id: 'file', name: 'Файл' },
+  { id: 'camera', name: 'Камера' },
+  { id: 'scissors', name: 'Монтаж' },
+  { id: 'check', name: 'Готово' },
+  { id: 'star', name: 'Звезда' },
+  { id: 'sparkles', name: 'Блеск' },
+  { id: 'rejected', name: 'Корзина' },
+];
+
 export function Workspace() {
-  const { loading, moveVideoToZone, deleteVideo, getVideosByZone } = useWorkspaceZones();
+  const { loading, moveVideoToZone, deleteVideo } = useWorkspaceZones();
   const { videos: inboxVideos, removeVideo: removeInboxVideo, updateVideoFolder } = useInboxVideos();
-  const { currentProject: _currentProject, currentProjectId: _currentProjectId } = useProjectContext();
+  const { 
+    currentProject, 
+    currentProjectId, 
+    addFolder, 
+    removeFolder, 
+    updateFolder, 
+    reorderFolders 
+  } = useProjectContext();
   const [draggedVideo, setDraggedVideo] = useState<ZoneVideo | null>(null);
   const [dropTargetZone, setDropTargetZone] = useState<string | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<FolderConfig | null>(null);
@@ -103,9 +135,30 @@ export function Workspace() {
   const [cardMenuVideoId, setCardMenuVideoId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'viral' | 'views' | 'likes' | 'date' | 'folder'>('viral');
   const [filterByFolder, setFilterByFolder] = useState<string | null>(null); // null = все
+  const [showFolderSettings, setShowFolderSettings] = useState(false);
+  const [editingFolder, setEditingFolder] = useState<ProjectFolder | null>(null);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [draggedFolderIndex, setDraggedFolderIndex] = useState<number | null>(null);
   
-  // Используем папки из текущего проекта или дефолтные
-  const folderConfigs = defaultFolderConfigs;
+  // Преобразуем папки проекта в FolderConfig формат
+  const projectFolders: FolderConfig[] = currentProject?.folders
+    ?.slice()
+    .sort((a, b) => a.order - b.order)
+    .map(f => ({
+      id: f.id,
+      title: f.name,
+      color: f.color,
+      iconType: f.icon,
+    })) || [];
+  
+  // Добавляем системную папку "Все видео" в начало
+  const folderConfigs: FolderConfig[] = [
+    { id: 'all', title: 'Все видео', color: '#64748b', iconType: 'all' },
+    ...projectFolders.length > 0 ? projectFolders : defaultFolderConfigs.slice(1),
+  ];
+  
+  // Папки для фильтрации (без "Все видео")
+  const filterableFolders = folderConfigs.filter(f => f.id !== 'all');
 
   // Перемещение видео в другую папку
   const handleMoveToFolder = async (video: ZoneVideo, targetFolderId: string) => {
@@ -180,23 +233,18 @@ export function Workspace() {
     // Для "all" - показываем ВСЕ видео проекта
     if (folderId === 'all') {
       return inboxVideos.map(v => {
-        const videoFolderId = (v as any).folder_id || 'ideas';
+        const videoFolderId = (v as any).folder_id || null;
         return transformInboxVideo(v, videoFolderId);
       });
     }
     
-    // Для "ideas" показываем видео из inboxVideos с folder_id = ideas
-    if (folderId === 'ideas') {
-      return inboxVideos
-        .filter(v => {
-          const videoFolderId = (v as any).folder_id || 'ideas';
-          return videoFolderId === 'ideas';
-        })
-        .map(v => transformInboxVideo(v, 'ideas'));
-    }
-    
-    // Для других папок - из workspace zones
-    return getVideosByZone(folderId);
+    // Для любой папки - фильтруем по folder_id
+    return inboxVideos
+      .filter(v => {
+        const videoFolderId = (v as any).folder_id;
+        return videoFolderId === folderId;
+      })
+      .map(v => transformInboxVideo(v, folderId || 'ideas'));
   };
   
   // Получить название папки по ID
@@ -355,7 +403,7 @@ export function Workspace() {
                   className="w-20 h-20 rounded-2xl flex items-center justify-center mb-4"
                   style={{ backgroundColor: `${selectedFolder.color}20` }}
                 >
-                  {iconMap[selectedFolder.iconType]}
+                  {getIconComponent(selectedFolder.iconType, selectedFolder.color)}
                 </div>
                 <h3 className="text-lg font-medium text-slate-800 mb-1">Папка пуста</h3>
                 <p className="text-slate-500 text-sm">Перетащите видео сюда из поиска</p>
@@ -408,7 +456,7 @@ export function Workspace() {
                               }}
                               className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-indigo-50 transition-colors text-left"
                             >
-                              <ArrowRightLeft className="w-4 h-4 text-indigo-500" />
+                              <FolderOpen className="w-4 h-4 text-indigo-500" />
                               <span className="text-sm text-slate-700">Переместить</span>
                             </button>
                             
@@ -484,21 +532,82 @@ export function Workspace() {
 
   // Подсчёт общего количества видео
   const totalVideos = folderConfigs.reduce((sum, config) => sum + getFolderVideos(config.id).length, 0);
+  
+  // Обработчик создания папки
+  const handleCreateFolder = async () => {
+    if (!currentProjectId || !newFolderName.trim()) return;
+    await addFolder(currentProjectId, newFolderName.trim());
+    setNewFolderName('');
+    toast.success('Папка создана');
+  };
+  
+  // Обработчик удаления папки
+  const handleDeleteFolder = async (folderId: string) => {
+    if (!currentProjectId) return;
+    await removeFolder(currentProjectId, folderId);
+    toast.success('Папка удалена');
+  };
+  
+  // Обработчик обновления папки
+  const handleUpdateFolder = async (folderId: string, updates: Partial<Omit<ProjectFolder, 'id'>>) => {
+    if (!currentProjectId) return;
+    await updateFolder(currentProjectId, folderId, updates);
+    setEditingFolder(null);
+  };
+  
+  // Drag & drop для перестановки папок
+  const handleFolderDragStart = (index: number) => {
+    setDraggedFolderIndex(index);
+  };
+  
+  const handleFolderDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedFolderIndex === null || draggedFolderIndex === index) return;
+    
+    // Визуальная обратная связь
+  };
+  
+  const handleFolderDrop = async (targetIndex: number) => {
+    if (!currentProjectId || draggedFolderIndex === null) return;
+    
+    const projectFoldersList = currentProject?.folders?.slice().sort((a, b) => a.order - b.order) || [];
+    if (draggedFolderIndex === targetIndex) {
+      setDraggedFolderIndex(null);
+      return;
+    }
+    
+    const newOrder = [...projectFoldersList];
+    const [moved] = newOrder.splice(draggedFolderIndex, 1);
+    newOrder.splice(targetIndex, 0, moved);
+    
+    await reorderFolders(currentProjectId, newOrder.map(f => f.id));
+    setDraggedFolderIndex(null);
+    toast.success('Порядок папок изменён');
+  };
 
   return (
     <div className="h-full overflow-y-auto custom-scrollbar-light">
       <div className="max-w-6xl mx-auto p-6 pt-6">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-4xl md:text-5xl font-serif italic text-neutral-900 tracking-tighter">
-              Рабочий стол
-            </h1>
-            {totalVideos > 0 && (
-              <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-sm font-semibold">
-                {totalVideos} видео
-              </span>
-            )}
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <h1 className="text-4xl md:text-5xl font-serif italic text-neutral-900 tracking-tighter">
+                Рабочий стол
+              </h1>
+              {totalVideos > 0 && (
+                <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-sm font-semibold">
+                  {totalVideos} видео
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => setShowFolderSettings(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 text-sm font-medium transition-colors shadow-sm"
+            >
+              <Settings className="w-4 h-4" />
+              Настроить папки
+            </button>
           </div>
           <p className="text-neutral-500 text-base">
             Организуй контент по категориям
@@ -529,7 +638,7 @@ export function Workspace() {
                   videos={folder3DVideos}
                   count={folderVideos.length}
                   color={config.color}
-                  icon={iconMap[config.iconType]}
+                  icon={getIconComponent(config.iconType, config.color)}
                   onClick={() => setSelectedFolder(config)}
                 />
               </div>
@@ -537,6 +646,155 @@ export function Workspace() {
           })}
         </div>
       </div>
+      
+      {/* Folder Settings Modal */}
+      {showFolderSettings && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-slate-100">
+              <h2 className="text-xl font-semibold text-slate-800">Настройка папок</h2>
+              <button
+                onClick={() => {
+                  setShowFolderSettings(false);
+                  setEditingFolder(null);
+                }}
+                className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            
+            {/* Content */}
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              {/* Add new folder */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-slate-600 mb-2">
+                  Создать новую папку
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    placeholder="Название папки..."
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all text-slate-700"
+                    onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
+                  />
+                  <button
+                    onClick={handleCreateFolder}
+                    disabled={!newFolderName.trim()}
+                    className="px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 disabled:bg-slate-200 text-white disabled:text-slate-400 font-medium transition-colors"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+              
+              {/* Folder list */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-slate-600 mb-3">
+                  Папки проекта (перетащите для изменения порядка)
+                </label>
+                
+                {(currentProject?.folders?.slice().sort((a, b) => a.order - b.order) || []).map((folder, index) => (
+                  <div
+                    key={folder.id}
+                    draggable
+                    onDragStart={() => handleFolderDragStart(index)}
+                    onDragOver={(e) => handleFolderDragOver(e, index)}
+                    onDrop={() => handleFolderDrop(index)}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50 cursor-move transition-all",
+                      draggedFolderIndex === index && "opacity-50 scale-95"
+                    )}
+                  >
+                    <GripVertical className="w-4 h-4 text-slate-300 flex-shrink-0" />
+                    
+                    <div
+                      className="w-4 h-4 rounded flex-shrink-0"
+                      style={{ backgroundColor: folder.color }}
+                    />
+                    
+                    {editingFolder?.id === folder.id ? (
+                      <input
+                        type="text"
+                        value={editingFolder.name}
+                        onChange={(e) => setEditingFolder({ ...editingFolder, name: e.target.value })}
+                        className="flex-1 px-2 py-1 rounded-lg border border-slate-200 text-sm outline-none focus:border-orange-400"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleUpdateFolder(folder.id, { name: editingFolder.name });
+                          if (e.key === 'Escape') setEditingFolder(null);
+                        }}
+                      />
+                    ) : (
+                      <span className="flex-1 text-sm font-medium text-slate-700">{folder.name}</span>
+                    )}
+                    
+                    <div className="flex items-center gap-1">
+                      {/* Color picker */}
+                      <div className="relative group">
+                        <button className="p-1.5 rounded-lg hover:bg-slate-200 transition-colors">
+                          <Palette className="w-4 h-4 text-slate-400" />
+                        </button>
+                        <div className="absolute right-0 top-full mt-1 p-2 bg-white rounded-xl shadow-xl border border-slate-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 grid grid-cols-5 gap-1">
+                          {FOLDER_COLORS.map(color => (
+                            <button
+                              key={color}
+                              onClick={() => handleUpdateFolder(folder.id, { color })}
+                              className={cn(
+                                "w-6 h-6 rounded-lg transition-transform hover:scale-110",
+                                folder.color === color && "ring-2 ring-offset-1 ring-slate-400"
+                              )}
+                              style={{ backgroundColor: color }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      
+                      {/* Edit name */}
+                      <button
+                        onClick={() => setEditingFolder(folder)}
+                        className="p-1.5 rounded-lg hover:bg-slate-200 transition-colors"
+                      >
+                        <FileText className="w-4 h-4 text-slate-400" />
+                      </button>
+                      
+                      {/* Delete */}
+                      <button
+                        onClick={() => handleDeleteFolder(folder.id)}
+                        className="p-1.5 rounded-lg hover:bg-red-100 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-400" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                
+                {(!currentProject?.folders || currentProject.folders.length === 0) && (
+                  <div className="text-center py-8 text-slate-400">
+                    Нет папок. Создайте первую папку выше.
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="p-6 border-t border-slate-100 bg-slate-50">
+              <button
+                onClick={() => {
+                  setShowFolderSettings(false);
+                  setEditingFolder(null);
+                }}
+                className="w-full py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-medium transition-colors"
+              >
+                Готово
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

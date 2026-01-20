@@ -20,12 +20,13 @@ export interface Project {
 }
 
 const DEFAULT_FOLDERS: Omit<ProjectFolder, 'id'>[] = [
-  { name: 'Входящие', color: '#64748b', icon: 'inbox', order: 0 },
+  { name: 'Все видео', color: '#64748b', icon: 'all', order: 0 },
   { name: 'Идеи', color: '#f97316', icon: 'lightbulb', order: 1 },
   { name: 'Ожидает сценария', color: '#6366f1', icon: 'file', order: 2 },
   { name: 'Ожидает съёмок', color: '#f59e0b', icon: 'camera', order: 3 },
   { name: 'Ожидает монтажа', color: '#10b981', icon: 'scissors', order: 4 },
   { name: 'Готовое', color: '#8b5cf6', icon: 'check', order: 5 },
+  { name: 'Не подходит', color: '#ef4444', icon: 'rejected', order: 6 },
 ];
 
 const PROJECT_COLORS = [
@@ -230,6 +231,36 @@ export function useProjects() {
     await updateProject(projectId, { folders: updatedFolders });
   }, [projects, updateProject]);
 
+  // Обновление папки
+  const updateFolder = useCallback(async (
+    projectId: string, 
+    folderId: string, 
+    updates: Partial<Omit<ProjectFolder, 'id'>>
+  ) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+
+    const updatedFolders = project.folders.map(f => 
+      f.id === folderId ? { ...f, ...updates } : f
+    );
+    await updateProject(projectId, { folders: updatedFolders });
+  }, [projects, updateProject]);
+
+  // Изменение порядка папок
+  const reorderFolders = useCallback(async (projectId: string, newOrder: string[]) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+
+    const reorderedFolders = newOrder
+      .map((id, index) => {
+        const folder = project.folders.find(f => f.id === id);
+        return folder ? { ...folder, order: index } : null;
+      })
+      .filter((f): f is ProjectFolder => f !== null);
+
+    await updateProject(projectId, { folders: reorderedFolders });
+  }, [projects, updateProject]);
+
   // Текущий проект
   const currentProject = projects.find(p => p.id === currentProjectId) || null;
 
@@ -250,6 +281,8 @@ export function useProjects() {
     selectProject,
     addFolder,
     removeFolder,
+    updateFolder,
+    reorderFolders,
     refetch: fetchProjects,
   };
 }

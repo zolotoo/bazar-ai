@@ -2,23 +2,14 @@ import { useState, useEffect } from 'react';
 import { 
   ChevronLeft, Play, Eye, Heart, MessageCircle, Calendar, 
   Sparkles, FileText, Copy, ExternalLink, Loader2, Check,
-  Wand2, Languages, RefreshCw, FolderOpen, ChevronDown
+  Wand2, Languages, RefreshCw, ChevronDown
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { checkTranscriptionStatus } from '../services/transcriptionService';
 import { supabase } from '../utils/supabase';
 import { toast } from 'sonner';
 import { useInboxVideos } from '../hooks/useInboxVideos';
-
-// Конфигурация папок
-const FOLDER_CONFIGS = [
-  { id: 'ideas', title: 'Идеи', color: '#f97316' },
-  { id: '1', title: 'Ожидает сценария', color: '#6366f1' },
-  { id: '2', title: 'Ожидает съёмок', color: '#f59e0b' },
-  { id: '3', title: 'Ожидает монтажа', color: '#10b981' },
-  { id: '4', title: 'Готовое', color: '#8b5cf6' },
-  { id: 'rejected', title: 'Не подходит', color: '#ef4444' },
-];
+import { useProjectContext } from '../contexts/ProjectContext';
 
 interface VideoData {
   id: string;
@@ -87,20 +78,29 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
   const [copiedScript, setCopiedScript] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
   const [showFolderMenu, setShowFolderMenu] = useState(false);
-  const [currentFolderId, setCurrentFolderId] = useState(video.folder_id || 'ideas');
+  const [currentFolderId, setCurrentFolderId] = useState(video.folder_id || null);
   
   const { updateVideoFolder } = useInboxVideos();
+  const { currentProject } = useProjectContext();
   const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at);
   
+  // Получить папки из проекта
+  const folderConfigs = currentProject?.folders
+    ?.slice()
+    .sort((a, b) => a.order - b.order)
+    .map(f => ({ id: f.id, title: f.name, color: f.color })) || [];
+  
   // Получить текущую папку
-  const currentFolder = FOLDER_CONFIGS.find(f => f.id === currentFolderId) || FOLDER_CONFIGS[0];
+  const currentFolder = currentFolderId 
+    ? folderConfigs.find(f => f.id === currentFolderId) 
+    : null;
   
   // Перемещение в папку
   const handleMoveToFolder = async (folderId: string) => {
     const success = await updateVideoFolder(video.id, folderId);
     if (success) {
       setCurrentFolderId(folderId);
-      const folder = FOLDER_CONFIGS.find(f => f.id === folderId);
+      const folder = folderConfigs.find(f => f.id === folderId);
       toast.success(`Перемещено в "${folder?.title || 'папку'}"`);
     }
     setShowFolderMenu(false);
@@ -294,11 +294,20 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
                 className="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <div 
-                    className="w-3 h-3 rounded"
-                    style={{ backgroundColor: currentFolder.color }}
-                  />
-                  <span className="text-sm font-medium text-slate-700">{currentFolder.title}</span>
+                  {currentFolder ? (
+                    <>
+                      <div 
+                        className="w-3 h-3 rounded"
+                        style={{ backgroundColor: currentFolder.color }}
+                      />
+                      <span className="text-sm font-medium text-slate-700">{currentFolder.title}</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-3 h-3 rounded bg-slate-300" />
+                      <span className="text-sm font-medium text-slate-400">Ожидает</span>
+                    </>
+                  )}
                 </div>
                 <ChevronDown className={cn(
                   "w-4 h-4 text-slate-400 transition-transform",
@@ -307,9 +316,9 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
               </button>
               
               {/* Folder dropdown */}
-              {showFolderMenu && (
+              {showFolderMenu && folderConfigs.length > 0 && (
                 <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-slate-100 p-1.5 z-50">
-                  {FOLDER_CONFIGS.map(folder => (
+                  {folderConfigs.map(folder => (
                     <button
                       key={folder.id}
                       onClick={() => handleMoveToFolder(folder.id)}
