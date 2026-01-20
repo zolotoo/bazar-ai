@@ -140,9 +140,6 @@ export function Workspace() {
   const [draggedVideo, setDraggedVideo] = useState<ZoneVideo | null>(null);
   const [dropTargetZone, setDropTargetZone] = useState<string | null>(null);
 
-  const _handleDragStart = (_e: React.DragEvent, video: ZoneVideo) => {
-    setDraggedVideo(video);
-  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -196,7 +193,6 @@ export function Workspace() {
               <FolderCard
                 key={config.id || 'incoming'}
                 title={config.title}
-                subtitle={config.subtitle}
                 videos={folderVideos}
                 color={config.color}
                 icon={iconMap[config.iconType]}
