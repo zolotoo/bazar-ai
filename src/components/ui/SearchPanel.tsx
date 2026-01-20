@@ -127,6 +127,8 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
   const [showFolderSelect, setShowFolderSelect] = useState(false);
   const [cardFolderSelect, setCardFolderSelect] = useState<string | null>(null);
   const [radarUsername, setRadarUsername] = useState('');
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [spinOffset, setSpinOffset] = useState(0);
   const { incomingVideos } = useFlowStore();
   const { addVideoToInbox } = useInboxVideos();
   const { history: searchHistory, addToHistory, refetch: refetchHistory, getTodayCache, getAllResultsByQuery } = useSearchHistory();
@@ -135,6 +137,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
   // Минимум просмотров для показа в поиске
   const MIN_VIEWS = 30000;
   const inputRef = useRef<HTMLInputElement>(null);
+  const spinIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Конфигурация папок
   const folderConfigs = [
@@ -256,6 +259,54 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
     }
   }, [cardFolderSelect]);
 
+  // Запуск анимации барабана
+  const startSpinAnimation = useCallback(() => {
+    setIsSpinning(true);
+    setViewMode('trending');
+    
+    // Быстрая прокрутка карусели как барабан
+    let speed = 50; // начальная скорость (мс)
+    let count = 0;
+    
+    const spin = () => {
+      setSpinOffset(prev => prev + 1);
+      setActiveIndex(prev => (prev + 1) % Math.max(reels.length, 10));
+      count++;
+      
+      // Постепенно замедляем
+      if (count < 20) {
+        speed = 50;
+      } else if (count < 35) {
+        speed = 80;
+      } else if (count < 45) {
+        speed = 120;
+      } else if (count < 52) {
+        speed = 180;
+      } else {
+        // Останавливаем
+        setIsSpinning(false);
+        if (spinIntervalRef.current) {
+          clearTimeout(spinIntervalRef.current);
+          spinIntervalRef.current = null;
+        }
+        return;
+      }
+      
+      spinIntervalRef.current = setTimeout(spin, speed);
+    };
+    
+    spin();
+  }, [reels.length]);
+
+  // Остановка анимации при размонтировании
+  useEffect(() => {
+    return () => {
+      if (spinIntervalRef.current) {
+        clearTimeout(spinIntervalRef.current);
+      }
+    };
+  }, []);
+
   const handleSearch = useCallback(async (searchQuery?: string) => {
     const queryToSearch = searchQuery || query;
     if (!queryToSearch.trim()) return;
@@ -284,22 +335,34 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
         }
       }
       
-      // Фильтруем по минимуму просмотров
-      const filteredResults = combinedResults.filter(r => (r.view_count || 0) >= MIN_VIEWS);
+      // Фильтруем по минимуму просмотров и сортируем по виральности
+      const filteredResults = combinedResults
+        .filter(r => (r.view_count || 0) >= MIN_VIEWS)
+        .sort((a, b) => calculateViralCoefficient(b.view_count, b.taken_at) - calculateViralCoefficient(a.view_count, a.taken_at));
       
       setReels(filteredResults);
-      setViewMode('results');
       
-      toast.success(`Из кэша: ${filteredResults.length} видео`, {
-        description: `Запрос уже был сегодня`,
-      });
+      // Запускаем анимацию барабана с кэшированными результатами
+      setViewMode('trending');
+      startSpinAnimation();
+      
+      setTimeout(() => {
+        setViewMode('results');
+        toast.success(`Из кэша: ${filteredResults.length} видео`, {
+          description: `Запрос уже был сегодня`,
+        });
+      }, 3000);
+      
       return;
     }
 
-    setViewMode('loading');
+    // Запускаем анимацию барабана сразу с текущими видео
+    if (reels.length > 0) {
+      startSpinAnimation();
+    }
+    
     setLoading(true);
     setError(null);
-    setReels([]);
 
     try {
       // Параллельный поиск по нескольким вариациям запроса
@@ -342,26 +405,38 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
         }
       }
       
-      // Фильтруем по минимуму просмотров (30,000+)
-      const filteredResults = allResults.filter(r => (r.view_count || 0) >= MIN_VIEWS);
+      // Фильтруем по минимуму просмотров (30,000+) и сортируем по виральности
+      const filteredResults = allResults
+        .filter(r => (r.view_count || 0) >= MIN_VIEWS)
+        .sort((a, b) => calculateViralCoefficient(b.view_count, b.taken_at) - calculateViralCoefficient(a.view_count, a.taken_at));
       
       setReels(filteredResults);
-      setViewMode('results');
+      
+      // Если барабан не крутится (не было видео), запускаем
+      if (!isSpinning && filteredResults.length > 0) {
+        startSpinAnimation();
+      }
       
       // Сохраняем в историю ВСЕ результаты (без фильтра), чтобы при повторном поиске их использовать
       addToHistory(cleanQuery, allResults);
       
-      if (filteredResults.length === 0) {
-        setError('Видео с 30K+ просмотрами не найдены');
-        setViewMode('carousel');
-      } else {
-        const totalFound = allResults.length;
-        const filtered = totalFound - filteredResults.length;
+      // Показываем результаты после завершения анимации
+      setTimeout(() => {
+        setViewMode('results');
         
-        toast.success(`Найдено ${filteredResults.length} видео`, {
-          description: filtered > 0 ? `${filtered} скрыто (<30K просмотров)` : undefined,
-        });
-      }
+        if (filteredResults.length === 0) {
+          setError('Видео с 30K+ просмотрами не найдены');
+          setViewMode('carousel');
+        } else {
+          const totalFound = allResults.length;
+          const filtered = totalFound - filteredResults.length;
+          
+          toast.success(`Найдено ${filteredResults.length} видео`, {
+            description: filtered > 0 ? `${filtered} скрыто (<30K просмотров)` : undefined,
+          });
+        }
+      }, isSpinning ? 3500 : 500);
+      
     } catch (err) {
       console.error('Search error:', err);
       setError('Ошибка поиска');
@@ -369,7 +444,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
     } finally {
       setLoading(false);
     }
-  }, [query, addToHistory, getTodayCache, getAllResultsByQuery]);
+  }, [query, addToHistory, getTodayCache, getAllResultsByQuery, reels.length, isSpinning, startSpinAnimation]);
 
   // Генерация вариаций поискового запроса
   const generateSearchVariations = (query: string): string[] => {
@@ -963,22 +1038,39 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
           {/* TRENDING VIEW - Carousel with Instagram trending videos */}
           {viewMode === 'trending' && reels.length > 0 && (
             <div className="h-full flex flex-col items-center justify-center">
+              {/* Spinning indicator */}
+              {isSpinning && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30">
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg animate-pulse">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm font-semibold">Ищем лучшие видео...</span>
+                  </div>
+                </div>
+              )}
+              
               {/* 3D Carousel */}
               <div className="relative w-full flex items-center justify-center" style={{ height: '480px' }}>
-                <button
-                  onClick={() => setActiveIndex(prev => (prev > 0 ? prev - 1 : reels.length - 1))}
-                  className="absolute left-8 z-20 p-3 rounded-full bg-white/70 hover:bg-white text-slate-500 hover:text-slate-700 transition-all shadow-lg"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => setActiveIndex(prev => (prev < reels.length - 1 ? prev + 1 : 0))}
-                  className="absolute right-8 z-20 p-3 rounded-full bg-white/70 hover:bg-white text-slate-500 hover:text-slate-700 transition-all shadow-lg"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
+                {!isSpinning && (
+                  <>
+                    <button
+                      onClick={() => setActiveIndex(prev => (prev > 0 ? prev - 1 : reels.length - 1))}
+                      className="absolute left-8 z-20 p-3 rounded-full bg-white/70 hover:bg-white text-slate-500 hover:text-slate-700 transition-all shadow-lg"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => setActiveIndex(prev => (prev < reels.length - 1 ? prev + 1 : 0))}
+                      className="absolute right-8 z-20 p-3 rounded-full bg-white/70 hover:bg-white text-slate-500 hover:text-slate-700 transition-all shadow-lg"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </>
+                )}
 
-                <div className="relative w-full h-full flex items-center justify-center perspective-1000">
+                <div className={cn(
+                  "relative w-full h-full flex items-center justify-center perspective-1000",
+                  isSpinning && "pointer-events-none"
+                )}>
                   {reels.map((reel, index) => {
                     const offset = index - activeIndex;
                     const absOffset = Math.abs(offset);
@@ -988,9 +1080,10 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
                     
                     if (absOffset > 3) return null;
 
-                    const translateX = offset * 190;
-                    const translateZ = isActive ? 80 : -absOffset * 80;
-                    const rotateY = offset * -12;
+                    // При спиннинге - более быстрая анимация и размытие
+                    const translateX = offset * (isSpinning ? 160 : 190);
+                    const translateZ = isActive ? (isSpinning ? 60 : 80) : -absOffset * (isSpinning ? 60 : 80);
+                    const rotateY = offset * (isSpinning ? -18 : -12);
                     const scale = isActive ? 1 : Math.max(0.75, 1 - absOffset * 0.12);
                     const opacity = isActive ? 1 : Math.max(0.5, 1 - absOffset * 0.25);
 
@@ -999,17 +1092,19 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
                     return (
                       <div
                         key={`carousel-${reel.shortcode || reel.id}-${index}`}
-                        onClick={() => isActive ? setSelectedVideo(reel) : setActiveIndex(index)}
-                        draggable={isActive}
-                        onDragStart={(e) => isActive && handleDragStart(e, reel)}
+                        onClick={() => !isSpinning && (isActive ? setSelectedVideo(reel) : setActiveIndex(index))}
+                        draggable={isActive && !isSpinning}
+                        onDragStart={(e) => isActive && !isSpinning && handleDragStart(e, reel)}
                         className={cn(
-                          'absolute transition-all duration-500 ease-out cursor-pointer group',
-                          isActive && 'cursor-grab active:cursor-grabbing z-10'
+                          'absolute cursor-pointer group',
+                          isActive && !isSpinning && 'cursor-grab active:cursor-grabbing z-10',
+                          isSpinning ? 'transition-all duration-75 ease-linear' : 'transition-all duration-500 ease-out'
                         )}
                         style={{
                           transform: `translateX(${translateX}px) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`,
                           opacity,
                           zIndex: 10 - absOffset,
+                          filter: isSpinning && !isActive ? 'blur(2px)' : 'none',
                         }}
                       >
                         <div className={cn(
