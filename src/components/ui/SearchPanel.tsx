@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Search, X, ExternalLink, Plus, Eye, Heart, MessageCircle, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { Search, X, ExternalLink, Plus, Eye, Heart, MessageCircle, ChevronLeft, ChevronRight, Sparkles, ArrowUpDown, Play } from 'lucide-react';
 import { TextShimmer } from './TextShimmer';
 import { 
   searchInstagramVideos,
@@ -24,6 +24,23 @@ function formatNumber(num?: number): string {
   return num.toString();
 }
 
+// Расчёт коэффициента виральности: views / (days * 1000)
+// Если просмотров < 30000 или дней = 0, то 0
+function calculateViralCoefficient(views?: number, takenAt?: string): number {
+  if (!views || views < 30000 || !takenAt) return 0;
+  
+  const videoDate = new Date(Number(takenAt) * 1000);
+  const today = new Date();
+  const diffTime = today.getTime() - videoDate.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) return 0;
+  
+  return Math.round((views / (diffDays * 1000)) * 100) / 100;
+}
+
+type SortOption = 'views' | 'likes' | 'viral' | 'date';
+
 // View mode: 'carousel' for saved videos, 'trending' for trending videos, 'results' for search
 type ViewMode = 'carousel' | 'loading' | 'results' | 'trending';
 
@@ -35,10 +52,28 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
   const [_error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('carousel');
   const [activeIndex, setActiveIndex] = useState(0);
+  const [sortBy, setSortBy] = useState<SortOption>('views');
+  const [selectedVideo, setSelectedVideo] = useState<InstagramSearchResult | null>(null);
   const { incomingVideos } = useFlowStore();
   const { addVideoToInbox } = useInboxVideos();
   const { history: searchHistory, addToHistory, refetch: refetchHistory } = useSearchHistory();
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Сортировка видео
+  const sortedReels = [...reels].sort((a, b) => {
+    switch (sortBy) {
+      case 'views':
+        return (b.view_count || 0) - (a.view_count || 0);
+      case 'likes':
+        return (b.like_count || 0) - (a.like_count || 0);
+      case 'viral':
+        return calculateViralCoefficient(b.view_count, b.taken_at) - calculateViralCoefficient(a.view_count, a.taken_at);
+      case 'date':
+        return Number(b.taken_at || 0) - Number(a.taken_at || 0);
+      default:
+        return 0;
+    }
+  });
 
   useEffect(() => {
     if (isOpen) {
@@ -517,7 +552,7 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
           {viewMode === 'trending' && reels.length > 0 && (
             <div className="h-full flex flex-col items-center justify-center">
               {/* 3D Carousel */}
-              <div className="relative w-full flex items-center justify-center" style={{ height: '420px' }}>
+              <div className="relative w-full flex items-center justify-center" style={{ height: '450px' }}>
                 <button
                   onClick={() => setActiveIndex(prev => (prev > 0 ? prev - 1 : reels.length - 1))}
                   className="absolute left-8 z-20 p-3 rounded-full bg-white/70 hover:bg-white text-slate-500 hover:text-slate-700 transition-all shadow-lg"
@@ -536,6 +571,7 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                     const offset = index - activeIndex;
                     const absOffset = Math.abs(offset);
                     const isActive = index === activeIndex;
+                    const viralCoef = calculateViralCoefficient(reel.view_count, reel.taken_at);
                     
                     if (absOffset > 3) return null;
 
@@ -548,7 +584,7 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                     return (
                       <div
                         key={reel.id}
-                        onClick={() => setActiveIndex(index)}
+                        onClick={() => isActive ? setSelectedVideo(reel) : setActiveIndex(index)}
                         draggable={isActive}
                         onDragStart={(e) => isActive && handleDragStart(e, reel)}
                         className={cn(
@@ -562,7 +598,7 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                         }}
                       >
                         <div className={cn(
-                          'w-[200px] bg-white rounded-3xl overflow-hidden shadow-2xl',
+                          'w-[200px] rounded-3xl overflow-hidden shadow-2xl',
                           isActive && 'ring-4 ring-white/80'
                         )}>
                           <div className="relative w-full" style={{ aspectRatio: '9/16' }}>
@@ -574,25 +610,49 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                                 e.currentTarget.src = 'https://via.placeholder.com/200x356?text=Video';
                               }}
                             />
-                            {/* Stats overlay */}
-                            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
-                              <div className="flex items-center gap-2 text-white text-[10px]">
-                                <span className="flex items-center gap-0.5">
-                                  <Eye className="w-3 h-3" />
-                                  {formatNumber(reel.view_count)}
-                                </span>
-                                <span className="flex items-center gap-0.5">
-                                  <Heart className="w-3 h-3" />
-                                  {formatNumber(reel.like_count)}
-                                </span>
+                            
+                            {/* Viral coefficient badge */}
+                            <div className="absolute top-2 left-2">
+                              <div className={cn(
+                                "px-2 py-1 rounded-full backdrop-blur-sm flex items-center gap-1 shadow-md",
+                                viralCoef > 10 ? "bg-emerald-500/90 text-white" : 
+                                viralCoef > 0 ? "bg-white/90 text-slate-700" :
+                                "bg-slate-500/80 text-white"
+                              )}>
+                                <Sparkles className="w-2.5 h-2.5" />
+                                <span className="text-[10px] font-semibold font-sans">{viralCoef || '—'}</span>
                               </div>
                             </div>
+                            
+                            {/* Play button on active */}
                             {isActive && (
-                              <button className="absolute top-2 right-2 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-sm text-slate-700 text-[10px] font-semibold flex items-center gap-1 shadow-md">
-                                <Sparkles className="w-3 h-3" />
-                                Expand
-                              </button>
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-xl opacity-80 group-hover:opacity-100">
+                                  <Play className="w-5 h-5 text-slate-800 ml-0.5" fill="currentColor" />
+                                </div>
+                              </div>
                             )}
+                            
+                            {/* Bottom glass panel */}
+                            <div className="absolute bottom-0 left-0 right-0">
+                              <div className="h-16 bg-gradient-to-t from-white/95 via-white/50 to-transparent" />
+                              <div className="bg-white/80 backdrop-blur-xl px-2.5 py-2 -mt-8">
+                                <p className="font-sans text-[11px] text-slate-500 mb-1.5 truncate">
+                                  @{reel.owner?.username || 'instagram'}
+                                </p>
+                                <div className="flex items-center gap-1.5">
+                                  <div className="flex-1 bg-slate-100 rounded px-1.5 py-1 text-center">
+                                    <span className="font-sans text-[9px] font-semibold text-slate-700">{formatNumber(reel.view_count)}</span>
+                                  </div>
+                                  <div className="flex-1 bg-slate-100 rounded px-1.5 py-1 text-center">
+                                    <span className="font-sans text-[9px] font-semibold text-slate-700">{formatNumber(reel.like_count)}</span>
+                                  </div>
+                                  <div className="flex-1 bg-slate-100 rounded px-1.5 py-1 text-center">
+                                    <span className="font-sans text-[9px] font-semibold text-slate-700">{formatNumber(reel.comment_count)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -601,27 +661,25 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                 </div>
               </div>
 
-              {/* Active reel info */}
+              {/* Active reel info - simplified */}
               {reels[activeIndex] && (
-                <div className="w-full max-w-sm mt-4">
-                  <div className="bg-white/80 backdrop-blur-xl rounded-2xl px-4 py-3 shadow-lg border border-white/50">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
-                        {reels[activeIndex].owner?.username?.[0]?.toUpperCase() || 'T'}
-                      </div>
+                <div className="w-full max-w-md mt-4">
+                  <div className="bg-white/80 backdrop-blur-xl rounded-2xl px-5 py-3 shadow-lg border border-white/50">
+                    <div className="flex items-center gap-4">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-700 truncate">
+                        <p className="font-sans text-sm font-medium text-slate-700 truncate">
                           @{reels[activeIndex].owner?.username || 'trending'}
                         </p>
-                        <div className="flex items-center gap-2 text-xs text-slate-400">
-                          <span>❤️ {formatNumber(reels[activeIndex].like_count)}</span>
-                          <span>👁️ {formatNumber(reels[activeIndex].view_count)}</span>
-                        </div>
+                        <p className="font-sans text-xs text-slate-400 truncate">
+                          {typeof reels[activeIndex].caption === 'string' 
+                            ? reels[activeIndex].caption?.slice(0, 40) + '...'
+                            : 'Популярное видео'}
+                        </p>
                       </div>
-                      <div className="flex gap-1.5">
+                      <div className="flex gap-2">
                         <button
                           onClick={() => handleAddToCanvas(reels[activeIndex])}
-                          className="p-2 rounded-xl bg-violet-100 hover:bg-violet-200 text-violet-600 transition-all"
+                          className="p-2.5 rounded-xl bg-orange-100 hover:bg-orange-200 text-orange-600 transition-all"
                         >
                           <Plus className="w-4 h-4" />
                         </button>
@@ -629,7 +687,7 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                           href={reels[activeIndex].url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 transition-all"
+                          className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 transition-all"
                         >
                           <ExternalLink className="w-4 h-4" />
                         </a>
@@ -655,8 +713,8 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                 ))}
               </div>
 
-              <p className="text-slate-400 text-xs mt-4 tracking-tight">
-                Трендовые видео • Перетащите на холст или используйте ← →
+              <p className="font-sans text-slate-400 text-xs mt-4">
+                Популярные видео • Нажмите для просмотра • ← →
               </p>
             </div>
           )}
@@ -737,21 +795,41 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
           {viewMode === 'results' && reels.length > 0 && (
             <div className="h-full overflow-y-auto px-6 pb-6 custom-scrollbar-light">
               <div className="max-w-6xl mx-auto">
-                <p className="text-sm text-slate-500 mb-4 font-medium">
-                  Найдено {reels.length} видео по запросу "{query}"
-                </p>
+                {/* Header with count and sorting */}
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-sm text-slate-500 font-medium">
+                    Найдено {reels.length} видео по запросу "{query}"
+                  </p>
+                  
+                  {/* Sort dropdown */}
+                  <div className="flex items-center gap-2">
+                    <ArrowUpDown className="w-4 h-4 text-slate-400" />
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as SortOption)}
+                      className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-orange-500/30"
+                    >
+                      <option value="views">По просмотрам</option>
+                      <option value="likes">По лайкам</option>
+                      <option value="viral">По виральности</option>
+                      <option value="date">По дате</option>
+                    </select>
+                  </div>
+                </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {reels.map((reel) => {
+                  {sortedReels.map((reel) => {
                     const takenDate = reel.taken_at ? new Date(Number(reel.taken_at) * 1000) : null;
                     const dateStr = takenDate ? takenDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) : null;
+                    const viralCoef = calculateViralCoefficient(reel.view_count, reel.taken_at);
                     
                     return (
                       <div
                         key={reel.id}
                         draggable
                         onDragStart={(e) => handleDragStart(e, reel)}
-                        className="group relative rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-grab active:cursor-grabbing hover:scale-[1.02]"
+                        onClick={() => setSelectedVideo(reel)}
+                        className="group relative rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer hover:scale-[1.02]"
                       >
                         <div className="relative w-full" style={{ aspectRatio: '9/16' }}>
                           <img
@@ -763,69 +841,73 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                             }}
                           />
                           
-                          {/* Top badge */}
+                          {/* Viral coefficient badge (top left) */}
                           <div className="absolute top-3 left-3">
-                            <div className="px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-sm flex items-center gap-1.5 shadow-md">
-                              <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                              <span className="text-xs font-medium text-slate-700">Да</span>
+                            <div className={cn(
+                              "px-2.5 py-1 rounded-full backdrop-blur-sm flex items-center gap-1.5 shadow-md",
+                              viralCoef > 10 ? "bg-emerald-500/90 text-white" : 
+                              viralCoef > 5 ? "bg-amber-500/90 text-white" :
+                              viralCoef > 0 ? "bg-white/90 text-slate-700" :
+                              "bg-slate-500/80 text-white"
+                            )}>
+                              <Sparkles className="w-3 h-3" />
+                              <span className="text-xs font-semibold font-sans">{viralCoef || '—'}</span>
                             </div>
                           </div>
                           
-                          {/* Add button on hover */}
+                          {/* Play button on hover (center) */}
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="w-14 h-14 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-xl">
+                              <Play className="w-6 h-6 text-slate-800 ml-1" fill="currentColor" />
+                            </div>
+                          </div>
+                          
+                          {/* Add button on hover (top right) */}
                           <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleAddToCanvas(reel);
                               }}
-                              className="p-2.5 rounded-full bg-white/90 hover:bg-white text-orange-500 transition-all shadow-lg"
+                              className="p-2 rounded-full bg-white/90 hover:bg-white text-orange-500 transition-all shadow-lg"
                             >
                               <Plus className="w-4 h-4" />
                             </button>
                           </div>
                           
-                          {/* Bottom glass panel with info */}
+                          {/* Bottom glass panel - gradient transition */}
                           <div className="absolute bottom-0 left-0 right-0">
-                            {/* Avatars row */}
-                            <div className="flex justify-center -mb-3 relative z-10">
-                              <div className="flex -space-x-2">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 ring-2 ring-white flex items-center justify-center">
-                                  <span className="text-white text-xs font-bold">
-                                    {reel.owner?.username?.[0]?.toUpperCase() || 'V'}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
+                            {/* Gradient overlay for smooth transition */}
+                            <div className="h-24 bg-gradient-to-t from-white/95 via-white/60 to-transparent" />
                             
                             {/* Glass info panel */}
-                            <div className="bg-white/70 backdrop-blur-xl p-4 pt-5">
-                              {/* Title */}
-                              <h3 className="text-center font-semibold text-slate-900 text-base leading-tight mb-1">
+                            <div className="bg-white/80 backdrop-blur-xl px-3 py-3 -mt-12">
+                              {/* Title - Inter font, smaller */}
+                              <h3 className="font-sans font-medium text-slate-900 text-sm leading-tight line-clamp-1 mb-1">
                                 {typeof reel.caption === 'string' 
-                                  ? reel.caption.slice(0, 30) + (reel.caption.length > 30 ? '...' : '')
+                                  ? reel.caption.slice(0, 25) + (reel.caption.length > 25 ? '...' : '')
                                   : 'Видео'}
                               </h3>
                               
-                              {/* Date and stats */}
-                              <p className="text-center text-slate-500 text-xs mb-2">
-                                {dateStr && `${dateStr} • `}
-                                {reel.owner?.username ? `@${reel.owner.username}` : 'Instagram'}
+                              {/* Date and username */}
+                              <p className="font-sans text-slate-500 text-[11px] mb-2">
+                                {dateStr && `${dateStr} • `}@{reel.owner?.username || 'instagram'}
                               </p>
                               
-                              {/* Stats row */}
-                              <div className="flex items-center justify-center gap-3 text-slate-600 text-xs">
-                                <span className="flex items-center gap-1">
-                                  <Eye className="w-3.5 h-3.5" />
-                                  {formatNumber(reel.view_count)}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Heart className="w-3.5 h-3.5" />
-                                  {formatNumber(reel.like_count)}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <MessageCircle className="w-3.5 h-3.5" />
-                                  {formatNumber(reel.comment_count)}
-                                </span>
+                              {/* Stats row - separate indicators */}
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 bg-slate-100 rounded-lg px-2 py-1.5 text-center">
+                                  <Eye className="w-3 h-3 text-slate-400 mx-auto mb-0.5" />
+                                  <span className="font-sans text-[10px] font-semibold text-slate-700 block">{formatNumber(reel.view_count)}</span>
+                                </div>
+                                <div className="flex-1 bg-slate-100 rounded-lg px-2 py-1.5 text-center">
+                                  <Heart className="w-3 h-3 text-slate-400 mx-auto mb-0.5" />
+                                  <span className="font-sans text-[10px] font-semibold text-slate-700 block">{formatNumber(reel.like_count)}</span>
+                                </div>
+                                <div className="flex-1 bg-slate-100 rounded-lg px-2 py-1.5 text-center">
+                                  <MessageCircle className="w-3 h-3 text-slate-400 mx-auto mb-0.5" />
+                                  <span className="font-sans text-[10px] font-semibold text-slate-700 block">{formatNumber(reel.comment_count)}</span>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -833,6 +915,127 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* VIDEO DETAIL MODAL */}
+          {selectedVideo && (
+            <div 
+              className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+              onClick={() => setSelectedVideo(null)}
+            >
+              <div 
+                className="relative bg-white rounded-3xl overflow-hidden max-w-lg w-full max-h-[90vh] shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Close button */}
+                <button
+                  onClick={() => setSelectedVideo(null)}
+                  className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                {/* Video thumbnail */}
+                <div className="relative w-full" style={{ aspectRatio: '9/16', maxHeight: '60vh' }}>
+                  <img
+                    src={selectedVideo.thumbnail_url || selectedVideo.display_url || 'https://via.placeholder.com/400x711'}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                  
+                  {/* Play overlay */}
+                  <a
+                    href={selectedVideo.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors"
+                  >
+                    <div className="w-20 h-20 rounded-full bg-white/95 flex items-center justify-center shadow-2xl">
+                      <Play className="w-8 h-8 text-slate-800 ml-1" fill="currentColor" />
+                    </div>
+                  </a>
+
+                  {/* Viral coefficient */}
+                  <div className="absolute top-4 left-4">
+                    <div className={cn(
+                      "px-3 py-1.5 rounded-full backdrop-blur-sm flex items-center gap-2 shadow-lg",
+                      calculateViralCoefficient(selectedVideo.view_count, selectedVideo.taken_at) > 10 
+                        ? "bg-emerald-500 text-white" 
+                        : "bg-white/90 text-slate-700"
+                    )}>
+                      <Sparkles className="w-4 h-4" />
+                      <span className="font-sans font-bold">
+                        {calculateViralCoefficient(selectedVideo.view_count, selectedVideo.taken_at) || '—'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Info panel */}
+                <div className="p-5">
+                  {/* Stats row */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex-1 bg-slate-100 rounded-xl px-3 py-2.5 text-center">
+                      <Eye className="w-4 h-4 text-slate-400 mx-auto mb-1" />
+                      <span className="font-sans text-sm font-bold text-slate-800 block">{formatNumber(selectedVideo.view_count)}</span>
+                      <span className="font-sans text-[10px] text-slate-400">просмотров</span>
+                    </div>
+                    <div className="flex-1 bg-slate-100 rounded-xl px-3 py-2.5 text-center">
+                      <Heart className="w-4 h-4 text-slate-400 mx-auto mb-1" />
+                      <span className="font-sans text-sm font-bold text-slate-800 block">{formatNumber(selectedVideo.like_count)}</span>
+                      <span className="font-sans text-[10px] text-slate-400">лайков</span>
+                    </div>
+                    <div className="flex-1 bg-slate-100 rounded-xl px-3 py-2.5 text-center">
+                      <MessageCircle className="w-4 h-4 text-slate-400 mx-auto mb-1" />
+                      <span className="font-sans text-sm font-bold text-slate-800 block">{formatNumber(selectedVideo.comment_count)}</span>
+                      <span className="font-sans text-[10px] text-slate-400">комментов</span>
+                    </div>
+                  </div>
+
+                  {/* Caption */}
+                  <p className="font-sans text-slate-700 text-sm leading-relaxed mb-4 line-clamp-3">
+                    {typeof selectedVideo.caption === 'string' ? selectedVideo.caption : 'Без описания'}
+                  </p>
+
+                  {/* Meta info */}
+                  <div className="flex items-center justify-between text-sm text-slate-500 mb-4">
+                    <span className="font-sans">@{selectedVideo.owner?.username || 'instagram'}</span>
+                    {selectedVideo.taken_at && (
+                      <span className="font-sans">
+                        {new Date(Number(selectedVideo.taken_at) * 1000).toLocaleDateString('ru-RU', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric'
+                        })}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        handleAddToCanvas(selectedVideo);
+                        setSelectedVideo(null);
+                      }}
+                      className="flex-1 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-medium flex items-center justify-center gap-2 hover:from-orange-400 hover:to-amber-400 transition-all shadow-lg shadow-orange-500/30"
+                    >
+                      <Plus className="w-5 h-5" />
+                      Сохранить
+                    </button>
+                    <a
+                      href={selectedVideo.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-5 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium flex items-center justify-center gap-2 transition-all"
+                    >
+                      <ExternalLink className="w-5 h-5" />
+                      Открыть
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
