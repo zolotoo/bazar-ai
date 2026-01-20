@@ -392,8 +392,10 @@ export async function searchInstagramVideos(query: string): Promise<InstagramSea
 
     console.log('Searching for REELS with exact query:', cleanQuery);
 
-    // Рабочий endpoint для поиска reels (через прокси)
-    const endpoint = `${API_BASE_URL}/searchreels/?keyword=${encodeURIComponent(cleanQuery)}&url_embed_safe=true`;
+    // На production используем полный URL с хостом RapidAPI
+    const endpoint = isDev 
+      ? `${API_BASE_URL}/searchreels/?keyword=${encodeURIComponent(cleanQuery)}&url_embed_safe=true`
+      : `https://${RAPIDAPI_HOST}/searchreels/?keyword=${encodeURIComponent(cleanQuery)}&url_embed_safe=true`;
     
     try {
       console.log('Making request to:', endpoint);
@@ -402,6 +404,7 @@ export async function searchInstagramVideos(query: string): Promise<InstagramSea
         headers: {
           'X-RapidAPI-Host': RAPIDAPI_HOST,
           'X-RapidAPI-Key': RAPIDAPI_KEY,
+          'Content-Type': 'application/json',
         },
       });
 
