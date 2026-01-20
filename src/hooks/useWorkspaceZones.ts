@@ -27,99 +27,160 @@ export interface ZoneVideo {
   status: string;
 }
 
-const isSupabaseConfigured = () => {
-  const url = import.meta.env.VITE_SUPABASE_URL || '';
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-  return !!(url && key && url !== 'https://placeholder.supabase.co');
+// Получаем user_id из localStorage
+const getUserId = (): string => {
+  try {
+    const stored = localStorage.getItem('bazar-ai-user');
+    if (stored) {
+      const user = JSON.parse(stored);
+      return user.id || 'anonymous';
+    }
+  } catch {}
+  return 'anonymous';
 };
 
+// Дефолтные зоны
+const DEFAULT_ZONES: WorkspaceZone[] = [
+  { id: 'incoming', name: 'Входящие', color: '#f97316', position_x: 0, position_y: 0, width: 300, height: 500, sort_order: 0 },
+  { id: 'favorites', name: 'Избранное', color: '#6366f1', position_x: 350, position_y: 0, width: 300, height: 500, sort_order: 1 },
+  { id: 'in-progress', name: 'В работе', color: '#f59e0b', position_x: 700, position_y: 0, width: 300, height: 500, sort_order: 2 },
+  { id: 'scripts', name: 'Сценарии', color: '#10b981', position_x: 1050, position_y: 0, width: 300, height: 500, sort_order: 3 },
+  { id: 'done', name: 'Готово', color: '#8b5cf6', position_x: 1400, position_y: 0, width: 300, height: 500, sort_order: 4 },
+];
+
 export function useWorkspaceZones() {
-  const [zones, setZones] = useState<WorkspaceZone[]>([]);
+  const [zones] = useState<WorkspaceZone[]>(DEFAULT_ZONES);
   const [videos, setVideos] = useState<ZoneVideo[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Загрузка зон
-  const fetchZones = useCallback(async () => {
-    if (!isSupabaseConfigured()) {
-      // Дефолтные зоны для локальной работы
-      setZones([
-        { id: '1', name: '📥 Входящие', color: '#6366f1', position_x: 0, position_y: 0, width: 300, height: 500, sort_order: 0 },
-        { id: '2', name: '⭐ Избранное', color: '#f59e0b', position_x: 350, position_y: 0, width: 300, height: 500, sort_order: 1 },
-        { id: '3', name: '📝 В работе', color: '#10b981', position_x: 700, position_y: 0, width: 300, height: 500, sort_order: 2 },
-        { id: '4', name: '✅ Готово', color: '#8b5cf6', position_x: 1050, position_y: 0, width: 300, height: 500, sort_order: 3 },
-      ]);
-      setLoading(false);
-      return;
-    }
-
+  // Загрузка видео из workspace_videos
+  const fetchVideos = useCallback(async () => {
+    const userId = getUserId();
+    
     try {
       const { data, error } = await supabase
-        .from('workspace_zones')
+        .from('workspace_videos')
         .select('*')
-        .order('sort_order', { ascending: true });
+        .eq('user_id', userId)
+        .order('position', { ascending: true });
 
-      if (error) throw error;
-      setZones(data || []);
+      if (error) {
+        console.error('Error fetching workspace videos:', error);
+        setVideos([]);
+      } else if (data) {
+        const transformed: ZoneVideo[] = data.map(v => ({
+          id: v.id,
+          title: v.caption || 'Без названия',
+          preview_url: v.thumbnail_url || '',
+          url: `https://instagram.com/reel/${v.shortcode}`,
+          zone_id: v.zone_id,
+          position_x: 0,
+          position_y: 0,
+          view_count: v.view_count,
+          like_count: v.like_count,
+          owner_username: v.owner_username,
+          status: 'active',
+        }));
+        setVideos(transformed);
+      }
     } catch (err) {
-      console.error('Error fetching zones:', err);
+      console.error('Error loading workspace videos:', err);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Загрузка видео
-  const fetchVideos = useCallback(async () => {
-    if (!isSupabaseConfigured()) {
-      setVideos([]);
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('inbox_videos')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setVideos(data || []);
-    } catch (err) {
-      console.error('Error fetching videos:', err);
-    }
-  }, []);
-
   // Перемещение видео в зону
   const moveVideoToZone = useCallback(async (videoId: string, zoneId: string | null) => {
+    const userId = getUserId();
+    
     // Оптимистичное обновление
     setVideos(prev => prev.map(v => 
       v.id === videoId ? { ...v, zone_id: zoneId } : v
     ));
 
-    if (!isSupabaseConfigured()) return;
-
     try {
-      const { error } = await supabase
-        .from('inbox_videos')
-        .update({ zone_id: zoneId, updated_at: new Date().toISOString() })
+      await supabase
+        .from('workspace_videos')
+        .update({ zone_id: zoneId })
+        .eq('user_id', userId)
         .eq('id', videoId);
-
-      if (error) throw error;
     } catch (err) {
       console.error('Error moving video:', err);
-      // Откат при ошибке
       fetchVideos();
     }
   }, [fetchVideos]);
 
+  // Добавление видео в workspace
+  const addVideoToWorkspace = useCallback(async (video: {
+    videoId: string;
+    shortcode?: string;
+    thumbnailUrl?: string;
+    caption?: string;
+    ownerUsername?: string;
+    viewCount?: number;
+    likeCount?: number;
+    zoneId?: string;
+  }) => {
+    const userId = getUserId();
+    
+    // Оптимистичное добавление
+    const newVideo: ZoneVideo = {
+      id: `local-${Date.now()}`,
+      title: video.caption || 'Без названия',
+      preview_url: video.thumbnailUrl || '',
+      url: `https://instagram.com/reel/${video.shortcode}`,
+      zone_id: video.zoneId || null,
+      position_x: 0,
+      position_y: 0,
+      view_count: video.viewCount,
+      like_count: video.likeCount,
+      owner_username: video.ownerUsername,
+      status: 'active',
+    };
+    
+    setVideos(prev => [newVideo, ...prev]);
+
+    try {
+      const { data } = await supabase
+        .from('workspace_videos')
+        .upsert({
+          user_id: userId,
+          video_id: video.videoId,
+          shortcode: video.shortcode,
+          thumbnail_url: video.thumbnailUrl,
+          caption: video.caption,
+          owner_username: video.ownerUsername,
+          view_count: video.viewCount,
+          like_count: video.likeCount,
+          zone_id: video.zoneId,
+        }, {
+          onConflict: 'user_id,video_id'
+        })
+        .select()
+        .single();
+
+      if (data) {
+        setVideos(prev => prev.map(v => 
+          v.id === newVideo.id ? { ...v, id: data.id } : v
+        ));
+      }
+    } catch (err) {
+      console.error('Error adding video to workspace:', err);
+    }
+  }, []);
+
   // Удаление видео
   const deleteVideo = useCallback(async (videoId: string) => {
+    const userId = getUserId();
+    
     setVideos(prev => prev.filter(v => v.id !== videoId));
-
-    if (!isSupabaseConfigured()) return;
 
     try {
       await supabase
-        .from('inbox_videos')
+        .from('workspace_videos')
         .delete()
+        .eq('user_id', userId)
         .eq('id', videoId);
     } catch (err) {
       console.error('Error deleting video:', err);
@@ -131,35 +192,18 @@ export function useWorkspaceZones() {
     return videos.filter(v => v.zone_id === zoneId);
   }, [videos]);
 
-  // Подписка на изменения в реальном времени
   useEffect(() => {
-    fetchZones();
     fetchVideos();
-
-    if (!isSupabaseConfigured()) return;
-
-    const channel = supabase
-      .channel('workspace_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'inbox_videos' }, () => {
-        fetchVideos();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'workspace_zones' }, () => {
-        fetchZones();
-      })
-      .subscribe();
-
-    return () => {
-      channel.unsubscribe();
-    };
-  }, [fetchZones, fetchVideos]);
+  }, [fetchVideos]);
 
   return {
     zones,
     videos,
     loading,
     moveVideoToZone,
+    addVideoToWorkspace,
     deleteVideo,
     getVideosByZone,
-    refetch: () => { fetchZones(); fetchVideos(); },
+    refetch: fetchVideos,
   };
 }

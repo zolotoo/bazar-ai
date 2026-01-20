@@ -1,18 +1,38 @@
-import { useEffect, useState } from 'react';
-import { supabase, InboxVideo } from '../utils/supabase';
+import { useEffect, useState, useCallback } from 'react';
+import { supabase } from '../utils/supabase';
 import { useFlowStore } from '../stores/flowStore';
 import { IncomingVideo } from '../types';
 
-// Проверяем, настроен ли Supabase
-const isSupabaseConfigured = () => {
-  const url = import.meta.env.VITE_SUPABASE_URL || '';
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-  return !!(url && key && url !== 'https://placeholder.supabase.co');
+// Получаем user_id из localStorage
+const getUserId = (): string => {
+  try {
+    const stored = localStorage.getItem('bazar-ai-user');
+    if (stored) {
+      const user = JSON.parse(stored);
+      return user.id || 'anonymous';
+    }
+  } catch {}
+  return 'anonymous';
 };
 
+interface SavedVideo {
+  id: string;
+  user_id: string;
+  video_id: string;
+  shortcode?: string;
+  thumbnail_url?: string;
+  video_url?: string;
+  caption?: string;
+  owner_username?: string;
+  view_count?: number;
+  like_count?: number;
+  comment_count?: number;
+  taken_at?: number;
+  added_at: string;
+}
+
 /**
- * Хук для подписки на таблицу inbox_videos в реальном времени
- * Автоматически обновляет список входящих видео при изменениях в Supabase
+ * Хук для работы с сохранёнными видео пользователя
  */
 export function useInboxVideos() {
   const [videos, setVideos] = useState<IncomingVideo[]>([]);
@@ -20,143 +40,60 @@ export function useInboxVideos() {
   const [error, setError] = useState<Error | null>(null);
   const { setIncomingVideos } = useFlowStore();
 
-  useEffect(() => {
-    // Если Supabase не настроен, просто возвращаем пустой список
-    if (!isSupabaseConfigured()) {
-      console.log('Supabase not configured, using empty video list');
-      setVideos([]);
-      setIncomingVideos([]);
-      setLoading(false);
-      return;
-    }
+  // Преобразование из БД в IncomingVideo
+  const transformVideo = useCallback((video: SavedVideo): IncomingVideo & { 
+    view_count?: number; 
+    like_count?: number; 
+    comment_count?: number;
+    owner_username?: string;
+  } => ({
+    id: video.id,
+    title: video.caption || 'Без названия',
+    previewUrl: video.thumbnail_url || '',
+    url: video.video_url || `https://instagram.com/reel/${video.shortcode}`,
+    receivedAt: new Date(video.added_at),
+    view_count: video.view_count,
+    like_count: video.like_count,
+    comment_count: video.comment_count,
+    owner_username: video.owner_username,
+  }), []);
 
-    // Функция для преобразования InboxVideo в IncomingVideo
-    const transformVideo = (video: InboxVideo): IncomingVideo & { view_count?: number; like_count?: number; comment_count?: number } => ({
-      id: video.id,
-      title: video.title,
-      previewUrl: video.preview_url,
-      url: video.url,
-      receivedAt: new Date(video.created_at),
-      view_count: video.view_count,
-      like_count: video.like_count,
-      comment_count: video.comment_count,
-    });
+  // Загрузка видео пользователя
+  const fetchVideos = useCallback(async () => {
+    const userId = getUserId();
+    
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('saved_videos')
+        .select('*')
+        .eq('user_id', userId)
+        .order('added_at', { ascending: false });
 
-    // Загружаем начальные данные
-    const fetchVideos = async () => {
-      try {
-        const { data, error: fetchError } = await supabase
-          .from('inbox_videos')
-          .select('*')
-          .eq('status', 'pending')
-          .order('created_at', { ascending: false });
-
-        if (fetchError) {
-          throw fetchError;
-        }
-
-        const transformedVideos = (data || []).map(transformVideo);
+      if (fetchError) {
+        console.error('Error fetching saved videos:', fetchError);
+        setVideos([]);
+        setIncomingVideos([]);
+      } else if (data) {
+        const transformedVideos = data.map(transformVideo);
         setVideos(transformedVideos);
         setIncomingVideos(transformedVideos);
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching inbox videos:', err);
-        setError(err instanceof Error ? err : new Error('Failed to fetch videos'));
-        setLoading(false);
       }
-    };
+    } catch (err) {
+      console.error('Error loading saved videos:', err);
+      setError(err instanceof Error ? err : new Error('Failed to fetch videos'));
+    } finally {
+      setLoading(false);
+    }
+  }, [setIncomingVideos, transformVideo]);
 
+  useEffect(() => {
     fetchVideos();
-
-    // Подписываемся на изменения в реальном времени
-    let channel: any;
-    try {
-      channel = supabase
-        .channel('inbox_videos_changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*', // Подписываемся на все события (INSERT, UPDATE, DELETE)
-            schema: 'public',
-            table: 'inbox_videos',
-            filter: 'status=eq.pending', // Только видео со статусом pending
-          },
-          (payload) => {
-            console.log('Supabase real-time event:', payload);
-
-            if (payload.eventType === 'INSERT') {
-              const newVideo = transformVideo(payload.new as InboxVideo);
-              setVideos((prev) => [newVideo, ...prev]);
-              setIncomingVideos([newVideo, ...useFlowStore.getState().incomingVideos]);
-            } else if (payload.eventType === 'UPDATE') {
-              const updatedVideo = payload.new as InboxVideo;
-              if (updatedVideo.status === 'on_canvas') {
-                // Видео переместили на холст - удаляем из списка
-                setVideos((prev) => prev.filter((v) => v.id !== updatedVideo.id));
-                setIncomingVideos(
-                  useFlowStore.getState().incomingVideos.filter((v) => v.id !== updatedVideo.id)
-                );
-              } else {
-                // Обновляем существующее видео
-                const transformedVideo = transformVideo(updatedVideo);
-                setVideos((prev) =>
-                  prev.map((v) => (v.id === transformedVideo.id ? transformedVideo : v))
-                );
-                setIncomingVideos(
-                  useFlowStore.getState().incomingVideos.map((v) =>
-                    v.id === transformedVideo.id ? transformedVideo : v
-                  )
-                );
-              }
-            } else if (payload.eventType === 'DELETE') {
-              const deletedId = payload.old.id;
-              setVideos((prev) => prev.filter((v) => v.id !== deletedId));
-              setIncomingVideos(
-                useFlowStore.getState().incomingVideos.filter((v) => v.id !== deletedId)
-              );
-            }
-          }
-        )
-        .subscribe();
-    } catch (err) {
-      console.warn('Failed to subscribe to Supabase real-time updates:', err);
-    }
-
-    return () => {
-      if (channel && channel.unsubscribe) {
-        channel.unsubscribe();
-      }
-    };
-  }, [setIncomingVideos]);
+  }, [fetchVideos]);
 
   /**
-   * Обновляет статус видео на 'on_canvas' в Supabase
+   * Добавляет видео в сохранённые
    */
-  const markVideoAsOnCanvas = async (videoId: string) => {
-    if (!isSupabaseConfigured()) {
-      console.log('Supabase not configured, skipping status update');
-      return;
-    }
-
-    try {
-      const { error: updateError } = await supabase
-        .from('inbox_videos')
-        .update({ status: 'on_canvas', updated_at: new Date().toISOString() })
-        .eq('id', videoId);
-
-      if (updateError) {
-        throw updateError;
-      }
-    } catch (err) {
-      console.error('Error updating video status:', err);
-      throw err;
-    }
-  };
-
-  /**
-   * Добавляет новое видео в Supabase
-   */
-  const addVideoToInbox = async (video: {
+  const addVideoToInbox = useCallback(async (video: {
     title: string;
     previewUrl: string;
     url: string;
@@ -164,9 +101,19 @@ export function useInboxVideos() {
     likeCount?: number;
     commentCount?: number;
     ownerUsername?: string;
+    shortcode?: string;
+    videoId?: string;
   }) => {
-    // Создаём локальное видео сразу
-    const localVideo: IncomingVideo & { view_count?: number; like_count?: number; comment_count?: number } = {
+    const userId = getUserId();
+    const videoId = video.videoId || video.shortcode || `video-${Date.now()}`;
+    
+    // Создаём локальное видео сразу для быстрого UI
+    const localVideo: IncomingVideo & { 
+      view_count?: number; 
+      like_count?: number; 
+      comment_count?: number;
+      owner_username?: string;
+    } = {
       id: `local-${Date.now()}`,
       title: video.title,
       previewUrl: video.previewUrl,
@@ -175,76 +122,91 @@ export function useInboxVideos() {
       view_count: video.viewCount,
       like_count: video.likeCount,
       comment_count: video.commentCount,
+      owner_username: video.ownerUsername,
     };
-    
-    if (!isSupabaseConfigured()) {
-      console.log('Supabase not configured, adding to local store only');
-      setVideos(prev => [localVideo, ...prev]);
-      setIncomingVideos([localVideo, ...useFlowStore.getState().incomingVideos]);
-      return localVideo;
-    }
+
+    // Оптимистичное обновление UI
+    setVideos(prev => [localVideo, ...prev]);
+    setIncomingVideos([localVideo, ...useFlowStore.getState().incomingVideos]);
 
     try {
       const { data, error: insertError } = await supabase
-        .from('inbox_videos')
-        .insert({
-          title: video.title,
-          preview_url: video.previewUrl,
-          url: video.url,
-          status: 'pending',
+        .from('saved_videos')
+        .upsert({
+          user_id: userId,
+          video_id: videoId,
+          shortcode: video.shortcode,
+          thumbnail_url: video.previewUrl,
+          video_url: video.url,
+          caption: video.title,
+          owner_username: video.ownerUsername,
           view_count: video.viewCount,
           like_count: video.likeCount,
           comment_count: video.commentCount,
-          owner_username: video.ownerUsername,
+        }, {
+          onConflict: 'user_id,video_id'
         })
         .select()
         .single();
 
       if (insertError) {
-        console.error('Supabase insert error, using local:', insertError);
-        // При ошибке добавляем локально
-        setVideos(prev => [localVideo, ...prev]);
-        setIncomingVideos([localVideo, ...useFlowStore.getState().incomingVideos]);
+        console.error('Error saving video:', insertError);
         return localVideo;
       }
 
-      console.log('Video saved to Supabase:', data);
-      
-      // Real-time подписка обновит список автоматически,
-      // но на всякий случай добавим и локально
       if (data) {
-        const newVideo: IncomingVideo & { view_count?: number; like_count?: number; comment_count?: number } = {
-          id: data.id,
-          title: data.title,
-          previewUrl: data.preview_url,
-          url: data.url,
-          receivedAt: new Date(data.created_at),
-          view_count: data.view_count,
-          like_count: data.like_count,
-          comment_count: data.comment_count,
-        };
-        // Добавляем локально чтобы UI обновился сразу
-        setVideos(prev => [newVideo, ...prev.filter(v => v.id !== newVideo.id)]);
-        setIncomingVideos([newVideo, ...useFlowStore.getState().incomingVideos.filter(v => v.id !== newVideo.id)]);
-        return newVideo;
+        const savedVideo = transformVideo(data);
+        // Заменяем локальное видео на сохранённое
+        setVideos(prev => [savedVideo, ...prev.filter(v => v.id !== localVideo.id)]);
+        setIncomingVideos([savedVideo, ...useFlowStore.getState().incomingVideos.filter(v => v.id !== localVideo.id)]);
+        return savedVideo;
       }
-      
+
       return localVideo;
     } catch (err) {
-      console.error('Error saving video to Supabase:', err);
-      // При любой ошибке добавляем локально
-      setVideos(prev => [localVideo, ...prev]);
-      setIncomingVideos([localVideo, ...useFlowStore.getState().incomingVideos]);
+      console.error('Error saving video:', err);
       return localVideo;
     }
-  };
+  }, [setIncomingVideos, transformVideo]);
+
+  /**
+   * Удаляет видео из сохранённых
+   */
+  const removeVideo = useCallback(async (videoId: string) => {
+    const userId = getUserId();
+    
+    // Оптимистичное удаление
+    setVideos(prev => prev.filter(v => v.id !== videoId));
+    setIncomingVideos(useFlowStore.getState().incomingVideos.filter(v => v.id !== videoId));
+
+    try {
+      await supabase
+        .from('saved_videos')
+        .delete()
+        .eq('user_id', userId)
+        .eq('id', videoId);
+    } catch (err) {
+      console.error('Error removing video:', err);
+    }
+  }, [setIncomingVideos]);
+
+  /**
+   * Для совместимости со старым кодом
+   */
+  const markVideoAsOnCanvas = useCallback(async (videoId: string) => {
+    // Просто удаляем из списка входящих
+    setVideos(prev => prev.filter(v => v.id !== videoId));
+    setIncomingVideos(useFlowStore.getState().incomingVideos.filter(v => v.id !== videoId));
+  }, [setIncomingVideos]);
 
   return {
     videos,
     loading,
     error,
-    markVideoAsOnCanvas,
     addVideoToInbox,
-    isConfigured: isSupabaseConfigured(),
+    removeVideo,
+    markVideoAsOnCanvas,
+    refetch: fetchVideos,
+    isConfigured: true,
   };
 }

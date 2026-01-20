@@ -126,12 +126,8 @@ function App() {
                 : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
             )}
           >
-            {isAuthenticated && user?.photo_url ? (
-              <img src={user.photo_url} alt="" className="w-4 h-4 rounded-full" />
-            ) : (
-              <User className="w-3.5 h-3.5" />
-            )}
-            <span className="hidden sm:inline">{isAuthenticated ? user?.first_name : 'Войти'}</span>
+            <User className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{isAuthenticated ? `@${user?.telegram_username}` : 'Войти'}</span>
           </button>
         </div>
         
