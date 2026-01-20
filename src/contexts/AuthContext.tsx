@@ -25,45 +25,91 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const STORAGE_KEY = 'bazar-ai-user';
+const SESSION_COOKIE = 'bazar-session';
 const BOT_TOKEN = '8367186792:AAHLr687MVkXV_DBwAYUaR0U74U-h0qbi6g';
 
 const generateCode = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// Синхронно читаем пользователя из localStorage при загрузке модуля
-const getInitialUser = (): User | null => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    console.log('[Auth] Initial localStorage check:', stored ? 'found user' : 'no user');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      console.log('[Auth] Parsed user:', parsed);
-      return parsed;
-    }
-  } catch (e) {
-    console.error('[Auth] Error reading localStorage:', e);
-    localStorage.removeItem(STORAGE_KEY);
-  }
-  return null;
+const generateSessionToken = () => {
+  return crypto.randomUUID() + '-' + Date.now();
+};
+
+// Cookie helpers
+const setCookie = (name: string, value: string, days: number = 30) => {
+  const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toUTCString();
+  document.cookie = `${name}=${value}; expires=${expires}; path=/; SameSite=Lax; Secure`;
+};
+
+const getCookie = (name: string): string | null => {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? match[2] : null;
+};
+
+const deleteCookie = (name: string) => {
+  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // Инициализируем синхронно, чтобы избежать мигания
-  const [user, setUser] = useState<User | null>(getInitialUser);
-  const [loading, setLoading] = useState(false); // Уже не нужен loading, т.к. читаем синхронно
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [sendingCode, setSendingCode] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [codeSent, setCodeSent] = useState(false);
   const [pendingUsername, setPendingUsername] = useState<string | null>(null);
 
-  // Логируем состояние при каждом рендере
+  // Проверяем сессию при загрузке
   useEffect(() => {
-    console.log('[Auth] Current user state:', user);
-    console.log('[Auth] isAuthenticated:', !!user);
-  }, [user]);
+    const checkSession = async () => {
+      const sessionToken = getCookie(SESSION_COOKIE);
+      console.log('[Auth] Checking session cookie:', sessionToken ? 'found' : 'not found');
+      
+      if (!sessionToken) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Проверяем сессию в Supabase
+        const { data, error } = await supabase
+          .from('sessions')
+          .select('*, users(*)')
+          .eq('token', sessionToken)
+          .gt('expires_at', new Date().toISOString())
+          .single();
+
+        if (error || !data) {
+          console.log('[Auth] Session invalid or expired');
+          deleteCookie(SESSION_COOKIE);
+          setLoading(false);
+          return;
+        }
+
+        console.log('[Auth] Session valid, user:', data.users);
+        
+        // Обновляем last_active
+        await supabase
+          .from('sessions')
+          .update({ last_active: new Date().toISOString() })
+          .eq('token', sessionToken);
+
+        setUser({
+          id: `tg-${data.telegram_username}`,
+          telegram_username: data.telegram_username,
+          created_at: data.created_at,
+        });
+      } catch (err) {
+        console.error('[Auth] Session check error:', err);
+        deleteCookie(SESSION_COOKIE);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkSession();
+  }, []);
 
   // Отправка кода в Telegram
   const sendCode = useCallback(async (username: string) => {
@@ -189,25 +235,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .update({ used: true })
         .eq('id', data[0].id);
 
-      // Создаём пользователя
-      const userData: User = {
-        id: `tg-${pendingUsername}`,
-        telegram_username: pendingUsername,
-        created_at: new Date().toISOString(),
-      };
-
-      // Сохраняем локально
-      console.log('[Auth] Saving user to localStorage:', userData);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
-      
-      // Проверяем что сохранилось
-      const saved = localStorage.getItem(STORAGE_KEY);
-      console.log('[Auth] Verified saved data:', saved);
-      
-      setUser(userData);
-      console.log('[Auth] User state updated');
-
-      // Сохраняем в Supabase
+      // Создаём/обновляем пользователя в Supabase
       await supabase
         .from('users')
         .upsert({
@@ -216,6 +244,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }, {
           onConflict: 'telegram_username'
         });
+
+      // Создаём сессию
+      const sessionToken = generateSessionToken();
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 дней
+      
+      await supabase
+        .from('sessions')
+        .insert({
+          token: sessionToken,
+          telegram_username: pendingUsername,
+          expires_at: expiresAt.toISOString(),
+          user_agent: navigator.userAgent,
+        });
+
+      // Сохраняем токен в cookie
+      setCookie(SESSION_COOKIE, sessionToken, 30);
+      console.log('[Auth] Session created and saved to cookie');
+
+      // Устанавливаем пользователя
+      const userData: User = {
+        id: `tg-${pendingUsername}`,
+        telegram_username: pendingUsername,
+        created_at: new Date().toISOString(),
+      };
+      
+      setUser(userData);
 
       setVerifying(false);
       setCodeSent(false);
@@ -237,8 +291,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Выход
-  const logout = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
+  const logout = useCallback(async () => {
+    const sessionToken = getCookie(SESSION_COOKIE);
+    
+    // Удаляем сессию из Supabase
+    if (sessionToken) {
+      await supabase
+        .from('sessions')
+        .delete()
+        .eq('token', sessionToken);
+    }
+    
+    // Удаляем cookie
+    deleteCookie(SESSION_COOKIE);
+    
     setUser(null);
     setCodeSent(false);
     setPendingUsername(null);
