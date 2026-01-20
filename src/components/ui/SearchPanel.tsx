@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Search, X, ExternalLink, Plus, Eye, Heart, MessageCircle, ChevronLeft, ChevronRight, Sparkles, ArrowUpDown, Play, Link, Loader2 } from 'lucide-react';
+import { Search, X, ExternalLink, Plus, Eye, Heart, MessageCircle, ChevronLeft, ChevronRight, Sparkles, Play, Link, Loader2 } from 'lucide-react';
 import { TextShimmer } from './TextShimmer';
 import { 
   searchInstagramVideos,
   getReelByUrl,
+  getHashtagReels,
   InstagramSearchResult
 } from '../../services/videoService';
 import { useFlowStore } from '../../stores/flowStore';
@@ -258,16 +259,40 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
     }
 
     try {
-      const foundReels = await searchInstagramVideos(queryToSearch.trim());
-      setReels(foundReels);
+      // Параллельный поиск: основной запрос + хэштег
+      const cleanQuery = queryToSearch.trim();
+      const hashtagQuery = cleanQuery.replace(/^#/, '').replace(/\s+/g, '');
+      
+      const [keywordResults, hashtagResults] = await Promise.all([
+        searchInstagramVideos(cleanQuery),
+        // Ищем по хэштегу только если запрос не начинается с #
+        cleanQuery.startsWith('#') ? Promise.resolve([]) : getHashtagReels(hashtagQuery),
+      ]);
+      
+      // Объединяем результаты, убираем дубликаты по shortcode
+      const allResults = [...keywordResults];
+      const existingCodes = new Set(keywordResults.map(r => r.shortcode));
+      
+      for (const reel of hashtagResults) {
+        if (!existingCodes.has(reel.shortcode)) {
+          allResults.push(reel);
+          existingCodes.add(reel.shortcode);
+        }
+      }
+      
+      setReels(allResults);
       setViewMode('results');
       
       // Сохраняем в историю вместе с результатами
-      addToHistory(queryToSearch.trim(), foundReels);
+      addToHistory(cleanQuery, allResults);
       
-      if (foundReels.length === 0) {
+      if (allResults.length === 0) {
         setError('Видео не найдены');
         setViewMode('carousel');
+      } else {
+        toast.success(`Найдено ${allResults.length} видео`, {
+          description: hashtagResults.length > 0 ? `+${hashtagResults.length} по #${hashtagQuery}` : undefined,
+        });
       }
     } catch (err) {
       console.error('Search error:', err);
@@ -845,7 +870,7 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                             {/* Date badge */}
                             {dateText && (
                               <div className="absolute top-3 right-3 z-10">
-                                <div className="px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md text-white/90 text-[10px] font-medium">
+                                <div className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-xs font-semibold shadow-lg">
                                   {dateText}
                                 </div>
                               </div>
@@ -1031,24 +1056,53 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
             <div className="h-full overflow-y-auto px-6 pb-6 custom-scrollbar-light">
               <div className="max-w-6xl mx-auto">
                 {/* Header with count and sorting */}
-                <div className="flex items-center justify-between mb-4">
-                  <p className="text-sm text-slate-500 font-medium">
-                    Найдено {reels.length} видео по запросу "{query}"
-                  </p>
+                <div className="flex flex-col gap-4 mb-5">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-slate-500 font-medium">
+                      Найдено {reels.length} видео по запросу "{query}"
+                    </p>
+                    
+                    {/* Sort buttons */}
+                    <div className="flex items-center gap-1 bg-white rounded-2xl p-1 shadow-sm border border-slate-100">
+                      {[
+                        { value: 'views', label: 'Просмотры', icon: Eye },
+                        { value: 'likes', label: 'Лайки', icon: Heart },
+                        { value: 'viral', label: 'Вирал', icon: Sparkles },
+                      ].map(({ value, label, icon: Icon }) => (
+                        <button
+                          key={value}
+                          onClick={() => setSortBy(value as SortOption)}
+                          className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all",
+                            sortBy === value 
+                              ? "bg-slate-900 text-white" 
+                              : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                          )}
+                        >
+                          <Icon className="w-3.5 h-3.5" />
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   
-                  {/* Sort dropdown */}
-                  <div className="flex items-center gap-2">
-                    <ArrowUpDown className="w-4 h-4 text-slate-400" />
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as SortOption)}
-                      className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-orange-500/30"
-                    >
-                      <option value="views">По просмотрам</option>
-                      <option value="likes">По лайкам</option>
-                      <option value="viral">По виральности</option>
-                      <option value="date">По дате</option>
-                    </select>
+                  {/* Related search suggestions */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs text-slate-400">Похожие:</span>
+                    {[
+                      `#${query.replace(/\s+/g, '')}`,
+                      `${query} тренды`,
+                      `${query} 2025`,
+                      `${query} советы`,
+                    ].map((suggestion, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleSearch(suggestion)}
+                        className="px-3 py-1 rounded-full bg-white hover:bg-orange-50 border border-slate-200 hover:border-orange-300 text-xs text-slate-600 hover:text-orange-600 transition-all"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -1100,7 +1154,7 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
                           {/* Date badge (top right) */}
                           {dateText && (
                             <div className="absolute top-3 right-3 z-10">
-                              <div className="px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-md text-white/90 text-xs font-medium">
+                              <div className="px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-sm font-semibold shadow-lg">
                                 {dateText}
                               </div>
                             </div>
