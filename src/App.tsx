@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { FlowCanvas } from './components/FlowCanvas';
 import { Workspace } from './components/Workspace';
 import { LandingPage } from './components/LandingPage';
@@ -76,12 +76,7 @@ function App() {
         <div className="flex items-center glass rounded-xl p-0.5">
           <button
             onClick={() => setViewMode('landing')}
-            className={cn(
-              "px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5",
-              viewMode === 'landing' 
-                ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg" 
-                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
-            )}
+            className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 text-slate-600 hover:text-slate-900 hover:bg-white/50"
           >
             <Home className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Главная</span>

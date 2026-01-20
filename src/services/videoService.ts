@@ -237,7 +237,6 @@ export async function getUserReels(username: string): Promise<InstagramSearchRes
 
     for (const endpoint of endpoints) {
       try {
-        const isProxied = endpoint.startsWith(API_BASE_URL);
         const host = endpoint.includes(RAPIDAPI_HOST_OLD) ? RAPIDAPI_HOST_OLD : RAPIDAPI_HOST;
         console.log('Trying user endpoint:', endpoint);
         
@@ -319,7 +318,6 @@ export async function getHashtagReels(hashtag: string): Promise<InstagramSearchR
 
     for (const endpoint of endpoints) {
       try {
-        const isProxied = endpoint.startsWith(API_BASE_URL);
         const host = endpoint.includes(RAPIDAPI_HOST_OLD) ? RAPIDAPI_HOST_OLD : RAPIDAPI_HOST;
         console.log('Trying hashtag endpoint:', endpoint);
         
@@ -497,35 +495,6 @@ export async function searchInstagramVideos(query: string): Promise<InstagramSea
   }
 }
 
-/**
- * Альтернативный метод поиска, если основной не сработал
- */
-async function tryAlternativeSearch(query: string): Promise<InstagramSearchResult[]> {
-  try {
-    // Пробуем поиск через общий endpoint (через прокси)
-    const response = await fetch(`${API_BASE_URL}/api/instagram/search?q=${encodeURIComponent(query)}&type=reel`, {
-      method: 'GET',
-      headers: {
-        'X-RapidAPI-Host': RAPIDAPI_HOST,
-        'X-RapidAPI-Key': RAPIDAPI_KEY,
-      },
-    });
-
-    if (!response.ok) {
-      return [];
-    }
-
-    const data = await response.json();
-    const items = Array.isArray(data) ? data : (data.items || data.data || []);
-    
-    return items
-      .map((item: any) => transformSearchResult(item))
-      .filter((item): item is InstagramSearchResult => item !== null);
-  } catch (error) {
-    console.error('Alternative search failed:', error);
-    return [];
-  }
-}
 
 /**
  * Преобразует результат API в стандартный формат
@@ -589,10 +558,10 @@ function transformSearchResult(item: any): InstagramSearchResult | null {
 
 /**
  * Анализирует видео через AI API (OpenAI/Claude)
- * @param description - Описание видео
+ * @param _description - Описание видео
  * @returns Разбор видео
  */
-export async function analyzeVideoMeaning(description: string): Promise<{
+export async function analyzeVideoMeaning(_description: string): Promise<{
   goal: string;
   trigger: string;
   structure: string;

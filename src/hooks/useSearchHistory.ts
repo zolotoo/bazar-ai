@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../utils/supabase';
 import { InstagramSearchResult } from '../services/videoService';
 
 export interface SearchHistoryEntry {
@@ -17,13 +16,6 @@ interface StoredSearchHistory {
   searched_at: string;
   results_count: number;
 }
-
-// Проверяем, настроен ли Supabase
-const isSupabaseConfigured = () => {
-  const url = import.meta.env.VITE_SUPABASE_URL || '';
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-  return !!(url && key && url !== 'https://placeholder.supabase.co');
-};
 
 const STORAGE_KEY = 'instagram-search-history-v2';
 

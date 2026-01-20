@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useSearchHistory } from '../hooks/useSearchHistory';
 import { useFlowStore } from '../stores/flowStore';
@@ -16,7 +15,6 @@ import {
   Bell,
   HelpCircle
 } from 'lucide-react';
-import { cn } from '../utils/cn';
 
 export function ProfilePage() {
   const { user, isAuthenticated, handleTelegramAuth, logout, botUsername } = useAuth();

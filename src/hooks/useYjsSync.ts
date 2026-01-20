@@ -11,7 +11,7 @@ const ydoc = new Y.Doc();
 export function useYjsSync(roomName: string = 'default-room') {
   const providerRef = useRef<WebrtcProvider | null>(null);
   const indexeddbRef = useRef<IndexeddbPersistence | null>(null);
-  const { nodes, edges, setNodes, setEdges } = useFlowStore();
+  const { setNodes, setEdges } = useFlowStore();
 
   useEffect(() => {
     // Initialize IndexedDB persistence для локального хранения состояния

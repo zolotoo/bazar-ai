@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Node, Edge, Connection, addEdge, applyNodeChanges, applyEdgeChanges, NodeChange, EdgeChange } from 'reactflow';
-import { IncomingVideo, ReferenceNodeData, ScriptNodeData, StatusNodeData } from '../types';
+import { IncomingVideo } from '../types';
 
 interface FlowStore {
   nodes: Node[];

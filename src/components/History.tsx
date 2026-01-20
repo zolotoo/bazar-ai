@@ -3,7 +3,7 @@ import { useSearchHistory, SearchHistoryEntry } from '../hooks/useSearchHistory'
 import { useFlowStore } from '../stores/flowStore';
 import { useInboxVideos } from '../hooks/useInboxVideos';
 import { InstagramSearchResult } from '../services/videoService';
-import { Search, Clock, Video, Eye, Heart, ExternalLink, Trash2, X, Calendar, ChevronLeft, Plus, MessageCircle } from 'lucide-react';
+import { Search, Clock, Video, Eye, Heart, ExternalLink, Trash2, X, Calendar, ChevronLeft, Plus } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 type TabType = 'queries' | 'videos';

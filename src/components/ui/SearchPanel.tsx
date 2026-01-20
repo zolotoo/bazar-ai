@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Search, X, Loader2, ExternalLink, Plus, Eye, Heart, MessageCircle, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { Search, X, ExternalLink, Plus, Eye, Heart, MessageCircle, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { TextShimmer } from './TextShimmer';
 import { 
   searchInstagramVideos,
@@ -31,12 +31,12 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
   const [reels, setReels] = useState<InstagramSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  const [_error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('carousel');
   const [activeIndex, setActiveIndex] = useState(0);
   const { incomingVideos } = useFlowStore();
   const { addVideoToInbox } = useInboxVideos();
-  const { history: searchHistory, addToHistory, removeFromHistory, clearHistory, refetch: refetchHistory } = useSearchHistory();
+  const { history: searchHistory, addToHistory, refetch: refetchHistory } = useSearchHistory();
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -686,7 +686,7 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                   {reels.map((reel) => {
-                    const takenDate = reel.taken_at ? new Date(reel.taken_at * 1000) : null;
+                    const takenDate = reel.taken_at ? new Date(Number(reel.taken_at) * 1000) : null;
                     const dateStr = takenDate ? takenDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) : null;
                     
                     return (

@@ -1,14 +1,7 @@
 import { useState } from 'react';
-import { useWorkspaceZones, ZoneVideo, WorkspaceZone } from '../hooks/useWorkspaceZones';
-import { Eye, Heart, ExternalLink, Trash2, GripVertical, Plus, Sparkles, Star, FileText, CheckCircle, ArrowUpRight } from 'lucide-react';
+import { useWorkspaceZones, ZoneVideo } from '../hooks/useWorkspaceZones';
+import { Plus, Sparkles, Star, FileText, CheckCircle, ArrowUpRight } from 'lucide-react';
 import { cn } from '../utils/cn';
-
-function formatNumber(num?: number): string {
-  if (num === undefined || num === null) return '0';
-  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-  return num.toString();
-}
 
 interface MiniVideoCardProps {
   video: ZoneVideo;
@@ -43,7 +36,6 @@ function MiniVideoCard({ video, index }: MiniVideoCardProps) {
 
 interface FolderCardProps {
   title: string;
-  subtitle: string;
   videos: ZoneVideo[];
   color: string;
   icon: React.ReactNode;
@@ -54,7 +46,7 @@ interface FolderCardProps {
   onDragEnter: () => void;
 }
 
-function FolderCard({ title, subtitle, videos, color, icon, zoneId, onDragOver, onDrop, isDropTarget, onDragEnter }: FolderCardProps) {
+function FolderCard({ title, videos, color, icon, zoneId, onDragOver, onDrop, isDropTarget, onDragEnter }: FolderCardProps) {
   const previewVideos = videos.slice(0, 3);
   
   return (
@@ -144,13 +136,12 @@ const iconMap: Record<string, React.ReactNode> = {
 };
 
 export function Workspace() {
-  const { zones, videos, loading, moveVideoToZone, deleteVideo, getVideosByZone } = useWorkspaceZones();
+  const { videos, loading, moveVideoToZone, getVideosByZone } = useWorkspaceZones();
   const [draggedVideo, setDraggedVideo] = useState<ZoneVideo | null>(null);
   const [dropTargetZone, setDropTargetZone] = useState<string | null>(null);
 
-  const handleDragStart = (e: React.DragEvent, video: ZoneVideo) => {
+  const _handleDragStart = (_e: React.DragEvent, video: ZoneVideo) => {
     setDraggedVideo(video);
-    e.dataTransfer.effectAllowed = 'move';
   };
 
   const handleDragOver = (e: React.DragEvent) => {
