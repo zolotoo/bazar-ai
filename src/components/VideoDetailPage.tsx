@@ -20,7 +20,7 @@ interface VideoData {
   like_count?: number;
   comment_count?: number;
   owner_username?: string;
-  taken_at?: string;
+  taken_at?: string | number;
   transcript_id?: string;
   transcript_status?: string;
   transcript_text?: string;
@@ -40,27 +40,49 @@ function formatNumber(num?: number): string {
   return num.toString();
 }
 
-function formatDate(dateStr?: string): string {
-  if (!dateStr) return '—';
-  const date = new Date(Number(dateStr) * 1000);
-  if (isNaN(date.getTime())) return '—';
+function parseDate(dateValue?: string | number): Date | null {
+  if (!dateValue) return null;
+  
+  // Если строка
+  if (typeof dateValue === 'string') {
+    // ISO формат или дата
+    if (dateValue.includes('T') || dateValue.includes('-')) {
+      const date = new Date(dateValue);
+      if (!isNaN(date.getTime())) return date;
+    }
+    // Числовой timestamp в строке
+    const ts = Number(dateValue);
+    if (!isNaN(ts)) {
+      // Если > 1e12 - миллисекунды, иначе секунды
+      return ts > 1e12 ? new Date(ts) : new Date(ts * 1000);
+    }
+  }
+  
+  // Если число
+  if (typeof dateValue === 'number') {
+    return dateValue > 1e12 ? new Date(dateValue) : new Date(dateValue * 1000);
+  }
+  
+  return null;
+}
+
+function formatDate(dateValue?: string | number): string {
+  const date = parseDate(dateValue);
+  if (!date || isNaN(date.getTime())) return '—';
   return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function calculateViralCoefficient(views?: number, takenAt?: string): number {
+function calculateViralCoefficient(views?: number, takenAt?: string | number): number {
   if (!views) return 0;
   
-  let daysOld = 30; // по умолчанию
+  const videoDate = parseDate(takenAt);
   
-  if (takenAt) {
-    const ts = Number(takenAt);
-    if (!isNaN(ts)) {
-      const videoDate = ts > 1e12 ? new Date(ts) : new Date(ts * 1000);
-      if (!isNaN(videoDate.getTime())) {
-        daysOld = Math.max(1, Math.floor((Date.now() - videoDate.getTime()) / (1000 * 60 * 60 * 24)));
-      }
-    }
+  // Если нет даты - используем 30 дней по умолчанию
+  if (!videoDate || isNaN(videoDate.getTime())) {
+    return Math.round((views / 30 / 1000) * 10) / 10;
   }
+  
+  const daysOld = Math.max(1, Math.floor((Date.now() - videoDate.getTime()) / (1000 * 60 * 60 * 24)));
   
   // K просмотров в день
   return Math.round((views / daysOld / 1000) * 10) / 10;

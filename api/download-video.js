@@ -44,27 +44,54 @@ export default async function handler(req, res) {
     }
 
     const data = await response.json();
-    console.log('Download API response keys:', Object.keys(data));
+    console.log('Download API response:', JSON.stringify(data, null, 2));
     
-    // Извлекаем URL видео из ответа
+    // Извлекаем URL видео из ответа - проверяем разные структуры
     let videoUrl = null;
     
+    // Прямые поля
     if (data.video_url) {
       videoUrl = data.video_url;
     } else if (data.download_url) {
       videoUrl = data.download_url;
-    } else if (data.url) {
-      videoUrl = data.url;
-    } else if (data.data?.video_url) {
+    } else if (data.video) {
+      videoUrl = data.video;
+    } else if (data.videoUrl) {
+      videoUrl = data.videoUrl;
+    }
+    // Вложенные в data
+    else if (data.data?.video_url) {
       videoUrl = data.data.video_url;
-    } else if (data.media?.[0]?.video_url) {
-      videoUrl = data.media[0].video_url;
-    } else if (Array.isArray(data) && data[0]?.video_url) {
-      videoUrl = data[0].video_url;
+    } else if (data.data?.video) {
+      videoUrl = data.data.video;
+    } else if (data.data?.download_url) {
+      videoUrl = data.data.download_url;
+    }
+    // Массив urls
+    else if (data.urls && Array.isArray(data.urls) && data.urls.length > 0) {
+      // Ищем видео URL в массиве
+      const videoItem = data.urls.find(u => u.type === 'video' || u.extension === 'mp4');
+      videoUrl = videoItem?.url || data.urls[0]?.url || data.urls[0];
+    }
+    // Массив media
+    else if (data.media && Array.isArray(data.media) && data.media.length > 0) {
+      videoUrl = data.media[0]?.video_url || data.media[0]?.url;
+    }
+    // Если data это массив
+    else if (Array.isArray(data) && data.length > 0) {
+      videoUrl = data[0]?.video_url || data[0]?.url || data[0]?.video;
+    }
+    // Поле result
+    else if (data.result?.video_url) {
+      videoUrl = data.result.video_url;
+    } else if (data.result?.url) {
+      videoUrl = data.result.url;
     }
     
+    console.log('Extracted videoUrl:', videoUrl);
+    
     return res.status(200).json({
-      success: true,
+      success: !!videoUrl,
       videoUrl,
       rawResponse: data,
     });
