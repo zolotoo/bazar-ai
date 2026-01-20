@@ -46,8 +46,21 @@ function formatDate(dateStr?: string): string {
 
 function calculateViralCoefficient(views?: number, takenAt?: string): number {
   if (!views) return 0;
-  const daysOld = takenAt ? Math.max(1, (Date.now() - Number(takenAt) * 1000) / (1000 * 60 * 60 * 24)) : 30;
-  return Math.round((views / daysOld) / 100) / 10;
+  
+  let daysOld = 30; // по умолчанию
+  
+  if (takenAt) {
+    const ts = Number(takenAt);
+    if (!isNaN(ts)) {
+      const videoDate = ts > 1e12 ? new Date(ts) : new Date(ts * 1000);
+      if (!isNaN(videoDate.getTime())) {
+        daysOld = Math.max(1, Math.floor((Date.now() - videoDate.getTime()) / (1000 * 60 * 60 * 24)));
+      }
+    }
+  }
+  
+  // K просмотров в день
+  return Math.round((views / daysOld / 1000) * 10) / 10;
 }
 
 export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {

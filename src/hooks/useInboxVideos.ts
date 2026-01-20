@@ -134,9 +134,23 @@ export function useInboxVideos() {
     videoId?: string;
     projectId?: string;
     folderId?: string;
+    takenAt?: string | number;
   }) => {
     const userId = getUserId();
     const videoId = video.videoId || video.shortcode || `video-${Date.now()}`;
+    
+    // Конвертируем taken_at в число (unix timestamp)
+    let takenAtTimestamp: number | undefined;
+    if (video.takenAt) {
+      if (typeof video.takenAt === 'number') {
+        takenAtTimestamp = video.takenAt > 1e12 ? Math.floor(video.takenAt / 1000) : video.takenAt;
+      } else if (typeof video.takenAt === 'string') {
+        const ts = Number(video.takenAt);
+        if (!isNaN(ts)) {
+          takenAtTimestamp = ts > 1e12 ? Math.floor(ts / 1000) : ts;
+        }
+      }
+    }
     
     // Создаём локальное видео сразу для быстрого UI
     const localVideo: IncomingVideo & { 
@@ -144,6 +158,7 @@ export function useInboxVideos() {
       like_count?: number; 
       comment_count?: number;
       owner_username?: string;
+      taken_at?: number;
     } = {
       id: `local-${Date.now()}`,
       title: video.title,
@@ -154,6 +169,7 @@ export function useInboxVideos() {
       like_count: video.likeCount,
       comment_count: video.commentCount,
       owner_username: video.ownerUsername,
+      taken_at: takenAtTimestamp,
     };
 
     // Оптимистичное обновление UI
@@ -176,6 +192,7 @@ export function useInboxVideos() {
           comment_count: video.commentCount,
           project_id: video.projectId,
           folder_id: video.folderId || 'inbox',
+          taken_at: takenAtTimestamp,
         }, {
           onConflict: 'user_id,video_id'
         })

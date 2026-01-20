@@ -2,42 +2,49 @@ import { useState } from 'react';
 import { useWorkspaceZones, ZoneVideo } from '../hooks/useWorkspaceZones';
 import { useInboxVideos } from '../hooks/useInboxVideos';
 import { useProjectContext } from '../contexts/ProjectContext';
-import { Sparkles, Star, FileText, Trash2, ExternalLink, ChevronLeft, Plus, Inbox, Lightbulb, Camera, Scissors, Check, FolderOpen } from 'lucide-react';
+import { Sparkles, Star, FileText, Trash2, ExternalLink, ChevronLeft, Plus, Inbox, Lightbulb, Camera, Scissors, Check, FolderOpen, ArrowRightLeft } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '../utils/cn';
 import { AnimatedFolder3D, FolderVideo } from './ui/Folder3D';
 import { VideoGradientCard } from './ui/VideoGradientCard';
 import { VideoDetailPage } from './VideoDetailPage';
 
 
-// Расчёт коэффициента виральности
+// Расчёт коэффициента виральности (K просмотров в день)
 function calculateViralCoefficient(views?: number, takenAt?: string | number | Date): number {
-  if (!views || views < 30000 || !takenAt) return 0;
+  if (!views) return 0;
   
-  let videoDate: Date;
+  let videoDate: Date | null = null;
   
   if (takenAt instanceof Date) {
     videoDate = takenAt;
   } else if (typeof takenAt === 'string') {
+    // ISO формат или timestamp строкой
     if (takenAt.includes('T') || takenAt.includes('-')) {
       videoDate = new Date(takenAt);
     } else {
-      videoDate = new Date(Number(takenAt) * 1000);
+      // Unix timestamp в секундах
+      const ts = Number(takenAt);
+      if (!isNaN(ts)) {
+        videoDate = new Date(ts * 1000);
+      }
     }
   } else if (typeof takenAt === 'number') {
+    // Если > 1e12 - это миллисекунды, иначе секунды
     videoDate = takenAt > 1e12 ? new Date(takenAt) : new Date(takenAt * 1000);
-  } else {
-    return 0;
   }
   
-  if (isNaN(videoDate.getTime())) return 0;
+  // Если нет даты - используем 30 дней по умолчанию
+  if (!videoDate || isNaN(videoDate.getTime())) {
+    return Math.round((views / 30000) * 10) / 10; // K/день при 30 днях
+  }
   
   const today = new Date();
   const diffTime = today.getTime() - videoDate.getTime();
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  const diffDays = Math.max(1, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
   
-  if (diffDays <= 0) return 0;
-  
-  return Math.round((views / (diffDays * 1000)) * 100) / 100;
+  // Возвращаем K просмотров в день (views / days / 1000)
+  return Math.round((views / diffDays / 1000) * 10) / 10;
 }
 
 // Конвертация ZoneVideo в FolderVideo для 3D папки
@@ -87,9 +94,23 @@ export function Workspace() {
   const [dropTargetZone, setDropTargetZone] = useState<string | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<FolderConfig | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<ZoneVideo | null>(null);
+  const [moveMenuVideoId, setMoveMenuVideoId] = useState<string | null>(null);
   
   // Используем папки из текущего проекта или дефолтные
   const folderConfigs = defaultFolderConfigs;
+
+  // Перемещение видео в другую папку
+  const handleMoveToFolder = async (video: ZoneVideo, targetFolderId: string) => {
+    const targetFolder = folderConfigs.find(f => f.id === targetFolderId);
+    try {
+      await moveVideoToZone(video.id, targetFolderId);
+      setMoveMenuVideoId(null);
+      toast.success(`Перемещено в "${targetFolder?.title || 'папку'}"`);
+    } catch (err) {
+      console.error('Ошибка перемещения:', err);
+      toast.error('Ошибка перемещения');
+    }
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -249,7 +270,7 @@ export function Workspace() {
                       onClick={() => setSelectedVideo(video)}
                       onDragStart={() => setDraggedVideo(video)}
                       folderMenu={
-                        <div className="absolute bottom-12 right-0 bg-white rounded-2xl shadow-2xl p-2 min-w-[140px] z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                        <div className="absolute bottom-12 right-0 bg-white rounded-2xl shadow-2xl p-2 min-w-[180px] z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
                           <button
                             onClick={(e) => { e.stopPropagation(); setSelectedVideo(video); }}
                             className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-orange-50 transition-colors text-left"
@@ -259,6 +280,59 @@ export function Workspace() {
                             </div>
                             <span className="text-sm font-medium text-slate-700">Работать</span>
                           </button>
+                          
+                          {/* Переместить в папку */}
+                          <div className="relative">
+                            <button
+                              onClick={(e) => { 
+                                e.stopPropagation(); 
+                                setMoveMenuVideoId(moveMenuVideoId === video.id ? null : video.id);
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-indigo-50 transition-colors text-left"
+                            >
+                              <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
+                                <ArrowRightLeft className="w-4 h-4 text-indigo-600" />
+                              </div>
+                              <span className="text-sm font-medium text-slate-700">Переместить</span>
+                            </button>
+                            
+                            {/* Подменю с папками */}
+                            {moveMenuVideoId === video.id && (
+                              <div className="absolute left-full top-0 ml-2 bg-white rounded-xl shadow-xl p-2 min-w-[160px] z-50 animate-in fade-in slide-in-from-left-2 duration-150">
+                                <p className="px-3 py-1.5 text-xs text-slate-400 font-medium">Переместить в:</p>
+                                {folderConfigs
+                                  .filter(f => f.id !== selectedFolder?.id)
+                                  .map(folder => (
+                                    <button
+                                      key={folder.id}
+                                      onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        handleMoveToFolder(video, folder.id || 'inbox');
+                                      }}
+                                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors text-left"
+                                    >
+                                      <div 
+                                        className="w-6 h-6 rounded-md flex items-center justify-center"
+                                        style={{ backgroundColor: `${folder.color}20` }}
+                                      >
+                                        {iconMap[folder.iconType] && (
+                                          <div className="w-3.5 h-3.5" style={{ color: folder.color }}>
+                                            {folder.iconType === 'inbox' && <Inbox className="w-3.5 h-3.5" />}
+                                            {folder.iconType === 'lightbulb' && <Lightbulb className="w-3.5 h-3.5" />}
+                                            {folder.iconType === 'file' && <FileText className="w-3.5 h-3.5" />}
+                                            {folder.iconType === 'camera' && <Camera className="w-3.5 h-3.5" />}
+                                            {folder.iconType === 'scissors' && <Scissors className="w-3.5 h-3.5" />}
+                                            {folder.iconType === 'check' && <Check className="w-3.5 h-3.5" />}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <span className="text-sm text-slate-700">{folder.title}</span>
+                                    </button>
+                                  ))}
+                              </div>
+                            )}
+                          </div>
+                          
                           <a
                             href={video.url}
                             target="_blank"

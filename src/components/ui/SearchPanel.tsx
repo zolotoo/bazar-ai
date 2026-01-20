@@ -496,6 +496,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
         ownerUsername: result.owner?.username,
         projectId: currentProjectId || undefined,
         folderId: folderId,
+        takenAt: result.taken_at,
       });
       toast.success(`Добавлено в "${folderName}"`, {
         description: `Проект: ${currentProjectName} • @${result.owner?.username || 'instagram'}`,
@@ -547,12 +548,15 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
         likeCount: linkPreview.like_count,
         commentCount: linkPreview.comment_count,
         ownerUsername: linkPreview.owner?.username,
+        projectId: currentProjectId || undefined,
+        folderId: 'ideas',
+        takenAt: linkPreview.taken_at,
       });
       
       setLinkUrl('');
       setLinkPreview(null);
       toast.success('Добавлено в папку "Идеи"', {
-        description: `@${linkPreview.owner?.username || 'instagram'} • ${formatNumber(linkPreview.view_count)} просмотров`,
+        description: `Проект: ${currentProjectName} • @${linkPreview.owner?.username || 'instagram'}`,
       });
     } catch (err) {
       console.error('Ошибка добавления:', err);
@@ -578,6 +582,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
           ownerUsername: result.owner?.username,
           projectId: currentProjectId || undefined,
           folderId: folderId,
+          takenAt: result.taken_at,
         });
       } else {
         // Для остальных папок используем addVideoToWorkspace
