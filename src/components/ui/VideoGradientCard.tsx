@@ -12,6 +12,7 @@ export interface VideoGradientCardProps {
   likeCount?: number;
   date?: string;
   viralCoef?: number;
+  folderBadge?: { name: string; color: string }; // Бейдж папки
   onClick?: () => void;
   onAdd?: () => void;
   onDragStart?: (e: React.DragEvent) => void;
@@ -36,6 +37,7 @@ export const VideoGradientCard = ({
   likeCount,
   date,
   viralCoef = 0,
+  folderBadge,
   onClick,
   onAdd,
   onDragStart,
@@ -184,14 +186,30 @@ export const VideoGradientCard = ({
             </div>
 
             {/* Stats line */}
-            <p className="text-sm text-white/70 font-medium mb-3">
+            <p className="text-sm text-white/70 font-medium mb-2">
               {viewCount !== undefined && <>{formatNumber(viewCount)} views</>}
               {viewCount !== undefined && likeCount !== undefined && ' • '}
               {likeCount !== undefined && <>{formatNumber(likeCount)} likes</>}
             </p>
 
+            {/* Folder badge - показывает в какой папке находится видео */}
+            {folderBadge && (
+              <div className="mb-2">
+                <span 
+                  className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold"
+                  style={{ 
+                    backgroundColor: folderBadge.color + '30',
+                    color: 'white',
+                    border: `1px solid ${folderBadge.color}50`
+                  }}
+                >
+                  {folderBadge.name}
+                </span>
+              </div>
+            )}
+
             {/* Caption */}
-            {caption && (
+            {caption && !folderBadge && (
               <p className="text-white/60 text-xs leading-relaxed line-clamp-2 mb-3">
                 {caption.slice(0, 80)}{caption.length > 80 ? '...' : ''}
               </p>

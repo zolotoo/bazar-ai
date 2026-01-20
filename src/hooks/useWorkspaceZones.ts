@@ -19,6 +19,7 @@ export interface ZoneVideo {
   preview_url: string;
   url: string;
   zone_id: string | null;
+  folder_id?: string; // Для отображения в какой папке находится видео
   position_x: number;
   position_y: number;
   view_count?: number;
@@ -28,6 +29,10 @@ export interface ZoneVideo {
   status: string;
   taken_at?: string;
   created_at?: string;
+  transcript_id?: string;
+  transcript_status?: string;
+  transcript_text?: string;
+  download_url?: string;
 }
 
 // Дефолтные зоны

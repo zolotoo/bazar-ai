@@ -66,7 +66,7 @@ interface FolderConfig {
 }
 
 const defaultFolderConfigs: FolderConfig[] = [
-  { id: 'inbox', title: 'Входящие', color: '#64748b', iconType: 'inbox' },
+  { id: 'all', title: 'Все видео', color: '#64748b', iconType: 'all' },
   { id: 'ideas', title: 'Идеи', color: '#f97316', iconType: 'lightbulb' },
   { id: '1', title: 'Ожидает сценария', color: '#6366f1', iconType: 'file' },
   { id: '2', title: 'Ожидает съёмок', color: '#f59e0b', iconType: 'camera' },
@@ -74,8 +74,11 @@ const defaultFolderConfigs: FolderConfig[] = [
   { id: '4', title: 'Готовое', color: '#8b5cf6', iconType: 'check' },
 ];
 
+// Папки для фильтрации (без "Все видео")
+const filterableFolders = defaultFolderConfigs.filter(f => f.id !== 'all');
+
 const iconMap: Record<string, React.ReactNode> = {
-  inbox: <Inbox className="w-8 h-8 text-slate-500" />,
+  all: <Inbox className="w-8 h-8 text-slate-500" />,
   lightbulb: <Lightbulb className="w-8 h-8 text-orange-500" />,
   plus: <Plus className="w-8 h-8 text-orange-500" />,
   star: <Star className="w-8 h-8 text-indigo-500" />,
@@ -96,7 +99,8 @@ export function Workspace() {
   const [selectedVideo, setSelectedVideo] = useState<ZoneVideo | null>(null);
   const [moveMenuVideoId, setMoveMenuVideoId] = useState<string | null>(null);
   const [cardMenuVideoId, setCardMenuVideoId] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<'viral' | 'views' | 'likes' | 'date'>('viral');
+  const [sortBy, setSortBy] = useState<'viral' | 'views' | 'likes' | 'date' | 'folder'>('viral');
+  const [filterByFolder, setFilterByFolder] = useState<string | null>(null); // null = все
   
   // Используем папки из текущего проекта или дефолтные
   const folderConfigs = defaultFolderConfigs;
@@ -140,37 +144,63 @@ export function Workspace() {
     }
   };
 
+  // Преобразование inbox видео в ZoneVideo формат
+  const transformInboxVideo = (v: any, folderId: string): ZoneVideo => ({
+    id: v.id,
+    title: v.title,
+    preview_url: v.previewUrl,
+    url: v.url,
+    zone_id: folderId,
+    folder_id: (v as any).folder_id || 'ideas',
+    position_x: 0,
+    position_y: 0,
+    view_count: (v as any).view_count,
+    like_count: (v as any).like_count,
+    comment_count: (v as any).comment_count,
+    owner_username: (v as any).owner_username,
+    taken_at: (v as any).taken_at,
+    created_at: v.receivedAt?.toISOString(),
+    transcript_id: (v as any).transcript_id,
+    transcript_status: (v as any).transcript_status,
+    transcript_text: (v as any).transcript_text,
+    download_url: (v as any).download_url,
+    status: 'active',
+  });
+
   // Получаем видео для папки по folderId
   const getFolderVideos = (folderId: string | null): ZoneVideo[] => {
-    // Для "inbox" и "ideas" показываем видео из inboxVideos, фильтруя по folder_id
-    if (folderId === 'inbox' || folderId === 'ideas') {
+    // Для "all" - показываем ВСЕ видео проекта
+    if (folderId === 'all') {
+      return inboxVideos.map(v => {
+        const videoFolderId = (v as any).folder_id || 'ideas';
+        return transformInboxVideo(v, videoFolderId);
+      });
+    }
+    
+    // Для "ideas" показываем видео из inboxVideos с folder_id = ideas
+    if (folderId === 'ideas') {
       return inboxVideos
         .filter(v => {
-          const videoFolderId = (v as any).folder_id || 'inbox';
-          return videoFolderId === folderId;
+          const videoFolderId = (v as any).folder_id || 'ideas';
+          return videoFolderId === 'ideas';
         })
-        .map(v => ({
-          id: v.id,
-          title: v.title,
-          preview_url: v.previewUrl,
-          url: v.url,
-          zone_id: folderId,
-          position_x: 0,
-          position_y: 0,
-          view_count: (v as any).view_count,
-          like_count: (v as any).like_count,
-          comment_count: (v as any).comment_count,
-          owner_username: (v as any).owner_username,
-          taken_at: (v as any).taken_at,
-          created_at: v.receivedAt?.toISOString(),
-          transcript_id: (v as any).transcript_id,
-          transcript_status: (v as any).transcript_status,
-          transcript_text: (v as any).transcript_text,
-          download_url: (v as any).download_url,
-          status: 'active',
-        }));
+        .map(v => transformInboxVideo(v, 'ideas'));
     }
+    
+    // Для других папок - из workspace zones
     return getVideosByZone(folderId);
+  };
+  
+  // Получить название папки по ID
+  const getFolderName = (folderId: string | null): string => {
+    const folder = filterableFolders.find(f => f.id === folderId);
+    return folder?.title || 'Неизвестно';
+  };
+  
+  // Получить цвет папки по ID
+  const getFolderColor = (folderId: string | null): string => {
+    const folder = filterableFolders.find(f => f.id === folderId);
+    return folder?.color || '#64748b';
   };
 
   if (loading) {
@@ -208,10 +238,16 @@ export function Workspace() {
   // Модалка папки
   if (selectedFolder) {
     const folderVideos = getFolderVideos(selectedFolder.id);
-    const isInboxFolder = selectedFolder.id === 'inbox' || selectedFolder.id === 'ideas';
+    const isAllVideos = selectedFolder.id === 'all';
+    const isInboxFolder = selectedFolder.id === 'ideas' || isAllVideos;
+    
+    // Фильтрация по папке (только для "Все видео")
+    const filteredVideos = isAllVideos && filterByFolder
+      ? folderVideos.filter(v => v.folder_id === filterByFolder)
+      : folderVideos;
     
     // Сортировка видео
-    const sortedVideos = [...folderVideos].sort((a, b) => {
+    const sortedVideos = [...filteredVideos].sort((a, b) => {
       switch (sortBy) {
         case 'viral':
           return calculateViralCoefficient(b.view_count, b.taken_at || b.created_at) - 
@@ -224,6 +260,11 @@ export function Workspace() {
           const dateA = a.taken_at || a.created_at || '';
           const dateB = b.taken_at || b.created_at || '';
           return String(dateB).localeCompare(String(dateA));
+        case 'folder':
+          // Сортировка по порядку папок
+          const orderA = filterableFolders.findIndex(f => f.id === a.folder_id);
+          const orderB = filterableFolders.findIndex(f => f.id === b.folder_id);
+          return orderA - orderB;
         default:
           return 0;
       }
@@ -235,14 +276,14 @@ export function Workspace() {
           {/* Header */}
           <div className="mb-6">
             <button
-              onClick={() => { setSelectedFolder(null); setCardMenuVideoId(null); }}
+              onClick={() => { setSelectedFolder(null); setCardMenuVideoId(null); setFilterByFolder(null); }}
               className="flex items-center gap-2 text-slate-500 hover:text-slate-700 mb-4 transition-colors active:scale-95"
             >
               <ChevronLeft className="w-5 h-5" />
               <span className="text-sm font-medium">Назад к папкам</span>
             </button>
             
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center gap-4">
                 <div 
                   className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg"
@@ -255,27 +296,45 @@ export function Workspace() {
                     {selectedFolder.title}
                   </h1>
                   <p className="text-neutral-500 text-sm">
-                    {folderVideos.length} видео
+                    {filteredVideos.length} видео {filterByFolder && `в "${getFolderName(filterByFolder)}"`}
                   </p>
                 </div>
               </div>
 
-              {/* Сортировка */}
-              {folderVideos.length > 1 && (
-                <div className="flex items-center gap-2">
-                  <ArrowDownUp className="w-4 h-4 text-slate-400" />
+              {/* Фильтры и сортировка */}
+              <div className="flex items-center gap-3">
+                {/* Фильтр по папке (только для "Все видео") */}
+                {isAllVideos && (
                   <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                    value={filterByFolder || ''}
+                    onChange={(e) => setFilterByFolder(e.target.value || null)}
                     className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-orange-500/30 cursor-pointer"
                   >
-                    <option value="viral">По виральности</option>
-                    <option value="views">По просмотрам</option>
-                    <option value="likes">По лайкам</option>
-                    <option value="date">По дате</option>
+                    <option value="">Все папки</option>
+                    {filterableFolders.map(f => (
+                      <option key={f.id} value={f.id || ''}>{f.title}</option>
+                    ))}
                   </select>
-                </div>
-              )}
+                )}
+                
+                {/* Сортировка */}
+                {filteredVideos.length > 1 && (
+                  <div className="flex items-center gap-2">
+                    <ArrowDownUp className="w-4 h-4 text-slate-400" />
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                      className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-orange-500/30 cursor-pointer"
+                    >
+                      <option value="viral">По виральности</option>
+                      <option value="views">По просмотрам</option>
+                      <option value="likes">По лайкам</option>
+                      <option value="date">По дате</option>
+                      {isAllVideos && <option value="folder">По стадии</option>}
+                    </select>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -298,6 +357,12 @@ export function Workspace() {
                   const thumbnailUrl = video.preview_url || 'https://via.placeholder.com/270x360';
                   const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at || video.created_at);
                   
+                  // Бейдж папки - показываем только в "Все видео"
+                  const folderBadge = isAllVideos && video.folder_id ? {
+                    name: getFolderName(video.folder_id),
+                    color: getFolderColor(video.folder_id)
+                  } : undefined;
+                  
                   return (
                     <VideoGradientCard
                       key={`folder-${video.id}-${idx}`}
@@ -307,6 +372,7 @@ export function Workspace() {
                       viewCount={video.view_count}
                       likeCount={video.like_count}
                       viralCoef={viralCoef}
+                      folderBadge={folderBadge}
                       onClick={() => setSelectedVideo(video)}
                       onDragStart={() => setDraggedVideo(video)}
                       showFolderMenu={cardMenuVideoId === video.id}
