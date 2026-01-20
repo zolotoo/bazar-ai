@@ -110,36 +110,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const checkSession = async () => {
       const sessionToken = getSession();
-      console.log('[Auth] Checking session:', sessionToken ? 'found' : 'not found');
+      console.log('[Auth] Checking session:', sessionToken ? sessionToken.slice(0, 20) + '...' : 'not found');
       
       if (!sessionToken) {
+        console.log('[Auth] No session token, showing login');
         setLoading(false);
         return;
       }
 
       try {
-        // Проверяем сессию в Supabase
+        // Проверяем сессию в Supabase (без join с users)
         const { data, error } = await supabase
           .from('sessions')
-          .select('*, users(*)')
+          .select('token, telegram_username, expires_at, created_at')
           .eq('token', sessionToken)
           .gt('expires_at', new Date().toISOString())
-          .single();
+          .maybeSingle();
 
-        if (error || !data) {
-          console.log('[Auth] Session invalid or expired');
+        console.log('[Auth] Session check result:', { data, error });
+
+        if (error) {
+          console.log('[Auth] Session query error:', error.message);
           clearSession();
           setLoading(false);
           return;
         }
 
-        console.log('[Auth] Session valid, user:', data.users);
+        if (!data) {
+          console.log('[Auth] Session not found or expired');
+          clearSession();
+          setLoading(false);
+          return;
+        }
+
+        console.log('[Auth] Session valid for user:', data.telegram_username);
         
-        // Обновляем last_active
-        await supabase
+        // Обновляем last_active (не ждём ответа)
+        supabase
           .from('sessions')
           .update({ last_active: new Date().toISOString() })
-          .eq('token', sessionToken);
+          .eq('token', sessionToken)
+          .then(() => console.log('[Auth] Updated last_active'));
 
         setUser({
           id: `tg-${data.telegram_username}`,
