@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useWorkspaceZones, ZoneVideo } from '../hooks/useWorkspaceZones';
 import { useInboxVideos } from '../hooks/useInboxVideos';
 import { useProjectContext } from '../contexts/ProjectContext';
-import { Sparkles, Star, FileText, Trash2, ExternalLink, ChevronLeft, Plus, Inbox, Lightbulb, Camera, Scissors, Check, FolderOpen, ArrowRightLeft } from 'lucide-react';
+import { Sparkles, Star, FileText, Trash2, ExternalLink, ChevronLeft, Plus, Inbox, Lightbulb, Camera, Scissors, Check, FolderOpen, ArrowRightLeft, ArrowDownUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../utils/cn';
 import { AnimatedFolder3D, FolderVideo } from './ui/Folder3D';
@@ -95,6 +95,8 @@ export function Workspace() {
   const [selectedFolder, setSelectedFolder] = useState<FolderConfig | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<ZoneVideo | null>(null);
   const [moveMenuVideoId, setMoveMenuVideoId] = useState<string | null>(null);
+  const [cardMenuVideoId, setCardMenuVideoId] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<'viral' | 'views' | 'likes' | 'date'>('viral');
   
   // Используем папки из текущего проекта или дефолтные
   const folderConfigs = defaultFolderConfigs;
@@ -206,7 +208,26 @@ export function Workspace() {
   // Модалка папки
   if (selectedFolder) {
     const folderVideos = getFolderVideos(selectedFolder.id);
-    const isInboxFolder = selectedFolder.id === null;
+    const isInboxFolder = selectedFolder.id === 'inbox' || selectedFolder.id === 'ideas';
+    
+    // Сортировка видео
+    const sortedVideos = [...folderVideos].sort((a, b) => {
+      switch (sortBy) {
+        case 'viral':
+          return calculateViralCoefficient(b.view_count, b.taken_at || b.created_at) - 
+                 calculateViralCoefficient(a.view_count, a.taken_at || a.created_at);
+        case 'views':
+          return (b.view_count || 0) - (a.view_count || 0);
+        case 'likes':
+          return (b.like_count || 0) - (a.like_count || 0);
+        case 'date':
+          const dateA = a.taken_at || a.created_at || '';
+          const dateB = b.taken_at || b.created_at || '';
+          return String(dateB).localeCompare(String(dateA));
+        default:
+          return 0;
+      }
+    });
     
     return (
       <div className="h-full overflow-hidden flex flex-col bg-[#f5f5f5]">
@@ -214,34 +235,53 @@ export function Workspace() {
           {/* Header */}
           <div className="mb-6">
             <button
-              onClick={() => setSelectedFolder(null)}
+              onClick={() => { setSelectedFolder(null); setCardMenuVideoId(null); }}
               className="flex items-center gap-2 text-slate-500 hover:text-slate-700 mb-4 transition-colors active:scale-95"
             >
               <ChevronLeft className="w-5 h-5" />
               <span className="text-sm font-medium">Назад к папкам</span>
             </button>
             
-            <div className="flex items-center gap-4">
-              <div 
-                className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg"
-                style={{ backgroundColor: selectedFolder.color }}
-              >
-                <FolderOpen className="w-7 h-7 text-white" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div 
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg"
+                  style={{ backgroundColor: selectedFolder.color }}
+                >
+                  <FolderOpen className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl md:text-4xl font-serif italic text-neutral-900 tracking-tighter">
+                    {selectedFolder.title}
+                  </h1>
+                  <p className="text-neutral-500 text-sm">
+                    {folderVideos.length} видео
+                  </p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-3xl md:text-4xl font-serif italic text-neutral-900 tracking-tighter">
-                  {selectedFolder.title}
-                </h1>
-                <p className="text-neutral-500 text-sm">
-                  {folderVideos.length} видео
-                </p>
-              </div>
+
+              {/* Сортировка */}
+              {folderVideos.length > 1 && (
+                <div className="flex items-center gap-2">
+                  <ArrowDownUp className="w-4 h-4 text-slate-400" />
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                    className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-orange-500/30 cursor-pointer"
+                  >
+                    <option value="viral">По виральности</option>
+                    <option value="views">По просмотрам</option>
+                    <option value="likes">По лайкам</option>
+                    <option value="date">По дате</option>
+                  </select>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Videos Grid */}
           <div className="flex-1 overflow-y-auto custom-scrollbar-light">
-            {folderVideos.length === 0 ? (
+            {sortedVideos.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-center">
                 <div 
                   className="w-20 h-20 rounded-2xl flex items-center justify-center mb-4"
@@ -254,7 +294,7 @@ export function Workspace() {
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 pb-6">
-                {folderVideos.map((video, idx) => {
+                {sortedVideos.map((video, idx) => {
                   const thumbnailUrl = video.preview_url || 'https://via.placeholder.com/270x360';
                   const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at || video.created_at);
                   
@@ -269,10 +309,15 @@ export function Workspace() {
                       viralCoef={viralCoef}
                       onClick={() => setSelectedVideo(video)}
                       onDragStart={() => setDraggedVideo(video)}
+                      showFolderMenu={cardMenuVideoId === video.id}
+                      onFolderMenuToggle={() => {
+                        setCardMenuVideoId(cardMenuVideoId === video.id ? null : video.id);
+                        setMoveMenuVideoId(null);
+                      }}
                       folderMenu={
-                        <div className="absolute bottom-12 right-0 bg-white rounded-2xl shadow-2xl p-2 min-w-[180px] z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                        <div className="bg-white rounded-2xl shadow-2xl p-2 min-w-[180px] animate-in fade-in slide-in-from-top-2 duration-200">
                           <button
-                            onClick={(e) => { e.stopPropagation(); setSelectedVideo(video); }}
+                            onClick={(e) => { e.stopPropagation(); setSelectedVideo(video); setCardMenuVideoId(null); }}
                             className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-orange-50 transition-colors text-left"
                           >
                             <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
@@ -308,6 +353,7 @@ export function Workspace() {
                                       onClick={(e) => { 
                                         e.stopPropagation(); 
                                         handleMoveToFolder(video, folder.id || 'inbox');
+                                        setCardMenuVideoId(null);
                                       }}
                                       className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors text-left"
                                     >
@@ -315,16 +361,12 @@ export function Workspace() {
                                         className="w-6 h-6 rounded-md flex items-center justify-center"
                                         style={{ backgroundColor: `${folder.color}20` }}
                                       >
-                                        {iconMap[folder.iconType] && (
-                                          <div className="w-3.5 h-3.5" style={{ color: folder.color }}>
-                                            {folder.iconType === 'inbox' && <Inbox className="w-3.5 h-3.5" />}
-                                            {folder.iconType === 'lightbulb' && <Lightbulb className="w-3.5 h-3.5" />}
-                                            {folder.iconType === 'file' && <FileText className="w-3.5 h-3.5" />}
-                                            {folder.iconType === 'camera' && <Camera className="w-3.5 h-3.5" />}
-                                            {folder.iconType === 'scissors' && <Scissors className="w-3.5 h-3.5" />}
-                                            {folder.iconType === 'check' && <Check className="w-3.5 h-3.5" />}
-                                          </div>
-                                        )}
+                                        {folder.iconType === 'inbox' && <Inbox className="w-3.5 h-3.5" style={{ color: folder.color }} />}
+                                        {folder.iconType === 'lightbulb' && <Lightbulb className="w-3.5 h-3.5" style={{ color: folder.color }} />}
+                                        {folder.iconType === 'file' && <FileText className="w-3.5 h-3.5" style={{ color: folder.color }} />}
+                                        {folder.iconType === 'camera' && <Camera className="w-3.5 h-3.5" style={{ color: folder.color }} />}
+                                        {folder.iconType === 'scissors' && <Scissors className="w-3.5 h-3.5" style={{ color: folder.color }} />}
+                                        {folder.iconType === 'check' && <Check className="w-3.5 h-3.5" style={{ color: folder.color }} />}
                                       </div>
                                       <span className="text-sm text-slate-700">{folder.title}</span>
                                     </button>
@@ -346,7 +388,11 @@ export function Workspace() {
                             <span className="text-sm font-medium text-slate-700">Открыть</span>
                           </a>
                           <button
-                            onClick={(e) => { e.stopPropagation(); handleDeleteVideo(video.id, isInboxFolder); }}
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              handleDeleteVideo(video.id, isInboxFolder); 
+                              setCardMenuVideoId(null);
+                            }}
                             className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-red-50 transition-colors text-left"
                           >
                             <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">

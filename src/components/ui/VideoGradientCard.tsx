@@ -2,7 +2,7 @@
 import React, { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { cn } from "../../utils/cn";
-import { Sparkles, Plus, Play, ArrowRight } from "lucide-react";
+import { Sparkles, MoreVertical, ArrowRight } from "lucide-react";
 
 export interface VideoGradientCardProps {
   thumbnailUrl: string;
@@ -68,7 +68,7 @@ export const VideoGradientCard = ({
         initial={{ y: 0 }}
         animate={{
           y: isHovered ? -4 : 0,
-          scale: isHovered ? 1.03 : 1,
+          scale: isHovered ? 1.02 : 1,
         }}
         transition={{
           type: "spring",
@@ -79,19 +79,19 @@ export const VideoGradientCard = ({
         onMouseLeave={() => setIsHovered(false)}
         onClick={onClick}
       >
-        {/* Background image with parallax */}
+        {/* Background image with zoom on hover */}
         <motion.div 
           className="absolute inset-0 z-0 bg-cover bg-center"
           style={{ 
             backgroundImage: `url(${thumbnailUrl})`,
           }}
           animate={{
-            scale: isHovered ? 1.08 : 1,
+            scale: isHovered ? 1.1 : 1,
           }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
         />
 
-        {/* Gradient overlay - серый/тёмный как на референсе */}
+        {/* Gradient overlay */}
         <div
           className="absolute inset-0 z-10"
           style={{
@@ -106,9 +106,9 @@ export const VideoGradientCard = ({
         />
 
         {/* Content */}
-        <div className="relative flex flex-col justify-end h-full p-5 z-20 text-white">
-          {/* Top badges - абсолютное позиционирование */}
-          <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
+        <div className="relative flex flex-col justify-end h-full p-4 z-20 text-white">
+          {/* Top badges */}
+          <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
             {/* Viral badge */}
             <motion.div
               className={cn(
@@ -126,8 +126,29 @@ export const VideoGradientCard = ({
               <span className="text-xs font-bold">{viralCoef > 0 ? viralCoef : '—'}</span>
             </motion.div>
             
-            {/* Date badge */}
-            {date && (
+            {/* Menu button - показывается при наведении или если открыто меню */}
+            {onFolderMenuToggle && (
+              <motion.button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onFolderMenuToggle();
+                }}
+                className={cn(
+                  "p-2 rounded-full backdrop-blur-sm transition-all",
+                  showFolderMenu 
+                    ? "bg-white text-slate-800" 
+                    : "bg-black/30 text-white hover:bg-white/20"
+                )}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: isHovered || showFolderMenu ? 1 : 0 }}
+                transition={{ duration: 0.15 }}
+              >
+                <MoreVertical className="w-4 h-4" />
+              </motion.button>
+            )}
+            
+            {/* Date badge - если нет кнопки меню */}
+            {date && !onFolderMenuToggle && (
               <motion.div
                 className="px-2.5 py-1 rounded-full bg-black/30 backdrop-blur-sm text-white/90 text-xs font-medium"
                 initial={{ opacity: 0, y: -10 }}
@@ -139,29 +160,23 @@ export const VideoGradientCard = ({
             )}
           </div>
 
-          {/* Play button on hover - центр карточки */}
-          <motion.div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full bg-white/95 flex items-center justify-center shadow-2xl pointer-events-none z-30"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ 
-              opacity: isHovered ? 1 : 0, 
-              scale: isHovered ? 1 : 0.8 
-            }}
-            transition={{ duration: 0.2 }}
-          >
-            <Play className="w-6 h-6 text-slate-800 ml-1" fill="currentColor" />
-          </motion.div>
+          {/* Folder menu - позиционируем от верхней кнопки */}
+          {showFolderMenu && folderMenu && (
+            <div className="absolute top-12 right-3 z-50">
+              {folderMenu}
+            </div>
+          )}
 
           {/* Bottom content */}
           <div>
             {/* Username with verified badge */}
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-xl font-bold tracking-tight">
+              <h3 className="text-lg font-bold tracking-tight truncate">
                 @{username || 'instagram'}
               </h3>
               {viralCoef > 5 && (
-                <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
                 </div>
@@ -169,56 +184,32 @@ export const VideoGradientCard = ({
             </div>
 
             {/* Stats line */}
-            <p className="text-sm text-white/70 font-medium mb-4">
+            <p className="text-sm text-white/70 font-medium mb-3">
               {viewCount !== undefined && <>{formatNumber(viewCount)} views</>}
               {viewCount !== undefined && likeCount !== undefined && ' • '}
               {likeCount !== undefined && <>{formatNumber(likeCount)} likes</>}
             </p>
 
-            {/* Caption - показываем только если есть */}
+            {/* Caption */}
             {caption && (
-              <p className="text-white/60 text-xs leading-relaxed line-clamp-2 mb-4">
+              <p className="text-white/60 text-xs leading-relaxed line-clamp-2 mb-3">
                 {caption.slice(0, 80)}{caption.length > 80 ? '...' : ''}
               </p>
             )}
 
-            {/* Action button - стиль как на референсе */}
-            {(onAdd || onFolderMenuToggle) && (
-              <div className="relative">
-                <motion.button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onFolderMenuToggle?.() || onAdd?.();
-                  }}
-                  className={cn(
-                    "w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-300",
-                    "bg-white/10 backdrop-blur-md border border-white/20",
-                    "hover:bg-white/20 hover:border-white/30",
-                    showFolderMenu && "bg-white/25 border-white/40"
-                  )}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <span className="text-sm font-semibold tracking-wide">
-                    {showFolderMenu ? 'Выберите папку' : 'Добавить'}
-                  </span>
-                  <motion.div
-                    animate={{ 
-                      rotate: showFolderMenu ? 45 : 0,
-                      x: isHovered && !showFolderMenu ? 3 : 0 
-                    }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    {showFolderMenu ? (
-                      <Plus className="h-4 w-4" />
-                    ) : (
-                      <ArrowRight className="h-4 w-4" />
-                    )}
-                  </motion.div>
-                </motion.button>
-                
-                {/* Folder menu */}
-                {showFolderMenu && folderMenu}
-              </div>
+            {/* Action button - для добавления (когда нет folderMenu) */}
+            {onAdd && !onFolderMenuToggle && (
+              <motion.button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAdd();
+                }}
+                className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 hover:border-white/30 transition-all"
+                whileTap={{ scale: 0.98 }}
+              >
+                <span className="text-sm font-semibold">Добавить</span>
+                <ArrowRight className="h-4 w-4" />
+              </motion.button>
             )}
           </div>
         </div>
