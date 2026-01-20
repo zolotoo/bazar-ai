@@ -103,18 +103,6 @@ const getIconComponent = (iconType: string, color: string) => {
 };
 
 // Доступные иконки для выбора
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _AVAILABLE_ICONS = [
-  { id: 'folder', name: 'Папка' },
-  { id: 'lightbulb', name: 'Идея' },
-  { id: 'file', name: 'Файл' },
-  { id: 'camera', name: 'Камера' },
-  { id: 'scissors', name: 'Монтаж' },
-  { id: 'check', name: 'Готово' },
-  { id: 'star', name: 'Звезда' },
-  { id: 'sparkles', name: 'Блеск' },
-  { id: 'rejected', name: 'Корзина' },
-];
 
 export function Workspace() {
   const { loading, moveVideoToZone, deleteVideo } = useWorkspaceZones();
