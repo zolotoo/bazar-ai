@@ -400,75 +400,80 @@ export async function getHashtagReels(hashtag: string): Promise<InstagramSearchR
 
 /**
  * Получает информацию о рилсе по URL или shortcode
+ * Использует instagram120 API (тот же что для скачивания)
  */
 export async function getReelByUrl(urlOrShortcode: string): Promise<InstagramSearchResult | null> {
   try {
-    const shortcode = extractShortcodeFromUrl(urlOrShortcode) || urlOrShortcode.trim();
+    // Нормализуем URL
+    let url = urlOrShortcode.trim();
+    if (!url.startsWith('http')) {
+      // Если передан shortcode
+      url = `https://www.instagram.com/reel/${url}/`;
+    }
     
-    if (!shortcode) {
-      console.error('Invalid URL or shortcode:', urlOrShortcode);
+    const shortcode = extractShortcodeFromUrl(url) || urlOrShortcode.trim();
+    
+    console.log('Fetching reel info for URL:', url);
+    
+    // Используем наш API endpoint который работает с instagram120
+    const response = await fetch('/api/download-video', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+    
+    if (!response.ok) {
+      console.error('Download API error:', response.status);
       return null;
     }
     
-    console.log('Fetching reel by shortcode:', shortcode);
+    const data = await response.json();
+    console.log('Download API response for reel info:', data);
     
-    // Пробуем разные endpoints для получения информации о посте
-    const endpoints = [
-      `${API_BASE_URL}/media/${shortcode}`,
-      `${API_BASE_URL}/post/${shortcode}`,
-      `${API_BASE_URL}/reel/${shortcode}`,
-      `https://${RAPIDAPI_HOST_OLD}/api/instagram/media/${shortcode}`,
-      `https://${RAPIDAPI_HOST_OLD}/api/instagram/post/${shortcode}`,
-    ];
-    
-    for (const endpoint of endpoints) {
-      try {
-        const host = endpoint.includes(RAPIDAPI_HOST_OLD) ? RAPIDAPI_HOST_OLD : RAPIDAPI_HOST;
-        console.log('Trying media endpoint:', endpoint);
-        
-        const headers: Record<string, string> = isDev 
-          ? {
-              'X-RapidAPI-Host': host,
-              'X-RapidAPI-Key': RAPIDAPI_KEY,
-            }
-          : {};
-        
-        const response = await fetch(endpoint, {
-          method: 'GET',
-          headers,
-        });
-        
-        console.log(`Media endpoint ${endpoint} status:`, response.status);
-        
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Media endpoint response:', data);
-          
-          // Данные могут быть в разных форматах
-          const item = data.data || data.media || data.post || data;
-          
-          if (item && (item.shortcode || item.id)) {
-            const result = transformSearchResult(item);
-            if (result) {
-              // Если shortcode не был в ответе, используем тот что был в запросе
-              result.shortcode = result.shortcode || shortcode;
-              result.url = result.url || `https://www.instagram.com/reel/${shortcode}/`;
-              return result;
-            }
-          }
-        }
-      } catch (e) {
-        console.warn('Error with endpoint:', e);
-        continue;
-      }
+    if (data.rawResponse && Array.isArray(data.rawResponse) && data.rawResponse.length > 0) {
+      const item = data.rawResponse[0];
+      
+      // Извлекаем данные из meta если есть
+      const meta = item.meta || {};
+      
+      return {
+        id: shortcode,
+        shortcode: shortcode,
+        url: url,
+        thumbnail_url: item.pictureUrl || data.thumbnailUrl || '',
+        display_url: item.pictureUrl || '',
+        caption: meta.title || meta.caption || 'Видео из Instagram',
+        view_count: meta.videoViewCount || meta.view_count,
+        like_count: meta.likeCount || meta.like_count,
+        comment_count: meta.commentCount || meta.comment_count,
+        taken_at: meta.uploadDate || meta.taken_at,
+        owner: {
+          username: meta.author || meta.username || '',
+        },
+        is_video: true,
+        is_reel: true,
+      };
     }
     
-    // Если API не сработал, создаём минимальный объект
-    console.warn('No API returned data, creating minimal object');
+    // Если нет данных но есть videoUrl - создаём минимальный объект
+    if (data.videoUrl) {
+      return {
+        id: shortcode,
+        shortcode: shortcode,
+        url: url,
+        thumbnail_url: data.thumbnailUrl || '',
+        caption: 'Видео из Instagram',
+        is_video: true,
+        is_reel: true,
+      };
+    }
+    
+    // Fallback - минимальный объект
+    console.warn('No data from API, creating minimal object');
     return {
       id: shortcode,
       shortcode: shortcode,
-      url: `https://www.instagram.com/reel/${shortcode}/`,
+      url: url,
       thumbnail_url: '',
       caption: 'Видео из Instagram',
     };
