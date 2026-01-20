@@ -2,9 +2,9 @@ const RAPIDAPI_HOST = 'instagram-scraper-20251.p.rapidapi.com'; // Рабочи�
 const RAPIDAPI_KEY = '959a088626msh74020d3fb11ad19p1e067bjsnb273d9fac830';
 const RAPIDAPI_HOST_OLD = 'instagram-looter2.p.rapidapi.com'; // Для поиска хэштегов/пользователей (fallback)
 
-// На production используем прямой URL, локально — прокси
+// На production используем Vercel serverless прокси, локально — Vite прокси
 const isDev = import.meta.env.DEV;
-const API_BASE_URL = isDev ? '/api-v1' : `https://${RAPIDAPI_HOST}`;
+const API_BASE_URL = '/api-v1'; // Для старых endpoints (fetchReelData и т.д.)
 
 export interface InstagramSearchResult {
   id: string;
@@ -392,20 +392,26 @@ export async function searchInstagramVideos(query: string): Promise<InstagramSea
 
     console.log('Searching for REELS with exact query:', cleanQuery);
 
-    // На production используем полный URL с хостом RapidAPI
+    // На production используем Vercel serverless proxy /api/searchreels
+    // На localhost используем Vite proxy /api-v1/searchreels
     const endpoint = isDev 
-      ? `${API_BASE_URL}/searchreels/?keyword=${encodeURIComponent(cleanQuery)}&url_embed_safe=true`
-      : `https://${RAPIDAPI_HOST}/searchreels/?keyword=${encodeURIComponent(cleanQuery)}&url_embed_safe=true`;
+      ? `/api-v1/searchreels/?keyword=${encodeURIComponent(cleanQuery)}&url_embed_safe=true`
+      : `/api/searchreels?keyword=${encodeURIComponent(cleanQuery)}`;
     
     try {
       console.log('Making request to:', endpoint);
+      
+      // Для локалки нужны заголовки RapidAPI, для прода - нет (прокси добавит)
+      const headers: Record<string, string> = isDev 
+        ? {
+            'X-RapidAPI-Host': RAPIDAPI_HOST,
+            'X-RapidAPI-Key': RAPIDAPI_KEY,
+          }
+        : {};
+      
       const response = await fetch(endpoint, {
         method: 'GET',
-        headers: {
-          'X-RapidAPI-Host': RAPIDAPI_HOST,
-          'X-RapidAPI-Key': RAPIDAPI_KEY,
-          'Content-Type': 'application/json',
-        },
+        headers,
       });
 
       console.log(`Response status: ${response.status}`);
