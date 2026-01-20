@@ -363,7 +363,6 @@ export function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
         });
         
         setLinkUrl('');
-        setShowLinkInput(false);
         toast.success('Рилс добавлен', {
           description: `@${reel.owner?.username || 'instagram'}`,
         });

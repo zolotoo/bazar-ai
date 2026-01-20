@@ -65,38 +65,40 @@ export const VideoGradientCard = ({
   };
 
   return (
-    <motion.div
-      ref={cardRef}
+    <div
       draggable={!!onDragStart}
       onDragStart={onDragStart}
-      className={cn(
-        "relative rounded-[24px] overflow-hidden cursor-pointer group",
-        className
-      )}
-      style={{
-        transformStyle: "preserve-3d",
-        boxShadow: isHovered 
-          ? "0 -8px 60px 4px rgba(251, 146, 60, 0.35), 0 25px 50px -12px rgba(0, 0, 0, 0.25)"
-          : "0 -5px 40px 2px rgba(251, 146, 60, 0.2), 0 10px 25px -5px rgba(0, 0, 0, 0.15)",
-        aspectRatio: "10/16",
-      }}
-      initial={{ y: 0 }}
-      animate={{
-        y: isHovered ? -6 : 0,
-        rotateX: rotation.x,
-        rotateY: rotation.y,
-        scale: isHovered ? 1.02 : 1,
-      }}
-      transition={{
-        type: "spring",
-        stiffness: 400,
-        damping: 25
-      }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={handleMouseLeave}
-      onMouseMove={handleMouseMove}
-      onClick={onClick}
     >
+      <motion.div
+        ref={cardRef}
+        className={cn(
+          "relative rounded-[24px] overflow-hidden cursor-pointer group",
+          className
+        )}
+        style={{
+          transformStyle: "preserve-3d",
+          boxShadow: isHovered 
+            ? "0 -8px 60px 4px rgba(251, 146, 60, 0.35), 0 25px 50px -12px rgba(0, 0, 0, 0.25)"
+            : "0 -5px 40px 2px rgba(251, 146, 60, 0.2), 0 10px 25px -5px rgba(0, 0, 0, 0.15)",
+          aspectRatio: "10/16",
+        }}
+        initial={{ y: 0 }}
+        animate={{
+          y: isHovered ? -6 : 0,
+          rotateX: rotation.x,
+          rotateY: rotation.y,
+          scale: isHovered ? 1.02 : 1,
+        }}
+        transition={{
+          type: "spring",
+          stiffness: 400,
+          damping: 25
+        }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={handleMouseLeave}
+        onMouseMove={handleMouseMove}
+        onClick={onClick}
+      >
       {/* Background image */}
       <div className="absolute inset-0 z-0">
         <img
@@ -333,6 +335,7 @@ export const VideoGradientCard = ({
         </motion.div>
       </div>
     </motion.div>
+    </div>
   );
 };
 

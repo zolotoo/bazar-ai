@@ -3,7 +3,7 @@ import { useSearchHistory, SearchHistoryEntry } from '../hooks/useSearchHistory'
 import { useFlowStore } from '../stores/flowStore';
 import { useInboxVideos } from '../hooks/useInboxVideos';
 import { InstagramSearchResult } from '../services/videoService';
-import { Search, Clock, Video, Eye, Heart, ExternalLink, Trash2, X, ChevronLeft, Plus, Sparkles } from 'lucide-react';
+import { Search, Clock, Video, ExternalLink, Trash2, X, ChevronLeft } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { toast } from 'sonner';
 import { VideoGradientCard } from './ui/VideoGradientCard';
@@ -11,12 +11,6 @@ import { MarketingBadges, searchBadges } from './ui/MarketingBadges';
 
 type TabType = 'queries' | 'videos';
 
-function formatNumber(num?: number): string {
-  if (num === undefined || num === null) return '0';
-  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-  return num.toString();
-}
 
 // Расчёт коэффициента виральности
 function calculateViralCoefficient(views?: number, takenAt?: string | number | Date): number {
