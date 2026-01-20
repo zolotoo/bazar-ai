@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, ReactNode } from 'react';
 import { FlowCanvas } from './components/FlowCanvas';
 import { Workspace } from './components/Workspace';
 import { LandingPage } from './components/LandingPage';
@@ -11,6 +11,56 @@ import { useInboxVideos } from './hooks/useInboxVideos';
 import { Video, Settings, Search, LayoutGrid, GitBranch, Clock, User, LogOut, Link, Radar } from 'lucide-react';
 import { cn } from './utils/cn';
 import { Toaster } from 'sonner';
+
+// Sidebar button with animated tooltip
+interface SidebarButtonProps {
+  icon: ReactNode;
+  label: string;
+  onClick: () => void;
+  isActive?: boolean;
+  variant?: 'default' | 'danger';
+}
+
+function SidebarButton({ icon, label, onClick, isActive, variant = 'default' }: SidebarButtonProps) {
+  const [isHovered, setIsHovered] = useState(false);
+  
+  return (
+    <div className="relative">
+      <button
+        onClick={onClick}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className={cn(
+          "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-95",
+          isActive 
+            ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg shadow-orange-500/30" 
+            : variant === 'danger'
+              ? "text-slate-500 hover:text-red-500 hover:bg-red-50"
+              : "text-slate-500 hover:text-slate-800 hover:bg-white/80"
+        )}
+      >
+        {icon}
+      </button>
+      
+      {/* Animated tooltip */}
+      <div 
+        className={cn(
+          "absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 rounded-lg",
+          "bg-slate-900 text-white text-sm font-medium whitespace-nowrap",
+          "transition-all duration-200 pointer-events-none z-50",
+          "shadow-lg shadow-slate-900/20",
+          isHovered 
+            ? "opacity-100 translate-x-0" 
+            : "opacity-0 -translate-x-2"
+        )}
+      >
+        {label}
+        {/* Arrow */}
+        <div className="absolute right-full top-1/2 -translate-y-1/2 border-[6px] border-transparent border-r-slate-900" />
+      </div>
+    </div>
+  );
+}
 
 type ViewMode = 'workspace' | 'canvas' | 'history' | 'profile';
 type SearchTab = 'search' | 'link' | 'radar';
@@ -65,106 +115,65 @@ function App() {
         
         {/* Main Navigation */}
         <div className="flex-1 flex flex-col items-center gap-2">
-          <button
+          <SidebarButton
+            icon={<LayoutGrid className="w-5 h-5" />}
+            label="Рабочий стол"
             onClick={() => setViewMode('workspace')}
-            className={cn(
-              "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-95",
-              viewMode === 'workspace' 
-                ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg shadow-orange-500/30" 
-                : "text-slate-500 hover:text-slate-800 hover:bg-white/80"
-            )}
-            title="Рабочий стол"
-          >
-            <LayoutGrid className="w-5 h-5" />
-          </button>
-          <button
+            isActive={viewMode === 'workspace'}
+          />
+          <SidebarButton
+            icon={<GitBranch className="w-5 h-5" />}
+            label="Холст"
             onClick={() => setViewMode('canvas')}
-            className={cn(
-              "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-95",
-              viewMode === 'canvas' 
-                ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg shadow-orange-500/30" 
-                : "text-slate-500 hover:text-slate-800 hover:bg-white/80"
-            )}
-            title="Холст"
-          >
-            <GitBranch className="w-5 h-5" />
-          </button>
-          <button
+            isActive={viewMode === 'canvas'}
+          />
+          <SidebarButton
+            icon={<Clock className="w-5 h-5" />}
+            label="История"
             onClick={() => setViewMode('history')}
-            className={cn(
-              "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-95",
-              viewMode === 'history' 
-                ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg shadow-orange-500/30" 
-                : "text-slate-500 hover:text-slate-800 hover:bg-white/80"
-            )}
-            title="История"
-          >
-            <Clock className="w-5 h-5" />
-          </button>
+            isActive={viewMode === 'history'}
+          />
           
           {/* Divider */}
           <div className="w-8 h-px bg-slate-200 my-2" />
           
           {/* Search Actions */}
-          <button
+          <SidebarButton
+            icon={<Search className="w-5 h-5" />}
+            label="Поиск видео"
             onClick={() => { setSearchTab('search'); setIsSearchOpen(true); }}
-            className={cn(
-              "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-95",
-              "text-slate-500 hover:text-slate-800 hover:bg-white/80"
-            )}
-            title="Поиск"
-          >
-            <Search className="w-5 h-5" />
-          </button>
-          <button
+          />
+          <SidebarButton
+            icon={<Link className="w-5 h-5" />}
+            label="Добавить по ссылке"
             onClick={() => { setSearchTab('link'); setIsSearchOpen(true); }}
-            className={cn(
-              "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-95",
-              "text-slate-500 hover:text-slate-800 hover:bg-white/80"
-            )}
-            title="Добавить по ссылке"
-          >
-            <Link className="w-5 h-5" />
-          </button>
-          <button
+          />
+          <SidebarButton
+            icon={<Radar className="w-5 h-5" />}
+            label="Радар профилей"
             onClick={() => { setSearchTab('radar'); setIsSearchOpen(true); }}
-            className={cn(
-              "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-95",
-              "text-slate-500 hover:text-slate-800 hover:bg-white/80"
-            )}
-            title="Радар"
-          >
-            <Radar className="w-5 h-5" />
-          </button>
+          />
         </div>
         
         {/* Bottom Actions */}
         <div className="flex flex-col items-center gap-2 mt-auto">
-          <button
+          <SidebarButton
+            icon={<User className="w-5 h-5" />}
+            label="Личный кабинет"
             onClick={() => setViewMode('profile')}
-            className={cn(
-              "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-95",
-              viewMode === 'profile' 
-                ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg shadow-orange-500/30" 
-                : "text-slate-500 hover:text-slate-800 hover:bg-white/80"
-            )}
-            title="Личный кабинет"
-          >
-            <User className="w-5 h-5" />
-          </button>
-          <button 
-            className="w-11 h-11 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-white/80 transition-all active:scale-95"
-            title="Настройки"
-          >
-            <Settings className="w-5 h-5" />
-          </button>
-          <button 
+            isActive={viewMode === 'profile'}
+          />
+          <SidebarButton
+            icon={<Settings className="w-5 h-5" />}
+            label="Настройки"
+            onClick={() => {}}
+          />
+          <SidebarButton
+            icon={<LogOut className="w-5 h-5" />}
+            label="Выйти"
             onClick={logout}
-            className="w-11 h-11 rounded-xl flex items-center justify-center text-slate-500 hover:text-red-500 hover:bg-red-50 transition-all active:scale-95"
-            title="Выйти"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
+            variant="danger"
+          />
         </div>
       </div>
 
