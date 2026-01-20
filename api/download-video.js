@@ -48,9 +48,28 @@ export default async function handler(req, res) {
     
     // Извлекаем URL видео из ответа - проверяем разные структуры
     let videoUrl = null;
+    let thumbnailUrl = null;
     
-    // Прямые поля
-    if (data.video_url) {
+    // Если ответ - это массив (как от instagram120 API)
+    if (Array.isArray(data) && data.length > 0) {
+      const item = data[0];
+      
+      // urls - массив с ссылками на скачивание
+      if (item.urls && Array.isArray(item.urls) && item.urls.length > 0) {
+        const mp4 = item.urls.find(u => u.extension === 'mp4' || u.name === 'MP4');
+        videoUrl = mp4?.url || item.urls[0]?.url;
+      }
+      
+      // pictureUrl - превью
+      thumbnailUrl = item.pictureUrl || item.pictureUrlWrapped;
+      
+      // Fallback на другие поля
+      if (!videoUrl) {
+        videoUrl = item.video_url || item.url || item.video;
+      }
+    }
+    // Прямые поля в объекте
+    else if (data.video_url) {
       videoUrl = data.video_url;
     } else if (data.download_url) {
       videoUrl = data.download_url;
@@ -64,35 +83,24 @@ export default async function handler(req, res) {
       videoUrl = data.data.video_url;
     } else if (data.data?.video) {
       videoUrl = data.data.video;
-    } else if (data.data?.download_url) {
-      videoUrl = data.data.download_url;
     }
-    // Массив urls
+    // Массив urls в объекте
     else if (data.urls && Array.isArray(data.urls) && data.urls.length > 0) {
-      // Ищем видео URL в массиве
-      const videoItem = data.urls.find(u => u.type === 'video' || u.extension === 'mp4');
-      videoUrl = videoItem?.url || data.urls[0]?.url || data.urls[0];
+      const mp4 = data.urls.find(u => u.extension === 'mp4' || u.name === 'MP4');
+      videoUrl = mp4?.url || data.urls[0]?.url;
     }
     // Массив media
     else if (data.media && Array.isArray(data.media) && data.media.length > 0) {
       videoUrl = data.media[0]?.video_url || data.media[0]?.url;
     }
-    // Если data это массив
-    else if (Array.isArray(data) && data.length > 0) {
-      videoUrl = data[0]?.video_url || data[0]?.url || data[0]?.video;
-    }
-    // Поле result
-    else if (data.result?.video_url) {
-      videoUrl = data.result.video_url;
-    } else if (data.result?.url) {
-      videoUrl = data.result.url;
-    }
     
     console.log('Extracted videoUrl:', videoUrl);
+    console.log('Extracted thumbnailUrl:', thumbnailUrl);
     
     return res.status(200).json({
       success: !!videoUrl,
       videoUrl,
+      thumbnailUrl,
       rawResponse: data,
     });
   } catch (error) {
