@@ -400,7 +400,8 @@ export async function getHashtagReels(hashtag: string): Promise<InstagramSearchR
 
 /**
  * Получает информацию о рилсе по URL или shortcode
- * Использует instagram120 API (тот же что для скачивания)
+ * Сначала пробует получить статистику через reel-info API,
+ * затем fallback на download-video для thumbnail
  */
 export async function getReelByUrl(urlOrShortcode: string): Promise<InstagramSearchResult | null> {
   try {
@@ -415,7 +416,41 @@ export async function getReelByUrl(urlOrShortcode: string): Promise<InstagramSea
     
     console.log('Fetching reel info for URL:', url);
     
-    // Используем наш API endpoint который работает с instagram120
+    // Сначала пробуем получить полную информацию со статистикой
+    try {
+      const infoResponse = await fetch('/api/reel-info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, shortcode }),
+      });
+      
+      if (infoResponse.ok) {
+        const infoData = await infoResponse.json();
+        console.log('Reel info API response:', infoData);
+        
+        if (infoData.success && (infoData.view_count || infoData.thumbnail_url)) {
+          return {
+            id: shortcode,
+            shortcode: shortcode,
+            url: infoData.url || url,
+            thumbnail_url: infoData.thumbnail_url || '',
+            display_url: infoData.thumbnail_url || '',
+            caption: infoData.caption || 'Видео из Instagram',
+            view_count: infoData.view_count,
+            like_count: infoData.like_count,
+            comment_count: infoData.comment_count,
+            taken_at: infoData.taken_at ? String(infoData.taken_at) : undefined,
+            owner: infoData.owner,
+            is_video: true,
+            is_reel: true,
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('Reel info API failed, trying download API:', e);
+    }
+    
+    // Fallback: используем download-video API для получения thumbnail
     const response = await fetch('/api/download-video', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
