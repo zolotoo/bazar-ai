@@ -10,6 +10,16 @@ import { VideoGradientCard } from './ui/VideoGradientCard';
 import { VideoDetailPage } from './VideoDetailPage';
 
 
+// Проксирование Instagram изображений через наш API
+function proxyImageUrl(url?: string): string {
+  if (!url) return 'https://via.placeholder.com/270x360';
+  if (url.includes('/api/proxy-image') || url.includes('placeholder.com')) return url;
+  if (url.includes('cdninstagram.com') || url.includes('instagram.com')) {
+    return `/api/proxy-image?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
 // Расчёт коэффициента виральности (K просмотров в день)
 function calculateViralCoefficient(views?: number, takenAt?: string | number | Date): number {
   if (!views) return 0;
@@ -51,7 +61,7 @@ function calculateViralCoefficient(views?: number, takenAt?: string | number | D
 function toFolderVideos(videos: ZoneVideo[]): FolderVideo[] {
   return videos.map(v => ({
     id: v.id,
-    image: v.preview_url || 'https://via.placeholder.com/64x96',
+    image: proxyImageUrl(v.preview_url),
     title: v.owner_username ? `@${v.owner_username}` : v.title?.slice(0, 20) || 'Video',
     views: v.view_count,
     likes: v.like_count,
@@ -399,7 +409,7 @@ export function Workspace() {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 pb-6">
                 {sortedVideos.map((video, idx) => {
-                  const thumbnailUrl = video.preview_url || 'https://via.placeholder.com/270x360';
+                  const thumbnailUrl = proxyImageUrl(video.preview_url);
                   const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at || video.created_at);
                   
                   // Бейдж папки - показываем только в "Все видео"

@@ -34,6 +34,18 @@ function formatNumber(num?: number): string {
   return num.toString();
 }
 
+// Проксирование Instagram изображений через наш API
+function proxyImageUrl(url?: string): string {
+  if (!url) return 'https://via.placeholder.com/270x360';
+  // Если уже проксировано или это placeholder - возвращаем как есть
+  if (url.includes('/api/proxy-image') || url.includes('placeholder.com')) return url;
+  // Если это Instagram CDN - проксируем
+  if (url.includes('cdninstagram.com') || url.includes('instagram.com')) {
+    return `/api/proxy-image?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
 // Расчёт коэффициента виральности: views / (days * 1000)
 // Если просмотров < 30000 или дней = 0, то 0
 function calculateViralCoefficient(views?: number, takenAt?: string | number | Date): number {
@@ -865,7 +877,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                       <div className="relative w-48 flex-shrink-0">
                         <div className="aspect-[9/16] rounded-xl overflow-hidden shadow-lg">
                           <img
-                            src={linkPreview.thumbnail_url || linkPreview.display_url}
+                            src={proxyImageUrl(linkPreview.thumbnail_url || linkPreview.display_url)}
                             alt=""
                             className="w-full h-full object-cover"
                           />
@@ -1235,7 +1247,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                     const scale = isActive ? 1 : Math.max(0.75, 1 - absOffset * 0.12);
                     const opacity = isActive ? 1 : Math.max(0.5, 1 - absOffset * 0.25);
 
-                    const thumbnailUrl = reel.thumbnail_url || reel.display_url || 'https://via.placeholder.com/200x300';
+                    const thumbnailUrl = proxyImageUrl(reel.thumbnail_url || reel.display_url);
                     
                     return (
                       <div
@@ -1529,7 +1541,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                   {sortedReels.map((reel, idx) => {
                     const viralCoef = calculateViralCoefficient(reel.view_count, reel.taken_at);
                     const captionText = typeof reel.caption === 'string' ? reel.caption : 'Видео из Instagram';
-                    const thumbnailUrl = reel.thumbnail_url || reel.display_url || 'https://via.placeholder.com/270x360';
+                    const thumbnailUrl = proxyImageUrl(reel.thumbnail_url || reel.display_url);
                     const cardId = `grid-${reel.shortcode || reel.id}-${idx}`;
                     const dateText = formatVideoDate(reel.taken_at);
                     const isMenuOpen = cardFolderSelect === cardId;
@@ -1611,7 +1623,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                 <div className="relative w-full md:w-2/5 flex-shrink-0">
                   <div className="relative w-full h-64 md:h-full md:min-h-[500px]">
                     <img
-                      src={selectedVideo.thumbnail_url || selectedVideo.display_url || 'https://via.placeholder.com/400x711'}
+                      src={proxyImageUrl(selectedVideo.thumbnail_url || selectedVideo.display_url)}
                       alt=""
                       className="w-full h-full object-cover"
                     />

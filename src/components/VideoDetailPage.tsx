@@ -40,6 +40,16 @@ function formatNumber(num?: number): string {
   return num.toString();
 }
 
+// Проксирование Instagram изображений через наш API
+function proxyImageUrl(url?: string): string {
+  if (!url) return 'https://via.placeholder.com/400x600';
+  if (url.includes('/api/proxy-image') || url.includes('placeholder.com')) return url;
+  if (url.includes('cdninstagram.com') || url.includes('instagram.com')) {
+    return `/api/proxy-image?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
 function parseDate(dateValue?: string | number): Date | null {
   if (!dateValue) return null;
   
@@ -309,7 +319,7 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
     }, 2000);
   };
 
-  const thumbnailUrl = video.preview_url || 'https://via.placeholder.com/400x600';
+  const thumbnailUrl = proxyImageUrl(video.preview_url);
 
   return (
     <div className="h-full overflow-hidden flex flex-col bg-[#f5f5f5]">
