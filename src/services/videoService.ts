@@ -298,80 +298,100 @@ export async function getUserReels(username: string): Promise<InstagramSearchRes
 }
 
 /**
- * Получает посты по хэштегу через instagram-looter2
+ * Получает посты по хэштегу
  * @param hashtag - Хэштег (без #)
  * @returns Список видео/реелсов
  */
 export async function getHashtagReels(hashtag: string): Promise<InstagramSearchResult[]> {
   try {
-    const cleanHashtag = hashtag.replace(/^#/, '');
+    const cleanHashtag = hashtag.replace(/^#/, '').replace(/\s+/g, '');
     
-    // Пробуем сначала новый API, потом старый
-    const endpoints = [
-      // Новый API (через прокси)
-      `${API_BASE_URL}/hashtag/${encodeURIComponent(cleanHashtag)}`,
-      `${API_BASE_URL}/hashtag/${encodeURIComponent(cleanHashtag)}/posts`,
-      `${API_BASE_URL}/hashtag/${encodeURIComponent(cleanHashtag)}/media`,
-      // Старый API (fallback) - оставляем полный URL
-      `https://${RAPIDAPI_HOST_OLD}/api/instagram/hashtag/${encodeURIComponent(cleanHashtag)}`,
-    ];
+    if (!cleanHashtag) {
+      return [];
+    }
 
-    for (const endpoint of endpoints) {
-      try {
-        const host = endpoint.includes(RAPIDAPI_HOST_OLD) ? RAPIDAPI_HOST_OLD : RAPIDAPI_HOST;
-        console.log('Trying hashtag endpoint:', endpoint);
-        
-        const response = await fetch(endpoint, {
-          method: 'GET',
-          headers: {
-            'X-RapidAPI-Host': host,
-            'X-RapidAPI-Key': RAPIDAPI_KEY,
-          },
-        });
+    console.log('Searching hashtag:', cleanHashtag);
 
-        console.log(`Hashtag endpoint ${endpoint} status:`, response.status);
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Hashtag endpoint response structure:', Object.keys(data));
-          let items: any[] = [];
-          
-          if (Array.isArray(data)) {
-            items = data;
-          } else if (data.posts && Array.isArray(data.posts)) {
-            items = data.posts;
-          } else if (data.media && Array.isArray(data.media)) {
-            items = data.media;
-          } else if (data.items && Array.isArray(data.items)) {
-            items = data.items;
-          } else if (data.data && Array.isArray(data.data)) {
-            items = data.data;
-          } else if (data.reels && Array.isArray(data.reels)) {
-            items = data.reels;
-          }
-
-          const reels = items
-            .filter((item: any) => {
-              const isVideo = item.is_video || item.type === 'video' || item.media_type === 2;
-              const isReel = item.is_reel || item.shortcode?.includes('reel') || item.url?.includes('/reel/');
-              return isVideo || isReel;
-            })
-            .map((item: any) => transformSearchResult(item))
-            .filter((item): item is InstagramSearchResult => item !== null);
-          
-          if (reels.length > 0) {
-            console.log(`Found ${reels.length} reels from hashtag #${cleanHashtag}`);
-            return reels;
-          }
+    // На production используем Vercel serverless proxy /api/hashtagreels
+    // На localhost используем Vite proxy /api-v1/hashtag/
+    const endpoint = isDev 
+      ? `${API_BASE_URL}/hashtag/${encodeURIComponent(cleanHashtag)}/`
+      : `/api/hashtagreels?hashtag=${encodeURIComponent(cleanHashtag)}`;
+    
+    console.log('Hashtag endpoint:', endpoint);
+    
+    // Для локалки нужны заголовки RapidAPI, для прода - нет (прокси добавит)
+    const headers: Record<string, string> = isDev 
+      ? {
+          'X-RapidAPI-Host': RAPIDAPI_HOST,
+          'X-RapidAPI-Key': RAPIDAPI_KEY,
         }
-      } catch (e) {
-        console.warn(`Error with endpoint:`, e);
-        continue;
+      : {};
+    
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers,
+    });
+
+    console.log(`Hashtag response status: ${response.status}`);
+
+    if (!response.ok) {
+      console.warn('Hashtag API error:', response.status);
+      return [];
+    }
+
+    const data = await response.json();
+    console.log('Hashtag API response keys:', Object.keys(data));
+    
+    let items: any[] = [];
+    
+    // Проверяем разные структуры ответа
+    if (Array.isArray(data)) {
+      items = data;
+    } else if (data.data && Array.isArray(data.data)) {
+      items = data.data;
+    } else if (data.posts && Array.isArray(data.posts)) {
+      items = data.posts;
+    } else if (data.media && Array.isArray(data.media)) {
+      items = data.media;
+    } else if (data.items && Array.isArray(data.items)) {
+      items = data.items;
+    } else if (data.reels && Array.isArray(data.reels)) {
+      items = data.reels;
+    } else if (data.edge_hashtag_to_media?.edges) {
+      items = data.edge_hashtag_to_media.edges.map((e: any) => e.node);
+    } else if (typeof data === 'object') {
+      // Пробуем найти любой массив в объекте
+      for (const key in data) {
+        if (Array.isArray(data[key]) && data[key].length > 0) {
+          items = data[key];
+          console.log(`Found items in data.${key}:`, items.length);
+          break;
+        }
       }
     }
 
-    console.warn('No working endpoint found for hashtag:', cleanHashtag);
-    return [];
+    console.log(`Extracted ${items.length} items from hashtag response`);
+
+    if (items.length === 0) {
+      return [];
+    }
+
+    // Фильтруем только видео/reels
+    const reels = items
+      .filter((item: any) => {
+        const isVideo = item.is_video === true || item.type === 'video' || item.media_type === 2 || item.product_type === 'reels';
+        const isReel = item.is_reel === true || 
+                     item.shortcode?.includes('reel') || 
+                     item.url?.includes('/reel/') || 
+                     item.code?.includes('reel');
+        return isVideo || isReel;
+      })
+      .map((item: any) => transformSearchResult(item))
+      .filter((item): item is InstagramSearchResult => item !== null);
+    
+    console.log(`Found ${reels.length} reels from hashtag #${cleanHashtag}`);
+    return reels;
   } catch (error) {
     console.error('Error fetching hashtag reels:', error);
     return [];
