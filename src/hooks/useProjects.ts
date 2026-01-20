@@ -20,11 +20,12 @@ export interface Project {
 }
 
 const DEFAULT_FOLDERS: Omit<ProjectFolder, 'id'>[] = [
-  { name: 'Идеи', color: '#f97316', icon: 'lightbulb', order: 0 },
-  { name: 'Ожидает сценария', color: '#6366f1', icon: 'file', order: 1 },
-  { name: 'Ожидает съёмок', color: '#f59e0b', icon: 'camera', order: 2 },
-  { name: 'Ожидает монтажа', color: '#10b981', icon: 'scissors', order: 3 },
-  { name: 'Готовое', color: '#8b5cf6', icon: 'check', order: 4 },
+  { name: 'Входящие', color: '#64748b', icon: 'inbox', order: 0 },
+  { name: 'Идеи', color: '#f97316', icon: 'lightbulb', order: 1 },
+  { name: 'Ожидает сценария', color: '#6366f1', icon: 'file', order: 2 },
+  { name: 'Ожидает съёмок', color: '#f59e0b', icon: 'camera', order: 3 },
+  { name: 'Ожидает монтажа', color: '#10b981', icon: 'scissors', order: 4 },
+  { name: 'Готовое', color: '#8b5cf6', icon: 'check', order: 5 },
 ];
 
 const PROJECT_COLORS = [

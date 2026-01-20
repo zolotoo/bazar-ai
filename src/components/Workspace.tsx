@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useWorkspaceZones, ZoneVideo } from '../hooks/useWorkspaceZones';
 import { useInboxVideos } from '../hooks/useInboxVideos';
-import { Sparkles, Star, FileText, CheckCircle, Trash2, ExternalLink, ChevronLeft, FolderOpen, Plus } from 'lucide-react';
+import { useProjectContext } from '../contexts/ProjectContext';
+import { Sparkles, Star, FileText, Trash2, ExternalLink, ChevronLeft, Plus, Inbox, Lightbulb, Camera, Scissors, Check, FolderOpen } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { AnimatedFolder3D, FolderVideo } from './ui/Folder3D';
 import { VideoGradientCard } from './ui/VideoGradientCard';
@@ -57,29 +58,38 @@ interface FolderConfig {
   iconType: string;
 }
 
-const folderConfigs: FolderConfig[] = [
-  { id: null, title: 'Идеи', color: '#f97316', iconType: 'sparkles' },
+const defaultFolderConfigs: FolderConfig[] = [
+  { id: 'inbox', title: 'Входящие', color: '#64748b', iconType: 'inbox' },
+  { id: 'ideas', title: 'Идеи', color: '#f97316', iconType: 'lightbulb' },
   { id: '1', title: 'Ожидает сценария', color: '#6366f1', iconType: 'file' },
-  { id: '2', title: 'Ожидает съёмок', color: '#f59e0b', iconType: 'star' },
-  { id: '3', title: 'Ожидает монтажа', color: '#10b981', iconType: 'sparkles' },
+  { id: '2', title: 'Ожидает съёмок', color: '#f59e0b', iconType: 'camera' },
+  { id: '3', title: 'Ожидает монтажа', color: '#10b981', iconType: 'scissors' },
   { id: '4', title: 'Готовое', color: '#8b5cf6', iconType: 'check' },
 ];
 
 const iconMap: Record<string, React.ReactNode> = {
+  inbox: <Inbox className="w-8 h-8 text-slate-500" />,
+  lightbulb: <Lightbulb className="w-8 h-8 text-orange-500" />,
   plus: <Plus className="w-8 h-8 text-orange-500" />,
   star: <Star className="w-8 h-8 text-indigo-500" />,
   sparkles: <Sparkles className="w-8 h-8 text-amber-500" />,
-  file: <FileText className="w-8 h-8 text-emerald-500" />,
-  check: <CheckCircle className="w-8 h-8 text-violet-500" />,
+  file: <FileText className="w-8 h-8 text-indigo-500" />,
+  camera: <Camera className="w-8 h-8 text-amber-500" />,
+  scissors: <Scissors className="w-8 h-8 text-emerald-500" />,
+  check: <Check className="w-8 h-8 text-violet-500" />,
 };
 
 export function Workspace() {
   const { loading, moveVideoToZone, deleteVideo, getVideosByZone } = useWorkspaceZones();
   const { videos: inboxVideos, removeVideo: removeInboxVideo } = useInboxVideos();
+  const { currentProject: _currentProject, currentProjectId: _currentProjectId } = useProjectContext();
   const [draggedVideo, setDraggedVideo] = useState<ZoneVideo | null>(null);
   const [dropTargetZone, setDropTargetZone] = useState<string | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<FolderConfig | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<ZoneVideo | null>(null);
+  
+  // Используем папки из текущего проекта или дефолтные
+  const folderConfigs = defaultFolderConfigs;
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -107,24 +117,35 @@ export function Workspace() {
     }
   };
 
-  // Получаем видео для папки "Входящие" - это inboxVideos
+  // Получаем видео для папки по folderId
   const getFolderVideos = (folderId: string | null): ZoneVideo[] => {
-    if (folderId === null) {
-      // Для "Входящих" показываем видео из inbox
-      return inboxVideos.map(v => ({
-        id: v.id,
-        title: v.title,
-        preview_url: v.previewUrl,
-        url: v.url,
-        zone_id: null,
-        position_x: 0,
-        position_y: 0,
-        view_count: (v as any).view_count,
-        like_count: (v as any).like_count,
-        comment_count: (v as any).comment_count,
-        owner_username: (v as any).owner_username,
-        status: 'active',
-      }));
+    // Для "inbox" и "ideas" показываем видео из inboxVideos, фильтруя по folder_id
+    if (folderId === 'inbox' || folderId === 'ideas') {
+      return inboxVideos
+        .filter(v => {
+          const videoFolderId = (v as any).folder_id || 'inbox';
+          return videoFolderId === folderId;
+        })
+        .map(v => ({
+          id: v.id,
+          title: v.title,
+          preview_url: v.previewUrl,
+          url: v.url,
+          zone_id: folderId,
+          position_x: 0,
+          position_y: 0,
+          view_count: (v as any).view_count,
+          like_count: (v as any).like_count,
+          comment_count: (v as any).comment_count,
+          owner_username: (v as any).owner_username,
+          taken_at: (v as any).taken_at,
+          created_at: v.receivedAt?.toISOString(),
+          transcript_id: (v as any).transcript_id,
+          transcript_status: (v as any).transcript_status,
+          transcript_text: (v as any).transcript_text,
+          download_url: (v as any).download_url,
+          status: 'active',
+        }));
     }
     return getVideosByZone(folderId);
   };

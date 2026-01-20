@@ -23,6 +23,8 @@ interface SearchPanelProps {
   isOpen: boolean;
   onClose: () => void;
   initialTab?: 'search' | 'link' | 'radar';
+  currentProjectId?: string | null;
+  currentProjectName?: string;
 }
 
 function formatNumber(num?: number): string {
@@ -111,7 +113,7 @@ function formatVideoDate(takenAt?: string | number | Date): string {
   return `${Math.floor(diffDays / 365)} г.`;
 }
 
-export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPanelProps) {
+export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentProjectId, currentProjectName = 'Проект' }: SearchPanelProps) {
   const [query, setQuery] = useState('');
   const [reels, setReels] = useState<InstagramSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -140,8 +142,10 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
   const inputRef = useRef<HTMLInputElement>(null);
   const spinIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Конфигурация папок
+  // Конфигурация папок для добавления
   const folderConfigs = [
+    { id: 'inbox', title: 'Входящие', color: '#64748b', icon: FolderPlus },
+    { id: 'ideas', title: 'Идеи', color: '#f97316', icon: SparklesIcon },
     { id: '1', title: 'Ожидает сценария', color: '#6366f1', icon: FileText },
     { id: '2', title: 'Ожидает съёмок', color: '#f59e0b', icon: Star },
     { id: '3', title: 'Ожидает монтажа', color: '#10b981', icon: SparklesIcon },
@@ -558,20 +562,37 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
     const folderName = folderConfigs.find(f => f.id === folderId)?.title || 'папку';
     
     try {
-      await addVideoToWorkspace({
-        videoId: result.shortcode || result.id,
-        shortcode: result.shortcode,
-        thumbnailUrl: result.thumbnail_url || result.display_url,
-        caption: captionText,
-        ownerUsername: result.owner?.username,
-        viewCount: result.view_count,
-        likeCount: result.like_count,
-        zoneId: folderId,
-      });
+      // Для "Входящие" и "Идеи" используем addVideoToInbox
+      if (folderId === 'inbox' || folderId === 'ideas') {
+        await addVideoToInbox({
+          title: captionText,
+          previewUrl: result.thumbnail_url || result.display_url || '',
+          url: result.url,
+          viewCount: result.view_count,
+          likeCount: result.like_count,
+          commentCount: result.comment_count,
+          ownerUsername: result.owner?.username,
+          projectId: currentProjectId || undefined,
+          folderId: folderId,
+        });
+      } else {
+        // Для остальных папок используем addVideoToWorkspace
+        await addVideoToWorkspace({
+          videoId: result.shortcode || result.id,
+          shortcode: result.shortcode,
+          thumbnailUrl: result.thumbnail_url || result.display_url,
+          caption: captionText,
+          ownerUsername: result.owner?.username,
+          viewCount: result.view_count,
+          likeCount: result.like_count,
+          zoneId: folderId,
+        });
+      }
       setShowFolderSelect(false);
       setSelectedVideo(null);
+      setCardFolderSelect(null);
       toast.success(`Добавлено в "${folderName}"`, {
-        description: `@${result.owner?.username || 'instagram'}`,
+        description: `Проект: ${currentProjectName} • @${result.owner?.username || 'instagram'}`,
       });
     } catch (err) {
       console.error('Ошибка добавления в папку:', err);
@@ -700,6 +721,14 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
                 Назад
               </button>
             )}
+
+            {/* Project indicator */}
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <div className="px-3 py-1.5 rounded-full bg-orange-100 text-orange-700 text-xs font-medium flex items-center gap-1.5">
+                <FolderPlus className="w-3.5 h-3.5" />
+                Проект: {currentProjectName}
+              </div>
+            </div>
 
             {/* Glass Tab Buttons */}
             <div className="flex justify-center mb-4">
@@ -1511,23 +1540,13 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search' }: SearchPa
                         onFolderMenuToggle={() => setCardFolderSelect(isMenuOpen ? null : cardId)}
                         folderMenu={
                           <div 
-                            className="absolute bottom-12 right-0 bg-white rounded-2xl shadow-2xl p-2 min-w-[160px] z-50 animate-in fade-in slide-in-from-bottom-2 duration-200"
+                            className="absolute bottom-12 right-0 bg-white rounded-2xl shadow-2xl p-2 min-w-[180px] z-50 animate-in fade-in slide-in-from-bottom-2 duration-200"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <button
-                              onClick={() => {
-                                handleAddToCanvas(reel);
-                                setCardFolderSelect(null);
-                              }}
-                              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-orange-50 transition-colors text-left"
-                            >
-                              <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
-                                <Plus className="w-4 h-4 text-orange-600" />
-                              </div>
-                              <span className="text-sm font-medium text-slate-700">Входящие</span>
-                            </button>
-                            
-                            <div className="h-px bg-slate-100 my-1" />
+                            {/* Название проекта */}
+                            <div className="px-3 py-2 text-xs text-slate-400 font-medium">
+                              Добавить в: {currentProjectName}
+                            </div>
                             
                             {folderConfigs.map((folder) => {
                               const FolderIcon = folder.icon;

@@ -8,6 +8,7 @@ import { IncomingVideosDrawer } from './components/sidebar/IncomingVideosDrawer'
 import { SearchPanel } from './components/ui/SearchPanel';
 import { useAuth } from './hooks/useAuth';
 import { useInboxVideos } from './hooks/useInboxVideos';
+import { ProjectProvider, useProjectContext } from './contexts/ProjectContext';
 import { 
   Video, Settings, Search, LayoutGrid, GitBranch, Clock, User, LogOut, 
   Link, Radar, ChevronLeft, ChevronRight, Plus, FolderOpen
@@ -87,38 +88,29 @@ function SectionHeader({ title, isExpanded, onAdd }: SectionHeaderProps) {
 type ViewMode = 'workspace' | 'canvas' | 'history' | 'profile';
 type SearchTab = 'search' | 'link' | 'radar';
 
-function App() {
+function AppContent() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTab, setSearchTab] = useState<SearchTab>('search');
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
-  const { isAuthenticated, loading, logout } = useAuth();
+  const { logout } = useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>('workspace');
   const { videos } = useInboxVideos();
   
-  // Mock projects for now
-  const [projects] = useState([
-    { id: '1', name: 'Мой проект', color: '#f97316' },
-  ]);
-  const [currentProjectId, setCurrentProjectId] = useState('1');
+  // Используем контекст проектов
+  const { projects, currentProject, currentProjectId, selectProject, createProject, loading: projectsLoading } = useProjectContext();
 
-  // Пока проверяем авторизацию — показываем загрузку
-  if (loading) {
+  if (projectsLoading) {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-[#f5f5f5]">
         <div className="flex flex-col items-center gap-4">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-lg shadow-orange-500/30 animate-pulse">
             <Video className="w-8 h-8 text-white" />
           </div>
-          <p className="text-slate-500 text-sm">Загрузка...</p>
+          <p className="text-slate-500 text-sm">Загрузка проектов...</p>
         </div>
       </div>
     );
-  }
-
-  // Если не авторизован — показываем Landing Page
-  if (!isAuthenticated) {
-    return <LandingPage />;
   }
 
   const sidebarWidth = sidebarExpanded ? 'w-56' : 'w-16';
@@ -222,14 +214,23 @@ function App() {
           <SectionHeader 
             title="Проекты" 
             isExpanded={sidebarExpanded}
-            onAdd={() => toast.info('Создание проектов скоро будет доступно')}
+            onAdd={async () => {
+              const name = prompt('Название проекта:');
+              if (name) {
+                const project = await createProject(name);
+                if (project) {
+                  toast.success(`Проект "${name}" создан`);
+                  selectProject(project.id);
+                }
+              }
+            }}
           />
           
           <div className="space-y-1">
             {projects.map(project => (
               <button
                 key={project.id}
-                onClick={() => setCurrentProjectId(project.id)}
+                onClick={() => selectProject(project.id)}
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all",
                   currentProjectId === project.id
@@ -298,6 +299,8 @@ function App() {
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
         initialTab={searchTab}
+        currentProjectId={currentProjectId}
+        currentProjectName={currentProject?.name || 'Проект'}
       />
 
       {/* Toast notifications */}
@@ -313,6 +316,34 @@ function App() {
         }}
       />
     </div>
+  );
+}
+
+// Wrapper component with auth check
+function App() {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center bg-[#f5f5f5]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-lg shadow-orange-500/30 animate-pulse">
+            <Video className="w-8 h-8 text-white" />
+          </div>
+          <p className="text-slate-500 text-sm">Загрузка...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LandingPage />;
+  }
+
+  return (
+    <ProjectProvider>
+      <AppContent />
+    </ProjectProvider>
   );
 }
 

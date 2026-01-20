@@ -25,6 +25,9 @@ interface SavedVideo {
   transcript_id?: string;
   transcript_status?: string;
   transcript_text?: string;
+  // Новые поля для проектов
+  project_id?: string;
+  folder_id?: string;
 }
 
 /**
@@ -51,6 +54,13 @@ export function useInboxVideos() {
     like_count?: number; 
     comment_count?: number;
     owner_username?: string;
+    folder_id?: string;
+    project_id?: string;
+    transcript_id?: string;
+    transcript_status?: string;
+    transcript_text?: string;
+    download_url?: string;
+    taken_at?: number;
   } => ({
     id: video.id,
     title: video.caption || 'Без названия',
@@ -61,6 +71,13 @@ export function useInboxVideos() {
     like_count: video.like_count,
     comment_count: video.comment_count,
     owner_username: video.owner_username,
+    folder_id: video.folder_id || 'inbox',
+    project_id: video.project_id,
+    transcript_id: video.transcript_id,
+    transcript_status: video.transcript_status,
+    transcript_text: video.transcript_text,
+    download_url: video.download_url,
+    taken_at: video.taken_at,
   }), []);
 
   // Загрузка видео пользователя
@@ -115,6 +132,8 @@ export function useInboxVideos() {
     ownerUsername?: string;
     shortcode?: string;
     videoId?: string;
+    projectId?: string;
+    folderId?: string;
   }) => {
     const userId = getUserId();
     const videoId = video.videoId || video.shortcode || `video-${Date.now()}`;
@@ -155,6 +174,8 @@ export function useInboxVideos() {
           view_count: video.viewCount,
           like_count: video.likeCount,
           comment_count: video.commentCount,
+          project_id: video.projectId,
+          folder_id: video.folderId || 'inbox',
         }, {
           onConflict: 'user_id,video_id'
         })
@@ -172,8 +193,10 @@ export function useInboxVideos() {
         setVideos(prev => [savedVideo, ...prev.filter(v => v.id !== localVideo.id)]);
         setIncomingVideos([savedVideo, ...useFlowStore.getState().incomingVideos.filter(v => v.id !== localVideo.id)]);
         
-        // Запускаем скачивание и транскрибацию в фоне
-        startVideoProcessing(data.id, video.url);
+        // Запускаем скачивание и транскрибацию только для папки "Идеи"
+        if (video.folderId === 'ideas') {
+          startVideoProcessing(data.id, video.url);
+        }
         
         return savedVideo;
       }
