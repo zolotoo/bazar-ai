@@ -1,4 +1,4 @@
-import { useState, ReactNode } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { FlowCanvas } from './components/FlowCanvas';
 import { Workspace } from './components/Workspace';
 import { LandingPage } from './components/LandingPage';
@@ -11,7 +11,7 @@ import { useInboxVideos } from './hooks/useInboxVideos';
 import { ProjectProvider, useProjectContext } from './contexts/ProjectContext';
 import { 
   Video, Settings, Search, LayoutGrid, GitBranch, Clock, User, LogOut, 
-  Link, Radar, ChevronLeft, ChevronRight, Plus, FolderOpen, X, Palette, Sparkles
+  Link, Radar, ChevronLeft, ChevronRight, Plus, FolderOpen, X, Palette, Sparkles, Trash2, Pencil
 } from 'lucide-react';
 import { cn } from './utils/cn';
 import { Toaster, toast } from 'sonner';
@@ -236,18 +236,207 @@ function CreateProjectModal({ isOpen, onClose, onCreate }: CreateProjectModalPro
   );
 }
 
+// Модальное окно редактирования проекта
+interface EditProjectModalProps {
+  isOpen: boolean;
+  project: { id: string; name: string; color: string } | null;
+  onClose: () => void;
+  onSave: (projectId: string, name: string, color: string) => void;
+  onDelete: (projectId: string) => void;
+}
+
+function EditProjectModal({ isOpen, project, onClose, onSave, onDelete }: EditProjectModalProps) {
+  const [name, setName] = useState('');
+  const [color, setColor] = useState(PROJECT_COLORS[0]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Обновляем состояние когда проект меняется
+  useEffect(() => {
+    if (project) {
+      setName(project.name);
+      setColor(project.color || PROJECT_COLORS[0]);
+      setShowDeleteConfirm(false);
+    }
+  }, [project]);
+
+  if (!isOpen || !project) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (name.trim()) {
+      onSave(project.id, name.trim(), color);
+      onClose();
+    }
+  };
+
+  const handleDelete = () => {
+    onDelete(project.id);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      
+      {/* Modal */}
+      <div className="relative w-full max-w-md mx-4 bg-white rounded-3xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div 
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ backgroundColor: color + '20' }}
+            >
+              <FolderOpen className="w-5 h-5" style={{ color }} />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-slate-800">Редактировать проект</h2>
+              <p className="text-sm text-slate-500">Изменить название и цвет</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {/* Name input */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Название проекта
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Например: Кулинарный блог"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all text-slate-800 placeholder:text-slate-400"
+              autoFocus
+            />
+          </div>
+
+          {/* Color picker */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              <div className="flex items-center gap-2">
+                <Palette className="w-4 h-4" />
+                Цвет проекта
+              </div>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {PROJECT_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setColor(c)}
+                  className={cn(
+                    "w-10 h-10 rounded-xl transition-all",
+                    color === c 
+                      ? "ring-2 ring-offset-2 ring-slate-400 scale-110" 
+                      : "hover:scale-105"
+                  )}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+            <p className="text-xs text-slate-500 mb-2">Предпросмотр</p>
+            <div className="flex items-center gap-3">
+              <div 
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ backgroundColor: color + '20' }}
+              >
+                <FolderOpen className="w-5 h-5" style={{ color }} />
+              </div>
+              <span className="font-medium text-slate-800">
+                {name || 'Название проекта'}
+              </span>
+            </div>
+          </div>
+
+          {/* Delete section */}
+          <div className="pt-4 border-t border-slate-100">
+            {!showDeleteConfirm ? (
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="flex items-center gap-2 text-sm text-red-500 hover:text-red-600 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                Удалить проект
+              </button>
+            ) : (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-100">
+                <p className="text-sm text-red-600 mb-3">
+                  Вы уверены? Все видео проекта будут удалены.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="flex-1 px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100 transition-colors"
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    className="flex-1 px-3 py-2 rounded-lg text-sm bg-red-500 text-white hover:bg-red-600 transition-colors"
+                  >
+                    Удалить
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-3 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50 transition-colors"
+            >
+              Отмена
+            </button>
+            <button
+              type="submit"
+              disabled={!name.trim()}
+              className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-medium hover:from-orange-400 hover:to-amber-400 transition-all shadow-lg shadow-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Сохранить
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function AppContent() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTab, setSearchTab] = useState<SearchTab>('search');
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<{ id: string; name: string; color: string } | null>(null);
   const { logout } = useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>('workspace');
   const { videos } = useInboxVideos();
   
   // Используем контекст проектов
-  const { projects, currentProject, currentProjectId, selectProject, createProject, loading: projectsLoading } = useProjectContext();
+  const { projects, currentProject, currentProjectId, selectProject, createProject, updateProject, deleteProject, loading: projectsLoading } = useProjectContext();
 
   // Создание проекта
   const handleCreateProject = async (name: string, color: string) => {
@@ -256,6 +445,19 @@ function AppContent() {
       toast.success(`Проект "${name}" создан`);
       selectProject(project.id);
     }
+  };
+
+  // Редактирование проекта
+  const handleEditProject = async (projectId: string, name: string, color: string) => {
+    await updateProject(projectId, { name, color });
+    toast.success(`Проект "${name}" обновлён`);
+  };
+
+  // Удаление проекта
+  const handleDeleteProject = async (projectId: string) => {
+    const projectName = projects.find(p => p.id === projectId)?.name || 'Проект';
+    await deleteProject(projectId);
+    toast.success(`Проект "${projectName}" удалён`);
   };
 
   if (projectsLoading) {
@@ -386,15 +588,15 @@ function AppContent() {
               </button>
             ) : (
               projects.map(project => (
-                <button
+                <div
                   key={project.id}
-                  onClick={() => selectProject(project.id)}
                   className={cn(
-                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all",
+                    "group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer",
                     currentProjectId === project.id
                       ? "bg-white shadow-sm border border-slate-100"
                       : "text-slate-600 hover:bg-slate-50"
                   )}
+                  onClick={() => selectProject(project.id)}
                 >
                   <div 
                     className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -410,12 +612,22 @@ function AppContent() {
                       )}>
                         {project.name}
                       </span>
+                      {/* Edit button - visible on hover */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingProject({ id: project.id, name: project.name, color: project.color });
+                        }}
+                        className="p-1 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-all"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
                       {currentProjectId === project.id && (
                         <div className="w-2 h-2 rounded-full bg-orange-500" />
                       )}
                     </>
                   )}
-                </button>
+                </div>
               ))
             )}
           </div>
@@ -477,6 +689,15 @@ function AppContent() {
         isOpen={isCreateProjectOpen}
         onClose={() => setIsCreateProjectOpen(false)}
         onCreate={handleCreateProject}
+      />
+
+      {/* Edit Project Modal */}
+      <EditProjectModal
+        isOpen={!!editingProject}
+        project={editingProject}
+        onClose={() => setEditingProject(null)}
+        onSave={handleEditProject}
+        onDelete={handleDeleteProject}
       />
 
       {/* Toast notifications */}
