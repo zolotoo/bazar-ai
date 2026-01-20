@@ -8,6 +8,7 @@ import { cn } from '../utils/cn';
 import { AnimatedFolder3D, FolderVideo } from './ui/Folder3D';
 import { VideoGradientCard } from './ui/VideoGradientCard';
 import { VideoDetailPage } from './VideoDetailPage';
+import { GlowingEffect } from './ui/GlowingEffect';
 
 
 // Проксирование Instagram изображений через наш API
@@ -612,7 +613,7 @@ export function Workspace() {
           </p>
         </div>
 
-        {/* Folder Grid - 3D Folders - 3 columns */}
+        {/* Folder Grid - 3D Folders with Glowing Effect - 3 columns */}
         <div 
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center"
         >
@@ -627,18 +628,31 @@ export function Workspace() {
                 onDragEnter={() => handleDragEnter(config.id)}
                 onDrop={(e) => handleDrop(e, config.id)}
                 className={cn(
-                  "transition-all duration-300",
-                  dropTargetZone === (config.id || 'unassigned') && "scale-105 ring-2 ring-orange-500 rounded-2xl"
+                  "relative transition-all duration-300",
+                  dropTargetZone === (config.id || 'unassigned') && "scale-105"
                 )}
               >
-                <AnimatedFolder3D
-                  title={config.title}
-                  videos={folder3DVideos}
-                  count={folderVideos.length}
-                  color={config.color}
-                  icon={getIconComponent(config.iconType, config.color)}
-                  onClick={() => setSelectedFolder(config)}
-                />
+                {/* Glowing Effect Container */}
+                <div className="relative rounded-[1.5rem] p-1">
+                  <GlowingEffect
+                    spread={40}
+                    glow={true}
+                    disabled={false}
+                    proximity={64}
+                    inactiveZone={0.01}
+                    borderWidth={2}
+                  />
+                  <div className="relative">
+                    <AnimatedFolder3D
+                      title={config.title}
+                      videos={folder3DVideos}
+                      count={folderVideos.length}
+                      color={config.color}
+                      icon={getIconComponent(config.iconType, config.color)}
+                      onClick={() => setSelectedFolder(config)}
+                    />
+                  </div>
+                </div>
               </div>
             );
           })}
