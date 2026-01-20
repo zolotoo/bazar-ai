@@ -72,6 +72,7 @@ const defaultFolderConfigs: FolderConfig[] = [
   { id: '2', title: 'Ожидает съёмок', color: '#f59e0b', iconType: 'camera' },
   { id: '3', title: 'Ожидает монтажа', color: '#10b981', iconType: 'scissors' },
   { id: '4', title: 'Готовое', color: '#8b5cf6', iconType: 'check' },
+  { id: 'rejected', title: 'Не подходит', color: '#ef4444', iconType: 'rejected' },
 ];
 
 // Папки для фильтрации (без "Все видео")
@@ -87,11 +88,12 @@ const iconMap: Record<string, React.ReactNode> = {
   camera: <Camera className="w-8 h-8 text-amber-500" />,
   scissors: <Scissors className="w-8 h-8 text-emerald-500" />,
   check: <Check className="w-8 h-8 text-violet-500" />,
+  rejected: <Trash2 className="w-8 h-8 text-red-500" />,
 };
 
 export function Workspace() {
   const { loading, moveVideoToZone, deleteVideo, getVideosByZone } = useWorkspaceZones();
-  const { videos: inboxVideos, removeVideo: removeInboxVideo } = useInboxVideos();
+  const { videos: inboxVideos, removeVideo: removeInboxVideo, updateVideoFolder } = useInboxVideos();
   const { currentProject: _currentProject, currentProjectId: _currentProjectId } = useProjectContext();
   const [draggedVideo, setDraggedVideo] = useState<ZoneVideo | null>(null);
   const [dropTargetZone, setDropTargetZone] = useState<string | null>(null);
@@ -109,9 +111,15 @@ export function Workspace() {
   const handleMoveToFolder = async (video: ZoneVideo, targetFolderId: string) => {
     const targetFolder = folderConfigs.find(f => f.id === targetFolderId);
     try {
-      await moveVideoToZone(video.id, targetFolderId);
-      setMoveMenuVideoId(null);
-      toast.success(`Перемещено в "${targetFolder?.title || 'папку'}"`);
+      // Используем updateVideoFolder для видео из inbox
+      const success = await updateVideoFolder(video.id, targetFolderId);
+      if (success) {
+        setMoveMenuVideoId(null);
+        setCardMenuVideoId(null);
+        toast.success(`Перемещено в "${targetFolder?.title || 'папку'}"`);
+      } else {
+        toast.error('Ошибка перемещения');
+      }
     } catch (err) {
       console.error('Ошибка перемещения:', err);
       toast.error('Ошибка перемещения');
@@ -229,6 +237,7 @@ export function Workspace() {
           transcript_status: (selectedVideo as any).transcript_status,
           transcript_text: (selectedVideo as any).transcript_text,
           download_url: (selectedVideo as any).download_url,
+          folder_id: selectedVideo.folder_id,
         }}
         onBack={() => setSelectedVideo(null)}
       />
@@ -358,9 +367,9 @@ export function Workspace() {
                   const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at || video.created_at);
                   
                   // Бейдж папки - показываем только в "Все видео"
-                  const folderBadge = isAllVideos && video.folder_id ? {
-                    name: getFolderName(video.folder_id),
-                    color: getFolderColor(video.folder_id)
+                  const folderBadge = isAllVideos ? {
+                    name: video.folder_id ? getFolderName(video.folder_id) : 'Ожидает',
+                    color: video.folder_id ? getFolderColor(video.folder_id) : '#94a3b8'
                   } : undefined;
                   
                   return (

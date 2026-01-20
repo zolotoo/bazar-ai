@@ -2,7 +2,7 @@
 import React, { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { cn } from "../../utils/cn";
-import { Sparkles, MoreVertical, ArrowRight } from "lucide-react";
+import { Sparkles, MoreVertical, ArrowRight, Eye, Heart } from "lucide-react";
 
 export interface VideoGradientCardProps {
   thumbnailUrl: string;
@@ -185,12 +185,21 @@ export const VideoGradientCard = ({
               )}
             </div>
 
-            {/* Stats line */}
-            <p className="text-sm text-white/70 font-medium mb-2">
-              {viewCount !== undefined && <>{formatNumber(viewCount)} views</>}
-              {viewCount !== undefined && likeCount !== undefined && ' • '}
-              {likeCount !== undefined && <>{formatNumber(likeCount)} likes</>}
-            </p>
+            {/* Stats line with icons */}
+            <div className="flex items-center gap-3 text-white/70 mb-2">
+              {viewCount !== undefined && (
+                <span className="flex items-center gap-1 text-sm font-medium">
+                  <Eye className="w-3.5 h-3.5" />
+                  {formatNumber(viewCount)}
+                </span>
+              )}
+              {likeCount !== undefined && (
+                <span className="flex items-center gap-1 text-sm font-medium">
+                  <Heart className="w-3.5 h-3.5" />
+                  {formatNumber(likeCount)}
+                </span>
+              )}
+            </div>
 
             {/* Folder badge - показывает в какой папке находится видео */}
             {folderBadge && (

@@ -334,6 +334,39 @@ export function useInboxVideos() {
   }, [fetchVideos]);
 
   /**
+   * Обновляет папку видео
+   */
+  const updateVideoFolder = useCallback(async (videoId: string, newFolderId: string) => {
+    const userId = getUserId();
+    
+    // Оптимистичное обновление
+    setVideos(prev => prev.map(v => 
+      v.id === videoId ? { ...v, folder_id: newFolderId } as any : v
+    ));
+
+    try {
+      const { error } = await supabase
+        .from('saved_videos')
+        .update({ folder_id: newFolderId })
+        .eq('user_id', userId)
+        .eq('id', videoId);
+      
+      if (error) {
+        console.error('Error updating video folder:', error);
+        // Откатываем изменения
+        fetchVideos();
+        return false;
+      }
+      
+      return true;
+    } catch (err) {
+      console.error('Error updating video folder:', err);
+      fetchVideos();
+      return false;
+    }
+  }, [getUserId, fetchVideos]);
+
+  /**
    * Удаляет видео из сохранённых
    */
   const removeVideo = useCallback(async (videoId: string) => {
@@ -369,6 +402,7 @@ export function useInboxVideos() {
     error,
     addVideoToInbox,
     removeVideo,
+    updateVideoFolder,
     markVideoAsOnCanvas,
     refetch: fetchVideos,
     isConfigured: true,

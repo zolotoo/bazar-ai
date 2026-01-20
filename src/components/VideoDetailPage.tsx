@@ -2,12 +2,23 @@ import { useState, useEffect } from 'react';
 import { 
   ChevronLeft, Play, Eye, Heart, MessageCircle, Calendar, 
   Sparkles, FileText, Copy, ExternalLink, Loader2, Check,
-  Wand2, Languages, RefreshCw
+  Wand2, Languages, RefreshCw, FolderOpen, ChevronDown
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { checkTranscriptionStatus } from '../services/transcriptionService';
 import { supabase } from '../utils/supabase';
 import { toast } from 'sonner';
+import { useInboxVideos } from '../hooks/useInboxVideos';
+
+// Конфигурация папок
+const FOLDER_CONFIGS = [
+  { id: 'ideas', title: 'Идеи', color: '#f97316' },
+  { id: '1', title: 'Ожидает сценария', color: '#6366f1' },
+  { id: '2', title: 'Ожидает съёмок', color: '#f59e0b' },
+  { id: '3', title: 'Ожидает монтажа', color: '#10b981' },
+  { id: '4', title: 'Готовое', color: '#8b5cf6' },
+  { id: 'rejected', title: 'Не подходит', color: '#ef4444' },
+];
 
 interface VideoData {
   id: string;
@@ -23,6 +34,7 @@ interface VideoData {
   transcript_status?: string;
   transcript_text?: string;
   download_url?: string;
+  folder_id?: string;
 }
 
 interface VideoDetailPageProps {
@@ -74,8 +86,25 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
   const [copiedTranscript, setCopiedTranscript] = useState(false);
   const [copiedScript, setCopiedScript] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
-
+  const [showFolderMenu, setShowFolderMenu] = useState(false);
+  const [currentFolderId, setCurrentFolderId] = useState(video.folder_id || 'ideas');
+  
+  const { updateVideoFolder } = useInboxVideos();
   const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at);
+  
+  // Получить текущую папку
+  const currentFolder = FOLDER_CONFIGS.find(f => f.id === currentFolderId) || FOLDER_CONFIGS[0];
+  
+  // Перемещение в папку
+  const handleMoveToFolder = async (folderId: string) => {
+    const success = await updateVideoFolder(video.id, folderId);
+    if (success) {
+      setCurrentFolderId(folderId);
+      const folder = FOLDER_CONFIGS.find(f => f.id === folderId);
+      toast.success(`Перемещено в "${folder?.title || 'папку'}"`);
+    }
+    setShowFolderMenu(false);
+  };
 
   // Polling для статуса транскрибации
   useEffect(() => {
@@ -251,6 +280,54 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
                       <Play className="w-6 h-6 text-slate-800 ml-1" fill="currentColor" />
                     </div>
                   </button>
+                </div>
+              )}
+            </div>
+
+            {/* Current folder + move */}
+            <div className="bg-white rounded-xl p-3 shadow-sm relative">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-slate-400 font-medium">Папка</span>
+              </div>
+              <button
+                onClick={() => setShowFolderMenu(!showFolderMenu)}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <div 
+                    className="w-3 h-3 rounded"
+                    style={{ backgroundColor: currentFolder.color }}
+                  />
+                  <span className="text-sm font-medium text-slate-700">{currentFolder.title}</span>
+                </div>
+                <ChevronDown className={cn(
+                  "w-4 h-4 text-slate-400 transition-transform",
+                  showFolderMenu && "rotate-180"
+                )} />
+              </button>
+              
+              {/* Folder dropdown */}
+              {showFolderMenu && (
+                <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-slate-100 p-1.5 z-50">
+                  {FOLDER_CONFIGS.map(folder => (
+                    <button
+                      key={folder.id}
+                      onClick={() => handleMoveToFolder(folder.id)}
+                      className={cn(
+                        "w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-left",
+                        folder.id === currentFolderId ? "bg-slate-100" : "hover:bg-slate-50"
+                      )}
+                    >
+                      <div 
+                        className="w-3 h-3 rounded"
+                        style={{ backgroundColor: folder.color }}
+                      />
+                      <span className="text-sm text-slate-700">{folder.title}</span>
+                      {folder.id === currentFolderId && (
+                        <Check className="w-4 h-4 text-emerald-500 ml-auto" />
+                      )}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
