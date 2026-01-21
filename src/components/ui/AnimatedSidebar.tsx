@@ -86,7 +86,7 @@ export const DesktopSidebar = ({
         className
       )}
       animate={{
-        width: animate ? (open ? "280px" : "88px") : "280px",
+        width: animate ? (open ? "280px" : "100px") : "280px",
       }}
       transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
       onMouseEnter={() => setOpen(true)}
@@ -173,7 +173,7 @@ export const SidebarLink = ({
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 py-1.5 rounded-xl transition-all w-full text-left group/sidebar",
+        "flex items-center gap-3 py-1 rounded-xl transition-all w-full text-left group/sidebar",
         open ? "px-3" : "px-2 justify-center",
         isActive 
           ? "bg-gradient-to-r from-orange-500/10 to-amber-500/10 text-orange-600" 
@@ -283,7 +283,7 @@ export const SidebarProject = ({
     <div
       onClick={onClick}
       className={cn(
-        "group flex items-center gap-3 py-1.5 rounded-xl transition-all cursor-pointer",
+        "group flex items-center gap-3 py-1 rounded-xl transition-all cursor-pointer",
         open ? "px-3" : "px-2 justify-center",
         isActive 
           ? "bg-white shadow-sm border border-slate-100" 
