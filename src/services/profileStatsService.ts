@@ -55,18 +55,28 @@ function calculateAverage(values: number[]): number {
  * Получить статистику профиля из БД
  */
 export async function getProfileStats(username: string): Promise<InstagramProfileStats | null> {
-  const { data, error } = await supabase
-    .from('instagram_profiles')
-    .select('*')
-    .eq('username', username.toLowerCase())
-    .maybeSingle();
-  
-  if (error) {
-    console.error('[ProfileStats] Error fetching profile:', error);
+  try {
+    const { data, error } = await supabase
+      .from('instagram_profiles')
+      .select('*')
+      .eq('username', username.toLowerCase())
+      .maybeSingle();
+    
+    if (error) {
+      // Если таблица не существует (404) - просто возвращаем null без ошибки
+      if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+        console.warn('[ProfileStats] Table instagram_profiles does not exist. Please run the migration.');
+        return null;
+      }
+      console.error('[ProfileStats] Error fetching profile:', error);
+      return null;
+    }
+    
+    return data;
+  } catch (err) {
+    console.error('[ProfileStats] Exception fetching profile:', err);
     return null;
   }
-  
-  return data;
 }
 
 /**

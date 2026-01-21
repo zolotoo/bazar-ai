@@ -655,7 +655,7 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
                     <span className="text-sm">Виральность</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    {viralMultiplier !== null && viralMultiplier !== undefined && (
+                      {viralMultiplier !== null && viralMultiplier !== undefined && (
                       <span className={cn(
                         "text-xs px-2 py-0.5 rounded-full font-semibold",
                         viralMultiplier >= 4 ? "bg-red-100 text-red-700" :
@@ -664,14 +664,14 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
                         viralMultiplier >= 1.5 ? "bg-green-100 text-green-700" :
                         "bg-slate-100 text-slate-600"
                       )}>
-                        {viralMultiplier.toFixed(1)}x
+                        {Math.round(viralMultiplier)}x
                       </span>
                     )}
                     <span className={cn(
                       "text-sm font-bold",
                       finalViralCoef > 10 ? "text-emerald-600" : finalViralCoef > 5 ? "text-amber-600" : "text-slate-600"
                     )}>
-                      {finalViralCoef.toFixed(1)}K/день
+                      {Math.round(finalViralCoef)}K/день
                     </span>
                   </div>
                 </div>

@@ -196,7 +196,7 @@ export const SidebarLink = ({
         }}
         transition={{ duration: 0.2 }}
         className={cn(
-          "text-sm font-medium whitespace-nowrap overflow-hidden",
+          "text-xs font-medium whitespace-nowrap overflow-hidden",
           "group-hover/sidebar:translate-x-0.5 transition-transform duration-150"
         )}
       >
@@ -227,14 +227,14 @@ export const SidebarSection = ({ title, children, onAdd }: SidebarSectionProps) 
   const { open, animate } = useSidebar();
   
   return (
-    <div className="mb-4">
+    <div className="mb-2">
       <motion.div
         animate={{
           opacity: animate ? (open ? 1 : 0) : 1,
           height: animate ? (open ? "auto" : 0) : "auto",
         }}
         transition={{ duration: 0.2 }}
-        className="flex items-center justify-between px-3 mb-2 overflow-hidden"
+        className="flex items-center justify-between px-3 mb-1.5 overflow-hidden"
       >
         <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
           {title}

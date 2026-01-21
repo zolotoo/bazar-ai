@@ -165,10 +165,10 @@ export const VideoGradientCard = ({
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.2 }}
-                  title={`В ${viralMultiplier.toFixed(1)}x раз ${viralMultiplier >= 1 ? 'больше' : 'меньше'} среднего у автора`}
+                  title={`В ${Math.round(viralMultiplier)}x раз ${viralMultiplier >= 1 ? 'больше' : 'меньше'} среднего у автора`}
                 >
                   <TrendingUp className="w-3 h-3" />
-                  <span className="text-[10px] font-bold">{viralMultiplier.toFixed(1)}x</span>
+                  <span className="text-[10px] font-bold">{Math.round(viralMultiplier)}x</span>
                 </motion.div>
               )}
             </div>

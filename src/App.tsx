@@ -438,31 +438,25 @@ function AppContent() {
                   badge={videos.length}
                 />
                 <SidebarLink
+                  icon={<Radar className="w-4 h-4" />}
+                  label="Радар"
+                  onClick={() => { setSearchTab('radar'); setIsSearchOpen(true); }}
+                />
+                <SidebarLink
+                  icon={<Link className="w-4 h-4" />}
+                  label="Поиск по ссылке"
+                  onClick={() => { setSearchTab('link'); setIsSearchOpen(true); }}
+                />
+                <SidebarLink
+                  icon={<Search className="w-4 h-4" />}
+                  label="Глобальный поиск"
+                  onClick={() => { setSearchTab('search'); setIsSearchOpen(true); }}
+                />
+                <SidebarLink
                   icon={<Clock className="w-4 h-4" />}
                   label="История"
                   onClick={() => setViewMode('history')}
                   isActive={viewMode === 'history'}
-                />
-              </div>
-            </SidebarSection>
-
-            {/* Search */}
-            <SidebarSection title="Поиск">
-              <div className="space-y-0.5">
-                <SidebarLink
-                  icon={<Search className="w-4 h-4" />}
-                  label="Поиск видео"
-                  onClick={() => { setSearchTab('search'); setIsSearchOpen(true); }}
-                />
-                <SidebarLink
-                  icon={<Link className="w-4 h-4" />}
-                  label="По ссылке"
-                  onClick={() => { setSearchTab('link'); setIsSearchOpen(true); }}
-                />
-                <SidebarLink
-                  icon={<Radar className="w-4 h-4" />}
-                  label="Радар"
-                  onClick={() => { setSearchTab('radar'); setIsSearchOpen(true); }}
                 />
               </div>
             </SidebarSection>
