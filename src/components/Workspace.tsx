@@ -260,6 +260,50 @@ export function Workspace() {
     return inboxVideos.filter(v => (v as any).folder_id === folderId).length;
   };
 
+  // ВСЕ ХУКИ ДОЛЖНЫ БЫТЬ ДО УСЛОВНЫХ ВОЗВРАТОВ!
+  const videosForFeed = useMemo(() => getVideosForFeed(), [inboxVideos, selectedFolderId, rejectedFolderId]);
+  const feedVideos = useMemo(() => {
+    return getSortedVideos(videosForFeed);
+  }, [videosForFeed, sortBy, profileStatsCache]);
+  const totalVideos = inboxVideos.filter(v => (v as any).folder_id !== rejectedFolderId).length;
+  
+  // Создаем стабильную строку зависимостей для usernames
+  const usernamesKey = useMemo(() => {
+    const usernames = new Set<string>();
+    videosForFeed.forEach(v => {
+      if (v.owner_username) {
+        usernames.add(v.owner_username.toLowerCase());
+      }
+    });
+    return Array.from(usernames).sort().join(',');
+  }, [videosForFeed]);
+  
+  // Загружаем статистику профилей для видео
+  useEffect(() => {
+    const loadProfileStats = async () => {
+      const usernames = new Set<string>();
+      videosForFeed.forEach(v => {
+        if (v.owner_username) {
+          usernames.add(v.owner_username.toLowerCase());
+        }
+      });
+      
+      for (const username of usernames) {
+        if (!profileStatsCache.has(username)) {
+          const stats = await getProfileStats(username);
+          if (stats) {
+            setProfileStatsCache(prev => new Map(prev).set(username, stats));
+          }
+        }
+      }
+    };
+    
+    if (videosForFeed.length > 0) {
+      loadProfileStats();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usernamesKey]);
+
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -294,49 +338,6 @@ export function Workspace() {
       />
     );
   }
-
-  const videosForFeed = useMemo(() => getVideosForFeed(), [inboxVideos, selectedFolderId, rejectedFolderId]);
-  const feedVideos = useMemo(() => {
-    return getSortedVideos(videosForFeed);
-  }, [videosForFeed, sortBy, profileStatsCache]);
-  const totalVideos = inboxVideos.filter(v => (v as any).folder_id !== rejectedFolderId).length;
-  
-  // Создаем стабильную строку зависимостей для usernames
-  const usernamesKey = useMemo(() => {
-    const usernames = new Set<string>();
-    feedVideos.forEach(v => {
-      if (v.owner_username) {
-        usernames.add(v.owner_username.toLowerCase());
-      }
-    });
-    return Array.from(usernames).sort().join(',');
-  }, [feedVideos]);
-  
-  // Загружаем статистику профилей для видео
-  useEffect(() => {
-    const loadProfileStats = async () => {
-      const usernames = new Set<string>();
-      videosForFeed.forEach(v => {
-        if (v.owner_username) {
-          usernames.add(v.owner_username.toLowerCase());
-        }
-      });
-      
-      for (const username of usernames) {
-        if (!profileStatsCache.has(username)) {
-          const stats = await getProfileStats(username);
-          if (stats) {
-            setProfileStatsCache(prev => new Map(prev).set(username, stats));
-          }
-        }
-      }
-    };
-    
-    if (videosForFeed.length > 0) {
-      loadProfileStats();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [usernamesKey]);
   
   // Обработчик создания папки
   const handleCreateFolder = async () => {
