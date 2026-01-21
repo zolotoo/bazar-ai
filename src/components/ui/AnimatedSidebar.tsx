@@ -173,7 +173,8 @@ export const SidebarLink = ({
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 py-2.5 px-3 rounded-xl transition-all w-full text-left group/sidebar",
+        "flex items-center gap-3 py-2.5 rounded-xl transition-all w-full text-left group/sidebar",
+        open ? "px-3" : "px-0 justify-center",
         isActive 
           ? "bg-gradient-to-r from-orange-500/10 to-amber-500/10 text-orange-600" 
           : variant === 'danger'
@@ -182,7 +183,10 @@ export const SidebarLink = ({
         className
       )}
     >
-      <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+      <div className={cn(
+        "flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl transition-all",
+        !open && isActive && "bg-orange-100"
+      )}>
         {icon}
       </div>
       <motion.span
@@ -229,6 +233,7 @@ export const SidebarSection = ({ title, children, onAdd }: SidebarSectionProps) 
           opacity: animate ? (open ? 1 : 0) : 1,
           height: animate ? (open ? "auto" : 0) : "auto",
         }}
+        transition={{ duration: 0.2 }}
         className="flex items-center justify-between px-3 mb-2 overflow-hidden"
       >
         <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
@@ -245,7 +250,12 @@ export const SidebarSection = ({ title, children, onAdd }: SidebarSectionProps) 
           </button>
         )}
       </motion.div>
-      {children}
+      <div className={cn(
+        "space-y-1",
+        !open && "flex flex-col items-center"
+      )}>
+        {children}
+      </div>
     </div>
   );
 };
@@ -273,18 +283,25 @@ export const SidebarProject = ({
     <div
       onClick={onClick}
       className={cn(
-        "group flex items-center gap-3 py-2.5 px-3 rounded-xl transition-all cursor-pointer",
+        "group flex items-center gap-3 py-2 rounded-xl transition-all cursor-pointer",
+        open ? "px-3" : "px-0 justify-center",
         isActive 
           ? "bg-white shadow-sm border border-slate-100" 
           : "hover:bg-slate-50"
       )}
     >
       <div 
-        className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
+        className={cn(
+          "rounded-lg flex items-center justify-center flex-shrink-0 transition-all",
+          open ? "w-6 h-6" : "w-10 h-10"
+        )}
         style={{ backgroundColor: color + '20' }}
       >
         {icon || (
-          <div className="w-3 h-3 rounded" style={{ backgroundColor: color }} />
+          <div 
+            className={cn("rounded transition-all", open ? "w-3 h-3" : "w-4 h-4")} 
+            style={{ backgroundColor: color }} 
+          />
         )}
       </div>
       <motion.span
@@ -323,7 +340,10 @@ export const SidebarLogo = () => {
   const { open, animate } = useSidebar();
   
   return (
-    <div className="flex items-center gap-3 px-3 py-2 mb-6">
+    <div className={cn(
+      "flex items-center gap-3 py-2 mb-6 transition-all",
+      open ? "px-3" : "px-0 justify-center"
+    )}>
       <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-lg shadow-orange-500/30 flex-shrink-0">
         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -343,6 +363,12 @@ export const SidebarLogo = () => {
   );
 };
 
-export const SidebarDivider = () => (
-  <div className="h-px bg-slate-200/50 my-4 mx-3" />
-);
+export const SidebarDivider = () => {
+  const { open } = useSidebar();
+  return (
+    <div className={cn(
+      "h-px bg-slate-200/50 my-4 transition-all",
+      open ? "mx-3" : "mx-2"
+    )} />
+  );
+};
