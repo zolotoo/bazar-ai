@@ -324,7 +324,13 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
       }
 
       const data = await response.json();
-      console.log('[Radar] API response:', { success: data.success, reelsCount: data.reels?.length });
+      console.log('[Radar] API full response:', JSON.stringify(data).slice(0, 500));
+      console.log('[Radar] API response parsed:', { 
+        success: data.success, 
+        reelsCount: data.reels?.length,
+        message: data.message,
+        apiUsed: data.api_used 
+      });
       
       if (data.success && data.reels?.length > 0) {
         let newCount = 0;
