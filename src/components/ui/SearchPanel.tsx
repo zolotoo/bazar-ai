@@ -549,8 +549,9 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
         likeCount: result.like_count,
         commentCount: result.comment_count,
         ownerUsername: result.owner?.username,
+        shortcode: result.shortcode,
         projectId: currentProjectId || undefined,
-        folderId: folderId,
+        folderId: folderId === 'all' ? undefined : folderId,
         takenAt: result.taken_at,
       });
       toast.success(`Добавлено в "${folderName}"`, {
@@ -615,12 +616,13 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
         likeCount: linkPreview.like_count,
         commentCount: linkPreview.comment_count,
         ownerUsername: linkPreview.owner?.username,
+        shortcode: linkPreview.shortcode,
         projectId: activeProjectId,
-        folderId: folderId, // undefined = "Все видео", или конкретная папка
+        folderId: folderId === 'all' ? undefined : folderId, // undefined/'all' = "Все видео"
         takenAt: linkPreview.taken_at,
       });
       
-      const folderName = folderId ? folderConfigs.find(f => f.id === folderId)?.title || 'папку' : 'Все видео';
+      const folderName = folderId && folderId !== 'all' ? folderConfigs.find(f => f.id === folderId)?.title || 'папку' : 'Все видео';
       
       setLinkUrl('');
       setLinkPreview(null);
@@ -646,6 +648,13 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
     const captionText = typeof result.caption === 'string' ? result.caption.slice(0, 500) : 'Видео из Instagram';
     const folderName = folderConfigs.find(f => f.id === folderId)?.title || 'папку';
     
+    // Извлекаем shortcode из URL если его нет
+    let shortcode: string | undefined = result.shortcode;
+    if (!shortcode && result.url) {
+      const match = result.url.match(/\/(reel|p)\/([A-Za-z0-9_-]+)/);
+      if (match) shortcode = match[2];
+    }
+    
     try {
       // Всегда используем addVideoToInbox для сохранения в Supabase
       await addVideoToInbox({
@@ -656,8 +665,9 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
         likeCount: result.like_count,
         commentCount: result.comment_count,
         ownerUsername: result.owner?.username,
+        shortcode: shortcode,
         projectId: activeProjectId,
-        folderId: folderId,
+        folderId: folderId === 'all' ? undefined : folderId, // 'all' = Все видео = без папки
         takenAt: result.taken_at,
       });
       
@@ -689,6 +699,9 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
         likeCount: result.like_count,
         commentCount: result.comment_count,
         ownerUsername: result.owner?.username,
+        shortcode: result.shortcode,
+        projectId: currentProjectId || undefined,
+        takenAt: result.taken_at,
       });
       
       if (savedVideo) {

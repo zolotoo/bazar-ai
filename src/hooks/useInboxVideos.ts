@@ -181,12 +181,19 @@ export function useInboxVideos() {
     setIncomingVideos([localVideo, ...useFlowStore.getState().incomingVideos]);
 
     try {
+      // Извлекаем shortcode из URL если его нет
+      let shortcode = video.shortcode;
+      if (!shortcode && video.url) {
+        const match = video.url.match(/\/(reel|p)\/([A-Za-z0-9_-]+)/);
+        shortcode = match ? match[2] : undefined;
+      }
+      
       const { data, error: insertError } = await supabase
         .from('saved_videos')
         .upsert({
           user_id: userId,
           video_id: videoId,
-          shortcode: video.shortcode,
+          shortcode: shortcode,
           thumbnail_url: video.previewUrl,
           video_url: video.url,
           caption: video.title,
@@ -195,7 +202,7 @@ export function useInboxVideos() {
           like_count: video.likeCount,
           comment_count: video.commentCount,
           project_id: video.projectId,
-          folder_id: video.folderId || 'inbox',
+          folder_id: video.folderId || null, // null = "Все видео"
           taken_at: takenAtTimestamp,
         }, {
           onConflict: 'user_id,video_id'
