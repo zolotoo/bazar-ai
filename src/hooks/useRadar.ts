@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { InstagramSearchResult } from '../services/videoService';
 import { supabase } from '../utils/supabase';
+import { downloadAndTranscribe, checkTranscriptionStatus } from '../services/transcriptionService';
 
 export interface TrackedProfile {
   id?: string;
@@ -24,12 +25,15 @@ const STORAGE_KEY = 'radar_profiles';
 // Функция для добавления видео в saved_videos (inbox)
 async function saveReelToInbox(reel: RadarReel, projectId: string, userId: string) {
   try {
-    // Проверяем, нет ли уже такого видео
+    // Извлекаем shortcode из URL
+    const shortcode = reel.shortcode || extractShortcode(reel.url);
+    
+    // Проверяем, нет ли уже такого видео (по video_url или shortcode)
     const { data: existing } = await supabase
       .from('saved_videos')
       .select('id')
-      .eq('url', reel.url)
       .eq('project_id', projectId)
+      .or(`video_url.eq.${reel.url},shortcode.eq.${shortcode}`)
       .single();
 
     if (existing) {
@@ -45,21 +49,32 @@ async function saveReelToInbox(reel: RadarReel, projectId: string, userId: strin
       return { updated: true, id: existing.id };
     }
 
+    // Конвертируем taken_at в число (unix timestamp)
+    let takenAtTimestamp: number | undefined;
+    if (reel.taken_at) {
+      const ts = typeof reel.taken_at === 'number' ? reel.taken_at : Number(reel.taken_at);
+      if (!isNaN(ts)) {
+        takenAtTimestamp = ts > 1e12 ? Math.floor(ts / 1000) : ts;
+      }
+    }
+
     // Добавляем новое видео
     const { data, error } = await supabase
       .from('saved_videos')
       .insert({
         user_id: userId,
+        video_id: shortcode || `radar-${Date.now()}`,
+        shortcode: shortcode,
         project_id: projectId,
-        title: typeof reel.caption === 'string' ? reel.caption.slice(0, 200) : 'Видео из Instagram',
-        preview_url: reel.thumbnail_url || reel.display_url || '',
-        url: reel.url,
+        caption: typeof reel.caption === 'string' ? reel.caption.slice(0, 500) : 'Видео из Instagram',
+        thumbnail_url: reel.thumbnail_url || reel.display_url || '',
+        video_url: reel.url,
         view_count: reel.view_count,
         like_count: reel.like_count,
         comment_count: reel.comment_count,
         owner_username: reel.owner?.username,
-        taken_at: reel.taken_at ? new Date(Number(reel.taken_at) * 1000).toISOString() : null,
-        folder_id: null, // Во "Все видео"
+        taken_at: takenAtTimestamp,
+        folder_id: null, // Во "Все видео" (без папки)
         source: 'radar',
       })
       .select()
@@ -70,11 +85,119 @@ async function saveReelToInbox(reel: RadarReel, projectId: string, userId: strin
       return null;
     }
 
-    return { created: true, id: data?.id };
+    return { created: true, id: data?.id, videoUrl: reel.url };
   } catch (e) {
     console.error('Failed to save reel to inbox:', e);
     return null;
   }
+}
+
+// Извлекаем shortcode из Instagram URL
+function extractShortcode(url: string): string | null {
+  if (!url) return null;
+  const match = url.match(/\/(reel|p)\/([A-Za-z0-9_-]+)/);
+  return match ? match[2] : null;
+}
+
+// Запускает скачивание и транскрибацию видео в фоне
+async function startVideoTranscription(videoDbId: string, instagramUrl: string) {
+  console.log('[Radar] Starting transcription for:', instagramUrl);
+  
+  try {
+    // Обновляем статус
+    await supabase
+      .from('saved_videos')
+      .update({ transcript_status: 'downloading' })
+      .eq('id', videoDbId);
+    
+    // Получаем ссылку на скачивание и запускаем транскрибацию
+    const result = await downloadAndTranscribe(instagramUrl);
+    
+    if (!result.success) {
+      console.error('[Radar] Video processing failed:', result.error);
+      await supabase
+        .from('saved_videos')
+        .update({ transcript_status: 'error' })
+        .eq('id', videoDbId);
+      return;
+    }
+    
+    // Сохраняем данные о скачивании и транскрибации
+    await supabase
+      .from('saved_videos')
+      .update({ 
+        download_url: result.videoUrl,
+        transcript_id: result.transcriptId,
+        transcript_status: 'processing',
+      })
+      .eq('id', videoDbId);
+    
+    console.log('[Radar] Transcription started, id:', result.transcriptId);
+    
+    // Запускаем проверку статуса транскрибации
+    if (result.transcriptId) {
+      pollTranscriptionStatus(videoDbId, result.transcriptId);
+    }
+  } catch (err) {
+    console.error('[Radar] Video processing error:', err);
+    await supabase
+      .from('saved_videos')
+      .update({ transcript_status: 'error' })
+      .eq('id', videoDbId);
+  }
+}
+
+// Проверяет статус транскрибации с polling
+async function pollTranscriptionStatus(videoDbId: string, transcriptId: string) {
+  const maxAttempts = 60; // 5 минут при интервале 5 сек
+  let attempts = 0;
+  
+  const checkStatus = async () => {
+    attempts++;
+    
+    try {
+      const result = await checkTranscriptionStatus(transcriptId);
+      
+      if (result.status === 'completed') {
+        // Сохраняем результат
+        await supabase
+          .from('saved_videos')
+          .update({ 
+            transcript_status: 'completed',
+            transcript_text: result.text,
+          })
+          .eq('id', videoDbId);
+        
+        console.log('[Radar] Transcription completed for:', videoDbId);
+        return;
+      }
+      
+      if (result.status === 'error') {
+        await supabase
+          .from('saved_videos')
+          .update({ transcript_status: 'error' })
+          .eq('id', videoDbId);
+        
+        console.error('[Radar] Transcription error for:', videoDbId);
+        return;
+      }
+      
+      // Продолжаем проверку
+      if (attempts < maxAttempts) {
+        setTimeout(checkStatus, 5000);
+      } else {
+        await supabase
+          .from('saved_videos')
+          .update({ transcript_status: 'timeout' })
+          .eq('id', videoDbId);
+      }
+    } catch (err) {
+      console.error('[Radar] Poll error:', err);
+    }
+  };
+  
+  // Первая проверка через 10 секунд
+  setTimeout(checkStatus, 10000);
 }
 
 export function useRadar(currentProjectId?: string | null, userId?: string) {
@@ -198,9 +321,12 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
         for (const reel of data.reels) {
           const result = await saveReelToInbox(reel, targetProjectId, userId);
           
-          if (result?.created) {
+          if (result?.created && result.id) {
             newCount++;
             savedReels.push({ ...reel, isNew: true, projectId: targetProjectId, savedToInbox: true });
+            
+            // Запускаем транскрибацию для нового видео в фоне
+            startVideoTranscription(result.id, reel.url);
           } else if (result?.updated) {
             updatedCount++;
             savedReels.push({ ...reel, isNew: false, projectId: targetProjectId, savedToInbox: true });
