@@ -86,7 +86,7 @@ export const DesktopSidebar = ({
         className
       )}
       animate={{
-        width: animate ? (open ? "280px" : "72px") : "280px",
+        width: animate ? (open ? "280px" : "88px") : "280px",
       }}
       transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
       onMouseEnter={() => setOpen(true)}
@@ -173,8 +173,8 @@ export const SidebarLink = ({
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 py-2.5 rounded-xl transition-all w-full text-left group/sidebar",
-        open ? "px-3" : "px-0 justify-center",
+        "flex items-center gap-3 py-1.5 rounded-xl transition-all w-full text-left group/sidebar",
+        open ? "px-3" : "px-2 justify-center",
         isActive 
           ? "bg-gradient-to-r from-orange-500/10 to-amber-500/10 text-orange-600" 
           : variant === 'danger'
@@ -283,8 +283,8 @@ export const SidebarProject = ({
     <div
       onClick={onClick}
       className={cn(
-        "group flex items-center gap-3 py-2 rounded-xl transition-all cursor-pointer",
-        open ? "px-3" : "px-0 justify-center",
+        "group flex items-center gap-3 py-1.5 rounded-xl transition-all cursor-pointer",
+        open ? "px-3" : "px-2 justify-center",
         isActive 
           ? "bg-white shadow-sm border border-slate-100" 
           : "hover:bg-slate-50"
@@ -342,7 +342,7 @@ export const SidebarLogo = () => {
   return (
     <div className={cn(
       "flex items-center gap-3 py-2 mb-6 transition-all",
-      open ? "px-3" : "px-0 justify-center"
+      open ? "px-3" : "px-2 justify-center"
     )}>
       <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-lg shadow-orange-500/30 flex-shrink-0">
         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
