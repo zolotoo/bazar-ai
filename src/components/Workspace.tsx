@@ -337,7 +337,7 @@ export function Workspace() {
     <div className="h-full overflow-hidden relative">
       {/* Floating Folder Widget */}
       <div className={cn(
-        "absolute top-4 left-4 z-40 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/50 transition-all duration-300",
+        "absolute top-4 right-4 z-40 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/50 transition-all duration-300",
         isFolderWidgetOpen ? "w-64" : "w-auto"
       )}>
         {/* Widget Header */}
@@ -432,7 +432,7 @@ export function Workspace() {
       </div>
 
       {/* Main Content - Video Feed */}
-      <div className="h-full overflow-y-auto custom-scrollbar-light pl-4 pr-4 md:pl-72">
+      <div className="h-full overflow-y-auto custom-scrollbar-light px-4">
         <div className="max-w-6xl mx-auto py-6">
           {/* Header */}
           <div className="mb-6">
