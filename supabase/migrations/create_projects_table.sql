@@ -22,3 +22,6 @@ ALTER TABLE saved_videos ADD COLUMN IF NOT EXISTS transcript_text TEXT;
 -- Добавляем project_id для связи видео с проектом
 ALTER TABLE saved_videos ADD COLUMN IF NOT EXISTS project_id TEXT;
 ALTER TABLE saved_videos ADD COLUMN IF NOT EXISTS folder_id TEXT;
+
+-- Добавляем поле для сценария
+ALTER TABLE saved_videos ADD COLUMN IF NOT EXISTS script_text TEXT;

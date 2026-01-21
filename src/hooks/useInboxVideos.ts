@@ -25,6 +25,8 @@ interface SavedVideo {
   transcript_id?: string;
   transcript_status?: string;
   transcript_text?: string;
+  // Сценарий
+  script_text?: string;
   // Новые поля для проектов
   project_id?: string;
   folder_id?: string;
@@ -59,6 +61,7 @@ export function useInboxVideos() {
     transcript_id?: string;
     transcript_status?: string;
     transcript_text?: string;
+    script_text?: string;
     download_url?: string;
     taken_at?: number;
   } => ({
@@ -76,6 +79,7 @@ export function useInboxVideos() {
     transcript_id: video.transcript_id,
     transcript_status: video.transcript_status,
     transcript_text: video.transcript_text,
+    script_text: video.script_text,
     download_url: video.download_url,
     taken_at: video.taken_at,
   }), []);
@@ -394,6 +398,63 @@ export function useInboxVideos() {
     setIncomingVideos(useFlowStore.getState().incomingVideos.filter(v => v.id !== videoId));
   }, [setIncomingVideos]);
 
+  /**
+   * Обновляет сценарий видео
+   */
+  const updateVideoScript = useCallback(async (videoId: string, scriptText: string) => {
+    try {
+      const { error } = await supabase
+        .from('saved_videos')
+        .update({ script_text: scriptText })
+        .eq('id', videoId);
+      
+      if (error) {
+        console.error('Error updating video script:', error);
+        return false;
+      }
+      
+      // Обновляем локальное состояние
+      setVideos(prev => prev.map(v => 
+        v.id === videoId ? { ...v, script_text: scriptText } as any : v
+      ));
+      
+      return true;
+    } catch (err) {
+      console.error('Error updating video script:', err);
+      return false;
+    }
+  }, []);
+
+  /**
+   * Обновляет транскрипцию видео
+   */
+  const updateVideoTranscript = useCallback(async (videoId: string, transcriptText: string) => {
+    try {
+      const { error } = await supabase
+        .from('saved_videos')
+        .update({ 
+          transcript_text: transcriptText,
+          transcript_status: 'completed',
+        })
+        .eq('id', videoId);
+      
+      if (error) {
+        console.error('Error updating video transcript:', error);
+        return false;
+      }
+      
+      // Обновляем локальное состояние
+      setVideos(prev => prev.map(v => 
+        v.id === videoId ? { ...v, transcript_text: transcriptText, transcript_status: 'completed' } as any : v
+      ));
+      
+      return true;
+    } catch (err) {
+      console.error('Error updating video transcript:', err);
+      return false;
+    }
+  }, []);
+
   return {
     videos,
     loading,
@@ -401,6 +462,8 @@ export function useInboxVideos() {
     addVideoToInbox,
     removeVideo,
     updateVideoFolder,
+    updateVideoScript,
+    updateVideoTranscript,
     markVideoAsOnCanvas,
     refetch: fetchVideos,
     isConfigured: true,

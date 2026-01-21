@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   ChevronLeft, Play, Eye, Heart, MessageCircle, Calendar, 
   Sparkles, FileText, Copy, ExternalLink, Loader2, Check,
-  Wand2, Languages, RefreshCw, ChevronDown, Mic
+  Languages, ChevronDown, Mic, Save
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { checkTranscriptionStatus, downloadAndTranscribe } from '../services/transcriptionService';
@@ -24,6 +24,7 @@ interface VideoData {
   transcript_id?: string;
   transcript_status?: string;
   transcript_text?: string;
+  script_text?: string;
   download_url?: string;
   folder_id?: string;
 }
@@ -103,8 +104,7 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
   const [transcript, setTranscript] = useState(video.transcript_text || '');
   const [translation, setTranslation] = useState('');
   const [transcriptStatus, setTranscriptStatus] = useState(video.transcript_status || 'pending');
-  const [script, setScript] = useState('');
-  const [isGeneratingScript, setIsGeneratingScript] = useState(false);
+  const [script, setScript] = useState(video.script_text || '');
   const [isTranslating, setIsTranslating] = useState(false);
   const [copiedTranscript, setCopiedTranscript] = useState(false);
   const [copiedScript, setCopiedScript] = useState(false);
@@ -115,8 +115,10 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
   const [localTranscriptId, setLocalTranscriptId] = useState(video.transcript_id);
   const [directVideoUrl, setDirectVideoUrl] = useState<string | null>(video.download_url || null);
   const [isLoadingVideo, setIsLoadingVideo] = useState(false);
+  const [isSavingScript, setIsSavingScript] = useState(false);
+  const [isSavingTranscript, setIsSavingTranscript] = useState(false);
   
-  const { updateVideoFolder } = useInboxVideos();
+  const { updateVideoFolder, updateVideoScript, updateVideoTranscript } = useInboxVideos();
   const { currentProject } = useProjectContext();
   const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at);
   
@@ -295,28 +297,28 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
     }, 1500);
   };
 
-  const handleGenerateScript = async () => {
-    if (!transcript) {
-      toast.error('Сначала дождитесь транскрибации');
-      return;
+  // Сохранение сценария
+  const handleSaveScript = async () => {
+    setIsSavingScript(true);
+    const success = await updateVideoScript(video.id, script);
+    setIsSavingScript(false);
+    if (success) {
+      toast.success('Сценарий сохранён');
+    } else {
+      toast.error('Ошибка сохранения');
     }
-    
-    setIsGeneratingScript(true);
-    // TODO: Интеграция с AI для генерации сценария
-    setTimeout(() => {
-      setScript(`# Сценарий на основе видео
+  };
 
-## Хук (0-3 сек)
-"${transcript.slice(0, 50)}..."
-
-## Основная часть
-[Ваш контент здесь]
-
-## Призыв к действию
-[CTA]`);
-      setIsGeneratingScript(false);
-      toast.success('Сценарий сгенерирован');
-    }, 2000);
+  // Сохранение транскрипции (если редактировали вручную)
+  const handleSaveTranscript = async () => {
+    setIsSavingTranscript(true);
+    const success = await updateVideoTranscript(video.id, transcript);
+    setIsSavingTranscript(false);
+    if (success) {
+      toast.success('Транскрипция сохранена');
+    } else {
+      toast.error('Ошибка сохранения');
+    }
   };
 
   const thumbnailUrl = proxyImageUrl(video.preview_url);
@@ -554,6 +556,19 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
                 {transcript && (
                   <>
                     <button
+                      onClick={handleSaveTranscript}
+                      disabled={isSavingTranscript}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium transition-all flex items-center gap-1.5 disabled:opacity-50"
+                      title="Сохранить транскрипцию"
+                    >
+                      {isSavingTranscript ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Save className="w-3.5 h-3.5" />
+                      )}
+                      Сохранить
+                    </button>
+                    <button
                       onClick={handleTranslate}
                       disabled={isTranslating}
                       className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-50"
@@ -586,9 +601,19 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
                   <p className="text-slate-400 text-sm">Это займёт несколько минут</p>
                 </div>
               ) : transcriptTab === 'original' && transcript ? (
-                <p className="text-slate-700 leading-relaxed whitespace-pre-wrap text-sm">{transcript}</p>
+                <textarea
+                  value={transcript}
+                  onChange={(e) => setTranscript(e.target.value)}
+                  className="w-full h-full resize-none text-slate-700 text-sm leading-relaxed focus:outline-none border border-slate-200 rounded-xl p-4 focus:border-amber-300 focus:ring-2 focus:ring-amber-100 transition-all"
+                  placeholder="Текст транскрипции..."
+                />
               ) : transcriptTab === 'translation' && translation ? (
-                <p className="text-slate-700 leading-relaxed whitespace-pre-wrap text-sm">{translation}</p>
+                <textarea
+                  value={translation}
+                  onChange={(e) => setTranslation(e.target.value)}
+                  className="w-full h-full resize-none text-slate-700 text-sm leading-relaxed focus:outline-none border border-slate-200 rounded-xl p-4 focus:border-amber-300 focus:ring-2 focus:ring-amber-100 transition-all"
+                  placeholder="Перевод..."
+                />
               ) : transcriptTab === 'translation' && !translation ? (
                 <div className="h-full flex flex-col items-center justify-center text-center">
                   <Languages className="w-10 h-10 text-slate-300 mb-3" />
@@ -644,39 +669,29 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
             {/* Script header */}
             <div className="flex items-center justify-between p-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <Wand2 className="w-5 h-5 text-violet-500" />
+                <FileText className="w-5 h-5 text-violet-500" />
                 <h3 className="font-semibold text-slate-800">Мой сценарий</h3>
+                {video.script_text && (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 text-[10px] font-medium">
+                    сохранён
+                  </span>
+                )}
               </div>
               
               <div className="flex items-center gap-2">
-                {!script && transcript && (
-                  <button
-                    onClick={handleGenerateScript}
-                    disabled={isGeneratingScript}
-                    className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-500 to-purple-600 text-white text-xs font-medium hover:from-violet-400 hover:to-purple-500 transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50"
-                  >
-                    {isGeneratingScript ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Wand2 className="w-3.5 h-3.5" />
-                    )}
-                    Сгенерировать
-                  </button>
-                )}
-                
                 {script && (
                   <>
                     <button
-                      onClick={handleGenerateScript}
-                      disabled={isGeneratingScript}
-                      className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-50"
-                      title="Перегенерировать"
+                      onClick={handleSaveScript}
+                      disabled={isSavingScript}
+                      className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-500 to-purple-600 text-white text-xs font-medium hover:from-violet-400 hover:to-purple-500 transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50"
                     >
-                      {isGeneratingScript ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                      {isSavingScript ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       ) : (
-                        <RefreshCw className="w-4 h-4" />
+                        <Save className="w-3.5 h-3.5" />
                       )}
+                      Сохранить
                     </button>
                     <button
                       onClick={handleCopyScript}
@@ -690,46 +705,23 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
               </div>
             </div>
             
-            {/* Script content */}
+            {/* Script content - всегда textarea */}
             <div className="flex-1 overflow-hidden p-4">
-              {script ? (
-                <textarea
-                  value={script}
-                  onChange={(e) => setScript(e.target.value)}
-                  className="w-full h-full resize-none text-slate-700 text-sm leading-relaxed focus:outline-none"
-                  placeholder="Ваш сценарий..."
-                />
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center text-center">
-                  <Wand2 className="w-10 h-10 text-violet-300 mb-3" />
-                  <p className="text-slate-600 font-medium">Создайте свой сценарий</p>
-                  <p className="text-slate-400 text-sm mb-4">
-                    На основе транскрибации или с нуля
-                  </p>
-                  {transcript ? (
-                    <button
-                      onClick={handleGenerateScript}
-                      disabled={isGeneratingScript}
-                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white text-sm font-medium hover:from-violet-400 hover:to-purple-500 transition-all shadow-lg shadow-violet-500/30 flex items-center gap-2 disabled:opacity-50"
-                    >
-                      {isGeneratingScript ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Wand2 className="w-4 h-4" />
-                      )}
-                      Сгенерировать из транскрибации
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => setScript('# Мой сценарий\n\n## Хук\n\n\n## Основная часть\n\n\n## CTA\n')}
-                      className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium transition-colors flex items-center gap-2"
-                    >
-                      <FileText className="w-4 h-4" />
-                      Начать с шаблона
-                    </button>
-                  )}
-                </div>
-              )}
+              <textarea
+                value={script}
+                onChange={(e) => setScript(e.target.value)}
+                className="w-full h-full resize-none text-slate-700 text-sm leading-relaxed focus:outline-none border border-slate-200 rounded-xl p-4 focus:border-violet-300 focus:ring-2 focus:ring-violet-100 transition-all"
+                placeholder="Напишите ваш сценарий здесь...
+
+# Хук (0-3 сек)
+Что зацепит внимание?
+
+# Основная часть
+Главный контент видео
+
+# Призыв к действию (CTA)
+Что должен сделать зритель?"
+              />
             </div>
           </div>
         </div>
