@@ -35,9 +35,9 @@ export default async function handler(req, res) {
 
   console.log('Fetching reel info for shortcode:', code);
 
-  // Используем ТОЛЬКО оплаченный API instagram-scraper-20251
+  // Используем оплаченный API instagram-scraper-20251
   try {
-    // Endpoint: postdetail/?code_or_url=CODE
+    // Endpoint: postdetail/?code_or_url=CODE (только shortcode!)
     const apiUrl = `https://instagram-scraper-20251.p.rapidapi.com/postdetail/?code_or_url=${code}`;
     console.log('Calling instagram-scraper-20251:', apiUrl);
     
@@ -53,41 +53,49 @@ export default async function handler(req, res) {
     
     if (response.ok) {
       const data = await response.json();
-      console.log('API raw response:', JSON.stringify(data).slice(0, 2000));
+      console.log('API raw response keys:', data?.data ? Object.keys(data.data).slice(0, 20) : 'no data');
       
-      // Пробуем разные структуры ответа
-      const media = data?.data || data?.graphql?.shortcode_media || data?.media || data;
+      const media = data?.data;
       
       if (media) {
-        console.log('Media keys:', Object.keys(media));
+        // Статистика в metrics
+        const metrics = media.metrics || {};
         
-        // Извлекаем view_count из разных возможных полей
-        const viewCount = media.play_count || media.video_play_count || media.video_view_count || 
-                         media.view_count || media.clip_music_attribution_info?.view_count || 0;
+        // Извлекаем view_count из metrics.play_count или metrics.ig_play_count
+        const viewCount = metrics.play_count || metrics.ig_play_count || metrics.view_count || 
+                         media.play_count || media.video_view_count || 0;
+        
+        const likeCount = metrics.like_count || media.like_count || 0;
+        const commentCount = metrics.comment_count || media.comment_count || 0;
         
         const result = {
           success: true,
           shortcode: code,
           url: url || `https://www.instagram.com/reel/${code}/`,
-          thumbnail_url: media.image_versions2?.candidates?.[0]?.url || media.thumbnail_url || 
-                        media.display_url || media.thumbnail_src || '',
-          caption: media.caption?.text || media.edge_media_to_caption?.edges?.[0]?.node?.text || 
-                  (typeof media.caption === 'string' ? media.caption : '') || '',
+          thumbnail_url: media.thumbnail_url || media.image_versions?.items?.[0]?.url || '',
+          video_url: media.video_url || media.video_versions?.[0]?.url || '',
+          caption: media.caption?.text || (typeof media.caption === 'string' ? media.caption : '') || '',
           view_count: viewCount,
-          like_count: media.like_count || media.edge_media_preview_like?.count || 0,
-          comment_count: media.comment_count || media.edge_media_to_comment?.count || 0,
-          taken_at: media.taken_at || media.taken_at_timestamp,
+          like_count: likeCount,
+          comment_count: commentCount,
+          taken_at: media.taken_at || media.taken_at_ts,
           owner: {
-            username: media.user?.username || media.owner?.username || '',
-            full_name: media.user?.full_name || media.owner?.full_name || '',
+            username: media.user?.username || '',
+            full_name: media.user?.full_name || '',
           },
-          is_video: media.media_type === 2 || media.is_video || media.__typename === 'GraphVideo',
+          is_video: media.is_video || media.media_type === 2 || !!media.video_url,
           api_used: 'instagram-scraper-20251',
         };
         
-        console.log('Extracted reel info:', result);
+        console.log('Extracted reel info:', {
+          shortcode: result.shortcode,
+          view_count: result.view_count,
+          like_count: result.like_count,
+          comment_count: result.comment_count,
+          owner: result.owner.username,
+        });
         
-        // Если получили хоть какие-то данные - возвращаем
+        // Если получили данные - возвращаем
         if (result.view_count || result.like_count || result.thumbnail_url || result.owner.username) {
           return res.status(200).json(result);
         }
