@@ -33,19 +33,24 @@ async function saveReelToInbox(reel: RadarReel, projectId: string, userId: strin
     // Проверяем, нет ли уже такого видео по shortcode
     let existing = null;
     if (shortcode) {
-      const { data } = await supabase
+      const { data, error: selectError } = await supabase
         .from('saved_videos')
-        .select('id')
+        .select('id, transcript_status')
         .eq('user_id', userId)
         .eq('shortcode', shortcode)
         .maybeSingle();
+      
+      if (selectError) {
+        console.error('[Radar] Error checking existing video:', selectError);
+      }
       existing = data;
+      console.log('[Radar] Existing check for', shortcode, ':', existing ? `found (id: ${existing.id})` : 'not found');
     }
 
     if (existing) {
-      console.log('[Radar] Video exists, updating stats:', existing.id);
-      // Обновляем статистику
-      await supabase
+      console.log('[Radar] Video exists, updating stats only:', existing.id);
+      // Обновляем только статистику, НЕ запускаем транскрибацию
+      const { error: updateError } = await supabase
         .from('saved_videos')
         .update({
           view_count: reel.view_count,
@@ -53,6 +58,11 @@ async function saveReelToInbox(reel: RadarReel, projectId: string, userId: strin
           comment_count: reel.comment_count,
         })
         .eq('id', existing.id);
+      
+      if (updateError) {
+        console.error('[Radar] Error updating stats:', updateError);
+      }
+      
       return { updated: true, id: existing.id };
     }
 
