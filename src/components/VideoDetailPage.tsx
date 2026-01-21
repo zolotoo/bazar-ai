@@ -242,6 +242,49 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
     }
   };
 
+  // При открытии - проверяем есть ли транскрибация в глобальной таблице
+  useEffect(() => {
+    const checkGlobalTranscription = async () => {
+      // Если транскрипция уже есть локально - не проверяем
+      if (transcript || video.transcript_text) return;
+      
+      // Извлекаем shortcode из URL
+      const match = video.url?.match(/\/(reel|p)\/([A-Za-z0-9_-]+)/);
+      const shortcode = match ? match[2] : null;
+      
+      if (!shortcode) return;
+      
+      // Проверяем глобальную таблицу
+      const { data: globalVideo } = await supabase
+        .from('videos')
+        .select('transcript_status, transcript_text')
+        .eq('shortcode', shortcode)
+        .maybeSingle();
+      
+      if (globalVideo?.transcript_status === 'completed' && globalVideo?.transcript_text) {
+        // Нашли готовую транскрипцию - копируем себе
+        setTranscript(globalVideo.transcript_text);
+        setTranscriptStatus('completed');
+        
+        // Сохраняем в saved_videos
+        await supabase
+          .from('saved_videos')
+          .update({ 
+            transcript_text: globalVideo.transcript_text, 
+            transcript_status: 'completed' 
+          })
+          .eq('id', video.id);
+        
+        toast.success('Транскрибация загружена', { description: 'Найдена в общей базе' });
+      } else if (globalVideo?.transcript_status && globalVideo.transcript_status !== 'completed' && globalVideo.transcript_status !== 'error') {
+        // Транскрибация в процессе
+        setTranscriptStatus(globalVideo.transcript_status);
+      }
+    };
+    
+    checkGlobalTranscription();
+  }, [video.id, video.url, video.transcript_text, transcript]);
+
   // Polling для статуса транскрибации
   useEffect(() => {
     const transcriptId = localTranscriptId || video.transcript_id;
@@ -287,14 +330,41 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
       return;
     }
     
-    setIsTranslating(true);
-    // TODO: Интеграция с API перевода
-    setTimeout(() => {
-      setTranslation(`[Перевод на русский]\n\n${transcript.split(' ').slice(0, 20).join(' ')}...\n\n(Здесь будет полный перевод текста)`);
-      setIsTranslating(false);
+    // Если уже есть перевод - просто переключаем таб
+    if (translation) {
       setTranscriptTab('translation');
-      toast.success('Текст переведён');
-    }, 1500);
+      return;
+    }
+    
+    setIsTranslating(true);
+    toast.info('Перевожу текст...', { description: 'Это займёт несколько секунд' });
+    
+    try {
+      const response = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: transcript,
+          from: 'en', // Автоопределение исходного языка (MyMemory сам определит)
+          to: 'ru',
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.translated) {
+        setTranslation(data.translated);
+        setTranscriptTab('translation');
+        toast.success('Текст переведён');
+      } else {
+        toast.error('Ошибка перевода', { description: data.error || 'Попробуйте позже' });
+      }
+    } catch (err) {
+      console.error('Translation error:', err);
+      toast.error('Ошибка при переводе');
+    } finally {
+      setIsTranslating(false);
+    }
   };
 
   // Сохранение сценария

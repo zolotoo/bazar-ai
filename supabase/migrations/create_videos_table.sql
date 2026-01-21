@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS videos (
   transcript_status TEXT DEFAULT NULL, -- null, downloading, processing, completed, error
   transcript_text TEXT,
   transcript_language TEXT,
+  translation_text TEXT, -- Перевод на русский
   
   -- Timestamps
   created_at TIMESTAMPTZ DEFAULT NOW(),
