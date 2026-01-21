@@ -423,7 +423,10 @@ function AppContent() {
       {/* Animated Sidebar */}
       <Sidebar open={sidebarExpanded} setOpen={setSidebarExpanded}>
         <SidebarBody className="justify-between gap-6">
-          <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar-light">
+          <div className={cn(
+            "flex flex-col flex-1 overflow-y-auto overflow-x-hidden",
+            sidebarExpanded ? "custom-scrollbar-light" : "scrollbar-hide"
+          )}>
             {/* Logo */}
             <SidebarLogo />
             

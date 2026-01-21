@@ -538,7 +538,7 @@ export function Workspace() {
                     key={value}
                     onClick={() => setSortBy(value as typeof sortBy)}
                     className={cn(
-                      "flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all active:scale-95",
+                      "flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold transition-all active:scale-95",
                       sortBy === value 
                         ? `bg-gradient-to-r ${color} text-white shadow-md` 
                         : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
