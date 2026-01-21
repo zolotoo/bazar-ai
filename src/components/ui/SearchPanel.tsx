@@ -1412,7 +1412,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                         )}>
                           <div className="relative w-full" style={{ aspectRatio: '9/16' }}>
                             <img
-                              src={video.previewUrl || 'https://via.placeholder.com/200x356'}
+                              src={proxyImageUrl(video.previewUrl)}
                               alt=""
                               className="w-full h-full object-cover"
                               onError={(e) => {

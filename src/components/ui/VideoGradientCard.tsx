@@ -4,6 +4,16 @@ import { motion } from "framer-motion";
 import { cn } from "../../utils/cn";
 import { Sparkles, MoreVertical, ArrowRight, Eye, Heart } from "lucide-react";
 
+// Проксирование Instagram изображений через наш API
+function proxyImageUrl(url?: string): string {
+  if (!url) return 'https://via.placeholder.com/270x360';
+  if (url.includes('/api/proxy-image') || url.includes('placeholder.com')) return url;
+  if (url.includes('cdninstagram.com') || url.includes('instagram.com')) {
+    return `/api/proxy-image?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
 export interface VideoGradientCardProps {
   thumbnailUrl: string;
   username?: string;
@@ -91,7 +101,7 @@ export const VideoGradientCard = ({
         <motion.div 
           className="absolute inset-0 z-0 bg-cover bg-center"
           style={{ 
-            backgroundImage: `url(${thumbnailUrl})`,
+            backgroundImage: `url(${proxyImageUrl(thumbnailUrl)})`,
           }}
           animate={{
             scale: isHovered ? 1.1 : 1,
