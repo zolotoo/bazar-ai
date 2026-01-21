@@ -21,91 +21,13 @@ export default async function handler(req, res) {
 
   const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY || '60b367f230mshd3ca48b7e1fa21cp18f206jsn57b97472bcca';
   const RAPIDAPI_KEY_2 = process.env.RAPIDAPI_KEY_2 || 'b0c8ed7c19msha2cdb96d5b4b6e8p1498c0jsncd589edf5d8b';
-  const HIKERAPI_KEY = process.env.HIKERAPI_KEY || '2gcewt5ly7xqjncxbamzb9i9kg1y81ka';
   
   // Очищаем username от @ если есть
   const cleanUsername = username.replace(/^@/, '').trim().toLowerCase();
   
   console.log('Fetching reels for user:', cleanUsername);
 
-  // ПРИОРИТЕТ 0: HikerAPI - надёжный платный сервис
-  try {
-    console.log('Trying HikerAPI...');
-    
-    // Шаг 1: Получаем user_id по username
-    const userInfoUrl = `https://api.hikerapi.com/v1/user/by/username?username=${cleanUsername}`;
-    console.log('HikerAPI - getting user info:', userInfoUrl);
-    
-    const userResponse = await fetch(userInfoUrl, {
-      method: 'GET',
-      headers: {
-        'accept': 'application/json',
-        'x-access-key': HIKERAPI_KEY,
-      },
-    });
-    
-    console.log('HikerAPI user info status:', userResponse.status);
-    
-    if (userResponse.ok) {
-      const userData = await userResponse.json();
-      console.log('HikerAPI user data:', JSON.stringify(userData).slice(0, 500));
-      
-      const userId = userData?.pk || userData?.id || userData?.user?.pk;
-      
-      if (userId) {
-        // Шаг 2: Получаем clips (reels) пользователя
-        const clipsUrl = `https://api.hikerapi.com/v1/user/clips/chunk?user_id=${userId}`;
-        console.log('HikerAPI - getting clips:', clipsUrl);
-        
-        const clipsResponse = await fetch(clipsUrl, {
-          method: 'GET',
-          headers: {
-            'accept': 'application/json',
-            'x-access-key': HIKERAPI_KEY,
-          },
-        });
-        
-        console.log('HikerAPI clips status:', clipsResponse.status);
-        
-        if (clipsResponse.ok) {
-          const clipsData = await clipsResponse.json();
-          console.log('HikerAPI clips data:', JSON.stringify(clipsData).slice(0, 1000));
-          
-          // Парсим ответ - может быть items или edges
-          let items = clipsData?.items || clipsData?.data?.items || clipsData?.clips || [];
-          
-          if (items.length > 0) {
-            const reels = items.map(item => ({
-              id: item.pk || item.id,
-              shortcode: item.code,
-              url: `https://www.instagram.com/reel/${item.code}/`,
-              thumbnail_url: item.image_versions2?.candidates?.[0]?.url || item.thumbnail_url || item.display_url,
-              caption: item.caption?.text || '',
-              view_count: item.play_count || item.view_count || 0,
-              like_count: item.like_count || 0,
-              comment_count: item.comment_count || 0,
-              taken_at: item.taken_at,
-              owner: { username: cleanUsername },
-            })).filter(r => r.shortcode);
-            
-            if (reels.length > 0) {
-              console.log(`HikerAPI found ${reels.length} reels`);
-              return res.status(200).json({
-                success: true,
-                username: cleanUsername,
-                reels,
-                api_used: 'hikerapi',
-              });
-            }
-          }
-        }
-      }
-    }
-  } catch (e) {
-    console.warn('HikerAPI error:', e.message);
-  }
-
-  // Fallback на RapidAPI если HikerAPI не сработал
+  // RapidAPI endpoints
   const apis = [
     // ПРИОРИТЕТ 1: instagram-scraper-20251 с новым ключом
     {
