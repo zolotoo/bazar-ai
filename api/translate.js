@@ -1,4 +1,4 @@
-// Vercel Serverless Function - перевод текста через MyMemory API (бесплатно)
+// Vercel Serverless Function - перевод текста через бесплатный Google Translate API
 export default async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -13,52 +13,77 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { text, from = 'en', to = 'ru' } = req.body;
+  const { text, to = 'ru' } = req.body;
 
   if (!text) {
     return res.status(400).json({ error: 'text is required' });
   }
 
-  console.log(`Translating ${text.length} chars from ${from} to ${to}`);
+  console.log(`Translating ${text.length} chars to ${to}`);
 
   try {
-    // MyMemory API - бесплатно до 5000 слов/день
-    // Разбиваем длинный текст на части (лимит ~500 символов на запрос)
-    const chunks = splitText(text, 450);
+    // Бесплатный Google Translate API (gtx client)
+    // Автоопределение языка, перевод на русский
+    // Лимит ~5000 символов за запрос
+    
+    const chunks = splitText(text, 4500);
     const translations = [];
     
     for (const chunk of chunks) {
-      const response = await fetch(
-        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=${from}|${to}`
-      );
+      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${to}&dt=t&q=${encodeURIComponent(chunk)}`;
+      
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        },
+      });
       
       if (!response.ok) {
-        console.error('MyMemory error:', response.status);
+        console.error('Google Translate error:', response.status);
+        translations.push(chunk); // Оставляем оригинал
         continue;
       }
       
       const data = await response.json();
       
-      if (data.responseStatus === 200 && data.responseData?.translatedText) {
-        translations.push(data.responseData.translatedText);
+      // Парсим ответ Google Translate
+      // Формат: [[[translated, original, ...], ...], ...]
+      if (data && data[0] && Array.isArray(data[0])) {
+        const translatedParts = data[0]
+          .filter(part => part && part[0])
+          .map(part => part[0]);
+        translations.push(translatedParts.join(''));
       } else {
-        console.error('MyMemory response error:', data);
-        translations.push(chunk); // Оставляем оригинал если не удалось перевести
+        console.error('Unexpected response format:', data);
+        translations.push(chunk);
       }
       
-      // Небольшая задержка между запросами чтобы не превысить лимит
+      // Небольшая задержка между запросами
       if (chunks.length > 1) {
-        await new Promise(r => setTimeout(r, 100));
+        await new Promise(r => setTimeout(r, 200));
       }
     }
     
     const translatedText = translations.join(' ');
     
+    // Определяем исходный язык из ответа (если был один chunk)
+    let detectedLang = 'auto';
+    try {
+      const testUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${to}&dt=t&q=${encodeURIComponent(text.slice(0, 100))}`;
+      const testResponse = await fetch(testUrl);
+      const testData = await testResponse.json();
+      if (testData && testData[2]) {
+        detectedLang = testData[2];
+      }
+    } catch (e) {
+      // ignore
+    }
+    
     return res.status(200).json({
       success: true,
       original: text,
       translated: translatedText,
-      from,
+      from: detectedLang,
       to,
     });
     
@@ -78,7 +103,7 @@ function splitText(text, maxLength) {
   }
   
   const chunks = [];
-  const sentences = text.split(/(?<=[.!?])\s+/);
+  const sentences = text.split(/(?<=[.!?।॥])\s+/); // Добавил индийские знаки препинания
   let currentChunk = '';
   
   for (const sentence of sentences) {
@@ -88,9 +113,9 @@ function splitText(text, maxLength) {
       if (currentChunk) {
         chunks.push(currentChunk);
       }
-      // Если предложение само по себе слишком длинное - разбиваем по словам
       if (sentence.length > maxLength) {
-        const words = sentence.split(' ');
+        // Разбиваем по словам если предложение слишком длинное
+        const words = sentence.split(/\s+/);
         currentChunk = '';
         for (const word of words) {
           if (currentChunk.length + word.length + 1 <= maxLength) {
