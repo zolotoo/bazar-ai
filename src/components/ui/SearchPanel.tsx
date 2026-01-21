@@ -15,6 +15,7 @@ import { useSearchHistory } from '../../hooks/useSearchHistory';
 import { useWorkspaceZones } from '../../hooks/useWorkspaceZones';
 import { useProjectContext } from '../../contexts/ProjectContext';
 import { useRadar } from '../../hooks/useRadar';
+import { useAuth } from '../../hooks/useAuth';
 import { IncomingVideo } from '../../types';
 import { cn } from '../../utils/cn';
 import { supabase } from '../../utils/supabase';
@@ -153,15 +154,21 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
   const { history: searchHistory, addToHistory, refetch: refetchHistory, getTodayCache, getAllResultsByQuery } = useSearchHistory();
   useWorkspaceZones(); // keep hook for potential future use
   const { projects, currentProject } = useProjectContext();
+  const { user } = useAuth();
+  
+  // Получаем userId для radar
+  const radarUserId = user?.telegram_username || user?.id || 'anonymous';
+  
   const { 
     profiles: radarProfiles, 
-    reels: radarReels, 
+    recentReels: radarReels, 
     loading: radarLoading,
     loadingUsername: radarLoadingUsername,
+    stats: radarStats,
     addProfile: addRadarProfile, 
     removeProfile: removeRadarProfile,
     refreshAll: refreshRadar,
-  } = useRadar();
+  } = useRadar(currentProjectId, radarUserId);
   
   // Минимум просмотров для показа в поиске
   const MIN_VIEWS = 30000;
@@ -1097,27 +1104,56 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                     </div>
                     <div>
                       <h3 className="text-sm font-semibold text-slate-800">Радар профилей</h3>
-                      <p className="text-xs text-slate-500">Отслеживайте новые видео от авторов</p>
+                      <p className="text-xs text-slate-500">
+                        Проект: <span className="font-medium text-orange-600">{currentProjectName}</span>
+                      </p>
                     </div>
                   </div>
-                  {radarProfiles.length > 0 && (
-                    <button
-                      onClick={refreshRadar}
-                      disabled={radarLoading}
-                      className={cn(
-                        "px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
-                        "bg-slate-100 text-slate-600 hover:bg-slate-200",
-                        radarLoading && "opacity-50 cursor-not-allowed"
-                      )}
-                    >
-                      {radarLoading ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        'Обновить все'
-                      )}
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {(radarStats.newVideos > 0 || radarStats.updatedVideos > 0) && (
+                      <div className="text-xs text-slate-500">
+                        {radarStats.newVideos > 0 && (
+                          <span className="text-emerald-600 font-medium">+{radarStats.newVideos} новых</span>
+                        )}
+                        {radarStats.newVideos > 0 && radarStats.updatedVideos > 0 && ', '}
+                        {radarStats.updatedVideos > 0 && (
+                          <span>{radarStats.updatedVideos} обновлено</span>
+                        )}
+                      </div>
+                    )}
+                    {radarProfiles.length > 0 && (
+                      <button
+                        onClick={() => {
+                          refreshRadar();
+                          toast.info('Обновляем все профили...', {
+                            description: 'Видео автоматически добавятся в "Все видео"',
+                          });
+                        }}
+                        disabled={radarLoading}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+                          "bg-slate-100 text-slate-600 hover:bg-slate-200",
+                          radarLoading && "opacity-50 cursor-not-allowed"
+                        )}
+                      >
+                        {radarLoading ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          'Обновить все'
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
+
+                {/* Info banner */}
+                {currentProjectId && (
+                  <div className="mb-4 p-3 rounded-xl bg-blue-50 border border-blue-100">
+                    <p className="text-xs text-blue-700">
+                      <span className="font-semibold">💡 Как это работает:</span> Все видео добавленных профилей автоматически попадут в папку "Все видео" проекта "{currentProjectName}". При обновлении - новые видео добавятся, а статистика старых обновится.
+                    </p>
+                  </div>
+                )}
                 
                 {/* Add new profile */}
                 <div className="flex items-center gap-2 mb-4">
@@ -1128,37 +1164,38 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                       value={radarUsername}
                       onChange={(e) => setRadarUsername(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && radarUsername.trim()) {
-                          const added = addRadarProfile(radarUsername);
+                        if (e.key === 'Enter' && radarUsername.trim() && currentProjectId) {
+                          const added = addRadarProfile(radarUsername, currentProjectId);
                           if (added) {
                             toast.success(`@${radarUsername} добавлен в радар`, {
-                              description: 'Загружаем последние видео...',
+                              description: `Проект: ${currentProjectName}. Загружаем видео...`,
                             });
                           } else {
-                            toast.error('Профиль уже отслеживается');
+                            toast.error('Профиль уже отслеживается в этом проекте');
                           }
                           setRadarUsername('');
                         }
                       }}
                       placeholder="username"
-                      className="w-full pl-9 pr-4 py-3 rounded-xl border border-slate-200 bg-white/80 outline-none focus:ring-2 focus:ring-orange-500/30 text-sm"
+                      disabled={!currentProjectId}
+                      className="w-full pl-9 pr-4 py-3 rounded-xl border border-slate-200 bg-white/80 outline-none focus:ring-2 focus:ring-orange-500/30 text-sm disabled:opacity-50"
                     />
                   </div>
                   <button
                     onClick={() => {
-                      if (radarUsername.trim()) {
-                        const added = addRadarProfile(radarUsername);
+                      if (radarUsername.trim() && currentProjectId) {
+                        const added = addRadarProfile(radarUsername, currentProjectId);
                         if (added) {
                           toast.success(`@${radarUsername} добавлен в радар`, {
-                            description: 'Загружаем последние видео...',
+                            description: `Проект: ${currentProjectName}. Загружаем видео...`,
                           });
                         } else {
-                          toast.error('Профиль уже отслеживается');
+                          toast.error('Профиль уже отслеживается в этом проекте');
                         }
                         setRadarUsername('');
                       }
                     }}
-                    disabled={!radarUsername.trim()}
+                    disabled={!radarUsername.trim() || !currentProjectId}
                     className={cn(
                       "px-5 py-3 rounded-xl font-medium text-sm transition-all active:scale-95 flex items-center gap-2",
                       "bg-gradient-to-r from-orange-500 to-amber-600 text-white",
@@ -1262,12 +1299,21 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                   </div>
                 )}
 
-                {/* Empty state */}
-                {radarProfiles.length === 0 && (
+                {/* Empty state - no project */}
+                {!currentProjectId && (
                   <div className="text-center py-8">
                     <Radar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                    <p className="text-slate-500 text-sm mb-1">Радар пуст</p>
-                    <p className="text-slate-400 text-xs">Добавьте профили для отслеживания новых видео</p>
+                    <p className="text-slate-500 text-sm mb-1">Выберите проект</p>
+                    <p className="text-slate-400 text-xs">Сначала выберите проект в боковом меню</p>
+                  </div>
+                )}
+
+                {/* Empty state - no profiles */}
+                {currentProjectId && radarProfiles.length === 0 && (
+                  <div className="text-center py-8">
+                    <Radar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                    <p className="text-slate-500 text-sm mb-1">Радар для "{currentProjectName}" пуст</p>
+                    <p className="text-slate-400 text-xs">Добавьте Instagram профили для автоматического сбора видео</p>
                   </div>
                 )}
               </div>
