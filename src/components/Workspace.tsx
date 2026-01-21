@@ -441,6 +441,7 @@ export function Workspace() {
                       likeCount={video.like_count}
                       viralCoef={viralCoef}
                       folderBadge={folderBadge}
+                      transcriptStatus={video.transcript_status}
                       onClick={() => setSelectedVideo(video)}
                       onDragStart={() => setDraggedVideo(video)}
                       showFolderMenu={cardMenuVideoId === video.id}

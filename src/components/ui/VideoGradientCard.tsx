@@ -2,7 +2,7 @@
 import React, { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { cn } from "../../utils/cn";
-import { Sparkles, MoreVertical, ArrowRight, Eye, Heart } from "lucide-react";
+import { Sparkles, MoreVertical, ArrowRight, Eye, Heart, Loader2, FileText, AlertCircle } from "lucide-react";
 
 // Проксирование Instagram изображений через наш API
 function proxyImageUrl(url?: string): string {
@@ -23,6 +23,7 @@ export interface VideoGradientCardProps {
   date?: string;
   viralCoef?: number;
   folderBadge?: { name: string; color: string }; // Бейдж папки
+  transcriptStatus?: string | null; // null, downloading, processing, completed, error
   onClick?: () => void;
   onAdd?: () => void;
   onDragStart?: (e: React.DragEvent) => void;
@@ -48,6 +49,7 @@ export const VideoGradientCard = ({
   date,
   viralCoef = 0,
   folderBadge,
+  transcriptStatus,
   onClick,
   onAdd,
   onDragStart,
@@ -211,8 +213,63 @@ export const VideoGradientCard = ({
               )}
             </div>
 
+            {/* Transcript status badge */}
+            {transcriptStatus && transcriptStatus !== 'completed' && (
+              <div className="mb-2">
+                <span 
+                  className={cn(
+                    "inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-semibold backdrop-blur-sm",
+                    transcriptStatus === 'error' || transcriptStatus === 'timeout'
+                      ? "bg-red-500/20 text-red-200 border border-red-500/30"
+                      : "bg-violet-500/20 text-violet-200 border border-violet-500/30"
+                  )}
+                >
+                  {transcriptStatus === 'downloading' && (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Скачивание...
+                    </>
+                  )}
+                  {transcriptStatus === 'processing' && (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Транскрибация...
+                    </>
+                  )}
+                  {transcriptStatus === 'queued' && (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      В очереди...
+                    </>
+                  )}
+                  {transcriptStatus === 'error' && (
+                    <>
+                      <AlertCircle className="w-3 h-3" />
+                      Ошибка
+                    </>
+                  )}
+                  {transcriptStatus === 'timeout' && (
+                    <>
+                      <AlertCircle className="w-3 h-3" />
+                      Таймаут
+                    </>
+                  )}
+                </span>
+              </div>
+            )}
+
+            {/* Transcript completed badge */}
+            {transcriptStatus === 'completed' && (
+              <div className="mb-2">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-500/20 text-emerald-200 border border-emerald-500/30">
+                  <FileText className="w-3 h-3" />
+                  Текст готов
+                </span>
+              </div>
+            )}
+
             {/* Folder badge - показывает в какой папке находится видео */}
-            {folderBadge && (
+            {folderBadge && !transcriptStatus && (
               <div className="mb-2">
                 <span 
                   className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold"
