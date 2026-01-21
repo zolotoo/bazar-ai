@@ -14,6 +14,7 @@ import { useInboxVideos } from '../../hooks/useInboxVideos';
 import { useSearchHistory } from '../../hooks/useSearchHistory';
 import { useWorkspaceZones } from '../../hooks/useWorkspaceZones';
 import { useProjectContext } from '../../contexts/ProjectContext';
+import { useRadar } from '../../hooks/useRadar';
 import { IncomingVideo } from '../../types';
 import { cn } from '../../utils/cn';
 import { supabase } from '../../utils/supabase';
@@ -152,6 +153,15 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
   const { history: searchHistory, addToHistory, refetch: refetchHistory, getTodayCache, getAllResultsByQuery } = useSearchHistory();
   useWorkspaceZones(); // keep hook for potential future use
   const { projects, currentProject } = useProjectContext();
+  const { 
+    profiles: radarProfiles, 
+    reels: radarReels, 
+    loading: radarLoading,
+    loadingUsername: radarLoadingUsername,
+    addProfile: addRadarProfile, 
+    removeProfile: removeRadarProfile,
+    refreshAll: refreshRadar,
+  } = useRadar();
   
   // Минимум просмотров для показа в поиске
   const MIN_VIEWS = 30000;
@@ -1075,17 +1085,41 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
             {/* Radar Tab Content */}
             {activeTab === 'radar' && (
               <div className="glass rounded-2xl p-5 shadow-xl shadow-orange-500/10">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center relative">
-                    <Radar className="w-5 h-5 text-white" />
-                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white" />
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center relative">
+                      <Radar className="w-5 h-5 text-white" />
+                      {radarProfiles.length > 0 && (
+                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center text-[10px] text-white font-bold">
+                          {radarProfiles.length}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-800">Радар профилей</h3>
+                      <p className="text-xs text-slate-500">Отслеживайте новые видео от авторов</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-800">Радар профилей</h3>
-                    <p className="text-xs text-slate-500">Отслеживайте новые видео от авторов</p>
-                  </div>
+                  {radarProfiles.length > 0 && (
+                    <button
+                      onClick={refreshRadar}
+                      disabled={radarLoading}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+                        "bg-slate-100 text-slate-600 hover:bg-slate-200",
+                        radarLoading && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      {radarLoading ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        'Обновить все'
+                      )}
+                    </button>
+                  )}
                 </div>
                 
+                {/* Add new profile */}
                 <div className="flex items-center gap-2 mb-4">
                   <div className="relative flex-1">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">@</span>
@@ -1093,6 +1127,19 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                       type="text"
                       value={radarUsername}
                       onChange={(e) => setRadarUsername(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && radarUsername.trim()) {
+                          const added = addRadarProfile(radarUsername);
+                          if (added) {
+                            toast.success(`@${radarUsername} добавлен в радар`, {
+                              description: 'Загружаем последние видео...',
+                            });
+                          } else {
+                            toast.error('Профиль уже отслеживается');
+                          }
+                          setRadarUsername('');
+                        }
+                      }}
                       placeholder="username"
                       className="w-full pl-9 pr-4 py-3 rounded-xl border border-slate-200 bg-white/80 outline-none focus:ring-2 focus:ring-orange-500/30 text-sm"
                     />
@@ -1100,9 +1147,14 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                   <button
                     onClick={() => {
                       if (radarUsername.trim()) {
-                        toast.success(`@${radarUsername} добавлен в радар`, {
-                          description: 'Вы будете получать уведомления о новых видео',
-                        });
+                        const added = addRadarProfile(radarUsername);
+                        if (added) {
+                          toast.success(`@${radarUsername} добавлен в радар`, {
+                            description: 'Загружаем последние видео...',
+                          });
+                        } else {
+                          toast.error('Профиль уже отслеживается');
+                        }
                         setRadarUsername('');
                       }
                     }}
@@ -1120,23 +1172,104 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                   </button>
                 </div>
 
-                {/* Tracked profiles placeholder */}
-                <div className="border-t border-slate-200/50 pt-4">
-                  <p className="text-xs text-slate-500 mb-3">Отслеживаемые профили</p>
-                  <div className="flex flex-wrap gap-2">
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/60 border border-slate-200/50">
-                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-pink-500 to-purple-600" />
-                      <span className="text-sm text-slate-700">@example_user</span>
-                      <button className="text-slate-400 hover:text-red-500 transition-colors">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
+                {/* Tracked profiles */}
+                {radarProfiles.length > 0 && (
+                  <div className="border-t border-slate-200/50 pt-4 mb-4">
+                    <p className="text-xs text-slate-500 mb-3">Отслеживаемые профили ({radarProfiles.length})</p>
+                    <div className="flex flex-wrap gap-2">
+                      {radarProfiles.map(profile => (
+                        <div 
+                          key={profile.username}
+                          className={cn(
+                            "flex items-center gap-2 px-3 py-2 rounded-xl bg-white/60 border border-slate-200/50 transition-all",
+                            radarLoadingUsername === profile.username && "animate-pulse"
+                          )}
+                        >
+                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
+                            {profile.username[0].toUpperCase()}
+                          </div>
+                          <span className="text-sm text-slate-700">@{profile.username}</span>
+                          {radarLoadingUsername === profile.username ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />
+                          ) : (
+                            <button 
+                              onClick={() => {
+                                removeRadarProfile(profile.username);
+                                toast.success(`@${profile.username} удалён из радара`);
+                              }}
+                              className="text-slate-400 hover:text-red-500 transition-colors"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                    <button className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-slate-300 text-slate-500 hover:border-orange-400 hover:text-orange-500 transition-all text-sm">
-                      <Plus className="w-4 h-4" />
-                      Добавить
-                    </button>
                   </div>
-                </div>
+                )}
+
+                {/* Radar reels grid */}
+                {radarReels.length > 0 && (
+                  <div className="border-t border-slate-200/50 pt-4">
+                    <p className="text-xs text-slate-500 mb-3">Последние видео ({radarReels.length})</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto custom-scrollbar-light pr-1">
+                      {radarReels.slice(0, 12).map((reel, idx) => (
+                        <div 
+                          key={`radar-${reel.shortcode}-${idx}`}
+                          className="relative group cursor-pointer"
+                          onClick={() => setSelectedVideo(reel)}
+                        >
+                          <div className="aspect-[9/16] rounded-xl overflow-hidden bg-slate-100">
+                            <img
+                              src={proxyImageUrl(reel.thumbnail_url)}
+                              alt=""
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              onError={(e) => {
+                                e.currentTarget.src = 'https://via.placeholder.com/200x356?text=Video';
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            
+                            {/* Stats overlay on hover */}
+                            <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <p className="text-white text-xs font-medium truncate mb-1">
+                                @{reel.owner?.username}
+                              </p>
+                              <div className="flex items-center gap-2 text-white/80 text-[10px]">
+                                <span className="flex items-center gap-0.5">
+                                  <Eye className="w-3 h-3" />
+                                  {formatNumber(reel.view_count)}
+                                </span>
+                                <span className="flex items-center gap-0.5">
+                                  <Heart className="w-3 h-3" />
+                                  {formatNumber(reel.like_count)}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* New badge */}
+                            {reel.isNew && (
+                              <div className="absolute top-2 right-2">
+                                <span className="px-1.5 py-0.5 rounded bg-emerald-500 text-white text-[10px] font-bold">
+                                  NEW
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty state */}
+                {radarProfiles.length === 0 && (
+                  <div className="text-center py-8">
+                    <Radar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                    <p className="text-slate-500 text-sm mb-1">Радар пуст</p>
+                    <p className="text-slate-400 text-xs">Добавьте профили для отслеживания новых видео</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
