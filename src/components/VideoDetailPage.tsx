@@ -24,6 +24,7 @@ interface VideoData {
   transcript_id?: string;
   transcript_status?: string;
   transcript_text?: string;
+  translation_text?: string; // Перевод
   script_text?: string;
   download_url?: string;
   folder_id?: string;
@@ -102,7 +103,7 @@ function calculateViralCoefficient(views?: number, takenAt?: string | number): n
 export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
   const [transcriptTab, setTranscriptTab] = useState<'original' | 'translation'>('original');
   const [transcript, setTranscript] = useState(video.transcript_text || '');
-  const [translation, setTranslation] = useState('');
+  const [translation, setTranslation] = useState(video.translation_text || ''); // Загружаем из БД
   const [transcriptStatus, setTranscriptStatus] = useState(video.transcript_status || 'pending');
   const [script, setScript] = useState(video.script_text || '');
   const [isTranslating, setIsTranslating] = useState(false);
@@ -242,12 +243,9 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
     }
   };
 
-  // При открытии - проверяем есть ли транскрибация в глобальной таблице
+  // При открытии - проверяем есть ли транскрибация и перевод в глобальной таблице
   useEffect(() => {
-    const checkGlobalTranscription = async () => {
-      // Если транскрипция уже есть локально - не проверяем
-      if (transcript || video.transcript_text) return;
-      
+    const checkGlobalData = async () => {
       // Извлекаем shortcode из URL
       const match = video.url?.match(/\/(reel|p)\/([A-Za-z0-9_-]+)/);
       const shortcode = match ? match[2] : null;
@@ -257,12 +255,14 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
       // Проверяем глобальную таблицу
       const { data: globalVideo } = await supabase
         .from('videos')
-        .select('transcript_status, transcript_text')
+        .select('transcript_status, transcript_text, translation_text')
         .eq('shortcode', shortcode)
         .maybeSingle();
       
-      if (globalVideo?.transcript_status === 'completed' && globalVideo?.transcript_text) {
-        // Нашли готовую транскрипцию - копируем себе
+      if (!globalVideo) return;
+      
+      // Загружаем транскрипцию если нет локально
+      if (!transcript && !video.transcript_text && globalVideo.transcript_status === 'completed' && globalVideo.transcript_text) {
         setTranscript(globalVideo.transcript_text);
         setTranscriptStatus('completed');
         
@@ -276,14 +276,39 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
           .eq('id', video.id);
         
         toast.success('Транскрибация загружена', { description: 'Найдена в общей базе' });
-      } else if (globalVideo?.transcript_status && globalVideo.transcript_status !== 'completed' && globalVideo.transcript_status !== 'error') {
-        // Транскрибация в процессе
+      } else if (globalVideo.transcript_status && globalVideo.transcript_status !== 'completed' && globalVideo.transcript_status !== 'error') {
         setTranscriptStatus(globalVideo.transcript_status);
+      }
+      
+      // Загружаем перевод если нет локально
+      if (!translation && !video.translation_text && globalVideo.translation_text) {
+        setTranslation(globalVideo.translation_text);
+        
+        // Сохраняем в saved_videos
+        await supabase
+          .from('saved_videos')
+          .update({ translation_text: globalVideo.translation_text })
+          .eq('id', video.id);
       }
     };
     
-    checkGlobalTranscription();
-  }, [video.id, video.url, video.transcript_text, transcript]);
+    checkGlobalData();
+  }, [video.id, video.url, video.transcript_text, video.translation_text, transcript, translation]);
+  
+  // Автосохранение сценария при изменении (с debounce)
+  useEffect(() => {
+    if (!script || script === video.script_text) return;
+    
+    const timer = setTimeout(async () => {
+      await supabase
+        .from('saved_videos')
+        .update({ script_text: script })
+        .eq('id', video.id);
+      console.log('[VideoDetail] Script auto-saved');
+    }, 2000); // Сохраняем через 2 секунды после последнего изменения
+    
+    return () => clearTimeout(timer);
+  }, [script, video.id, video.script_text]);
 
   // Polling для статуса транскрибации
   useEffect(() => {
@@ -345,7 +370,6 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: transcript,
-          from: 'en', // Автоопределение исходного языка (MyMemory сам определит)
           to: 'ru',
         }),
       });
@@ -355,7 +379,24 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
       if (data.success && data.translated) {
         setTranslation(data.translated);
         setTranscriptTab('translation');
-        toast.success('Текст переведён');
+        
+        // Сохраняем перевод в БД
+        await supabase
+          .from('saved_videos')
+          .update({ translation_text: data.translated })
+          .eq('id', video.id);
+        
+        // Также сохраняем в глобальную таблицу по shortcode
+        const match = video.url?.match(/\/(reel|p)\/([A-Za-z0-9_-]+)/);
+        const shortcode = match ? match[2] : null;
+        if (shortcode) {
+          await supabase
+            .from('videos')
+            .update({ translation_text: data.translated })
+            .eq('shortcode', shortcode);
+        }
+        
+        toast.success('Перевод сохранён');
       } else {
         toast.error('Ошибка перевода', { description: data.error || 'Попробуйте позже' });
       }

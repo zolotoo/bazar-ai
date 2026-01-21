@@ -32,6 +32,8 @@ export interface ZoneVideo {
   transcript_id?: string;
   transcript_status?: string;
   transcript_text?: string;
+  translation_text?: string;
+  script_text?: string;
   download_url?: string;
 }
 

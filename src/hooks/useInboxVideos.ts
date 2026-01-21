@@ -25,14 +25,15 @@ interface SavedVideo {
   comment_count?: number;
   taken_at?: number;
   added_at: string;
-  // Новые поля для транскрибации
+  // Транскрибация и перевод
   download_url?: string;
   transcript_id?: string;
   transcript_status?: string;
   transcript_text?: string;
+  translation_text?: string;
   // Сценарий
   script_text?: string;
-  // Новые поля для проектов
+  // Проекты
   project_id?: string;
   folder_id?: string;
 }
@@ -66,6 +67,7 @@ export function useInboxVideos() {
     transcript_id?: string;
     transcript_status?: string;
     transcript_text?: string;
+    translation_text?: string;
     script_text?: string;
     download_url?: string;
     taken_at?: number;
@@ -84,6 +86,7 @@ export function useInboxVideos() {
     transcript_id: video.transcript_id,
     transcript_status: video.transcript_status,
     transcript_text: video.transcript_text,
+    translation_text: video.translation_text,
     script_text: video.script_text,
     download_url: video.download_url,
     taken_at: video.taken_at,

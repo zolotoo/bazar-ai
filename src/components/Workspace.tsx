@@ -224,6 +224,8 @@ export function Workspace() {
     transcript_id: (v as any).transcript_id,
     transcript_status: (v as any).transcript_status,
     transcript_text: (v as any).transcript_text,
+    translation_text: (v as any).translation_text,
+    script_text: (v as any).script_text,
     download_url: (v as any).download_url,
     status: 'active',
   });
@@ -295,6 +297,8 @@ export function Workspace() {
           transcript_id: (selectedVideo as any).transcript_id,
           transcript_status: (selectedVideo as any).transcript_status,
           transcript_text: (selectedVideo as any).transcript_text,
+          translation_text: (selectedVideo as any).translation_text,
+          script_text: (selectedVideo as any).script_text,
           download_url: (selectedVideo as any).download_url,
           folder_id: selectedVideo.folder_id,
         }}
