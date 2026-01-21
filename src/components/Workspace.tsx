@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useWorkspaceZones, ZoneVideo } from '../hooks/useWorkspaceZones';
 import { useInboxVideos } from '../hooks/useInboxVideos';
 import { useProjectContext, ProjectFolder } from '../contexts/ProjectContext';
@@ -295,14 +295,28 @@ export function Workspace() {
     );
   }
 
-  const feedVideos = getSortedVideos(getVideosForFeed());
+  const videosForFeed = useMemo(() => getVideosForFeed(), [inboxVideos, selectedFolderId, rejectedFolderId]);
+  const feedVideos = useMemo(() => {
+    return getSortedVideos(videosForFeed);
+  }, [videosForFeed, sortBy, profileStatsCache]);
   const totalVideos = inboxVideos.filter(v => (v as any).folder_id !== rejectedFolderId).length;
+  
+  // Создаем стабильную строку зависимостей для usernames
+  const usernamesKey = useMemo(() => {
+    const usernames = new Set<string>();
+    feedVideos.forEach(v => {
+      if (v.owner_username) {
+        usernames.add(v.owner_username.toLowerCase());
+      }
+    });
+    return Array.from(usernames).sort().join(',');
+  }, [feedVideos]);
   
   // Загружаем статистику профилей для видео
   useEffect(() => {
     const loadProfileStats = async () => {
       const usernames = new Set<string>();
-      feedVideos.forEach(v => {
+      videosForFeed.forEach(v => {
         if (v.owner_username) {
           usernames.add(v.owner_username.toLowerCase());
         }
@@ -318,10 +332,11 @@ export function Workspace() {
       }
     };
     
-    if (feedVideos.length > 0) {
+    if (videosForFeed.length > 0) {
       loadProfileStats();
     }
-  }, [feedVideos.map(v => v.owner_username).join(',')]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usernamesKey]);
   
   // Обработчик создания папки
   const handleCreateFolder = async () => {
