@@ -156,8 +156,8 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
   const { projects, currentProject } = useProjectContext();
   const { user } = useAuth();
   
-  // Получаем userId для radar
-  const radarUserId = user?.telegram_username || user?.id || 'anonymous';
+  // Получаем userId для radar (формат должен совпадать с useInboxVideos)
+  const radarUserId = user?.telegram_username ? `tg-${user.telegram_username}` : 'anonymous';
   
   const { 
     profiles: radarProfiles, 

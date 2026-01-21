@@ -206,7 +206,7 @@ export function Workspace() {
   };
 
   // Преобразование inbox видео в ZoneVideo формат
-  const transformInboxVideo = (v: any, folderId: string): ZoneVideo => ({
+  const transformInboxVideo = (v: any, folderId: string | null): ZoneVideo => ({
     id: v.id,
     title: v.title,
     preview_url: v.previewUrl,
@@ -238,13 +238,24 @@ export function Workspace() {
       });
     }
     
+    // Для null (Все видео внутри папки) - показываем видео без папки
+    if (folderId === null) {
+      return inboxVideos
+        .filter(v => {
+          const videoFolderId = (v as any).folder_id;
+          // Видео без папки: null, undefined, пустая строка, или 'inbox'
+          return !videoFolderId || videoFolderId === 'inbox';
+        })
+        .map(v => transformInboxVideo(v, null));
+    }
+    
     // Для любой папки - фильтруем по folder_id
     return inboxVideos
       .filter(v => {
         const videoFolderId = (v as any).folder_id;
         return videoFolderId === folderId;
       })
-      .map(v => transformInboxVideo(v, folderId || 'ideas'));
+      .map(v => transformInboxVideo(v, folderId));
   };
   
   // Получить название папки по ID

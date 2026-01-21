@@ -74,7 +74,7 @@ export function useInboxVideos() {
     like_count: video.like_count,
     comment_count: video.comment_count,
     owner_username: video.owner_username,
-    folder_id: video.folder_id || 'inbox',
+    folder_id: video.folder_id || undefined,
     project_id: video.project_id,
     transcript_id: video.transcript_id,
     transcript_status: video.transcript_status,
@@ -142,6 +142,15 @@ export function useInboxVideos() {
   }) => {
     const userId = getUserId();
     const videoId = video.videoId || video.shortcode || `video-${Date.now()}`;
+    
+    console.log('[InboxVideos] Adding video:', { 
+      userId, 
+      videoId, 
+      shortcode: video.shortcode,
+      projectId: video.projectId, 
+      folderId: video.folderId,
+      url: video.url 
+    });
     
     // Конвертируем taken_at в число (unix timestamp)
     let takenAtTimestamp: number | undefined;
@@ -211,7 +220,14 @@ export function useInboxVideos() {
         .single();
 
       if (insertError) {
-        console.error('Error saving video:', insertError);
+        console.error('[InboxVideos] Error saving video:', insertError);
+        console.error('[InboxVideos] Insert data was:', {
+          user_id: userId,
+          video_id: videoId,
+          shortcode: shortcode,
+          project_id: video.projectId,
+          folder_id: video.folderId || null,
+        });
         return localVideo;
       }
 

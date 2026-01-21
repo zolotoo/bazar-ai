@@ -28,15 +28,22 @@ async function saveReelToInbox(reel: RadarReel, projectId: string, userId: strin
     // Извлекаем shortcode из URL
     const shortcode = reel.shortcode || extractShortcode(reel.url);
     
-    // Проверяем, нет ли уже такого видео (по video_url или shortcode)
-    const { data: existing } = await supabase
-      .from('saved_videos')
-      .select('id')
-      .eq('project_id', projectId)
-      .or(`video_url.eq.${reel.url},shortcode.eq.${shortcode}`)
-      .single();
+    console.log('[Radar] Saving reel:', { shortcode, projectId, userId, url: reel.url });
+    
+    // Проверяем, нет ли уже такого видео по shortcode
+    let existing = null;
+    if (shortcode) {
+      const { data } = await supabase
+        .from('saved_videos')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('shortcode', shortcode)
+        .maybeSingle();
+      existing = data;
+    }
 
     if (existing) {
+      console.log('[Radar] Video exists, updating stats:', existing.id);
       // Обновляем статистику
       await supabase
         .from('saved_videos')
@@ -58,12 +65,14 @@ async function saveReelToInbox(reel: RadarReel, projectId: string, userId: strin
       }
     }
 
+    const videoId = shortcode || `radar-${Date.now()}`;
+    
     // Добавляем новое видео
     const { data, error } = await supabase
       .from('saved_videos')
       .insert({
         user_id: userId,
-        video_id: shortcode || `radar-${Date.now()}`,
+        video_id: videoId,
         shortcode: shortcode,
         project_id: projectId,
         caption: typeof reel.caption === 'string' ? reel.caption.slice(0, 500) : 'Видео из Instagram',
@@ -75,19 +84,19 @@ async function saveReelToInbox(reel: RadarReel, projectId: string, userId: strin
         owner_username: reel.owner?.username,
         taken_at: takenAtTimestamp,
         folder_id: null, // Во "Все видео" (без папки)
-        source: 'radar',
       })
       .select()
       .single();
 
     if (error) {
-      console.error('Error saving reel to inbox:', error);
+      console.error('[Radar] Error saving reel to inbox:', error);
       return null;
     }
 
+    console.log('[Radar] Video saved successfully:', data?.id);
     return { created: true, id: data?.id, videoUrl: reel.url };
   } catch (e) {
-    console.error('Failed to save reel to inbox:', e);
+    console.error('[Radar] Failed to save reel to inbox:', e);
     return null;
   }
 }
