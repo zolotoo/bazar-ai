@@ -598,6 +598,15 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
   const handleAddLinkPreviewToAllVideos = async (folderId?: string) => {
     if (!linkPreview) return;
     
+    console.log('[SearchPanel] handleAddLinkPreviewToAllVideos:', {
+      activeProjectId,
+      currentProjectId,
+      selectedProjectForAdd,
+      folderId,
+      shortcode: linkPreview.shortcode,
+      url: linkPreview.url,
+    });
+    
     // Проверяем что проект выбран
     if (!activeProjectId) {
       setShowProjectSelect(true);
@@ -605,10 +614,19 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
       return;
     }
     
+    // Извлекаем shortcode из URL если его нет
+    let shortcode = linkPreview.shortcode;
+    if (!shortcode && linkPreview.url) {
+      const match = linkPreview.url.match(/\/(reel|p)\/([A-Za-z0-9_-]+)/);
+      if (match) shortcode = match[2];
+    }
+    
+    console.log('[SearchPanel] Saving video with shortcode:', shortcode);
+    
     try {
       const captionText = typeof linkPreview.caption === 'string' ? linkPreview.caption.slice(0, 200) : 'Видео из Instagram';
       
-      await addVideoToInbox({
+      const savedVideo = await addVideoToInbox({
         title: captionText,
         previewUrl: linkPreview.thumbnail_url || linkPreview.display_url || '',
         url: linkPreview.url,
@@ -616,11 +634,13 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
         likeCount: linkPreview.like_count,
         commentCount: linkPreview.comment_count,
         ownerUsername: linkPreview.owner?.username,
-        shortcode: linkPreview.shortcode,
+        shortcode: shortcode,
         projectId: activeProjectId,
         folderId: folderId === 'all' ? undefined : folderId, // undefined/'all' = "Все видео"
         takenAt: linkPreview.taken_at,
       });
+      
+      console.log('[SearchPanel] Video saved:', savedVideo);
       
       const folderName = folderId && folderId !== 'all' ? folderConfigs.find(f => f.id === folderId)?.title || 'папку' : 'Все видео';
       

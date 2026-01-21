@@ -197,31 +197,80 @@ export function useInboxVideos() {
         shortcode = match ? match[2] : undefined;
       }
       
-      const { data, error: insertError } = await supabase
-        .from('saved_videos')
-        .upsert({
-          user_id: userId,
-          video_id: videoId,
-          shortcode: shortcode,
-          thumbnail_url: video.previewUrl,
-          video_url: video.url,
-          caption: video.title,
-          owner_username: video.ownerUsername,
-          view_count: video.viewCount,
-          like_count: video.likeCount,
-          comment_count: video.commentCount,
-          project_id: video.projectId,
-          folder_id: video.folderId || null, // null = "Все видео"
-          taken_at: takenAtTimestamp,
-        }, {
-          onConflict: 'user_id,video_id'
-        })
-        .select()
-        .single();
+      console.log('[InboxVideos] Attempting to save video:', {
+        userId,
+        videoId,
+        shortcode,
+        projectId: video.projectId,
+        folderId: video.folderId,
+      });
+      
+      // Сначала проверяем существует ли уже такое видео
+      let existingVideo = null;
+      if (shortcode) {
+        const { data: existing } = await supabase
+          .from('saved_videos')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('shortcode', shortcode)
+          .maybeSingle();
+        existingVideo = existing;
+      }
+      
+      let data;
+      let error;
+      
+      if (existingVideo) {
+        // Обновляем существующее видео
+        console.log('[InboxVideos] Video exists, updating:', existingVideo.id);
+        const result = await supabase
+          .from('saved_videos')
+          .update({
+            thumbnail_url: video.previewUrl,
+            video_url: video.url,
+            caption: video.title,
+            owner_username: video.ownerUsername,
+            view_count: video.viewCount,
+            like_count: video.likeCount,
+            comment_count: video.commentCount,
+            project_id: video.projectId,
+            folder_id: video.folderId || null,
+            taken_at: takenAtTimestamp,
+          })
+          .eq('id', existingVideo.id)
+          .select()
+          .single();
+        data = result.data;
+        error = result.error;
+      } else {
+        // Создаём новое видео
+        console.log('[InboxVideos] Creating new video');
+        const result = await supabase
+          .from('saved_videos')
+          .insert({
+            user_id: userId,
+            video_id: videoId,
+            shortcode: shortcode,
+            thumbnail_url: video.previewUrl,
+            video_url: video.url,
+            caption: video.title,
+            owner_username: video.ownerUsername,
+            view_count: video.viewCount,
+            like_count: video.likeCount,
+            comment_count: video.commentCount,
+            project_id: video.projectId,
+            folder_id: video.folderId || null, // null = "Все видео"
+            taken_at: takenAtTimestamp,
+          })
+          .select()
+          .single();
+        data = result.data;
+        error = result.error;
+      }
 
-      if (insertError) {
-        console.error('[InboxVideos] Error saving video:', insertError);
-        console.error('[InboxVideos] Insert data was:', {
+      if (error) {
+        console.error('[InboxVideos] Error saving video:', error);
+        console.error('[InboxVideos] Data was:', {
           user_id: userId,
           video_id: videoId,
           shortcode: shortcode,
