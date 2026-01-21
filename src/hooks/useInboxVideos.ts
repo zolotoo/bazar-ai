@@ -3,8 +3,13 @@ import { supabase } from '../utils/supabase';
 import { useFlowStore } from '../stores/flowStore';
 import { IncomingVideo } from '../types';
 import { useAuth } from './useAuth';
-import { downloadAndTranscribe, checkTranscriptionStatus } from '../services/transcriptionService';
 import { toast } from 'sonner';
+import { 
+  getOrCreateGlobalVideo, 
+  getTranscriptionByShortcode,
+  startGlobalTranscription,
+  extractShortcode,
+} from '../services/globalVideoService';
 
 interface SavedVideo {
   id: string;
@@ -125,6 +130,7 @@ export function useInboxVideos() {
 
   /**
    * Добавляет видео в сохранённые
+   * Использует глобальную таблицу videos для транскрибаций
    */
   const addVideoToInbox = useCallback(async (video: {
     title: string;
@@ -141,12 +147,15 @@ export function useInboxVideos() {
     takenAt?: string | number;
   }) => {
     const userId = getUserId();
-    const videoId = video.videoId || video.shortcode || `video-${Date.now()}`;
+    
+    // Извлекаем shortcode из URL если его нет
+    const shortcode = video.shortcode || extractShortcode(video.url) || undefined;
+    const videoId = video.videoId || shortcode || `video-${Date.now()}`;
     
     console.log('[InboxVideos] Adding video:', { 
       userId, 
       videoId, 
-      shortcode: video.shortcode,
+      shortcode,
       projectId: video.projectId, 
       folderId: video.folderId,
       url: video.url 
@@ -190,78 +199,115 @@ export function useInboxVideos() {
     setIncomingVideos([localVideo, ...useFlowStore.getState().incomingVideos]);
 
     try {
-      // Извлекаем shortcode из URL если его нет
-      let shortcode = video.shortcode;
-      if (!shortcode && video.url) {
-        const match = video.url.match(/\/(reel|p)\/([A-Za-z0-9_-]+)/);
-        shortcode = match ? match[2] : undefined;
+      // 1. СНАЧАЛА проверяем/создаём видео в ГЛОБАЛЬНОЙ таблице videos
+      let globalVideo = null;
+      let existingTranscription = null;
+      
+      if (shortcode) {
+        // Проверяем есть ли уже транскрибация
+        existingTranscription = await getTranscriptionByShortcode(shortcode);
+        console.log('[InboxVideos] Existing transcription check:', existingTranscription);
+        
+        // Получаем или создаём глобальное видео
+        globalVideo = await getOrCreateGlobalVideo({
+          shortcode,
+          url: video.url,
+          thumbnailUrl: video.previewUrl,
+          caption: video.title,
+          ownerUsername: video.ownerUsername,
+          viewCount: video.viewCount,
+          likeCount: video.likeCount,
+          commentCount: video.commentCount,
+          takenAt: takenAtTimestamp,
+        });
+        
+        console.log('[InboxVideos] Global video:', globalVideo?.id, 'transcript:', globalVideo?.transcript_status);
       }
       
-      console.log('[InboxVideos] Attempting to save video:', {
-        userId,
-        videoId,
-        shortcode,
-        projectId: video.projectId,
-        folderId: video.folderId,
-      });
-      
-      // Сначала проверяем существует ли уже такое видео
-      let existingVideo = null;
+      // 2. Проверяем есть ли у ПОЛЬЗОВАТЕЛЯ это видео
+      let existingUserVideo = null;
       if (shortcode) {
         const { data: existing } = await supabase
           .from('saved_videos')
-          .select('id')
+          .select('id, transcript_status, transcript_text')
           .eq('user_id', userId)
           .eq('shortcode', shortcode)
           .maybeSingle();
-        existingVideo = existing;
+        existingUserVideo = existing;
       }
       
       let data;
       let error;
+      let needsTranscription = true;
       
-      if (existingVideo) {
-        // Обновляем существующее видео
-        console.log('[InboxVideos] Video exists, updating:', existingVideo.id);
+      if (existingUserVideo) {
+        // 3a. Обновляем существующее видео пользователя
+        console.log('[InboxVideos] User video exists, updating:', existingUserVideo.id);
+        
+        // Если у пользователя нет транскрибации, но есть в глобальной - копируем
+        const updateData: Record<string, unknown> = {
+          thumbnail_url: video.previewUrl,
+          video_url: video.url,
+          caption: video.title,
+          owner_username: video.ownerUsername,
+          view_count: video.viewCount,
+          like_count: video.likeCount,
+          comment_count: video.commentCount,
+          project_id: video.projectId,
+          folder_id: video.folderId || null,
+          taken_at: takenAtTimestamp,
+        };
+        
+        // Копируем транскрибацию из глобальной таблицы если есть
+        if (existingTranscription?.hasTranscription) {
+          updateData.transcript_status = existingTranscription.transcriptStatus;
+          updateData.transcript_text = existingTranscription.transcriptText;
+          needsTranscription = false;
+          console.log('[InboxVideos] Copying transcription from global DB');
+        } else if (existingUserVideo.transcript_status === 'completed') {
+          needsTranscription = false;
+        }
+        
         const result = await supabase
           .from('saved_videos')
-          .update({
-            thumbnail_url: video.previewUrl,
-            video_url: video.url,
-            caption: video.title,
-            owner_username: video.ownerUsername,
-            view_count: video.viewCount,
-            like_count: video.likeCount,
-            comment_count: video.commentCount,
-            project_id: video.projectId,
-            folder_id: video.folderId || null,
-            taken_at: takenAtTimestamp,
-          })
-          .eq('id', existingVideo.id)
+          .update(updateData)
+          .eq('id', existingUserVideo.id)
           .select()
           .single();
         data = result.data;
         error = result.error;
+        
       } else {
-        // Создаём новое видео
-        console.log('[InboxVideos] Creating new video');
+        // 3b. Создаём новое видео для пользователя
+        console.log('[InboxVideos] Creating new user video');
+        
+        const insertData: Record<string, unknown> = {
+          user_id: userId,
+          video_id: videoId,
+          shortcode: shortcode,
+          thumbnail_url: video.previewUrl,
+          video_url: video.url,
+          caption: video.title,
+          owner_username: video.ownerUsername,
+          view_count: video.viewCount,
+          like_count: video.likeCount,
+          comment_count: video.commentCount,
+          project_id: video.projectId,
+          folder_id: video.folderId || null,
+          taken_at: takenAtTimestamp,
+        };
+        
+        // Копируем транскрибацию из глобальной таблицы если есть
+        if (existingTranscription?.hasTranscription) {
+          insertData.transcript_status = existingTranscription.transcriptStatus;
+          insertData.transcript_text = existingTranscription.transcriptText;
+          needsTranscription = false;
+          console.log('[InboxVideos] Copying transcription from global DB to new user video');
+        }
+        
         const result = await supabase
           .from('saved_videos')
-          .insert({
-            user_id: userId,
-            video_id: videoId,
-            shortcode: shortcode,
-            thumbnail_url: video.previewUrl,
-            video_url: video.url,
-            caption: video.title,
-            owner_username: video.ownerUsername,
-            view_count: video.viewCount,
-            like_count: video.likeCount,
-            comment_count: video.commentCount,
-            project_id: video.projectId,
-            folder_id: video.folderId || null, // null = "Все видео"
-            taken_at: takenAtTimestamp,
-          })
+          .insert(insertData)
           .select()
           .single();
         data = result.data;
@@ -270,13 +316,6 @@ export function useInboxVideos() {
 
       if (error) {
         console.error('[InboxVideos] Error saving video:', error);
-        console.error('[InboxVideos] Data was:', {
-          user_id: userId,
-          video_id: videoId,
-          shortcode: shortcode,
-          project_id: video.projectId,
-          folder_id: video.folderId || null,
-        });
         return localVideo;
       }
 
@@ -286,8 +325,23 @@ export function useInboxVideos() {
         setVideos(prev => [savedVideo, ...prev.filter(v => v.id !== localVideo.id)]);
         setIncomingVideos([savedVideo, ...useFlowStore.getState().incomingVideos.filter(v => v.id !== localVideo.id)]);
         
-        // Запускаем скачивание и транскрибацию для всех новых видео
-        startVideoProcessing(data.id, video.url);
+        // 4. Запускаем транскрибацию ТОЛЬКО если нет готовой
+        if (needsTranscription && shortcode) {
+          console.log('[InboxVideos] Starting new transcription');
+          startGlobalTranscription(
+            data.id,
+            globalVideo?.id,
+            shortcode,
+            video.url
+          );
+        } else {
+          console.log('[InboxVideos] Skipping transcription - already exists');
+          if (existingTranscription?.hasTranscription) {
+            toast.success('Транскрибация найдена', {
+              description: 'Видео уже было обработано ранее',
+            });
+          }
+        }
         
         return savedVideo;
       }
@@ -300,111 +354,54 @@ export function useInboxVideos() {
   }, [setIncomingVideos, transformVideo, getUserId]);
 
   /**
-   * Запускает скачивание и транскрибацию видео в фоне
+   * Ручной запуск транскрибации (для кнопки "Транскрибировать")
+   * Использует глобальный сервис
    */
   const startVideoProcessing = useCallback(async (videoDbId: string, instagramUrl: string) => {
-    console.log('[InboxVideos] Starting video processing for:', instagramUrl);
+    console.log('[InboxVideos] Manual transcription request for:', instagramUrl);
     
-    try {
-      // Обновляем статус
-      await supabase
-        .from('saved_videos')
-        .update({ transcript_status: 'downloading' })
-        .eq('id', videoDbId);
+    const shortcode = extractShortcode(instagramUrl);
+    
+    // Сначала проверяем есть ли уже транскрибация в глобальной таблице
+    if (shortcode) {
+      const existing = await getTranscriptionByShortcode(shortcode);
       
-      // Получаем ссылку на скачивание и запускаем транскрибацию
-      const result = await downloadAndTranscribe(instagramUrl);
-      
-      if (!result.success) {
-        console.error('[InboxVideos] Video processing failed:', result.error);
+      if (existing.hasTranscription) {
+        console.log('[InboxVideos] Found existing transcription in global DB');
+        
+        // Копируем к пользователю
         await supabase
           .from('saved_videos')
-          .update({ transcript_status: 'error' })
+          .update({
+            transcript_status: existing.transcriptStatus,
+            transcript_text: existing.transcriptText,
+          })
           .eq('id', videoDbId);
+        
+        toast.success('Транскрибация найдена', {
+          description: 'Видео уже было обработано ранее',
+        });
+        
+        fetchVideos();
         return;
       }
       
-      // Сохраняем данные о скачивании и транскрибации
-      await supabase
-        .from('saved_videos')
-        .update({ 
-          download_url: result.videoUrl,
-          transcript_id: result.transcriptId,
-          transcript_status: 'processing',
-        })
-        .eq('id', videoDbId);
+      // Получаем или создаём глобальное видео
+      const globalVideo = await getOrCreateGlobalVideo({
+        shortcode,
+        url: instagramUrl,
+      });
       
+      // Запускаем глобальную транскрибацию
       toast.success('Видео обрабатывается', {
         description: 'Транскрибация запущена',
       });
       
-      // Запускаем проверку статуса транскрибации
-      if (result.transcriptId) {
-        pollTranscriptionStatus(videoDbId, result.transcriptId);
-      }
-    } catch (err) {
-      console.error('[InboxVideos] Video processing error:', err);
+      startGlobalTranscription(videoDbId, globalVideo?.id, shortcode, instagramUrl);
+    } else {
+      console.error('[InboxVideos] No shortcode found for:', instagramUrl);
+      toast.error('Не удалось определить видео');
     }
-  }, []);
-
-  /**
-   * Проверяет статус транскрибации с polling
-   */
-  const pollTranscriptionStatus = useCallback(async (videoDbId: string, transcriptId: string) => {
-    const maxAttempts = 60; // 5 минут при интервале 5 сек
-    let attempts = 0;
-    
-    const checkStatus = async () => {
-      attempts++;
-      
-      try {
-        const result = await checkTranscriptionStatus(transcriptId);
-        
-        if (result.status === 'completed') {
-          // Сохраняем результат
-          await supabase
-            .from('saved_videos')
-            .update({ 
-              transcript_status: 'completed',
-              transcript_text: result.text,
-            })
-            .eq('id', videoDbId);
-          
-          toast.success('Транскрибация завершена', {
-            description: result.text?.slice(0, 50) + '...',
-          });
-          
-          // Обновляем локальный список
-          fetchVideos();
-          return;
-        }
-        
-        if (result.status === 'error') {
-          await supabase
-            .from('saved_videos')
-            .update({ transcript_status: 'error' })
-            .eq('id', videoDbId);
-          
-          toast.error('Ошибка транскрибации');
-          return;
-        }
-        
-        // Продолжаем проверку
-        if (attempts < maxAttempts) {
-          setTimeout(checkStatus, 5000);
-        } else {
-          await supabase
-            .from('saved_videos')
-            .update({ transcript_status: 'timeout' })
-            .eq('id', videoDbId);
-        }
-      } catch (err) {
-        console.error('[InboxVideos] Poll error:', err);
-      }
-    };
-    
-    // Первая проверка через 10 секунд
-    setTimeout(checkStatus, 10000);
   }, [fetchVideos]);
 
   /**
@@ -499,9 +496,20 @@ export function useInboxVideos() {
 
   /**
    * Обновляет транскрипцию видео
+   * Синхронизирует с глобальной таблицей videos
    */
   const updateVideoTranscript = useCallback(async (videoId: string, transcriptText: string) => {
     try {
+      // 1. Получаем shortcode видео
+      const { data: video } = await supabase
+        .from('saved_videos')
+        .select('shortcode')
+        .eq('id', videoId)
+        .single();
+      
+      const shortcode = video?.shortcode;
+      
+      // 2. Обновляем у пользователя
       const { error } = await supabase
         .from('saved_videos')
         .update({ 
@@ -515,7 +523,20 @@ export function useInboxVideos() {
         return false;
       }
       
-      // Обновляем локальное состояние
+      // 3. Обновляем в глобальной таблице
+      if (shortcode) {
+        await supabase
+          .from('videos')
+          .update({ 
+            transcript_text: transcriptText,
+            transcript_status: 'completed',
+          })
+          .eq('shortcode', shortcode);
+        
+        console.log('[InboxVideos] Synced transcript to global table for:', shortcode);
+      }
+      
+      // 4. Обновляем локальное состояние
       setVideos(prev => prev.map(v => 
         v.id === videoId ? { ...v, transcript_text: transcriptText, transcript_status: 'completed' } as any : v
       ));
@@ -536,6 +557,7 @@ export function useInboxVideos() {
     updateVideoFolder,
     updateVideoScript,
     updateVideoTranscript,
+    startVideoProcessing, // Ручной запуск транскрибации
     markVideoAsOnCanvas,
     refetch: fetchVideos,
     isConfigured: true,

@@ -1,7 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { InstagramSearchResult } from '../services/videoService';
 import { supabase } from '../utils/supabase';
-import { downloadAndTranscribe, checkTranscriptionStatus } from '../services/transcriptionService';
+import { 
+  getOrCreateGlobalVideo, 
+  startGlobalTranscription,
+  extractShortcode,
+} from '../services/globalVideoService';
 
 export interface TrackedProfile {
   id?: string;
@@ -22,97 +26,40 @@ export interface RadarReel extends InstagramSearchResult {
 
 const STORAGE_KEY = 'radar_profiles';
 
-// Функция для получения/создания видео в общей таблице videos
-async function getOrCreateGlobalVideo(reel: RadarReel): Promise<{
-  id: string;
-  shortcode: string;
-  transcript_status: string | null;
-  transcript_text: string | null;
-  needsTranscription: boolean;
-} | null> {
-  const shortcode = reel.shortcode || extractShortcode(reel.url);
-  if (!shortcode) return null;
-  
-  // Конвертируем taken_at
-  let takenAtTimestamp: number | undefined;
-  if (reel.taken_at) {
-    const ts = typeof reel.taken_at === 'number' ? reel.taken_at : Number(reel.taken_at);
-    if (!isNaN(ts)) {
-      takenAtTimestamp = ts > 1e12 ? Math.floor(ts / 1000) : ts;
-    }
-  }
-  
-  // Проверяем есть ли видео в общей таблице
-  const { data: existing } = await supabase
-    .from('videos')
-    .select('id, shortcode, transcript_status, transcript_text')
-    .eq('shortcode', shortcode)
-    .maybeSingle();
-  
-  if (existing) {
-    console.log('[Radar] Global video exists:', shortcode, 'transcript:', existing.transcript_status);
-    
-    // Обновляем статистику
-    await supabase
-      .from('videos')
-      .update({
-        view_count: reel.view_count,
-        like_count: reel.like_count,
-        comment_count: reel.comment_count,
-        thumbnail_url: reel.thumbnail_url || reel.display_url,
-      })
-      .eq('id', existing.id);
-    
-    return {
-      ...existing,
-      needsTranscription: !existing.transcript_status || existing.transcript_status === 'error',
-    };
-  }
-  
-  // Создаём новое видео в общей таблице
-  console.log('[Radar] Creating global video:', shortcode);
-  const { data: newVideo, error } = await supabase
-    .from('videos')
-    .insert({
-      shortcode,
-      instagram_id: reel.id,
-      url: reel.url,
-      thumbnail_url: reel.thumbnail_url || reel.display_url || '',
-      caption: typeof reel.caption === 'string' ? reel.caption.slice(0, 500) : '',
-      owner_username: reel.owner?.username,
-      view_count: reel.view_count || 0,
-      like_count: reel.like_count || 0,
-      comment_count: reel.comment_count || 0,
-      taken_at: takenAtTimestamp,
-    })
-    .select()
-    .single();
-  
-  if (error) {
-    console.error('[Radar] Error creating global video:', error);
-    return null;
-  }
-  
-  return {
-    id: newVideo.id,
-    shortcode,
-    transcript_status: null,
-    transcript_text: null,
-    needsTranscription: true,
-  };
-}
-
 // Функция для добавления видео в saved_videos пользователя (inbox)
+// Использует глобальный сервис для транскрибаций
 async function saveReelToInbox(reel: RadarReel, projectId: string, userId: string) {
   try {
     const shortcode = reel.shortcode || extractShortcode(reel.url);
     
     console.log('[Radar] Saving reel:', { shortcode, projectId, userId, url: reel.url });
     
-    // 1. Сначала получаем/создаём видео в общей таблице
-    const globalVideo = await getOrCreateGlobalVideo(reel);
+    // Конвертируем taken_at
+    let takenAtTimestamp: number | undefined;
+    if (reel.taken_at) {
+      const ts = typeof reel.taken_at === 'number' ? reel.taken_at : Number(reel.taken_at);
+      if (!isNaN(ts)) {
+        takenAtTimestamp = ts > 1e12 ? Math.floor(ts / 1000) : ts;
+      }
+    }
     
-    // 2. Проверяем, есть ли уже у пользователя это видео
+    // 1. Получаем/создаём видео в ГЛОБАЛЬНОЙ таблице videos
+    const globalVideo = shortcode ? await getOrCreateGlobalVideo({
+      shortcode,
+      url: reel.url,
+      thumbnailUrl: reel.thumbnail_url || reel.display_url,
+      caption: typeof reel.caption === 'string' ? reel.caption.slice(0, 500) : '',
+      ownerUsername: reel.owner?.username,
+      viewCount: reel.view_count,
+      likeCount: reel.like_count,
+      commentCount: reel.comment_count,
+      takenAt: takenAtTimestamp,
+      instagramId: reel.id,
+    }) : null;
+    
+    const needsTranscription = !globalVideo?.transcript_status || globalVideo.transcript_status === 'error';
+    
+    // 2. Проверяем, есть ли уже у ПОЛЬЗОВАТЕЛЯ это видео
     let existingUserVideo = null;
     if (shortcode) {
       const { data } = await supabase
@@ -127,31 +74,22 @@ async function saveReelToInbox(reel: RadarReel, projectId: string, userId: strin
     if (existingUserVideo) {
       console.log('[Radar] User already has this video:', existingUserVideo.id);
       
-      // Обновляем статистику у пользователя
+      // Обновляем статистику и копируем транскрибацию из глобальной таблицы
       await supabase
         .from('saved_videos')
         .update({
           view_count: reel.view_count,
           like_count: reel.like_count,
           comment_count: reel.comment_count,
-          // Копируем транскрибацию из общей таблицы если есть
           transcript_status: globalVideo?.transcript_status,
           transcript_text: globalVideo?.transcript_text,
         })
         .eq('id', existingUserVideo.id);
       
-      return { updated: true, id: existingUserVideo.id, globalVideoId: globalVideo?.id };
+      return { updated: true, id: existingUserVideo.id, globalVideoId: globalVideo?.id, needsTranscription: false };
     }
 
-    // 3. Добавляем видео пользователю
-    let takenAtTimestamp: number | undefined;
-    if (reel.taken_at) {
-      const ts = typeof reel.taken_at === 'number' ? reel.taken_at : Number(reel.taken_at);
-      if (!isNaN(ts)) {
-        takenAtTimestamp = ts > 1e12 ? Math.floor(ts / 1000) : ts;
-      }
-    }
-
+    // 3. Создаём новое видео для пользователя
     const videoId = shortcode || `radar-${Date.now()}`;
     
     const { data, error } = await supabase
@@ -170,7 +108,7 @@ async function saveReelToInbox(reel: RadarReel, projectId: string, userId: strin
         owner_username: reel.owner?.username,
         taken_at: takenAtTimestamp,
         folder_id: null,
-        // Копируем транскрибацию если уже есть в общей таблице
+        // Копируем транскрибацию если уже есть в глобальной таблице
         transcript_status: globalVideo?.transcript_status,
         transcript_text: globalVideo?.transcript_text,
       })
@@ -188,184 +126,13 @@ async function saveReelToInbox(reel: RadarReel, projectId: string, userId: strin
       id: data?.id, 
       videoUrl: reel.url,
       globalVideoId: globalVideo?.id,
-      needsTranscription: globalVideo?.needsTranscription ?? true,
+      shortcode,
+      needsTranscription,
     };
   } catch (e) {
     console.error('[Radar] Failed to save reel to inbox:', e);
     return null;
   }
-}
-
-// Извлекаем shortcode из Instagram URL
-function extractShortcode(url: string): string | null {
-  if (!url) return null;
-  const match = url.match(/\/(reel|p)\/([A-Za-z0-9_-]+)/);
-  return match ? match[2] : null;
-}
-
-// Запускает скачивание и транскрибацию видео в фоне
-// Сохраняет в ОБЕИХ таблицах: videos (общая) и saved_videos (пользователя)
-async function startVideoTranscription(userVideoId: string, globalVideoId: string | undefined, instagramUrl: string) {
-  console.log('[Radar] Starting transcription for:', instagramUrl);
-  
-  const shortcode = extractShortcode(instagramUrl);
-  
-  try {
-    // Обновляем статус в обеих таблицах
-    await supabase
-      .from('saved_videos')
-      .update({ transcript_status: 'downloading' })
-      .eq('id', userVideoId);
-    
-    if (globalVideoId) {
-      await supabase
-        .from('videos')
-        .update({ transcript_status: 'downloading' })
-        .eq('id', globalVideoId);
-    }
-    
-    // Получаем ссылку на скачивание и запускаем транскрибацию
-    const result = await downloadAndTranscribe(instagramUrl);
-    
-    if (!result.success) {
-      console.error('[Radar] Video processing failed:', result.error);
-      await supabase
-        .from('saved_videos')
-        .update({ transcript_status: 'error' })
-        .eq('id', userVideoId);
-      if (globalVideoId) {
-        await supabase
-          .from('videos')
-          .update({ transcript_status: 'error' })
-          .eq('id', globalVideoId);
-      }
-      return;
-    }
-    
-    // Сохраняем данные в обеих таблицах
-    await supabase
-      .from('saved_videos')
-      .update({ 
-        download_url: result.videoUrl,
-        transcript_id: result.transcriptId,
-        transcript_status: 'processing',
-      })
-      .eq('id', userVideoId);
-    
-    if (globalVideoId) {
-      await supabase
-        .from('videos')
-        .update({ 
-          download_url: result.videoUrl,
-          transcript_id: result.transcriptId,
-          transcript_status: 'processing',
-        })
-        .eq('id', globalVideoId);
-    }
-    
-    console.log('[Radar] Transcription started, id:', result.transcriptId);
-    
-    // Запускаем проверку статуса транскрибации
-    if (result.transcriptId) {
-      pollTranscriptionStatus(userVideoId, globalVideoId, shortcode, result.transcriptId);
-    }
-  } catch (err) {
-    console.error('[Radar] Video processing error:', err);
-    await supabase
-      .from('saved_videos')
-      .update({ transcript_status: 'error' })
-      .eq('id', userVideoId);
-  }
-}
-
-// Проверяет статус транскрибации с polling
-// Сохраняет результат в обе таблицы + обновляет всех пользователей с этим shortcode
-async function pollTranscriptionStatus(
-  userVideoId: string, 
-  globalVideoId: string | undefined, 
-  shortcode: string | null,
-  transcriptId: string
-) {
-  const maxAttempts = 60; // 5 минут при интервале 5 сек
-  let attempts = 0;
-  
-  const checkStatus = async () => {
-    attempts++;
-    
-    try {
-      const result = await checkTranscriptionStatus(transcriptId);
-      
-      if (result.status === 'completed') {
-        // 1. Сохраняем в общую таблицу videos
-        if (globalVideoId) {
-          await supabase
-            .from('videos')
-            .update({ 
-              transcript_status: 'completed',
-              transcript_text: result.text,
-            })
-            .eq('id', globalVideoId);
-        }
-        
-        // 2. Обновляем ВСЕХ пользователей у кого есть это видео по shortcode
-        if (shortcode) {
-          await supabase
-            .from('saved_videos')
-            .update({ 
-              transcript_status: 'completed',
-              transcript_text: result.text,
-            })
-            .eq('shortcode', shortcode);
-          
-          console.log('[Radar] Transcription completed and synced for shortcode:', shortcode);
-        } else {
-          // Fallback - обновляем только конкретное видео пользователя
-          await supabase
-            .from('saved_videos')
-            .update({ 
-              transcript_status: 'completed',
-              transcript_text: result.text,
-            })
-            .eq('id', userVideoId);
-        }
-        
-        console.log('[Radar] Transcription completed for:', userVideoId);
-        return;
-      }
-      
-      if (result.status === 'error') {
-        if (globalVideoId) {
-          await supabase
-            .from('videos')
-            .update({ transcript_status: 'error' })
-            .eq('id', globalVideoId);
-        }
-        
-        await supabase
-          .from('saved_videos')
-          .update({ transcript_status: 'error' })
-          .eq('id', userVideoId);
-        
-        console.error('[Radar] Transcription error for:', userVideoId);
-        return;
-      }
-      
-      // Продолжаем проверку
-      if (attempts < maxAttempts) {
-        setTimeout(checkStatus, 5000);
-      } else {
-        await supabase
-          .from('saved_videos')
-          .update({ transcript_status: 'timeout' })
-          .eq('id', userVideoId);
-      }
-    } catch (err) {
-      console.error('[Radar] Poll error:', err);
-    }
-  };
-  
-  // Первая проверка через 10 секунд
-  setTimeout(checkStatus, 10000);
 }
 
 export function useRadar(currentProjectId?: string | null, userId?: string) {
@@ -506,8 +273,8 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
             savedReels.push({ ...reel, isNew: true, projectId: targetProjectId, savedToInbox: true });
             
             // Запускаем транскрибацию ТОЛЬКО если нужно (нет в общей базе)
-            if (result.needsTranscription) {
-              startVideoTranscription(result.id, result.globalVideoId, reel.url);
+            if (result.needsTranscription && result.shortcode) {
+              startGlobalTranscription(result.id, result.globalVideoId, result.shortcode, reel.url);
             } else {
               console.log('[Radar] Skipping transcription - already exists in global DB');
             }
