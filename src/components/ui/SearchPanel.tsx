@@ -19,6 +19,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { IncomingVideo } from '../../types';
 import { cn } from '../../utils/cn';
 import { supabase } from '../../utils/supabase';
+import { calculateViralMultiplier } from '../../services/profileStatsService';
 import { FolderPlus, Star, Sparkles as SparklesIcon, FileText, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -169,6 +170,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
     addProfile: addRadarProfile, 
     removeProfile: removeRadarProfile,
     refreshAll: refreshRadar,
+    getProfileStats,
   } = useRadar(currentProjectId, radarUserId);
   
   // Минимум просмотров для показа в поиске
@@ -1428,6 +1430,9 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                     );
                   }
 
+                  // Получаем статистику профиля для расчёта viralMultiplier
+                  const profileStats = getProfileStats(selectedRadarProfile);
+
                   return (
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
                       {profileReels.map((reel, idx) => {
@@ -1435,6 +1440,8 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                         const captionText = typeof reel.caption === 'string' ? reel.caption : 'Видео из Instagram';
                         const thumbnailUrl = proxyImageUrl(reel.thumbnail_url || reel.display_url);
                         const dateText = formatVideoDate(reel.taken_at);
+                        // Рассчитываем множитель залётности относительно среднего автора
+                        const viralMult = calculateViralMultiplier(reel.view_count || 0, profileStats || null);
                         
                         return (
                           <VideoGradientCard
@@ -1446,6 +1453,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                             likeCount={reel.like_count}
                             date={dateText || '—'}
                             viralCoef={viralCoef}
+                            viralMultiplier={viralMult}
                             onClick={() => setSelectedVideo(reel)}
                             onDragStart={(e) => handleDragStart(e, reel)}
                             showFolderMenu={cardFolderSelect === `radar-profile-${reel.shortcode}-${idx}`}

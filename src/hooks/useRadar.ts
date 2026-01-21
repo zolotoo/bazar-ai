@@ -6,6 +6,10 @@ import {
   startGlobalTranscription,
   extractShortcode,
 } from '../services/globalVideoService';
+import {
+  getOrUpdateProfileStats,
+  InstagramProfileStats,
+} from '../services/profileStatsService';
 
 export interface TrackedProfile {
   id?: string;
@@ -16,6 +20,8 @@ export interface TrackedProfile {
   avatarUrl?: string;
   fullName?: string;
   reelsCount?: number;
+  // Статистика профиля
+  profileStats?: InstagramProfileStats | null;
 }
 
 export interface RadarReel extends InstagramSearchResult {
@@ -141,6 +147,7 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
   const [loading, setLoading] = useState(false);
   const [loadingUsername, setLoadingUsername] = useState<string | null>(null);
   const [stats, setStats] = useState({ newVideos: 0, updatedVideos: 0 });
+  const [profileStatsCache, setProfileStatsCache] = useState<Map<string, InstagramProfileStats>>(new Map());
 
   // Загрузка профилей из localStorage
   useEffect(() => {
@@ -200,6 +207,23 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
     if (userId) {
       fetchUserReels(cleanUsername, targetProjectId);
     }
+    
+    // Загружаем статистику профиля (асинхронно, не блокируя)
+    getOrUpdateProfileStats(cleanUsername).then(stats => {
+      if (stats) {
+        setProfileStatsCache(prev => new Map(prev).set(cleanUsername, stats));
+        setProfiles(prev => prev.map(p => 
+          p.username.toLowerCase() === cleanUsername && p.projectId === targetProjectId
+            ? { ...p, profileStats: stats }
+            : p
+        ));
+        console.log(`[Radar] Profile stats loaded for @${cleanUsername}:`, {
+          avg_views: stats.avg_views,
+          median_views: stats.median_views,
+          videos_analyzed: stats.videos_analyzed,
+        });
+      }
+    });
     
     return true;
   }, [profiles, currentProjectId, userId]);
@@ -315,6 +339,32 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
     }
   }, [currentProjectId, userId]);
 
+  // Обновить статистику одного профиля
+  const updateProfileStats = useCallback(async (username: string, forceUpdate = false) => {
+    const cleanUsername = username.toLowerCase().replace('@', '');
+    
+    try {
+      const stats = await getOrUpdateProfileStats(cleanUsername, forceUpdate);
+      if (stats) {
+        setProfileStatsCache(prev => new Map(prev).set(cleanUsername, stats));
+        setProfiles(prev => prev.map(p => 
+          p.username.toLowerCase() === cleanUsername
+            ? { ...p, profileStats: stats }
+            : p
+        ));
+        return stats;
+      }
+    } catch (err) {
+      console.error(`[Radar] Error updating profile stats for @${username}:`, err);
+    }
+    return null;
+  }, []);
+
+  // Получить статистику профиля (из кэша или загрузить)
+  const getProfileStats = useCallback((username: string): InstagramProfileStats | undefined => {
+    return profileStatsCache.get(username.toLowerCase().replace('@', ''));
+  }, [profileStatsCache]);
+
   // Обновить все профили текущего проекта
   const refreshAll = useCallback(async () => {
     console.log('[Radar] refreshAll called:', { 
@@ -346,13 +396,17 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
     for (const profile of projectProfiles) {
       console.log('[Radar] Fetching reels for:', profile.username);
       await fetchUserReels(profile.username, profile.projectId);
+      
+      // Обновляем статистику профиля (раз в 7 дней автоматически)
+      await updateProfileStats(profile.username);
+      
       // Небольшая задержка между запросами
       await new Promise(r => setTimeout(r, 1000));
     }
     
     setLoading(false);
     console.log('[Radar] refreshAll completed');
-  }, [projectProfiles, loading, fetchUserReels, userId, currentProjectId]);
+  }, [projectProfiles, loading, fetchUserReels, userId, currentProjectId, updateProfileStats]);
 
   // Очистить профили текущего проекта
   const clearProject = useCallback(() => {
@@ -378,10 +432,13 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
     loading,
     loadingUsername,
     stats,
+    profileStatsCache,
     addProfile,
     removeProfile,
     fetchUserReels,
     refreshAll,
+    updateProfileStats,
+    getProfileStats,
     clearProject,
     clearAll,
   };

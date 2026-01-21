@@ -2,7 +2,7 @@
 import React, { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { cn } from "../../utils/cn";
-import { Sparkles, MoreVertical, ArrowRight, Eye, Heart, Loader2, FileText, AlertCircle } from "lucide-react";
+import { Sparkles, MoreVertical, ArrowRight, Eye, Heart, Loader2, FileText, AlertCircle, TrendingUp } from "lucide-react";
 
 // Проксирование Instagram изображений через наш API
 function proxyImageUrl(url?: string): string {
@@ -22,6 +22,7 @@ export interface VideoGradientCardProps {
   likeCount?: number;
   date?: string;
   viralCoef?: number;
+  viralMultiplier?: number | null; // Множитель залётности (во сколько раз больше среднего автора)
   folderBadge?: { name: string; color: string }; // Бейдж папки
   transcriptStatus?: string | null; // null, downloading, processing, completed, error
   onClick?: () => void;
@@ -48,6 +49,7 @@ export const VideoGradientCard = ({
   likeCount,
   date,
   viralCoef = 0,
+  viralMultiplier,
   folderBadge,
   transcriptStatus,
   onClick,
@@ -129,22 +131,46 @@ export const VideoGradientCard = ({
         <div className="relative flex flex-col justify-end h-full p-4 z-20 text-white">
           {/* Top badges */}
           <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-            {/* Viral badge */}
-            <motion.div
-              className={cn(
-                "px-2.5 py-1 rounded-full backdrop-blur-sm flex items-center gap-1.5",
-                viralCoef > 10 ? "bg-emerald-500/90 text-white" : 
-                viralCoef > 5 ? "bg-amber-500/90 text-white" :
-                viralCoef > 0 ? "bg-white/90 text-slate-700" :
-                "bg-black/30 text-white/80"
+            {/* Badges container */}
+            <div className="flex items-center gap-1.5">
+              {/* Viral badge */}
+              <motion.div
+                className={cn(
+                  "px-2.5 py-1 rounded-full backdrop-blur-sm flex items-center gap-1.5",
+                  viralCoef > 10 ? "bg-emerald-500/90 text-white" : 
+                  viralCoef > 5 ? "bg-amber-500/90 text-white" :
+                  viralCoef > 0 ? "bg-white/90 text-slate-700" :
+                  "bg-black/30 text-white/80"
+                )}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+              >
+                <Sparkles className="w-3 h-3" />
+                <span className="text-xs font-bold">{viralCoef > 0 ? viralCoef : '—'}</span>
+              </motion.div>
+              
+              {/* Viral multiplier badge (залётность относительно автора) */}
+              {viralMultiplier !== null && viralMultiplier !== undefined && viralMultiplier >= 1.5 && (
+                <motion.div
+                  className={cn(
+                    "px-2 py-1 rounded-full backdrop-blur-sm flex items-center gap-1",
+                    viralMultiplier >= 10 ? "bg-red-500/90 text-white" :
+                    viralMultiplier >= 5 ? "bg-orange-500/90 text-white" :
+                    viralMultiplier >= 3 ? "bg-amber-500/90 text-white" :
+                    viralMultiplier >= 2 ? "bg-lime-500/90 text-white" :
+                    "bg-green-500/90 text-white"
+                  )}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.2 }}
+                  title={`В ${viralMultiplier}x раз больше среднего у автора`}
+                >
+                  <TrendingUp className="w-3 h-3" />
+                  <span className="text-[10px] font-bold">{viralMultiplier}x</span>
+                </motion.div>
               )}
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-            >
-              <Sparkles className="w-3 h-3" />
-              <span className="text-xs font-bold">{viralCoef > 0 ? viralCoef : '—'}</span>
-            </motion.div>
+            </div>
             
             {/* Menu button - показывается при наведении или если открыто меню */}
             {onFolderMenuToggle && (
