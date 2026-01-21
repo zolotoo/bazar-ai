@@ -1291,89 +1291,40 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                   </div>
                 )}
 
-                {/* Radar reels grid */}
-                {radarReels.length > 0 && (
+                {/* Radar reels mini preview - только если профиль НЕ выбран */}
+                {radarReels.length > 0 && !selectedRadarProfile && (
                   <div className="border-t border-slate-200/50 pt-4">
-                    {/* Фильтруем видео по выбранному профилю */}
-                    {(() => {
-                      const filteredReels = selectedRadarProfile 
-                        ? radarReels.filter(r => r.owner?.username === selectedRadarProfile)
-                        : radarReels;
-                      
-                      return (
-                        <>
-                          <div className="flex items-center justify-between mb-3">
-                            <p className="text-xs text-slate-500">
-                              {selectedRadarProfile ? (
-                                <>Видео от <span className="font-medium text-orange-600">@{selectedRadarProfile}</span> ({filteredReels.length})</>
-                              ) : (
-                                <>Все видео ({radarReels.length})</>
-                              )}
-                            </p>
+                    <p className="text-xs text-slate-500 mb-3">Последние видео ({radarReels.length})</p>
+                    <div className="grid grid-cols-4 gap-2">
+                      {radarReels.slice(0, 8).map((reel, idx) => (
+                        <div 
+                          key={`radar-mini-${reel.shortcode}-${idx}`}
+                          className="relative group cursor-pointer"
+                          onClick={() => setSelectedVideo(reel)}
+                        >
+                          <div className="aspect-[9/16] rounded-lg overflow-hidden bg-slate-100">
+                            <img
+                              src={proxyImageUrl(reel.thumbnail_url)}
+                              alt=""
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              onError={(e) => {
+                                e.currentTarget.src = 'https://via.placeholder.com/200x356?text=Video';
+                              }}
+                            />
+                            {reel.isNew && (
+                              <div className="absolute top-1 right-1">
+                                <span className="px-1 py-0.5 rounded bg-emerald-500 text-white text-[8px] font-bold">
+                                  NEW
+                                </span>
+                              </div>
+                            )}
                           </div>
-                          
-                          {filteredReels.length > 0 ? (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto custom-scrollbar-light pr-1">
-                              {filteredReels.slice(0, 30).map((reel, idx) => (
-                                <div 
-                                  key={`radar-${reel.shortcode}-${idx}`}
-                                  className="relative group cursor-pointer"
-                                  onClick={() => setSelectedVideo(reel)}
-                                >
-                                  <div className="aspect-[9/16] rounded-xl overflow-hidden bg-slate-100">
-                                    <img
-                                      src={proxyImageUrl(reel.thumbnail_url)}
-                                      alt=""
-                                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                      onError={(e) => {
-                                        e.currentTarget.src = 'https://via.placeholder.com/200x356?text=Video';
-                                      }}
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    
-                                    {/* Stats overlay on hover */}
-                                    <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <p className="text-white text-xs font-medium truncate mb-1">
-                                        @{reel.owner?.username}
-                                      </p>
-                                      <div className="flex items-center gap-2 text-white/80 text-[10px]">
-                                        <span className="flex items-center gap-0.5">
-                                          <Eye className="w-3 h-3" />
-                                          {formatNumber(reel.view_count)}
-                                        </span>
-                                        <span className="flex items-center gap-0.5">
-                                          <Heart className="w-3 h-3" />
-                                          {formatNumber(reel.like_count)}
-                                        </span>
-                                      </div>
-                                    </div>
-
-                                    {/* New badge */}
-                                    {reel.isNew && (
-                                      <div className="absolute top-2 right-2">
-                                        <span className="px-1.5 py-0.5 rounded bg-emerald-500 text-white text-[10px] font-bold">
-                                          NEW
-                                        </span>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="text-center py-8">
-                              <p className="text-slate-400 text-sm">Нет видео от @{selectedRadarProfile}</p>
-                              <button
-                                onClick={() => setSelectedRadarProfile(null)}
-                                className="mt-2 text-sm text-orange-600 hover:text-orange-700 font-medium"
-                              >
-                                Показать все видео
-                              </button>
-                            </div>
-                          )}
-                        </>
-                      );
-                    })()}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-slate-400 mt-3 text-center">
+                      Кликните на профиль выше, чтобы увидеть все его видео
+                    </p>
                   </div>
                 )}
 
@@ -1402,8 +1353,150 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
         {/* Main Content Area */}
         <div className="flex-1 overflow-hidden">
           
+          {/* RADAR PROFILE VIDEOS VIEW - Показываем когда выбран профиль в радаре */}
+          {activeTab === 'radar' && selectedRadarProfile && (
+            <div className="h-full overflow-y-auto px-6 pb-6 custom-scrollbar-light">
+              <div className="max-w-6xl mx-auto">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setSelectedRadarProfile(null)}
+                      className="p-2 rounded-xl bg-white hover:bg-slate-100 text-slate-500 transition-all"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                      {selectedRadarProfile[0].toUpperCase()}
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-slate-800">@{selectedRadarProfile}</h2>
+                      <p className="text-sm text-slate-500">
+                        {radarReels.filter(r => r.owner?.username === selectedRadarProfile).length} видео
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Sort */}
+                  <div className="flex items-center gap-1.5 bg-white/80 backdrop-blur-sm rounded-2xl p-1.5 shadow-lg border border-white/50">
+                    {[
+                      { value: 'views', label: 'Просмотры', icon: Eye },
+                      { value: 'likes', label: 'Лайки', icon: Heart },
+                      { value: 'viral', label: 'Вирал', icon: Sparkles },
+                    ].map(({ value, label, icon: Icon }) => (
+                      <button
+                        key={value}
+                        onClick={() => setSortBy(value as SortOption)}
+                        className={cn(
+                          "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all",
+                          sortBy === value 
+                            ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md" 
+                            : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                        )}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Video Grid */}
+                {(() => {
+                  const profileReels = radarReels
+                    .filter(r => r.owner?.username === selectedRadarProfile)
+                    .sort((a, b) => {
+                      switch (sortBy) {
+                        case 'views':
+                          return (b.view_count || 0) - (a.view_count || 0);
+                        case 'likes':
+                          return (b.like_count || 0) - (a.like_count || 0);
+                        case 'viral':
+                          return calculateViralCoefficient(b.view_count, b.taken_at) - calculateViralCoefficient(a.view_count, a.taken_at);
+                        default:
+                          return 0;
+                      }
+                    });
+
+                  if (profileReels.length === 0) {
+                    return (
+                      <div className="text-center py-16">
+                        <Radar className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                        <p className="text-slate-500 text-lg mb-2">Нет видео от @{selectedRadarProfile}</p>
+                        <p className="text-slate-400 text-sm">Нажмите "Обновить все" чтобы загрузить видео</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
+                      {profileReels.map((reel, idx) => {
+                        const viralCoef = calculateViralCoefficient(reel.view_count, reel.taken_at);
+                        const captionText = typeof reel.caption === 'string' ? reel.caption : 'Видео из Instagram';
+                        const thumbnailUrl = proxyImageUrl(reel.thumbnail_url || reel.display_url);
+                        const dateText = formatVideoDate(reel.taken_at);
+                        
+                        return (
+                          <VideoGradientCard
+                            key={`radar-profile-${reel.shortcode}-${idx}`}
+                            thumbnailUrl={thumbnailUrl}
+                            username={reel.owner?.username || 'instagram'}
+                            caption={captionText}
+                            viewCount={reel.view_count}
+                            likeCount={reel.like_count}
+                            date={dateText || '—'}
+                            viralCoef={viralCoef}
+                            onClick={() => setSelectedVideo(reel)}
+                            onDragStart={(e) => handleDragStart(e, reel)}
+                            showFolderMenu={cardFolderSelect === `radar-profile-${reel.shortcode}-${idx}`}
+                            onFolderMenuToggle={() => setCardFolderSelect(
+                              cardFolderSelect === `radar-profile-${reel.shortcode}-${idx}` 
+                                ? null 
+                                : `radar-profile-${reel.shortcode}-${idx}`
+                            )}
+                            folderMenu={
+                              <div 
+                                className="absolute bottom-12 right-0 bg-white rounded-2xl shadow-2xl p-2 min-w-[180px] z-50 animate-in fade-in slide-in-from-bottom-2 duration-200"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <div className="px-3 py-2 text-xs text-slate-400 font-medium">
+                                  Добавить в: {currentProjectName}
+                                </div>
+                                {folderConfigs.map((folder) => {
+                                  const FolderIcon = folder.icon;
+                                  return (
+                                    <button
+                                      key={folder.id}
+                                      onClick={() => {
+                                        handleAddToFolder(reel, folder.id);
+                                        setCardFolderSelect(null);
+                                      }}
+                                      className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-colors text-left"
+                                    >
+                                      <div 
+                                        className="w-8 h-8 rounded-lg flex items-center justify-center"
+                                        style={{ backgroundColor: `${folder.color}20` }}
+                                      >
+                                        <FolderIcon className="w-4 h-4" style={{ color: folder.color }} />
+                                      </div>
+                                      <span className="text-sm font-medium text-slate-700">{folder.title}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            }
+                          />
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+
           {/* CAROUSEL VIEW - Saved Videos */}
-          {viewMode === 'carousel' && incomingVideos.length > 0 && (
+          {viewMode === 'carousel' && incomingVideos.length > 0 && activeTab !== 'radar' && (
             <div className="h-full flex flex-col items-center justify-center">
               {/* 3D Carousel */}
               <div className="relative w-full flex items-center justify-center" style={{ height: '400px' }}>
@@ -1538,7 +1631,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
           )}
 
           {/* EMPTY STATE - No videos in database */}
-          {(viewMode === 'carousel' || viewMode === 'trending') && incomingVideos.length === 0 && reels.length === 0 && !loading && (
+          {(viewMode === 'carousel' || viewMode === 'trending') && incomingVideos.length === 0 && reels.length === 0 && !loading && !(activeTab === 'radar' && selectedRadarProfile) && (
             <div className="h-full flex flex-col items-center justify-center px-6">
               <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-orange-500/20 to-amber-600/20 flex items-center justify-center mb-6">
                 <Search className="w-10 h-10 text-orange-500" />
@@ -1564,7 +1657,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
           )}
 
           {/* TRENDING VIEW - Carousel with Instagram trending videos */}
-          {viewMode === 'trending' && reels.length > 0 && (
+          {viewMode === 'trending' && reels.length > 0 && !(activeTab === 'radar' && selectedRadarProfile) && (
             <div className="h-full flex flex-col items-center justify-center">
               {/* Spinning indicator */}
               {isSpinning && (
@@ -1779,7 +1872,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
           )}
 
           {/* LOADING VIEW - Orange Glowing Sun */}
-          {viewMode === 'loading' && (
+          {viewMode === 'loading' && !(activeTab === 'radar' && selectedRadarProfile) && (
             <div className="h-full flex flex-col items-center justify-center">
               <div className="relative">
                 <div 
@@ -1851,7 +1944,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
           )}
 
           {/* RESULTS VIEW - Grid */}
-          {viewMode === 'results' && reels.length > 0 && (
+          {viewMode === 'results' && reels.length > 0 && !(activeTab === 'radar' && selectedRadarProfile) && (
             <div className="h-full overflow-y-auto px-6 pb-6 custom-scrollbar-light">
               <div className="max-w-6xl mx-auto">
                 {/* Header with count and sorting */}
