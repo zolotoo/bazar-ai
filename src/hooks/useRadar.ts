@@ -299,26 +299,32 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
     const cleanUsername = username.replace(/^@/, '').trim().toLowerCase();
     const targetProjectId = projectId || currentProjectId;
     
+    console.log('[Radar] fetchUserReels:', { cleanUsername, targetProjectId, userId });
+    
     if (!targetProjectId || !userId) {
-      console.warn('No projectId or userId for fetching reels');
+      console.error('[Radar] Missing projectId or userId:', { targetProjectId, userId });
       return [];
     }
     
     setLoadingUsername(cleanUsername);
     
     try {
+      console.log('[Radar] Calling /api/user-reels for:', cleanUsername);
       const response = await fetch('/api/user-reels', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: cleanUsername }),
       });
 
+      console.log('[Radar] API response status:', response.status);
+      
       if (!response.ok) {
-        console.error('Failed to fetch user reels:', response.status);
+        console.error('[Radar] Failed to fetch user reels:', response.status);
         return [];
       }
 
       const data = await response.json();
+      console.log('[Radar] API response:', { success: data.success, reelsCount: data.reels?.length });
       
       if (data.success && data.reels?.length > 0) {
         let newCount = 0;
@@ -375,19 +381,42 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
 
   // Обновить все профили текущего проекта
   const refreshAll = useCallback(async () => {
-    if (loading || projectProfiles.length === 0) return;
+    console.log('[Radar] refreshAll called:', { 
+      loading, 
+      profilesCount: projectProfiles.length,
+      userId,
+      currentProjectId,
+      profiles: projectProfiles.map(p => p.username)
+    });
+    
+    if (loading) {
+      console.log('[Radar] Already loading, skip');
+      return;
+    }
+    
+    if (projectProfiles.length === 0) {
+      console.log('[Radar] No profiles to refresh');
+      return;
+    }
+    
+    if (!userId) {
+      console.error('[Radar] No userId for refreshAll');
+      return;
+    }
     
     setLoading(true);
     setStats({ newVideos: 0, updatedVideos: 0 });
     
     for (const profile of projectProfiles) {
+      console.log('[Radar] Fetching reels for:', profile.username);
       await fetchUserReels(profile.username, profile.projectId);
       // Небольшая задержка между запросами
       await new Promise(r => setTimeout(r, 1000));
     }
     
     setLoading(false);
-  }, [projectProfiles, loading, fetchUserReels]);
+    console.log('[Radar] refreshAll completed');
+  }, [projectProfiles, loading, fetchUserReels, userId, currentProjectId]);
 
   // Очистить профили текущего проекта
   const clearProject = useCallback(() => {

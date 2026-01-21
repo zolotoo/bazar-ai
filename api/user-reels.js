@@ -34,6 +34,7 @@ export default async function handler(req, res) {
       host: 'instagram-scraper2.p.rapidapi.com',
       method: 'GET',
       parseResponse: (data) => {
+        console.log('instagram-scraper2 response structure:', JSON.stringify(data).slice(0, 500));
         if (!data?.data?.items) return null;
         return data.data.items.map(item => ({
           id: item.id || item.pk,
@@ -57,6 +58,7 @@ export default async function handler(req, res) {
       host: 'instagram-scraper-api2.p.rapidapi.com',
       method: 'GET',
       parseResponse: (data) => {
+        console.log('instagram-scraper-api2 response structure:', JSON.stringify(data).slice(0, 500));
         if (!data?.data?.items) return null;
         return data.data.items.map(item => ({
           id: item.id,
@@ -65,6 +67,32 @@ export default async function handler(req, res) {
           thumbnail_url: item.thumbnail_url || item.display_url,
           caption: item.caption?.text || '',
           view_count: item.play_count || item.view_count,
+          like_count: item.like_count,
+          comment_count: item.comment_count,
+          taken_at: item.taken_at,
+          owner: {
+            username: cleanUsername,
+          },
+        }));
+      },
+    },
+    {
+      name: 'instagram-scraper-20251',
+      url: `https://instagram-scraper-20251.p.rapidapi.com/v1/reels?username_or_id_or_url=${cleanUsername}`,
+      host: 'instagram-scraper-20251.p.rapidapi.com',
+      method: 'GET',
+      parseResponse: (data) => {
+        console.log('instagram-scraper-20251 response structure:', JSON.stringify(data).slice(0, 500));
+        // Пробуем разные структуры
+        let items = data?.data?.items || data?.data || data?.items || data?.reels;
+        if (!items || !Array.isArray(items)) return null;
+        return items.filter(item => item.code || item.shortcode).map(item => ({
+          id: item.id || item.pk,
+          shortcode: item.code || item.shortcode,
+          url: `https://www.instagram.com/reel/${item.code || item.shortcode}/`,
+          thumbnail_url: item.image_versions2?.candidates?.[0]?.url || item.thumbnail_url || item.display_url,
+          caption: item.caption?.text || item.caption || '',
+          view_count: item.play_count || item.view_count || item.video_view_count,
           like_count: item.like_count,
           comment_count: item.comment_count,
           taken_at: item.taken_at,
