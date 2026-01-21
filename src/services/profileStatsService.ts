@@ -103,7 +103,17 @@ export async function fetchAndCalculateProfileStats(username: string): Promise<I
   
   try {
     // Запрашиваем ролики пользователя через наш API
-    const response = await fetch(`/api/user-reels?username=${cleanUsername}`);
+    const response = await fetch('/api/user-reels', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: cleanUsername }),
+    });
+    
+    if (!response.ok) {
+      console.error(`[ProfileStats] API error: ${response.status}`);
+      return null;
+    }
+    
     const data = await response.json();
     
     if (!data.success || !data.reels || data.reels.length === 0) {
