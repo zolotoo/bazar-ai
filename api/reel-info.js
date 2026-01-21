@@ -51,31 +51,42 @@ export default async function handler(req, res) {
     
     if (response.ok) {
       const data = await response.json();
-      const media = data?.data?.shortcode_media;
+      console.log('instagram-scraper2 raw response:', JSON.stringify(data).slice(0, 1000));
+      
+      // Пробуем разные структуры ответа
+      const media = data?.data?.shortcode_media || data?.data || data?.graphql?.shortcode_media || data;
       
       if (media) {
-        console.log('instagram-scraper2 found media');
+        console.log('instagram-scraper2 media keys:', Object.keys(media));
+        
+        // Извлекаем view_count из разных возможных полей
+        const viewCount = media.video_view_count || media.play_count || media.view_count || 
+                         media.video_play_count || media.clip_music_attribution_info?.view_count || 0;
         
         const result = {
           success: true,
           shortcode: code,
           url: url || `https://www.instagram.com/reel/${code}/`,
-          thumbnail_url: media.thumbnail_src || media.display_url || '',
-          caption: media.edge_media_to_caption?.edges?.[0]?.node?.text || '',
-          view_count: media.video_view_count || 0,
-          like_count: media.edge_media_preview_like?.count || 0,
-          comment_count: media.edge_media_to_comment?.count || 0,
-          taken_at: media.taken_at_timestamp,
+          thumbnail_url: media.thumbnail_src || media.display_url || media.image_versions2?.candidates?.[0]?.url || '',
+          caption: media.edge_media_to_caption?.edges?.[0]?.node?.text || media.caption?.text || '',
+          view_count: viewCount,
+          like_count: media.edge_media_preview_like?.count || media.like_count || 0,
+          comment_count: media.edge_media_to_comment?.count || media.comment_count || 0,
+          taken_at: media.taken_at_timestamp || media.taken_at,
           owner: {
-            username: media.owner?.username || '',
-            full_name: media.owner?.full_name || '',
+            username: media.owner?.username || media.user?.username || '',
+            full_name: media.owner?.full_name || media.user?.full_name || '',
           },
-          is_video: media.__typename === 'GraphVideo',
+          is_video: media.__typename === 'GraphVideo' || media.is_video || media.media_type === 2,
           api_used: 'instagram-scraper2',
         };
         
         console.log('Extracted from instagram-scraper2:', result);
-        return res.status(200).json(result);
+        
+        // Если получили хоть какие-то данные - возвращаем
+        if (result.view_count || result.like_count || result.thumbnail_url || result.owner.username) {
+          return res.status(200).json(result);
+        }
       }
     }
   } catch (e) {
@@ -85,9 +96,21 @@ export default async function handler(req, res) {
   // Fallback APIs
   const apis = [
     {
+      name: 'instagram-scraper-api2',
+      host: 'instagram-scraper-api2.p.rapidapi.com',
+      url: `https://instagram-scraper-api2.p.rapidapi.com/v1/post_info?code_or_id_or_url=${code}`,
+      method: 'GET',
+    },
+    {
       name: 'instagram-scraper-20251',
       host: 'instagram-scraper-20251.p.rapidapi.com',
       url: `https://instagram-scraper-20251.p.rapidapi.com/v1/media/${code}`,
+      method: 'GET',
+    },
+    {
+      name: 'instagram120',
+      host: 'instagram120.p.rapidapi.com',
+      url: `https://instagram120.p.rapidapi.com/api/instagram/media/info?code=${code}`,
       method: 'GET',
     },
   ];
@@ -111,6 +134,35 @@ export default async function handler(req, res) {
 
       const data = await response.json();
       console.log(`${api.name} response:`, JSON.stringify(data).slice(0, 500));
+
+      // Для instagram-scraper-api2 - структура data.data
+      if (api.name === 'instagram-scraper-api2' && data?.data) {
+        const item = data.data;
+        console.log('instagram-scraper-api2 item keys:', Object.keys(item));
+        
+        const result = {
+          success: true,
+          shortcode: code,
+          url: url || `https://www.instagram.com/reel/${code}/`,
+          thumbnail_url: item.thumbnail_url || item.display_url || item.image_versions2?.candidates?.[0]?.url || '',
+          caption: item.caption?.text || '',
+          view_count: item.play_count || item.view_count || item.video_view_count || 0,
+          like_count: item.like_count || 0,
+          comment_count: item.comment_count || 0,
+          taken_at: item.taken_at,
+          owner: {
+            username: item.user?.username || item.owner?.username || '',
+            full_name: item.user?.full_name || item.owner?.full_name || '',
+          },
+          is_video: item.media_type === 2 || item.is_video,
+          api_used: api.name,
+        };
+        
+        if (result.view_count || result.like_count || result.thumbnail_url) {
+          console.log('Extracted from instagram-scraper-api2:', result);
+          return res.status(200).json(result);
+        }
+      }
 
       // Для instagram-scraper-stable API
       if (api.name === 'instagram-scraper-stable' && data) {
