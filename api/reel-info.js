@@ -19,7 +19,8 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'url or shortcode is required' });
   }
 
-  const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY || '60b367f230mshd3ca48b7e1fa21cp18f206jsn57b97472bcca';
+  // ОСНОВНОЙ КЛЮЧ - оплаченный instagram-scraper-20251
+  const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY || '959a088626msh74020d3fb11ad19p1e067bjsnb273d9fac830';
   
   // Извлекаем shortcode из URL если нужно
   let code = shortcode;
@@ -34,193 +35,69 @@ export default async function handler(req, res) {
 
   console.log('Fetching reel info for shortcode:', code);
 
-  // Используем instagram-scraper2 API - он возвращает view_count!
+  // Используем ТОЛЬКО оплаченный API instagram-scraper-20251
   try {
-    const scraperUrl = `https://instagram-scraper2.p.rapidapi.com/media_info?short_code=${code}`;
-    console.log('Trying instagram-scraper2:', scraperUrl);
+    // Endpoint: postdetail/?code_or_url=CODE
+    const apiUrl = `https://instagram-scraper-20251.p.rapidapi.com/postdetail/?code_or_url=${code}`;
+    console.log('Calling instagram-scraper-20251:', apiUrl);
     
-    const response = await fetch(scraperUrl, {
+    const response = await fetch(apiUrl, {
       method: 'GET',
       headers: {
-        'x-rapidapi-host': 'instagram-scraper2.p.rapidapi.com',
+        'x-rapidapi-host': 'instagram-scraper-20251.p.rapidapi.com',
         'x-rapidapi-key': RAPIDAPI_KEY,
       },
     });
 
-    console.log('instagram-scraper2 status:', response.status);
+    console.log('API status:', response.status);
     
     if (response.ok) {
       const data = await response.json();
-      console.log('instagram-scraper2 raw response:', JSON.stringify(data).slice(0, 1000));
+      console.log('API raw response:', JSON.stringify(data).slice(0, 2000));
       
       // Пробуем разные структуры ответа
-      const media = data?.data?.shortcode_media || data?.data || data?.graphql?.shortcode_media || data;
+      const media = data?.data || data?.graphql?.shortcode_media || data?.media || data;
       
       if (media) {
-        console.log('instagram-scraper2 media keys:', Object.keys(media));
+        console.log('Media keys:', Object.keys(media));
         
         // Извлекаем view_count из разных возможных полей
-        const viewCount = media.video_view_count || media.play_count || media.view_count || 
-                         media.video_play_count || media.clip_music_attribution_info?.view_count || 0;
+        const viewCount = media.play_count || media.video_play_count || media.video_view_count || 
+                         media.view_count || media.clip_music_attribution_info?.view_count || 0;
         
         const result = {
           success: true,
           shortcode: code,
           url: url || `https://www.instagram.com/reel/${code}/`,
-          thumbnail_url: media.thumbnail_src || media.display_url || media.image_versions2?.candidates?.[0]?.url || '',
-          caption: media.edge_media_to_caption?.edges?.[0]?.node?.text || media.caption?.text || '',
+          thumbnail_url: media.image_versions2?.candidates?.[0]?.url || media.thumbnail_url || 
+                        media.display_url || media.thumbnail_src || '',
+          caption: media.caption?.text || media.edge_media_to_caption?.edges?.[0]?.node?.text || 
+                  (typeof media.caption === 'string' ? media.caption : '') || '',
           view_count: viewCount,
-          like_count: media.edge_media_preview_like?.count || media.like_count || 0,
-          comment_count: media.edge_media_to_comment?.count || media.comment_count || 0,
-          taken_at: media.taken_at_timestamp || media.taken_at,
+          like_count: media.like_count || media.edge_media_preview_like?.count || 0,
+          comment_count: media.comment_count || media.edge_media_to_comment?.count || 0,
+          taken_at: media.taken_at || media.taken_at_timestamp,
           owner: {
-            username: media.owner?.username || media.user?.username || '',
-            full_name: media.owner?.full_name || media.user?.full_name || '',
+            username: media.user?.username || media.owner?.username || '',
+            full_name: media.user?.full_name || media.owner?.full_name || '',
           },
-          is_video: media.__typename === 'GraphVideo' || media.is_video || media.media_type === 2,
-          api_used: 'instagram-scraper2',
+          is_video: media.media_type === 2 || media.is_video || media.__typename === 'GraphVideo',
+          api_used: 'instagram-scraper-20251',
         };
         
-        console.log('Extracted from instagram-scraper2:', result);
+        console.log('Extracted reel info:', result);
         
         // Если получили хоть какие-то данные - возвращаем
         if (result.view_count || result.like_count || result.thumbnail_url || result.owner.username) {
           return res.status(200).json(result);
         }
       }
+    } else {
+      const errorText = await response.text();
+      console.log('API error:', response.status, errorText);
     }
   } catch (e) {
-    console.warn('instagram-scraper2 error:', e.message);
-  }
-
-  // Fallback APIs
-  const apis = [
-    {
-      name: 'instagram-scraper-api2',
-      host: 'instagram-scraper-api2.p.rapidapi.com',
-      url: `https://instagram-scraper-api2.p.rapidapi.com/v1/post_info?code_or_id_or_url=${code}`,
-      method: 'GET',
-    },
-    {
-      name: 'instagram-scraper-20251',
-      host: 'instagram-scraper-20251.p.rapidapi.com',
-      url: `https://instagram-scraper-20251.p.rapidapi.com/v1/media/${code}`,
-      method: 'GET',
-    },
-    {
-      name: 'instagram120',
-      host: 'instagram120.p.rapidapi.com',
-      url: `https://instagram120.p.rapidapi.com/api/instagram/media/info?code=${code}`,
-      method: 'GET',
-    },
-  ];
-
-  for (const api of apis) {
-    try {
-      console.log(`Trying ${api.name}:`, api.url);
-      
-      const response = await fetch(api.url, {
-        method: api.method,
-        headers: {
-          'X-RapidAPI-Key': RAPIDAPI_KEY,
-          'X-RapidAPI-Host': api.host,
-        },
-      });
-
-      if (!response.ok) {
-        console.log(`${api.name} returned ${response.status}`);
-        continue;
-      }
-
-      const data = await response.json();
-      console.log(`${api.name} response:`, JSON.stringify(data).slice(0, 500));
-
-      // Для instagram-scraper-api2 - структура data.data
-      if (api.name === 'instagram-scraper-api2' && data?.data) {
-        const item = data.data;
-        console.log('instagram-scraper-api2 item keys:', Object.keys(item));
-        
-        const result = {
-          success: true,
-          shortcode: code,
-          url: url || `https://www.instagram.com/reel/${code}/`,
-          thumbnail_url: item.thumbnail_url || item.display_url || item.image_versions2?.candidates?.[0]?.url || '',
-          caption: item.caption?.text || '',
-          view_count: item.play_count || item.view_count || item.video_view_count || 0,
-          like_count: item.like_count || 0,
-          comment_count: item.comment_count || 0,
-          taken_at: item.taken_at,
-          owner: {
-            username: item.user?.username || item.owner?.username || '',
-            full_name: item.user?.full_name || item.owner?.full_name || '',
-          },
-          is_video: item.media_type === 2 || item.is_video,
-          api_used: api.name,
-        };
-        
-        if (result.view_count || result.like_count || result.thumbnail_url) {
-          console.log('Extracted from instagram-scraper-api2:', result);
-          return res.status(200).json(result);
-        }
-      }
-
-      // Для instagram-scraper-stable API
-      if (api.name === 'instagram-scraper-stable' && data) {
-        // Этот API возвращает данные напрямую
-        const result = {
-          success: true,
-          shortcode: code,
-          url: url || `https://www.instagram.com/reel/${code}/`,
-          thumbnail_url: data.thumbnail_url || data.display_url || data.image_versions2?.candidates?.[0]?.url || '',
-          caption: data.caption?.text || (typeof data.caption === 'string' ? data.caption : '') || '',
-          view_count: data.play_count || data.view_count || data.video_view_count || 0,
-          like_count: data.like_count || data.likes_count || 0,
-          comment_count: data.comment_count || data.comments_count || 0,
-          taken_at: data.taken_at || data.taken_at_timestamp,
-          owner: {
-            username: data.user?.username || data.owner?.username || '',
-            full_name: data.user?.full_name || data.owner?.full_name || '',
-          },
-          is_video: data.is_video !== false || data.media_type === 2,
-          api_used: api.name,
-        };
-        
-        // Проверяем что получили хоть какие-то данные
-        if (result.view_count || result.like_count || result.thumbnail_url) {
-          console.log('Extracted reel info:', result);
-          return res.status(200).json(result);
-        }
-      }
-
-      // Для других API - общий парсинг
-      const item = data.data || data.media || data.post || data.graphql?.shortcode_media || data;
-      
-      if (item && (item.play_count || item.view_count || item.like_count || item.thumbnail_url)) {
-        const result = {
-          success: true,
-          shortcode: code,
-          url: url || `https://www.instagram.com/reel/${code}/`,
-          thumbnail_url: item.thumbnail_url || item.display_url || item.image_versions2?.candidates?.[0]?.url || item.thumbnail_src || '',
-          caption: item.caption?.text || item.caption || item.edge_media_to_caption?.edges?.[0]?.node?.text || '',
-          view_count: item.play_count || item.view_count || item.video_view_count || item.video_play_count || 0,
-          like_count: item.like_count || item.likes?.count || item.edge_media_preview_like?.count || 0,
-          comment_count: item.comment_count || item.comments?.count || item.edge_media_to_comment?.count || 0,
-          taken_at: item.taken_at || item.taken_at_timestamp,
-          owner: {
-            username: item.owner?.username || item.user?.username || '',
-            full_name: item.owner?.full_name || item.user?.full_name || '',
-          },
-          is_video: item.is_video !== false,
-          api_used: api.name,
-        };
-        
-        console.log('Extracted reel info:', result);
-        return res.status(200).json(result);
-      }
-    } catch (e) {
-      console.warn(`Error with ${api.name}:`, e.message);
-      continue;
-    }
+    console.error('API error:', e.message);
   }
 
   // Если ничего не сработало - возвращаем минимум
@@ -228,6 +105,6 @@ export default async function handler(req, res) {
     success: false,
     shortcode: code,
     url: url || `https://www.instagram.com/reel/${code}/`,
-    error: 'Could not fetch reel info from any API',
+    error: 'Could not fetch reel info',
   });
 }
