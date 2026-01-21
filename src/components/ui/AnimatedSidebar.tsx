@@ -173,7 +173,7 @@ export const SidebarLink = ({
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 py-0.5 rounded-xl transition-all w-full text-left group/sidebar",
+        "flex items-center gap-3 py-1 rounded-xl transition-all w-full text-left group/sidebar",
         open ? "px-3" : "px-2 justify-center",
         isActive 
           ? "bg-gradient-to-r from-orange-500/10 to-amber-500/10 text-orange-600" 
