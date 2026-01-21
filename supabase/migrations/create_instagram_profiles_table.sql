@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS instagram_profiles (
   median_views INTEGER DEFAULT 0,           -- Медиана просмотров
   min_views INTEGER DEFAULT 0,              -- Минимум просмотров
   max_views INTEGER DEFAULT 0,              -- Максимум просмотров
+  avg_bottom3_views INTEGER DEFAULT 0,      -- Среднее из 3 самых маленьких роликов (для расчета залётности)
   avg_likes INTEGER DEFAULT 0,              -- Среднее кол-во лайков
   median_likes INTEGER DEFAULT 0,           -- Медиана лайков
   avg_comments INTEGER DEFAULT 0,           -- Среднее кол-во комментов

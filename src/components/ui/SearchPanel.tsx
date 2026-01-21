@@ -19,7 +19,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { IncomingVideo } from '../../types';
 import { cn } from '../../utils/cn';
 import { supabase } from '../../utils/supabase';
-import { calculateViralMultiplier } from '../../services/profileStatsService';
+import { calculateViralMultiplier, applyViralMultiplierToCoefficient } from '../../services/profileStatsService';
 import { FolderPlus, Star, Sparkles as SparklesIcon, FileText, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -579,9 +579,47 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
     setLinkLoading(true);
     setLinkPreview(null);
     try {
+      // Проверяем тип ссылки: профиль или ролик
+      const profileMatch = linkUrl.match(/instagram\.com\/([^\/\?]+)\/?$/);
+      const reelMatch = linkUrl.match(/instagram\.com\/(reel|p)\/([A-Za-z0-9_-]+)/);
+      
+      // Если это профиль (без /reel/ или /p/)
+      if (profileMatch && !reelMatch) {
+        const username = profileMatch[1].replace('@', '').toLowerCase();
+        const added = addRadarProfile(username, currentProjectId);
+        if (added) {
+          toast.success(`@${username} добавлен в радар`, {
+            description: `Проект: ${currentProjectName}. Загружаем видео...`,
+          });
+          setLinkUrl('');
+          setLinkLoading(false);
+          return;
+        } else {
+          toast.error('Профиль уже отслеживается в этом проекте');
+          setLinkLoading(false);
+          return;
+        }
+      }
+      
+      // Если это ролик - получаем данные и добавляем автора в радар
       const reel = await getReelByUrl(linkUrl);
       
       if (reel) {
+        // Добавляем автора в радар если его там нет
+        if (reel.owner?.username) {
+          const username = reel.owner.username.toLowerCase();
+          const alreadyInRadar = radarProfiles.some(p => 
+            p.username.toLowerCase() === username && p.projectId === currentProjectId
+          );
+          
+          if (!alreadyInRadar) {
+            addRadarProfile(username, currentProjectId);
+            toast.info(`@${username} добавлен в радар`, {
+              description: 'Автор видео автоматически добавлен',
+            });
+          }
+        }
+        
         // Извлекаем shortcode
         let shortcode = reel.shortcode;
         if (!shortcode && reel.url) {
@@ -609,9 +647,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
         // Показываем превью с возможностью переместить в папку
         setLinkPreview(reel);
         
-        // Сохраняем в историю поиска
-        const shortUrl = linkUrl.length > 50 ? linkUrl.slice(0, 47) + '...' : linkUrl;
-        addToHistory(`🔗 ${shortUrl}`, [reel]);
+        // НЕ сохраняем ссылку в историю поиска (только текстовые запросы)
         
         toast.success(`Сохранено в "${currentProjectName}"`, {
           description: 'Видео добавлено в "Все видео". Можете переместить в папку.',
@@ -1357,7 +1393,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
           
           {/* RADAR PROFILE VIDEOS VIEW - Показываем когда выбран профиль в радаре */}
           {activeTab === 'radar' && selectedRadarProfile && (
-            <div className="h-full overflow-y-auto px-6 pb-6 custom-scrollbar-light">
+            <div className="h-full overflow-y-auto px-6 pb-6 custom-scrollbar-light pt-4">
               <div className="max-w-6xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-5">
@@ -1405,6 +1441,9 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
 
                 {/* Video Grid */}
                 {(() => {
+                  // Получаем статистику профиля для расчёта viralMultiplier
+                  const profileStats = getProfileStats(selectedRadarProfile);
+                  
                   const profileReels = radarReels
                     .filter(r => r.owner?.username === selectedRadarProfile)
                     .sort((a, b) => {
@@ -1414,7 +1453,13 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                         case 'likes':
                           return (b.like_count || 0) - (a.like_count || 0);
                         case 'viral':
-                          return calculateViralCoefficient(b.view_count, b.taken_at) - calculateViralCoefficient(a.view_count, a.taken_at);
+                          const coefA = calculateViralCoefficient(a.view_count, a.taken_at);
+                          const coefB = calculateViralCoefficient(b.view_count, b.taken_at);
+                          const multA = calculateViralMultiplier(a.view_count || 0, profileStats || null);
+                          const multB = calculateViralMultiplier(b.view_count || 0, profileStats || null);
+                          const finalCoefA = applyViralMultiplierToCoefficient(coefA, multA);
+                          const finalCoefB = applyViralMultiplierToCoefficient(coefB, multB);
+                          return finalCoefB - finalCoefA;
                         default:
                           return 0;
                       }
@@ -1429,9 +1474,6 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                       </div>
                     );
                   }
-
-                  // Получаем статистику профиля для расчёта viralMultiplier
-                  const profileStats = getProfileStats(selectedRadarProfile);
 
                   return (
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">

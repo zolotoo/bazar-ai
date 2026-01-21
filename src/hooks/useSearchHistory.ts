@@ -25,7 +25,11 @@ export function useSearchHistory() {
   }, [user]);
 
   // Простой список запросов для обратной совместимости
-  const history = historyEntries.map(e => e.query);
+  // Фильтруем ссылки (начинаются с 🔗 или http) и показываем только последние 3
+  const history = historyEntries
+    .filter(e => !e.query.startsWith('🔗') && !e.query.startsWith('http'))
+    .slice(0, 3)
+    .map(e => e.query);
 
   // Загрузка истории из Supabase
   const fetchHistory = useCallback(async () => {

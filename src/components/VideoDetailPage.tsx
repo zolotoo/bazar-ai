@@ -10,6 +10,7 @@ import { supabase } from '../utils/supabase';
 import { toast } from 'sonner';
 import { useInboxVideos } from '../hooks/useInboxVideos';
 import { useProjectContext } from '../contexts/ProjectContext';
+import { calculateViralMultiplier, getOrUpdateProfileStats, applyViralMultiplierToCoefficient } from '../services/profileStatsService';
 
 interface VideoData {
   id: string;
@@ -118,10 +119,15 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
   const [isLoadingVideo, setIsLoadingVideo] = useState(false);
   const [isSavingScript, setIsSavingScript] = useState(false);
   const [isSavingTranscript, setIsSavingTranscript] = useState(false);
+  const [viralMultiplier, setViralMultiplier] = useState<number | null>(null);
+  const [isCalculatingViral, setIsCalculatingViral] = useState(false);
   
   const { updateVideoFolder, updateVideoScript, updateVideoTranscript } = useInboxVideos();
   const { currentProject } = useProjectContext();
   const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at);
+  
+  // Применяем множитель к коэффициенту виральности
+  const finalViralCoef = applyViralMultiplierToCoefficient(viralCoef, viralMultiplier);
   
   // Получить папки из проекта
   const folderConfigs = currentProject?.folders
@@ -294,6 +300,48 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
     
     checkGlobalData();
   }, [video.id, video.url, video.transcript_text, video.translation_text, transcript, translation]);
+  
+  // Загружаем статистику профиля при открытии
+  useEffect(() => {
+    const loadProfileStats = async () => {
+      if (!video.owner_username) return;
+      
+      const stats = await getOrUpdateProfileStats(video.owner_username, false);
+      if (stats) {
+        const mult = calculateViralMultiplier(video.view_count || 0, stats);
+        setViralMultiplier(mult);
+      }
+    };
+    
+    loadProfileStats();
+  }, [video.owner_username, video.view_count]);
+  
+  // Расчет точной виральности (принудительное обновление статистики)
+  const handleCalculateViral = async () => {
+    if (!video.owner_username) {
+      toast.error('Нет информации об авторе видео');
+      return;
+    }
+    
+    setIsCalculatingViral(true);
+    try {
+      const stats = await getOrUpdateProfileStats(video.owner_username, true);
+      if (stats) {
+        const mult = calculateViralMultiplier(video.view_count || 0, stats);
+        setViralMultiplier(mult);
+        toast.success('Виральность рассчитана', {
+          description: mult ? `В ${mult.toFixed(1)}x раз ${mult >= 1 ? 'больше' : 'меньше'} среднего` : 'Нет данных для сравнения',
+        });
+      } else {
+        toast.error('Не удалось получить статистику профиля');
+      }
+    } catch (err) {
+      console.error('Error calculating viral:', err);
+      toast.error('Ошибка расчета виральности');
+    } finally {
+      setIsCalculatingViral(false);
+    }
+  };
   
   // Автосохранение сценария при изменении (с debounce)
   useEffect(() => {
@@ -600,19 +648,56 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
                 </div>
               </div>
               
-              <div className="mt-3 pt-3 border-t border-slate-100">
+              <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-slate-500">
                     <Sparkles className="w-4 h-4" />
                     <span className="text-sm">Виральность</span>
                   </div>
-                  <span className={cn(
-                    "text-sm font-bold",
-                    viralCoef > 10 ? "text-emerald-600" : viralCoef > 5 ? "text-amber-600" : "text-slate-600"
-                  )}>
-                    {viralCoef.toFixed(1)}K/день
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {viralMultiplier !== null && viralMultiplier !== undefined && (
+                      <span className={cn(
+                        "text-xs px-2 py-0.5 rounded-full font-semibold",
+                        viralMultiplier >= 4 ? "bg-red-100 text-red-700" :
+                        viralMultiplier >= 3 ? "bg-amber-100 text-amber-700" :
+                        viralMultiplier >= 2 ? "bg-lime-100 text-lime-700" :
+                        viralMultiplier >= 1.5 ? "bg-green-100 text-green-700" :
+                        "bg-slate-100 text-slate-600"
+                      )}>
+                        {viralMultiplier.toFixed(1)}x
+                      </span>
+                    )}
+                    <span className={cn(
+                      "text-sm font-bold",
+                      finalViralCoef > 10 ? "text-emerald-600" : finalViralCoef > 5 ? "text-amber-600" : "text-slate-600"
+                    )}>
+                      {finalViralCoef.toFixed(1)}K/день
+                    </span>
+                  </div>
                 </div>
+                {(!viralMultiplier && video.owner_username) && (
+                  <button
+                    onClick={handleCalculateViral}
+                    disabled={isCalculatingViral}
+                    className={cn(
+                      "w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+                      "bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200",
+                      "disabled:opacity-50 disabled:cursor-not-allowed"
+                    )}
+                  >
+                    {isCalculatingViral ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Расчет...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3 h-3" />
+                        Расчет точной виральности
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
 

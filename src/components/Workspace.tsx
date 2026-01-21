@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWorkspaceZones, ZoneVideo } from '../hooks/useWorkspaceZones';
 import { useInboxVideos } from '../hooks/useInboxVideos';
 import { useProjectContext, ProjectFolder } from '../contexts/ProjectContext';
@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { cn } from '../utils/cn';
 import { VideoGradientCard } from './ui/VideoGradientCard';
 import { VideoDetailPage } from './VideoDetailPage';
+import { calculateViralMultiplier, applyViralMultiplierToCoefficient, getProfileStats } from '../services/profileStatsService';
 
 
 // Проксирование Instagram изображений через наш API
@@ -102,18 +103,20 @@ export function Workspace() {
     addFolder, 
     removeFolder, 
     updateFolder, 
-    reorderFolders 
+    reorderFolders,
+    refetch: refetchProjects,
   } = useProjectContext();
   const [selectedVideo, setSelectedVideo] = useState<ZoneVideo | null>(null);
   const [moveMenuVideoId, setMoveMenuVideoId] = useState<string | null>(null);
   const [cardMenuVideoId, setCardMenuVideoId] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<'viral' | 'views' | 'likes' | 'date'>('viral');
+  const [sortBy, setSortBy] = useState<'viral' | 'views' | 'likes' | 'date' | 'recent'>('viral');
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null); // null = все видео (кроме "не подходит")
   const [showFolderSettings, setShowFolderSettings] = useState(false);
   const [editingFolder, setEditingFolder] = useState<ProjectFolder | null>(null);
   const [newFolderName, setNewFolderName] = useState('');
   const [draggedFolderIndex, setDraggedFolderIndex] = useState<number | null>(null);
   const [isFolderWidgetOpen, setIsFolderWidgetOpen] = useState(true);
+  const [profileStatsCache, setProfileStatsCache] = useState<Map<string, any>>(new Map());
   
   // Преобразуем папки проекта в FolderConfig формат
   const projectFolders: FolderConfig[] = currentProject?.folders
@@ -198,13 +201,25 @@ export function Workspace() {
       .map(v => transformInboxVideo(v, (v as any).folder_id));
   };
   
-  // Сортировка видео
+  // Сортировка видео с применением множителя залётности
   const getSortedVideos = (videos: ZoneVideo[]): ZoneVideo[] => {
     return [...videos].sort((a, b) => {
       switch (sortBy) {
         case 'viral':
-          return calculateViralCoefficient(b.view_count, b.taken_at || b.created_at) - 
-                 calculateViralCoefficient(a.view_count, a.taken_at || a.created_at);
+          const coefA = calculateViralCoefficient(a.view_count, a.taken_at || a.created_at);
+          const coefB = calculateViralCoefficient(b.view_count, b.taken_at || b.created_at);
+          
+          // Получаем статистику профилей для применения множителя
+          const profileA = a.owner_username ? profileStatsCache.get(a.owner_username.toLowerCase()) : null;
+          const profileB = b.owner_username ? profileStatsCache.get(b.owner_username.toLowerCase()) : null;
+          
+          const multA = calculateViralMultiplier(a.view_count || 0, profileA);
+          const multB = calculateViralMultiplier(b.view_count || 0, profileB);
+          
+          const finalCoefA = applyViralMultiplierToCoefficient(coefA, multA);
+          const finalCoefB = applyViralMultiplierToCoefficient(coefB, multB);
+          
+          return finalCoefB - finalCoefA;
         case 'views':
           return (b.view_count || 0) - (a.view_count || 0);
         case 'likes':
@@ -213,6 +228,11 @@ export function Workspace() {
           const dateA = a.taken_at || a.created_at || '';
           const dateB = b.taken_at || b.created_at || '';
           return String(dateB).localeCompare(String(dateA));
+        case 'recent':
+          // По недавно добавленным (по created_at из saved_videos)
+          const createdA = a.created_at || '';
+          const createdB = b.created_at || '';
+          return String(createdB).localeCompare(String(createdA));
         default:
           return 0;
       }
@@ -278,11 +298,37 @@ export function Workspace() {
   const feedVideos = getSortedVideos(getVideosForFeed());
   const totalVideos = inboxVideos.filter(v => (v as any).folder_id !== rejectedFolderId).length;
   
+  // Загружаем статистику профилей для видео
+  useEffect(() => {
+    const loadProfileStats = async () => {
+      const usernames = new Set<string>();
+      feedVideos.forEach(v => {
+        if (v.owner_username) {
+          usernames.add(v.owner_username.toLowerCase());
+        }
+      });
+      
+      for (const username of usernames) {
+        if (!profileStatsCache.has(username)) {
+          const stats = await getProfileStats(username);
+          if (stats) {
+            setProfileStatsCache(prev => new Map(prev).set(username, stats));
+          }
+        }
+      }
+    };
+    
+    if (feedVideos.length > 0) {
+      loadProfileStats();
+    }
+  }, [feedVideos.map(v => v.owner_username).join(',')]);
+  
   // Обработчик создания папки
   const handleCreateFolder = async () => {
     if (!currentProjectId || !newFolderName.trim()) return;
     await addFolder(currentProjectId, newFolderName.trim());
     setNewFolderName('');
+    await refetchProjects(); // Обновляем проекты чтобы новая папка появилась
     toast.success('Папка создана');
   };
   
@@ -337,8 +383,8 @@ export function Workspace() {
     <div className="h-full overflow-hidden relative">
       {/* Floating Folder Widget */}
       <div className={cn(
-        "absolute top-4 right-4 z-40 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/50 transition-all duration-300",
-        isFolderWidgetOpen ? "w-64" : "w-auto"
+        "absolute top-4 right-4 z-40 bg-white/95 backdrop-blur-xl rounded-xl shadow-xl border border-white/50 transition-all duration-300",
+        isFolderWidgetOpen ? "w-56" : "w-auto"
       )}>
         {/* Widget Header */}
         <div 
@@ -465,11 +511,12 @@ export function Workspace() {
               </div>
 
               {/* Сортировка */}
-              <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-2xl p-1.5 shadow-lg border border-white/50">
+              <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-2xl p-1.5 shadow-lg border border-white/50 mr-72">
                 {[
                   { value: 'viral', label: 'Вирал', icon: Sparkles, color: 'from-orange-500 to-amber-500' },
                   { value: 'views', label: 'Просмотры', icon: Eye, color: 'from-blue-500 to-cyan-500' },
                   { value: 'likes', label: 'Лайки', icon: Heart, color: 'from-pink-500 to-rose-500' },
+                  { value: 'recent', label: 'Недавно', icon: Inbox, color: 'from-purple-500 to-indigo-500' },
                 ].map(({ value, label, icon: Icon, color }) => (
                   <button
                     key={value}
@@ -508,6 +555,12 @@ export function Workspace() {
                 const thumbnailUrl = proxyImageUrl(video.preview_url);
                 const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at || video.created_at);
                 
+                // Получаем статистику профиля для расчёта множителя
+                const profileStats = video.owner_username 
+                  ? profileStatsCache.get(video.owner_username.toLowerCase()) 
+                  : null;
+                const viralMult = calculateViralMultiplier(video.view_count || 0, profileStats);
+                
                 // Бейдж папки - показываем если не выбрана конкретная папка
                 const folderBadge = !selectedFolderId ? {
                   name: video.folder_id ? getFolderName(video.folder_id) : 'Без папки',
@@ -523,6 +576,7 @@ export function Workspace() {
                     viewCount={video.view_count}
                     likeCount={video.like_count}
                     viralCoef={viralCoef}
+                    viralMultiplier={viralMult}
                     folderBadge={folderBadge}
                     transcriptStatus={video.transcript_status}
                     onClick={() => setSelectedVideo(video)}

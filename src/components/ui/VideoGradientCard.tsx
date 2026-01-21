@@ -150,8 +150,8 @@ export const VideoGradientCard = ({
                 <span className="text-xs font-bold">{viralCoef > 0 ? viralCoef : '—'}</span>
               </motion.div>
               
-              {/* Viral multiplier badge (залётность относительно автора) */}
-              {viralMultiplier !== null && viralMultiplier !== undefined && viralMultiplier >= 1.5 && (
+              {/* Viral multiplier badge (залётность относительно автора) - показываем всегда если есть данные */}
+              {viralMultiplier !== null && viralMultiplier !== undefined && (
                 <motion.div
                   className={cn(
                     "px-2 py-1 rounded-full backdrop-blur-sm flex items-center gap-1",
@@ -159,15 +159,16 @@ export const VideoGradientCard = ({
                     viralMultiplier >= 5 ? "bg-orange-500/90 text-white" :
                     viralMultiplier >= 3 ? "bg-amber-500/90 text-white" :
                     viralMultiplier >= 2 ? "bg-lime-500/90 text-white" :
-                    "bg-green-500/90 text-white"
+                    viralMultiplier >= 1.5 ? "bg-green-500/90 text-white" :
+                    "bg-slate-500/90 text-white"
                   )}
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.2 }}
-                  title={`В ${viralMultiplier}x раз больше среднего у автора`}
+                  title={`В ${viralMultiplier.toFixed(1)}x раз ${viralMultiplier >= 1 ? 'больше' : 'меньше'} среднего у автора`}
                 >
                   <TrendingUp className="w-3 h-3" />
-                  <span className="text-[10px] font-bold">{viralMultiplier}x</span>
+                  <span className="text-[10px] font-bold">{viralMultiplier.toFixed(1)}x</span>
                 </motion.div>
               )}
             </div>

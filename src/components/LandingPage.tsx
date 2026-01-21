@@ -6,7 +6,7 @@ import ScrollMorphHero from './ui/ScrollMorphHero';
 
 export function LandingPage() {
   const [showAuth, setShowAuth] = useState(false);
-  const [showHero, setShowHero] = useState(true);
+  const [showHero, setShowHero] = useState(false); // Отключаем заставку
   const [username, setUsername] = useState('');
   const [code, setCode] = useState('');
   const { sendCode, verifyCode, sendingCode, verifying, error, codeSent, resetAuth } = useAuth();

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { FlowCanvas } from './components/FlowCanvas';
 import { Workspace } from './components/Workspace';
 import { LandingPage } from './components/LandingPage';
 import { History } from './components/History';
@@ -14,7 +13,7 @@ import { useAuth } from './hooks/useAuth';
 import { useInboxVideos } from './hooks/useInboxVideos';
 import { ProjectProvider, useProjectContext } from './contexts/ProjectContext';
 import { 
-  Video, Settings, Search, LayoutGrid, GitBranch, Clock, User, LogOut, 
+  Video, Settings, Search, LayoutGrid, Clock, User, LogOut, 
   Link, Radar, Plus, FolderOpen, X, Palette, Sparkles, Trash2
 } from 'lucide-react';
 import { cn } from './utils/cn';
@@ -430,44 +429,38 @@ function AppContent() {
             
             {/* Navigation */}
             <SidebarSection title="Навигация">
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <SidebarLink
-                  icon={<LayoutGrid className="w-5 h-5" />}
-                  label="Рабочий стол"
+                  icon={<LayoutGrid className="w-4 h-4" />}
+                  label="Лента"
                   onClick={() => setViewMode('workspace')}
                   isActive={viewMode === 'workspace'}
                   badge={videos.length}
                 />
                 <SidebarLink
-                  icon={<GitBranch className="w-5 h-5" />}
-                  label="Холст"
-                  onClick={() => setViewMode('canvas')}
-                  isActive={viewMode === 'canvas'}
-                />
-                <SidebarLink
-                  icon={<Clock className="w-5 h-5" />}
+                  icon={<Clock className="w-4 h-4" />}
                   label="История"
                   onClick={() => setViewMode('history')}
                   isActive={viewMode === 'history'}
                 />
               </div>
             </SidebarSection>
-            
+
             {/* Search */}
             <SidebarSection title="Поиск">
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <SidebarLink
-                  icon={<Search className="w-5 h-5" />}
+                  icon={<Search className="w-4 h-4" />}
                   label="Поиск видео"
                   onClick={() => { setSearchTab('search'); setIsSearchOpen(true); }}
                 />
                 <SidebarLink
-                  icon={<Link className="w-5 h-5" />}
+                  icon={<Link className="w-4 h-4" />}
                   label="По ссылке"
                   onClick={() => { setSearchTab('link'); setIsSearchOpen(true); }}
                 />
                 <SidebarLink
-                  icon={<Radar className="w-5 h-5" />}
+                  icon={<Radar className="w-4 h-4" />}
                   label="Радар"
                   onClick={() => { setSearchTab('radar'); setIsSearchOpen(true); }}
                 />
@@ -502,21 +495,21 @@ function AppContent() {
           </div>
           
           {/* Bottom Actions */}
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             <SidebarDivider />
             <SidebarLink
-              icon={<User className="w-5 h-5" />}
+              icon={<User className="w-4 h-4" />}
               label="Профиль"
               onClick={() => setViewMode('profile')}
               isActive={viewMode === 'profile'}
             />
             <SidebarLink
-              icon={<Settings className="w-5 h-5" />}
+              icon={<Settings className="w-4 h-4" />}
               label="Настройки"
               onClick={() => toast.info('Настройки скоро будут доступны')}
             />
             <SidebarLink
-              icon={<LogOut className="w-5 h-5" />}
+              icon={<LogOut className="w-4 h-4" />}
               label="Выйти"
               onClick={logout}
               variant="danger"
@@ -528,7 +521,6 @@ function AppContent() {
       {/* Main Content */}
       <div className="flex-1 h-screen overflow-hidden">
         {viewMode === 'workspace' && <Workspace />}
-        {viewMode === 'canvas' && <FlowCanvas />}
         {viewMode === 'history' && <History />}
         {viewMode === 'profile' && <ProfilePage />}
       </div>
