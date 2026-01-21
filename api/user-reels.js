@@ -20,6 +20,7 @@ export default async function handler(req, res) {
   }
 
   const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY || '60b367f230mshd3ca48b7e1fa21cp18f206jsn57b97472bcca';
+  const RAPIDAPI_KEY_2 = process.env.RAPIDAPI_KEY_2 || 'b0c8ed7c19msha2cdb96d5b4b6e8p1498c0jsncd589edf5d8b';
   
   // Очищаем username от @ если есть
   const cleanUsername = username.replace(/^@/, '').trim().toLowerCase();
@@ -28,19 +29,52 @@ export default async function handler(req, res) {
 
   // Попробуем несколько API - с улучшенным парсингом
   const apis = [
+    // ПРИОРИТЕТ 1: instagram-scraper-20251 с новым ключом
+    {
+      name: 'instagram-scraper-20251-userreels',
+      url: `https://instagram-scraper-20251.p.rapidapi.com/userreels/?username_or_id=${cleanUsername}&url_embed_safe=true`,
+      host: 'instagram-scraper-20251.p.rapidapi.com',
+      apiKey: RAPIDAPI_KEY_2, // Используем второй ключ
+      method: 'GET',
+      parseResponse: (data) => {
+        console.log('instagram-scraper-20251-userreels full response:', JSON.stringify(data).slice(0, 1500));
+        // Пробуем разные структуры
+        let items = data?.data?.items || data?.items || data?.data || data?.reels;
+        if (!items || !Array.isArray(items)) {
+          // Может быть объект с edge_owner_to_timeline_media
+          if (data?.data?.user?.edge_owner_to_timeline_media?.edges) {
+            items = data.data.user.edge_owner_to_timeline_media.edges.map(e => e.node);
+          }
+        }
+        if (!items || !Array.isArray(items)) return null;
+        
+        return items.map(item => ({
+          id: item.id || item.pk,
+          shortcode: item.code || item.shortcode,
+          url: `https://www.instagram.com/reel/${item.code || item.shortcode}/`,
+          thumbnail_url: item.image_versions2?.candidates?.[0]?.url || item.thumbnail_url || item.display_url || item.thumbnail_src,
+          caption: item.caption?.text || item.edge_media_to_caption?.edges?.[0]?.node?.text || '',
+          view_count: item.play_count || item.view_count || item.video_view_count || 0,
+          like_count: item.like_count || item.edge_liked_by?.count || 0,
+          comment_count: item.comment_count || item.edge_media_to_comment?.count || 0,
+          taken_at: item.taken_at || item.taken_at_timestamp,
+          owner: { username: cleanUsername },
+        })).filter(r => r.shortcode);
+      },
+    },
+    // Fallback APIs с первым ключом
     {
       name: 'instagram-scraper2-reels',
       url: `https://instagram-scraper2.p.rapidapi.com/user_reels?username_or_id=${cleanUsername}&count=12`,
       host: 'instagram-scraper2.p.rapidapi.com',
+      apiKey: RAPIDAPI_KEY,
       method: 'GET',
       parseResponse: (data) => {
         console.log('instagram-scraper2-reels full response:', JSON.stringify(data).slice(0, 1000));
-        // Пробуем разные пути к данным
         let items = data?.data?.items || data?.items || data?.data?.user?.edge_owner_to_timeline_media?.edges;
         if (!items || !Array.isArray(items)) return null;
         
         return items.map(item => {
-          // Если edges формат (GraphQL)
           const node = item.node || item;
           return {
             id: node.id || node.pk,
@@ -61,6 +95,7 @@ export default async function handler(req, res) {
       name: 'instagram-scraper-api2-reels',
       url: `https://instagram-scraper-api2.p.rapidapi.com/v1/reels?username_or_id_or_url=${cleanUsername}`,
       host: 'instagram-scraper-api2.p.rapidapi.com',
+      apiKey: RAPIDAPI_KEY,
       method: 'GET',
       parseResponse: (data) => {
         console.log('instagram-scraper-api2-reels full response:', JSON.stringify(data).slice(0, 1000));
@@ -81,60 +116,6 @@ export default async function handler(req, res) {
         })).filter(r => r.shortcode);
       },
     },
-    {
-      // Альтернативный endpoint - получаем посты пользователя (включая reels)
-      name: 'instagram-scraper2-posts',
-      url: `https://instagram-scraper2.p.rapidapi.com/user_posts?username_or_id=${cleanUsername}&count=20`,
-      host: 'instagram-scraper2.p.rapidapi.com',
-      method: 'GET',
-      parseResponse: (data) => {
-        console.log('instagram-scraper2-posts full response:', JSON.stringify(data).slice(0, 1000));
-        let items = data?.data?.items || data?.items || data?.data;
-        if (!items || !Array.isArray(items)) return null;
-        
-        // Фильтруем только видео (reels)
-        return items
-          .filter(item => item.media_type === 2 || item.is_video || item.video_versions)
-          .map(item => ({
-            id: item.id || item.pk,
-            shortcode: item.code || item.shortcode,
-            url: `https://www.instagram.com/reel/${item.code || item.shortcode}/`,
-            thumbnail_url: item.image_versions2?.candidates?.[0]?.url || item.thumbnail_url || item.display_url,
-            caption: item.caption?.text || '',
-            view_count: item.play_count || item.view_count || item.video_view_count || 0,
-            like_count: item.like_count || 0,
-            comment_count: item.comment_count || 0,
-            taken_at: item.taken_at,
-            owner: { username: cleanUsername },
-          })).filter(r => r.shortcode);
-      },
-    },
-    {
-      name: 'instagram120-user-feed',
-      url: `https://instagram120.p.rapidapi.com/api/instagram/user-feed?username=${cleanUsername}`,
-      host: 'instagram120.p.rapidapi.com',
-      method: 'GET',
-      parseResponse: (data) => {
-        console.log('instagram120-user-feed full response:', JSON.stringify(data).slice(0, 1000));
-        let items = data?.items || data?.data?.items || data?.feed?.items;
-        if (!items || !Array.isArray(items)) return null;
-        
-        return items
-          .filter(item => item.media_type === 2 || item.is_video || item.video_versions)
-          .map(item => ({
-            id: item.id || item.pk,
-            shortcode: item.code || item.shortcode,
-            url: `https://www.instagram.com/reel/${item.code || item.shortcode}/`,
-            thumbnail_url: item.image_versions2?.candidates?.[0]?.url || item.thumbnail_url || item.display_url,
-            caption: item.caption?.text || '',
-            view_count: item.play_count || item.view_count || item.video_view_count || 0,
-            like_count: item.like_count || 0,
-            comment_count: item.comment_count || 0,
-            taken_at: item.taken_at,
-            owner: { username: cleanUsername },
-          })).filter(r => r.shortcode);
-      },
-    },
   ];
 
   for (const api of apis) {
@@ -145,7 +126,7 @@ export default async function handler(req, res) {
         method: api.method,
         headers: {
           'x-rapidapi-host': api.host,
-          'x-rapidapi-key': RAPIDAPI_KEY,
+          'x-rapidapi-key': api.apiKey || RAPIDAPI_KEY,
         },
       });
 
@@ -165,6 +146,8 @@ export default async function handler(req, res) {
             reels,
             api_used: api.name,
           });
+        } else {
+          console.log(`${api.name} returned OK but no reels parsed`);
         }
       }
     } catch (e) {
