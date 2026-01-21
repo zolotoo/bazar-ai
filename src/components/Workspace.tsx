@@ -2,13 +2,11 @@ import { useState } from 'react';
 import { useWorkspaceZones, ZoneVideo } from '../hooks/useWorkspaceZones';
 import { useInboxVideos } from '../hooks/useInboxVideos';
 import { useProjectContext, ProjectFolder } from '../contexts/ProjectContext';
-import { Sparkles, Star, FileText, Trash2, ExternalLink, ChevronLeft, Plus, Inbox, Lightbulb, Camera, Scissors, Check, FolderOpen, ArrowDownUp, Settings, GripVertical, X, Palette } from 'lucide-react';
+import { Sparkles, Star, FileText, Trash2, ExternalLink, Plus, Inbox, Lightbulb, Camera, Scissors, Check, FolderOpen, Settings, GripVertical, X, Palette, Eye, Heart, ChevronDown, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../utils/cn';
-import { AnimatedFolder3D, FolderVideo } from './ui/Folder3D';
 import { VideoGradientCard } from './ui/VideoGradientCard';
 import { VideoDetailPage } from './VideoDetailPage';
-import { GlowingEffect } from './ui/GlowingEffect';
 
 
 // Проксирование Instagram изображений через наш API
@@ -30,43 +28,27 @@ function calculateViralCoefficient(views?: number, takenAt?: string | number | D
   if (takenAt instanceof Date) {
     videoDate = takenAt;
   } else if (typeof takenAt === 'string') {
-    // ISO формат или timestamp строкой
     if (takenAt.includes('T') || takenAt.includes('-')) {
       videoDate = new Date(takenAt);
     } else {
-      // Unix timestamp в секундах
       const ts = Number(takenAt);
       if (!isNaN(ts)) {
         videoDate = new Date(ts * 1000);
       }
     }
   } else if (typeof takenAt === 'number') {
-    // Если > 1e12 - это миллисекунды, иначе секунды
     videoDate = takenAt > 1e12 ? new Date(takenAt) : new Date(takenAt * 1000);
   }
   
-  // Если нет даты - используем 30 дней по умолчанию
   if (!videoDate || isNaN(videoDate.getTime())) {
-    return Math.round((views / 30000) * 10) / 10; // K/день при 30 днях
+    return Math.round((views / 30000) * 10) / 10;
   }
   
   const today = new Date();
   const diffTime = today.getTime() - videoDate.getTime();
   const diffDays = Math.max(1, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
   
-  // Возвращаем K просмотров в день (views / days / 1000)
   return Math.round((views / diffDays / 1000) * 10) / 10;
-}
-
-// Конвертация ZoneVideo в FolderVideo для 3D папки
-function toFolderVideos(videos: ZoneVideo[]): FolderVideo[] {
-  return videos.map(v => ({
-    id: v.id,
-    image: proxyImageUrl(v.preview_url),
-    title: v.owner_username ? `@${v.owner_username}` : v.title?.slice(0, 20) || 'Video',
-    views: v.view_count,
-    likes: v.like_count,
-  }));
 }
 
 interface FolderConfig {
@@ -82,9 +64,8 @@ const FOLDER_COLORS = [
   '#8b5cf6', '#ef4444', '#ec4899', '#14b8a6', '#84cc16'
 ];
 
-// Дефолтные папки (используются если у проекта нет папок)
+// Дефолтные папки
 const defaultFolderConfigs: FolderConfig[] = [
-  { id: 'all', title: 'Все видео', color: '#64748b', iconType: 'all' },
   { id: 'ideas', title: 'Идеи', color: '#f97316', iconType: 'lightbulb' },
   { id: '1', title: 'Ожидает сценария', color: '#6366f1', iconType: 'file' },
   { id: '2', title: 'Ожидает съёмок', color: '#f59e0b', iconType: 'camera' },
@@ -94,29 +75,26 @@ const defaultFolderConfigs: FolderConfig[] = [
 ];
 
 // Иконки маппинг
-const getIconComponent = (iconType: string, color: string) => {
-  const iconClass = "w-8 h-8";
+const getIconComponent = (iconType: string, color: string, size: string = "w-5 h-5") => {
   const style = { color };
   
   switch (iconType) {
-    case 'all': return <Inbox className={iconClass} style={style} />;
-    case 'lightbulb': return <Lightbulb className={iconClass} style={style} />;
-    case 'plus': return <Plus className={iconClass} style={style} />;
-    case 'star': return <Star className={iconClass} style={style} />;
-    case 'sparkles': return <Sparkles className={iconClass} style={style} />;
-    case 'file': return <FileText className={iconClass} style={style} />;
-    case 'camera': return <Camera className={iconClass} style={style} />;
-    case 'scissors': return <Scissors className={iconClass} style={style} />;
-    case 'check': return <Check className={iconClass} style={style} />;
-    case 'rejected': return <Trash2 className={iconClass} style={style} />;
-    default: return <FolderOpen className={iconClass} style={style} />;
+    case 'all': return <Inbox className={size} style={style} />;
+    case 'lightbulb': return <Lightbulb className={size} style={style} />;
+    case 'plus': return <Plus className={size} style={style} />;
+    case 'star': return <Star className={size} style={style} />;
+    case 'sparkles': return <Sparkles className={size} style={style} />;
+    case 'file': return <FileText className={size} style={style} />;
+    case 'camera': return <Camera className={size} style={style} />;
+    case 'scissors': return <Scissors className={size} style={style} />;
+    case 'check': return <Check className={size} style={style} />;
+    case 'rejected': return <Trash2 className={size} style={style} />;
+    default: return <FolderOpen className={size} style={style} />;
   }
 };
 
-// Доступные иконки для выбора
-
 export function Workspace() {
-  const { loading, moveVideoToZone, deleteVideo } = useWorkspaceZones();
+  const { loading } = useWorkspaceZones();
   const { videos: inboxVideos, removeVideo: removeInboxVideo, updateVideoFolder } = useInboxVideos();
   const { 
     currentProject, 
@@ -126,20 +104,18 @@ export function Workspace() {
     updateFolder, 
     reorderFolders 
   } = useProjectContext();
-  const [draggedVideo, setDraggedVideo] = useState<ZoneVideo | null>(null);
-  const [dropTargetZone, setDropTargetZone] = useState<string | null>(null);
-  const [selectedFolder, setSelectedFolder] = useState<FolderConfig | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<ZoneVideo | null>(null);
   const [moveMenuVideoId, setMoveMenuVideoId] = useState<string | null>(null);
   const [cardMenuVideoId, setCardMenuVideoId] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<'viral' | 'views' | 'likes' | 'date' | 'folder'>('viral');
-  const [filterByFolder, setFilterByFolder] = useState<string | null>(null); // null = все
+  const [sortBy, setSortBy] = useState<'viral' | 'views' | 'likes' | 'date'>('viral');
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null); // null = все видео (кроме "не подходит")
   const [showFolderSettings, setShowFolderSettings] = useState(false);
   const [editingFolder, setEditingFolder] = useState<ProjectFolder | null>(null);
   const [newFolderName, setNewFolderName] = useState('');
   const [draggedFolderIndex, setDraggedFolderIndex] = useState<number | null>(null);
+  const [isFolderWidgetOpen, setIsFolderWidgetOpen] = useState(true);
   
-  // Преобразуем папки проекта в FolderConfig формат (исключая "Все видео" чтобы не дублировать)
+  // Преобразуем папки проекта в FolderConfig формат
   const projectFolders: FolderConfig[] = currentProject?.folders
     ?.slice()
     .sort((a, b) => a.order - b.order)
@@ -151,20 +127,16 @@ export function Workspace() {
       iconType: f.icon,
     })) || [];
   
-  // Добавляем системную папку "Все видео" в начало
-  const folderConfigs: FolderConfig[] = [
-    { id: 'all', title: 'Все видео', color: '#64748b', iconType: 'all' },
-    ...projectFolders.length > 0 ? projectFolders : defaultFolderConfigs.slice(1),
-  ];
+  // Папки для фильтрации
+  const folderConfigs: FolderConfig[] = projectFolders.length > 0 ? projectFolders : defaultFolderConfigs;
   
-  // Папки для фильтрации (без "Все видео")
-  const filterableFolders = folderConfigs.filter(f => f.id !== 'all');
+  // ID папки "Не подходит"
+  const rejectedFolderId = folderConfigs.find(f => f.iconType === 'rejected')?.id;
 
   // Перемещение видео в другую папку
   const handleMoveToFolder = async (video: ZoneVideo, targetFolderId: string) => {
     const targetFolder = folderConfigs.find(f => f.id === targetFolderId);
     try {
-      // Используем updateVideoFolder для видео из inbox
       const success = await updateVideoFolder(video.id, targetFolderId);
       if (success) {
         setMoveMenuVideoId(null);
@@ -179,30 +151,8 @@ export function Workspace() {
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDragEnter = (zoneId: string | null) => {
-    setDropTargetZone(zoneId === null ? 'unassigned' : zoneId);
-  };
-
-  const handleDrop = (e: React.DragEvent, zoneId: string | null) => {
-    e.preventDefault();
-    setDropTargetZone(null);
-    if (draggedVideo) {
-      moveVideoToZone(draggedVideo.id, zoneId);
-    }
-    setDraggedVideo(null);
-  };
-
-  const handleDeleteVideo = async (videoId: string, isInbox: boolean) => {
-    if (isInbox) {
-      await removeInboxVideo(videoId);
-    } else {
-      await deleteVideo(videoId);
-    }
+  const handleDeleteVideo = async (videoId: string) => {
+    await removeInboxVideo(videoId);
   };
 
   // Преобразование inbox видео в ZoneVideo формат
@@ -212,7 +162,7 @@ export function Workspace() {
     preview_url: v.previewUrl,
     url: v.url,
     zone_id: folderId,
-    folder_id: (v as any).folder_id || 'ideas',
+    folder_id: (v as any).folder_id || null,
     position_x: 0,
     position_y: 0,
     view_count: (v as any).view_count,
@@ -230,46 +180,64 @@ export function Workspace() {
     status: 'active',
   });
 
-  // Получаем видео для папки по folderId
-  const getFolderVideos = (folderId: string | null): ZoneVideo[] => {
-    // Для "all" - показываем ВСЕ видео проекта
-    if (folderId === 'all') {
-      return inboxVideos.map(v => {
-        const videoFolderId = (v as any).folder_id || null;
-        return transformInboxVideo(v, videoFolderId);
-      });
-    }
-    
-    // Для null (Все видео внутри папки) - показываем видео без папки
-    if (folderId === null) {
+  // Получаем видео для ленты
+  const getVideosForFeed = (): ZoneVideo[] => {
+    // Если выбрана конкретная папка - фильтруем по ней
+    if (selectedFolderId) {
       return inboxVideos
-        .filter(v => {
-          const videoFolderId = (v as any).folder_id;
-          // Видео без папки: null, undefined, пустая строка, или 'inbox'
-          return !videoFolderId || videoFolderId === 'inbox';
-        })
-        .map(v => transformInboxVideo(v, null));
+        .filter(v => (v as any).folder_id === selectedFolderId)
+        .map(v => transformInboxVideo(v, (v as any).folder_id));
     }
     
-    // Для любой папки - фильтруем по folder_id
+    // Иначе показываем все видео, КРОМЕ тех что в "Не подходит"
     return inboxVideos
       .filter(v => {
-        const videoFolderId = (v as any).folder_id;
-        return videoFolderId === folderId;
+        const folderId = (v as any).folder_id;
+        return folderId !== rejectedFolderId;
       })
-      .map(v => transformInboxVideo(v, folderId));
+      .map(v => transformInboxVideo(v, (v as any).folder_id));
+  };
+  
+  // Сортировка видео
+  const getSortedVideos = (videos: ZoneVideo[]): ZoneVideo[] => {
+    return [...videos].sort((a, b) => {
+      switch (sortBy) {
+        case 'viral':
+          return calculateViralCoefficient(b.view_count, b.taken_at || b.created_at) - 
+                 calculateViralCoefficient(a.view_count, a.taken_at || a.created_at);
+        case 'views':
+          return (b.view_count || 0) - (a.view_count || 0);
+        case 'likes':
+          return (b.like_count || 0) - (a.like_count || 0);
+        case 'date':
+          const dateA = a.taken_at || a.created_at || '';
+          const dateB = b.taken_at || b.created_at || '';
+          return String(dateB).localeCompare(String(dateA));
+        default:
+          return 0;
+      }
+    });
   };
   
   // Получить название папки по ID
   const getFolderName = (folderId: string | null): string => {
-    const folder = filterableFolders.find(f => f.id === folderId);
-    return folder?.title || 'Неизвестно';
+    const folder = folderConfigs.find(f => f.id === folderId);
+    return folder?.title || 'Без папки';
   };
   
   // Получить цвет папки по ID
   const getFolderColor = (folderId: string | null): string => {
-    const folder = filterableFolders.find(f => f.id === folderId);
-    return folder?.color || '#64748b';
+    const folder = folderConfigs.find(f => f.id === folderId);
+    return folder?.color || '#94a3b8';
+  };
+  
+  // Подсчёт видео в папке
+  const getVideoCountInFolder = (folderId: string | null): number => {
+    if (folderId === null) {
+      // Все видео кроме "Не подходит"
+      return inboxVideos.filter(v => (v as any).folder_id !== rejectedFolderId).length;
+    }
+    return inboxVideos.filter(v => (v as any).folder_id === folderId).length;
   };
 
   if (loading) {
@@ -307,247 +275,8 @@ export function Workspace() {
     );
   }
 
-  // Модалка папки
-  if (selectedFolder) {
-    const folderVideos = getFolderVideos(selectedFolder.id);
-    const isAllVideos = selectedFolder.id === 'all';
-    const isInboxFolder = selectedFolder.id === 'ideas' || isAllVideos;
-    
-    // Фильтрация по папке (только для "Все видео")
-    const filteredVideos = isAllVideos && filterByFolder
-      ? folderVideos.filter(v => v.folder_id === filterByFolder)
-      : folderVideos;
-    
-    // Сортировка видео
-    const sortedVideos = [...filteredVideos].sort((a, b) => {
-      switch (sortBy) {
-        case 'viral':
-          return calculateViralCoefficient(b.view_count, b.taken_at || b.created_at) - 
-                 calculateViralCoefficient(a.view_count, a.taken_at || a.created_at);
-        case 'views':
-          return (b.view_count || 0) - (a.view_count || 0);
-        case 'likes':
-          return (b.like_count || 0) - (a.like_count || 0);
-        case 'date':
-          const dateA = a.taken_at || a.created_at || '';
-          const dateB = b.taken_at || b.created_at || '';
-          return String(dateB).localeCompare(String(dateA));
-        case 'folder':
-          // Сортировка по порядку папок
-          const orderA = filterableFolders.findIndex(f => f.id === a.folder_id);
-          const orderB = filterableFolders.findIndex(f => f.id === b.folder_id);
-          return orderA - orderB;
-        default:
-          return 0;
-      }
-    });
-    
-    return (
-      <div className="h-full overflow-hidden flex flex-col bg-[#f5f5f5]">
-        <div className="max-w-6xl mx-auto w-full p-6 pt-6 flex flex-col h-full">
-          {/* Header */}
-          <div className="mb-6">
-            <button
-              onClick={() => { setSelectedFolder(null); setCardMenuVideoId(null); setFilterByFolder(null); }}
-              className="flex items-center gap-2 text-slate-500 hover:text-slate-700 mb-4 transition-colors active:scale-95"
-            >
-              <ChevronLeft className="w-5 h-5" />
-              <span className="text-sm font-medium">Назад к папкам</span>
-            </button>
-            
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-4">
-                <div 
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg"
-                  style={{ backgroundColor: selectedFolder.color }}
-                >
-                  <FolderOpen className="w-7 h-7 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
-                    {selectedFolder.title}
-                  </h1>
-                  <p className="text-neutral-500 text-sm">
-                    {filteredVideos.length} видео {filterByFolder && `в "${getFolderName(filterByFolder)}"`}
-                  </p>
-                </div>
-              </div>
-
-              {/* Фильтры и сортировка */}
-              <div className="flex items-center gap-3">
-                {/* Фильтр по папке (только для "Все видео") */}
-                {isAllVideos && (
-                  <select
-                    value={filterByFolder || ''}
-                    onChange={(e) => setFilterByFolder(e.target.value || null)}
-                    className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-orange-500/30 cursor-pointer"
-                  >
-                    <option value="">Все папки</option>
-                    {filterableFolders.map(f => (
-                      <option key={f.id} value={f.id || ''}>{f.title}</option>
-                    ))}
-                  </select>
-                )}
-                
-                {/* Сортировка */}
-                {filteredVideos.length > 1 && (
-                  <div className="flex items-center gap-2">
-                    <ArrowDownUp className="w-4 h-4 text-slate-400" />
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                      className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-orange-500/30 cursor-pointer"
-                    >
-                      <option value="viral">По виральности</option>
-                      <option value="views">По просмотрам</option>
-                      <option value="likes">По лайкам</option>
-                      <option value="date">По дате</option>
-                      {isAllVideos && <option value="folder">По стадии</option>}
-                    </select>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Videos Grid */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar-light">
-            {sortedVideos.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 text-center">
-                <div 
-                  className="w-20 h-20 rounded-2xl flex items-center justify-center mb-4"
-                  style={{ backgroundColor: `${selectedFolder.color}20` }}
-                >
-                  {getIconComponent(selectedFolder.iconType, selectedFolder.color)}
-                </div>
-                <h3 className="text-lg font-medium text-slate-800 mb-1">Папка пуста</h3>
-                <p className="text-slate-500 text-sm">Перетащите видео сюда из поиска</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 pb-6">
-                {sortedVideos.map((video, idx) => {
-                  const thumbnailUrl = proxyImageUrl(video.preview_url);
-                  const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at || video.created_at);
-                  
-                  // Бейдж папки - показываем только в "Все видео"
-                  const folderBadge = isAllVideos ? {
-                    name: video.folder_id ? getFolderName(video.folder_id) : 'Ожидает',
-                    color: video.folder_id ? getFolderColor(video.folder_id) : '#94a3b8'
-                  } : undefined;
-                  
-                  return (
-                    <VideoGradientCard
-                      key={`folder-${video.id}-${idx}`}
-                      thumbnailUrl={thumbnailUrl}
-                      username={video.owner_username || 'instagram'}
-                      caption={video.title}
-                      viewCount={video.view_count}
-                      likeCount={video.like_count}
-                      viralCoef={viralCoef}
-                      folderBadge={folderBadge}
-                      transcriptStatus={video.transcript_status}
-                      onClick={() => setSelectedVideo(video)}
-                      onDragStart={() => setDraggedVideo(video)}
-                      showFolderMenu={cardMenuVideoId === video.id}
-                      onFolderMenuToggle={() => {
-                        setCardMenuVideoId(cardMenuVideoId === video.id ? null : video.id);
-                        setMoveMenuVideoId(null);
-                      }}
-                      folderMenu={
-                        <div className="bg-white rounded-xl shadow-2xl border border-slate-100 p-1.5 min-w-[140px] animate-in fade-in slide-in-from-top-2 duration-200">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setSelectedVideo(video); setCardMenuVideoId(null); }}
-                            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-orange-50 transition-colors text-left"
-                          >
-                            <FileText className="w-4 h-4 text-orange-500" />
-                            <span className="text-sm text-slate-700">Работать</span>
-                          </button>
-                          
-                          {/* Переместить в папку */}
-                          <div className="relative">
-                            <button
-                              onClick={(e) => { 
-                                e.stopPropagation(); 
-                                setMoveMenuVideoId(moveMenuVideoId === video.id ? null : video.id);
-                              }}
-                              className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-indigo-50 transition-colors text-left"
-                            >
-                              <FolderOpen className="w-4 h-4 text-indigo-500" />
-                              <span className="text-sm text-slate-700">Переместить</span>
-                            </button>
-                            
-                            {/* Подменю с папками */}
-                            {moveMenuVideoId === video.id && (
-                              <div className="absolute left-full top-0 ml-1 bg-white rounded-lg shadow-xl border border-slate-100 p-1.5 min-w-[140px] z-[110] animate-in fade-in slide-in-from-left-2 duration-150">
-                                {folderConfigs
-                                  .filter(f => f.id !== selectedFolder?.id)
-                                  .map(folder => (
-                                    <button
-                                      key={folder.id}
-                                      onClick={(e) => { 
-                                        e.stopPropagation(); 
-                                        handleMoveToFolder(video, folder.id || 'inbox');
-                                        setCardMenuVideoId(null);
-                                      }}
-                                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md hover:bg-slate-50 transition-colors text-left"
-                                    >
-                                      <div 
-                                        className="w-4 h-4 rounded flex items-center justify-center"
-                                        style={{ backgroundColor: `${folder.color}20` }}
-                                      >
-                                        {folder.iconType === 'inbox' && <Inbox className="w-2.5 h-2.5" style={{ color: folder.color }} />}
-                                        {folder.iconType === 'lightbulb' && <Lightbulb className="w-2.5 h-2.5" style={{ color: folder.color }} />}
-                                        {folder.iconType === 'file' && <FileText className="w-2.5 h-2.5" style={{ color: folder.color }} />}
-                                        {folder.iconType === 'camera' && <Camera className="w-2.5 h-2.5" style={{ color: folder.color }} />}
-                                        {folder.iconType === 'scissors' && <Scissors className="w-2.5 h-2.5" style={{ color: folder.color }} />}
-                                        {folder.iconType === 'check' && <Check className="w-2.5 h-2.5" style={{ color: folder.color }} />}
-                                      </div>
-                                      <span className="text-xs text-slate-600">{folder.title}</span>
-                                    </button>
-                                  ))}
-                              </div>
-                            )}
-                          </div>
-                          
-                          <a
-                            href={video.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-blue-50 transition-colors text-left"
-                          >
-                            <ExternalLink className="w-4 h-4 text-blue-500" />
-                            <span className="text-sm text-slate-700">Открыть</span>
-                          </a>
-                          
-                          <div className="h-px bg-slate-100 my-1" />
-                          
-                          <button
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              handleDeleteVideo(video.id, isInboxFolder); 
-                              setCardMenuVideoId(null);
-                            }}
-                            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-red-50 transition-colors text-left"
-                          >
-                            <Trash2 className="w-4 h-4 text-red-500" />
-                            <span className="text-sm text-red-600">Удалить</span>
-                          </button>
-                        </div>
-                      }
-                    />
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Подсчёт общего количества видео
-  const totalVideos = folderConfigs.reduce((sum, config) => sum + getFolderVideos(config.id).length, 0);
+  const feedVideos = getSortedVideos(getVideosForFeed());
+  const totalVideos = inboxVideos.filter(v => (v as any).folder_id !== rejectedFolderId).length;
   
   // Обработчик создания папки
   const handleCreateFolder = async () => {
@@ -579,8 +308,6 @@ export function Workspace() {
   const handleFolderDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
     if (draggedFolderIndex === null || draggedFolderIndex === index) return;
-    
-    // Визуальная обратная связь
   };
   
   const handleFolderDrop = async (targetIndex: number) => {
@@ -601,78 +328,289 @@ export function Workspace() {
     toast.success('Порядок папок изменён');
   };
 
+  // Текущая выбранная папка для заголовка
+  const currentFolderConfig = selectedFolderId 
+    ? folderConfigs.find(f => f.id === selectedFolderId) 
+    : null;
+
   return (
-    <div className="h-full overflow-y-auto custom-scrollbar-light">
-      <div className="max-w-6xl mx-auto p-6 pt-6">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl md:text-4xl font-bold text-slate-800">
-                Рабочий стол
-              </h1>
-              {totalVideos > 0 && (
-                <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-sm font-semibold">
-                  {totalVideos} видео
-                </span>
+    <div className="h-full overflow-hidden relative">
+      {/* Floating Folder Widget */}
+      <div className={cn(
+        "absolute top-4 left-4 z-40 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/50 transition-all duration-300",
+        isFolderWidgetOpen ? "w-64" : "w-auto"
+      )}>
+        {/* Widget Header */}
+        <div 
+          className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-slate-50/50 rounded-t-2xl transition-colors"
+          onClick={() => setIsFolderWidgetOpen(!isFolderWidgetOpen)}
+        >
+          <div className="flex items-center gap-2">
+            <FolderOpen className="w-5 h-5 text-orange-500" />
+            <span className="text-sm font-semibold text-slate-700">Папки</span>
+          </div>
+          {isFolderWidgetOpen ? (
+            <ChevronDown className="w-4 h-4 text-slate-400" />
+          ) : (
+            <ChevronRight className="w-4 h-4 text-slate-400" />
+          )}
+        </div>
+        
+        {/* Widget Content */}
+        {isFolderWidgetOpen && (
+          <div className="px-2 pb-3 max-h-[60vh] overflow-y-auto custom-scrollbar-light">
+            {/* Все видео (лента) */}
+            <button
+              onClick={() => setSelectedFolderId(null)}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left mb-1",
+                selectedFolderId === null 
+                  ? "bg-orange-100 text-orange-700" 
+                  : "hover:bg-slate-100 text-slate-600"
               )}
-            </div>
+            >
+              <div className={cn(
+                "w-8 h-8 rounded-lg flex items-center justify-center",
+                selectedFolderId === null ? "bg-orange-200" : "bg-slate-100"
+              )}>
+                <Inbox className="w-4 h-4" style={{ color: selectedFolderId === null ? '#ea580c' : '#64748b' }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-sm font-medium block truncate">Все видео</span>
+                <span className="text-xs text-slate-400">{totalVideos} видео</span>
+              </div>
+            </button>
+            
+            <div className="h-px bg-slate-100 my-2" />
+            
+            {/* Папки */}
+            {folderConfigs.map(folder => {
+              const count = getVideoCountInFolder(folder.id);
+              const isSelected = selectedFolderId === folder.id;
+              const isRejected = folder.iconType === 'rejected';
+              
+              return (
+                <button
+                  key={folder.id}
+                  onClick={() => setSelectedFolderId(folder.id)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-left",
+                    isSelected 
+                      ? "bg-slate-100" 
+                      : "hover:bg-slate-50 text-slate-600",
+                    isRejected && "opacity-70"
+                  )}
+                >
+                  <div 
+                    className="w-8 h-8 rounded-lg flex items-center justify-center"
+                    style={{ backgroundColor: `${folder.color}20` }}
+                  >
+                    {getIconComponent(folder.iconType, folder.color, "w-4 h-4")}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className={cn(
+                      "text-sm font-medium block truncate",
+                      isSelected && "text-slate-800"
+                    )}>{folder.title}</span>
+                    <span className="text-xs text-slate-400">{count} видео</span>
+                  </div>
+                </button>
+              );
+            })}
+            
+            {/* Settings button */}
+            <div className="h-px bg-slate-100 my-2" />
             <button
               onClick={() => setShowFolderSettings(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 text-sm font-medium transition-colors shadow-sm"
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 text-slate-500 text-sm transition-colors"
             >
               <Settings className="w-4 h-4" />
               Настроить папки
             </button>
           </div>
-          <p className="text-neutral-500 text-base">
-            Организуй контент по категориям
-          </p>
-        </div>
+        )}
+      </div>
 
-        {/* Folder Grid - 3D Folders with Glowing Effect - 3 columns */}
-        <div 
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center"
-        >
-          {folderConfigs.map((config) => {
-            const folderVideos = getFolderVideos(config.id);
-            const folder3DVideos = toFolderVideos(folderVideos);
-            
-            return (
-              <div
-                key={config.id || 'incoming'}
-                onDragOver={handleDragOver}
-                onDragEnter={() => handleDragEnter(config.id)}
-                onDrop={(e) => handleDrop(e, config.id)}
-                className={cn(
-                  "relative transition-all duration-300",
-                  dropTargetZone === (config.id || 'unassigned') && "scale-105"
+      {/* Main Content - Video Feed */}
+      <div className="h-full overflow-y-auto custom-scrollbar-light pl-4 pr-4 md:pl-72">
+        <div className="max-w-6xl mx-auto py-6">
+          {/* Header */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-3">
+                {currentFolderConfig ? (
+                  <>
+                    <div 
+                      className="w-12 h-12 rounded-2xl flex items-center justify-center"
+                      style={{ backgroundColor: currentFolderConfig.color }}
+                    >
+                      {getIconComponent(currentFolderConfig.iconType, '#ffffff', "w-6 h-6")}
+                    </div>
+                    <div>
+                      <h1 className="text-2xl font-bold text-slate-800">{currentFolderConfig.title}</h1>
+                      <p className="text-slate-500 text-sm">{feedVideos.length} видео</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
+                      <Sparkles className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h1 className="text-2xl font-bold text-slate-800">Все видео</h1>
+                      <p className="text-slate-500 text-sm">{feedVideos.length} видео • отсортировано по виральности</p>
+                    </div>
+                  </>
                 )}
-              >
-                {/* Glowing Effect Container */}
-                <div className="relative rounded-[1.5rem] p-1">
-                  <GlowingEffect
-                    spread={40}
-                    glow={true}
-                    disabled={false}
-                    proximity={64}
-                    inactiveZone={0.01}
-                    borderWidth={2}
-                  />
-                  <div className="relative">
-                    <AnimatedFolder3D
-                      title={config.title}
-                      videos={folder3DVideos}
-                      count={folderVideos.length}
-                      color={config.color}
-                      icon={getIconComponent(config.iconType, config.color)}
-                      onClick={() => setSelectedFolder(config)}
-                    />
-                  </div>
-                </div>
               </div>
-            );
-          })}
+
+              {/* Сортировка */}
+              <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-2xl p-1.5 shadow-lg border border-white/50">
+                {[
+                  { value: 'viral', label: 'Вирал', icon: Sparkles, color: 'from-orange-500 to-amber-500' },
+                  { value: 'views', label: 'Просмотры', icon: Eye, color: 'from-blue-500 to-cyan-500' },
+                  { value: 'likes', label: 'Лайки', icon: Heart, color: 'from-pink-500 to-rose-500' },
+                ].map(({ value, label, icon: Icon, color }) => (
+                  <button
+                    key={value}
+                    onClick={() => setSortBy(value as typeof sortBy)}
+                    className={cn(
+                      "flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all active:scale-95",
+                      sortBy === value 
+                        ? `bg-gradient-to-r ${color} text-white shadow-md` 
+                        : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                    )}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Videos Grid */}
+          {feedVideos.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64 text-center">
+              <div className="w-20 h-20 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+                <Inbox className="w-10 h-10 text-slate-300" />
+              </div>
+              <h3 className="text-lg font-medium text-slate-800 mb-1">
+                {selectedFolderId ? 'Папка пуста' : 'Нет видео'}
+              </h3>
+              <p className="text-slate-500 text-sm">
+                {selectedFolderId ? 'Перетащите видео сюда' : 'Добавьте видео через поиск или радар'}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 pb-6">
+              {feedVideos.map((video, idx) => {
+                const thumbnailUrl = proxyImageUrl(video.preview_url);
+                const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at || video.created_at);
+                
+                // Бейдж папки - показываем если не выбрана конкретная папка
+                const folderBadge = !selectedFolderId ? {
+                  name: video.folder_id ? getFolderName(video.folder_id) : 'Без папки',
+                  color: video.folder_id ? getFolderColor(video.folder_id) : '#94a3b8'
+                } : undefined;
+                
+                return (
+                  <VideoGradientCard
+                    key={`feed-${video.id}-${idx}`}
+                    thumbnailUrl={thumbnailUrl}
+                    username={video.owner_username || 'instagram'}
+                    caption={video.title}
+                    viewCount={video.view_count}
+                    likeCount={video.like_count}
+                    viralCoef={viralCoef}
+                    folderBadge={folderBadge}
+                    transcriptStatus={video.transcript_status}
+                    onClick={() => setSelectedVideo(video)}
+                    showFolderMenu={cardMenuVideoId === video.id}
+                    onFolderMenuToggle={() => {
+                      setCardMenuVideoId(cardMenuVideoId === video.id ? null : video.id);
+                      setMoveMenuVideoId(null);
+                    }}
+                    folderMenu={
+                      <div className="bg-white rounded-xl shadow-2xl border border-slate-100 p-1.5 min-w-[140px] animate-in fade-in slide-in-from-top-2 duration-200">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSelectedVideo(video); setCardMenuVideoId(null); }}
+                          className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-orange-50 transition-colors text-left"
+                        >
+                          <FileText className="w-4 h-4 text-orange-500" />
+                          <span className="text-sm text-slate-700">Работать</span>
+                        </button>
+                        
+                        {/* Переместить в папку */}
+                        <div className="relative">
+                          <button
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              setMoveMenuVideoId(moveMenuVideoId === video.id ? null : video.id);
+                            }}
+                            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-indigo-50 transition-colors text-left"
+                          >
+                            <FolderOpen className="w-4 h-4 text-indigo-500" />
+                            <span className="text-sm text-slate-700">Переместить</span>
+                          </button>
+                          
+                          {/* Подменю с папками */}
+                          {moveMenuVideoId === video.id && (
+                            <div className="absolute left-full top-0 ml-1 bg-white rounded-lg shadow-xl border border-slate-100 p-1.5 min-w-[140px] z-[110] animate-in fade-in slide-in-from-left-2 duration-150">
+                              {folderConfigs.map(folder => (
+                                <button
+                                  key={folder.id}
+                                  onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    handleMoveToFolder(video, folder.id || 'inbox');
+                                    setCardMenuVideoId(null);
+                                  }}
+                                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md hover:bg-slate-50 transition-colors text-left"
+                                >
+                                  <div 
+                                    className="w-4 h-4 rounded flex items-center justify-center"
+                                    style={{ backgroundColor: `${folder.color}20` }}
+                                  >
+                                    {getIconComponent(folder.iconType, folder.color, "w-2.5 h-2.5")}
+                                  </div>
+                                  <span className="text-xs text-slate-600">{folder.title}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        
+                        <a
+                          href={video.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-blue-50 transition-colors text-left"
+                        >
+                          <ExternalLink className="w-4 h-4 text-blue-500" />
+                          <span className="text-sm text-slate-700">Открыть</span>
+                        </a>
+                        
+                        <div className="h-px bg-slate-100 my-1" />
+                        
+                        <button
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            handleDeleteVideo(video.id); 
+                            setCardMenuVideoId(null);
+                          }}
+                          className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-red-50 transition-colors text-left"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                          <span className="text-sm text-red-600">Удалить</span>
+                        </button>
+                      </div>
+                    }
+                  />
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
       
