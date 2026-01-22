@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useWorkspaceZones, ZoneVideo } from '../hooks/useWorkspaceZones';
 import { useInboxVideos } from '../hooks/useInboxVideos';
 import { useProjectContext, ProjectFolder } from '../contexts/ProjectContext';
-import { Sparkles, Star, FileText, Trash2, ExternalLink, Plus, Inbox, Lightbulb, Camera, Scissors, Check, FolderOpen, Settings, GripVertical, X, Palette, Eye, Heart, ChevronDown, ChevronRight } from 'lucide-react';
+import { useActionHistory } from '../hooks/useActionHistory';
+import { Sparkles, Star, FileText, Trash2, ExternalLink, Plus, Inbox, Lightbulb, Camera, Scissors, Check, FolderOpen, Settings, GripVertical, X, Palette, Eye, Heart, ChevronDown, ChevronRight, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../utils/cn';
 import { VideoGradientCard } from './ui/VideoGradientCard';
@@ -96,16 +97,18 @@ const getIconComponent = (iconType: string, color: string, size: string = "w-5 h
 
 export function Workspace() {
   const { loading } = useWorkspaceZones();
-  const { videos: inboxVideos, removeVideo: removeInboxVideo, updateVideoFolder } = useInboxVideos();
+  const { videos: inboxVideos, removeVideo: removeInboxVideo, restoreVideo, updateVideoFolder } = useInboxVideos();
   const { 
     currentProject, 
     currentProjectId, 
     addFolder, 
-    removeFolder, 
+    removeFolder,
+    restoreFolder, 
     updateFolder, 
     reorderFolders,
     refetch: refetchProjects,
   } = useProjectContext();
+  const { addAction, undoLastAction, canUndo } = useActionHistory();
   const [selectedVideo, setSelectedVideo] = useState<ZoneVideo | null>(null);
   const [moveMenuVideoId, setMoveMenuVideoId] = useState<string | null>(null);
   const [cardMenuVideoId, setCardMenuVideoId] = useState<string | null>(null);
@@ -155,7 +158,39 @@ export function Workspace() {
   };
 
   const handleDeleteVideo = async (videoId: string) => {
-    await removeInboxVideo(videoId);
+    const videoData = await removeInboxVideo(videoId);
+    if (videoData) {
+      addAction('delete_video', videoData);
+      toast.success('Видео удалено', {
+        action: {
+          label: 'Отменить',
+          onClick: handleUndo,
+        },
+        duration: 5000,
+      });
+    }
+  };
+
+  const handleUndo = async () => {
+    const lastAction = undoLastAction();
+    if (!lastAction) return;
+    
+    if (lastAction.type === 'delete_video') {
+      const success = await restoreVideo(lastAction.data);
+      if (success) {
+        toast.success('Видео восстановлено');
+      } else {
+        toast.error('Не удалось восстановить видео');
+      }
+    } else if (lastAction.type === 'delete_folder') {
+      const success = await restoreFolder(lastAction.data);
+      if (success) {
+        toast.success('Папка восстановлена');
+        await refetchProjects();
+      } else {
+        toast.error('Не удалось восстановить папку');
+      }
+    }
   };
 
   // Преобразование inbox видео в ZoneVideo формат
@@ -192,11 +227,12 @@ export function Workspace() {
         .map(v => transformInboxVideo(v, (v as any).folder_id));
     }
     
-    // Иначе показываем все видео, КРОМЕ тех что в "Не подходит"
+    // Иначе показываем только видео БЕЗ папки (folder_id === null)
+    // Видео, которые перемещены в папки, не показываются в ленте "Все видео"
     return inboxVideos
       .filter(v => {
         const folderId = (v as any).folder_id;
-        return folderId !== rejectedFolderId;
+        return folderId === null || folderId === undefined;
       })
       .map(v => transformInboxVideo(v, (v as any).folder_id));
   };
@@ -351,8 +387,17 @@ export function Workspace() {
   // Обработчик удаления папки
   const handleDeleteFolder = async (folderId: string) => {
     if (!currentProjectId) return;
-    await removeFolder(currentProjectId, folderId);
-    toast.success('Папка удалена');
+    const folderData = await removeFolder(currentProjectId, folderId);
+    if (folderData) {
+      addAction('delete_folder', folderData);
+      toast.success('Папка удалена', {
+        action: {
+          label: 'Отменить',
+          onClick: handleUndo,
+        },
+        duration: 5000,
+      });
+    }
   };
   
   // Обработчик обновления папки
@@ -526,8 +571,20 @@ export function Workspace() {
                 )}
               </div>
 
-              {/* Сортировка */}
-              <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-2xl p-1.5 shadow-lg border border-white/50 mr-72">
+              {/* Сортировка и кнопка отмены */}
+              <div className="flex items-center gap-2">
+                {/* Undo button */}
+                {canUndo && (
+                  <button
+                    onClick={handleUndo}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-all shadow-sm"
+                    title="Отменить последнее действие"
+                  >
+                    <Undo2 className="w-3.5 h-3.5" />
+                    Отменить
+                  </button>
+                )}
+                <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-2xl p-1.5 shadow-lg border border-white/50 mr-72">
                 {[
                   { value: 'viral', label: 'Вирал', icon: Sparkles, color: 'from-orange-500 to-amber-500' },
                   { value: 'views', label: 'Просмотры', icon: Eye, color: 'from-blue-500 to-cyan-500' },
@@ -548,6 +605,7 @@ export function Workspace() {
                     {label}
                   </button>
                 ))}
+                </div>
               </div>
             </div>
           </div>
@@ -576,6 +634,7 @@ export function Workspace() {
                   ? profileStatsCache.get(video.owner_username.toLowerCase()) 
                   : null;
                 const viralMult = calculateViralMultiplier(video.view_count || 0, profileStats);
+                const finalViralCoef = applyViralMultiplierToCoefficient(viralCoef, viralMult);
                 
                 // Бейдж папки - показываем если не выбрана конкретная папка
                 const folderBadge = !selectedFolderId ? {
@@ -591,8 +650,8 @@ export function Workspace() {
                     caption={video.title}
                     viewCount={video.view_count}
                     likeCount={video.like_count}
-                    viralCoef={viralCoef}
-                    viralMultiplier={viralMult}
+                    viralCoef={finalViralCoef}
+                    viralMultiplier={null}
                     folderBadge={folderBadge}
                     transcriptStatus={video.transcript_status}
                     onClick={() => setSelectedVideo(video)}

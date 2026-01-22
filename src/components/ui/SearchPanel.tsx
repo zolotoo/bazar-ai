@@ -1128,8 +1128,8 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
               </div>
             )}
 
-            {/* Radar Tab Content */}
-            {activeTab === 'radar' && (
+            {/* Radar Tab Content - скрываем когда выбран профиль */}
+            {activeTab === 'radar' && !selectedRadarProfile && (
               <div className="glass rounded-2xl p-5 shadow-xl shadow-orange-500/10">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
@@ -1391,9 +1391,9 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
         {/* Main Content Area */}
         <div className="flex-1 overflow-hidden">
           
-          {/* RADAR PROFILE VIDEOS VIEW - Показываем когда выбран профиль в радаре */}
+          {/* RADAR PROFILE VIDEOS VIEW - Показываем когда выбран профиль в радаре, полноэкранный режим */}
           {activeTab === 'radar' && selectedRadarProfile && (
-            <div className="h-full overflow-y-auto px-6 pb-6 custom-scrollbar-light pt-4">
+            <div className="h-full overflow-y-auto px-6 pb-6 custom-scrollbar-light pt-6">
               <div className="max-w-6xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-5">
@@ -1484,6 +1484,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                         const dateText = formatVideoDate(reel.taken_at);
                         // Рассчитываем множитель залётности относительно среднего автора
                         const viralMult = calculateViralMultiplier(reel.view_count || 0, profileStats || null);
+                        const finalViralCoef = applyViralMultiplierToCoefficient(viralCoef, viralMult);
                         
                         return (
                           <VideoGradientCard
@@ -1494,8 +1495,8 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                             viewCount={reel.view_count}
                             likeCount={reel.like_count}
                             date={dateText || '—'}
-                            viralCoef={viralCoef}
-                            viralMultiplier={viralMult}
+                            viralCoef={finalViralCoef}
+                            viralMultiplier={null}
                             onClick={() => setSelectedVideo(reel)}
                             onDragStart={(e) => handleDragStart(e, reel)}
                             showFolderMenu={cardFolderSelect === `radar-profile-${reel.shortcode}-${idx}`}

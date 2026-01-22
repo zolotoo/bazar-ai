@@ -261,12 +261,37 @@ export function useProjects() {
   }, [projects, updateProject]);
 
   // Удаление папки из проекта
+  // Возвращает данные удаленной папки для возможности отмены
   const removeFolder = useCallback(async (projectId: string, folderId: string) => {
     const project = projects.find(p => p.id === projectId);
-    if (!project) return;
+    if (!project) return null;
+
+    // Сохраняем данные папки перед удалением
+    const folderToDelete = project.folders.find(f => f.id === folderId);
+    const folderData = folderToDelete ? { ...folderToDelete, projectId } : null;
 
     const updatedFolders = project.folders.filter(f => f.id !== folderId);
     await updateProject(projectId, { folders: updatedFolders });
+    
+    return folderData;
+  }, [projects, updateProject]);
+
+  // Восстановление удаленной папки
+  const restoreFolder = useCallback(async (folderData: any) => {
+    if (!folderData || !folderData.projectId) return false;
+    
+    const project = projects.find(p => p.id === folderData.projectId);
+    if (!project) return false;
+    
+    // Проверяем что папки с таким ID еще нет
+    const folderExists = project.folders.some(f => f.id === folderData.id);
+    if (folderExists) return false;
+    
+    // Восстанавливаем папку
+    const updatedFolders = [...project.folders, folderData].sort((a, b) => a.order - b.order);
+    await updateProject(folderData.projectId, { folders: updatedFolders });
+    
+    return true;
   }, [projects, updateProject]);
 
   // Обновление папки
@@ -319,6 +344,7 @@ export function useProjects() {
     selectProject,
     addFolder,
     removeFolder,
+    restoreFolder,
     updateFolder,
     reorderFolders,
     refetch: fetchProjects,

@@ -47,6 +47,7 @@ export function useInboxVideos() {
   const [error, setError] = useState<Error | null>(null);
   const { setIncomingVideos } = useFlowStore();
   const { user } = useAuth();
+  const { currentProjectId } = useProjectContext();
   
   // Получаем user_id из контекста авторизации
   const getUserId = useCallback((): string => {
@@ -95,13 +96,20 @@ export function useInboxVideos() {
   // Загрузка видео пользователя
   const fetchVideos = useCallback(async () => {
     const userId = getUserId();
-    console.log('[InboxVideos] Fetching videos for user:', userId);
+    console.log('[InboxVideos] Fetching videos for user:', userId, 'project:', currentProjectId);
     
     try {
-      const { data, error: fetchError } = await supabase
+      let query = supabase
         .from('saved_videos')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', userId);
+      
+      // Фильтруем по проекту если он выбран
+      if (currentProjectId) {
+        query = query.eq('project_id', currentProjectId);
+      }
+      
+      const { data, error: fetchError } = await query
         .order('added_at', { ascending: false });
 
       console.log('[InboxVideos] Fetch result:', { count: data?.length, error: fetchError });
@@ -124,12 +132,12 @@ export function useInboxVideos() {
     }
   }, [setIncomingVideos, transformVideo, getUserId]);
 
-  // Перезагружаем видео при смене пользователя
+  // Перезагружаем видео при смене пользователя или проекта
   useEffect(() => {
     if (user) {
       fetchVideos();
     }
-  }, [user, fetchVideos]);
+  }, [user, currentProjectId, fetchVideos]);
 
   /**
    * Добавляет видео в сохранённые
@@ -442,9 +450,29 @@ export function useInboxVideos() {
 
   /**
    * Удаляет видео из сохранённых
+   * Возвращает данные удаленного видео для возможности отмены
    */
   const removeVideo = useCallback(async (videoId: string) => {
     const userId = getUserId();
+    
+    // Сохраняем данные видео перед удалением (для отмены)
+    const videoToDelete = videos.find(v => v.id === videoId);
+    const videoData = videoToDelete ? {
+      id: videoToDelete.id,
+      title: videoToDelete.title,
+      previewUrl: videoToDelete.previewUrl,
+      url: videoToDelete.url,
+      view_count: (videoToDelete as any).view_count,
+      like_count: (videoToDelete as any).like_count,
+      comment_count: (videoToDelete as any).comment_count,
+      owner_username: (videoToDelete as any).owner_username,
+      folder_id: (videoToDelete as any).folder_id,
+      project_id: (videoToDelete as any).project_id,
+      taken_at: (videoToDelete as any).taken_at,
+      transcript_text: (videoToDelete as any).transcript_text,
+      translation_text: (videoToDelete as any).translation_text,
+      script_text: (videoToDelete as any).script_text,
+    } : null;
     
     // Оптимистичное удаление
     setVideos(prev => prev.filter(v => v.id !== videoId));
@@ -458,8 +486,66 @@ export function useInboxVideos() {
         .eq('id', videoId);
     } catch (err) {
       console.error('Error removing video:', err);
+      // Восстанавливаем при ошибке
+      if (videoToDelete) {
+        setVideos(prev => [...prev, videoToDelete]);
+      }
     }
-  }, [setIncomingVideos, getUserId]);
+    
+    return videoData;
+  }, [setIncomingVideos, getUserId, videos]);
+
+  /**
+   * Восстановить удаленное видео
+   */
+  const restoreVideo = useCallback(async (videoData: any) => {
+    const userId = getUserId();
+    
+    if (!videoData) return false;
+    
+    try {
+      // Восстанавливаем в БД
+      const { error } = await supabase
+        .from('saved_videos')
+        .insert({
+          id: videoData.id,
+          user_id: userId,
+          video_id: videoData.id, // Используем id как video_id
+          shortcode: extractShortcode(videoData.url),
+          thumbnail_url: videoData.previewUrl,
+          video_url: videoData.url,
+          caption: videoData.title,
+          owner_username: videoData.owner_username,
+          view_count: videoData.view_count,
+          like_count: videoData.like_count,
+          comment_count: videoData.comment_count,
+          folder_id: videoData.folder_id,
+          project_id: videoData.project_id,
+          taken_at: videoData.taken_at,
+          transcript_text: videoData.transcript_text,
+          translation_text: videoData.translation_text,
+          script_text: videoData.script_text,
+        });
+      
+      if (error) {
+        console.error('Error restoring video:', error);
+        return false;
+      }
+      
+      // Перезагружаем видео
+      await fetchVideos();
+      return true;
+    } catch (err) {
+      console.error('Error restoring video:', err);
+      return false;
+    }
+  }, [getUserId, fetchVideos]);
+
+  // Вспомогательная функция для извлечения shortcode
+  const extractShortcode = (url: string): string | undefined => {
+    const match = url.match(/\/(reel|p)\/([A-Za-z0-9_-]+)/);
+    return match ? match[2] : undefined;
+  };
 
   /**
    * Для совместимости со старым кодом
@@ -560,6 +646,7 @@ export function useInboxVideos() {
     updateVideoFolder,
     updateVideoScript,
     updateVideoTranscript,
+    restoreVideo,
     startVideoProcessing, // Ручной запуск транскрибации
     markVideoAsOnCanvas,
     refetch: fetchVideos,

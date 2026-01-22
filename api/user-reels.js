@@ -58,7 +58,19 @@ export default async function handler(req, res) {
       }
       
       if (items && Array.isArray(items)) {
-        const reels = items.map(item => ({
+        // Фильтруем закрепленные видео (pinned/highlighted)
+        // Обычно закрепленные видео имеют is_pinned, is_highlight, или pinned: true
+        const filteredItems = items.filter(item => {
+          // Исключаем закрепленные видео по различным признакам
+          if (item.is_pinned === true || item.pinned === true) return false;
+          if (item.is_highlight === true || item.highlight === true) return false;
+          if (item.is_featured === true || item.featured === true) return false;
+          // Если есть поле pinned_reel или highlight_reel - тоже исключаем
+          if (item.pinned_reel === true || item.highlight_reel === true) return false;
+          return true;
+        });
+        
+        const reels = filteredItems.map(item => ({
           id: item.id || item.pk,
           shortcode: item.code || item.shortcode,
           url: `https://www.instagram.com/reel/${item.code || item.shortcode}/`,

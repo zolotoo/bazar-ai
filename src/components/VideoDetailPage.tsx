@@ -535,7 +535,7 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
           {/* Left: Video preview */}
           <div className="w-64 flex-shrink-0 flex flex-col gap-3 overflow-y-auto custom-scrollbar-light">
             {/* Video card - 9:16 aspect ratio */}
-            <div className="relative rounded-2xl overflow-hidden shadow-xl bg-black aspect-[9/16]">
+            <div className="relative rounded-2xl overflow-hidden shadow-xl bg-black" style={{ aspectRatio: '9/16' }}>
               {showVideo && directVideoUrl ? (
                 <video
                   src={directVideoUrl}
@@ -655,24 +655,20 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
                     <span className="text-sm">Виральность</span>
                   </div>
                   <div className="flex items-center gap-2">
-                      {viralMultiplier !== null && viralMultiplier !== undefined && (
-                      <span className={cn(
-                        "text-xs px-2 py-0.5 rounded-full font-semibold",
-                        viralMultiplier >= 4 ? "bg-red-100 text-red-700" :
-                        viralMultiplier >= 3 ? "bg-amber-100 text-amber-700" :
-                        viralMultiplier >= 2 ? "bg-lime-100 text-lime-700" :
-                        viralMultiplier >= 1.5 ? "bg-green-100 text-green-700" :
-                        "bg-slate-100 text-slate-600"
-                      )}>
-                        {Math.round(viralMultiplier)}x
-                      </span>
-                    )}
                     <span className={cn(
                       "text-sm font-bold",
                       finalViralCoef > 10 ? "text-emerald-600" : finalViralCoef > 5 ? "text-amber-600" : "text-slate-600"
                     )}>
                       {Math.round(finalViralCoef)}K/день
                     </span>
+                    {viralMultiplier !== null && viralMultiplier !== undefined && (
+                      <span 
+                        className="text-xs text-slate-400"
+                        title={`В ${Math.round(viralMultiplier)}x раз ${viralMultiplier >= 1 ? 'больше' : 'меньше'} среднего у автора`}
+                      >
+                        ({Math.round(viralMultiplier)}x)
+                      </span>
+                    )}
                   </div>
                 </div>
                 {(!viralMultiplier && video.owner_username) && (
