@@ -11,7 +11,8 @@ interface ProjectContextType {
   deleteProject: (projectId: string) => Promise<void>;
   selectProject: (projectId: string) => void;
   addFolder: (projectId: string, folderName: string) => Promise<void>;
-  removeFolder: (projectId: string, folderId: string) => Promise<void>;
+  removeFolder: (projectId: string, folderId: string) => Promise<ProjectFolder | null>;
+  restoreFolder: (folderData: any) => Promise<boolean>;
   updateFolder: (projectId: string, folderId: string, updates: Partial<Omit<ProjectFolder, 'id'>>) => Promise<void>;
   reorderFolders: (projectId: string, newOrder: string[]) => Promise<void>;
   refetch: () => Promise<void>;
