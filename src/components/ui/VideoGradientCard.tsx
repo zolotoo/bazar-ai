@@ -81,7 +81,7 @@ export const VideoGradientCard = ({
         ref={cardRef}
         className={cn(
           "relative rounded-2xl overflow-hidden cursor-pointer",
-          "border-2 border-slate-300/50",
+          "border-[4px] border-slate-300/60",
           "backdrop-blur-sm",
           className
         )}
@@ -236,7 +236,7 @@ export const VideoGradientCard = ({
             <div className="flex items-center gap-2 mb-2 flex-wrap">
               {viewCount !== undefined && (
                 <motion.div
-                  className="px-2.5 py-1.5 rounded-2xl backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1.5 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
+                  className="px-2.5 py-1.5 rounded-xl backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1.5 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.2 }}
@@ -247,7 +247,7 @@ export const VideoGradientCard = ({
               )}
               {likeCount !== undefined && (
                 <motion.div
-                  className="px-2.5 py-1.5 rounded-2xl backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1.5 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
+                  className="px-2.5 py-1.5 rounded-xl backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1.5 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.25 }}
@@ -258,7 +258,7 @@ export const VideoGradientCard = ({
               )}
               {commentCount !== undefined && (
                 <motion.div
-                  className="px-2.5 py-1.5 rounded-2xl backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1.5 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
+                  className="px-2.5 py-1.5 rounded-xl backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1.5 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.3 }}

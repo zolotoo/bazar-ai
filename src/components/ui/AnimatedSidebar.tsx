@@ -91,7 +91,7 @@ export const DesktopSidebar = ({
       animate={{
         width: animate ? (open ? "260px" : "88px") : "260px",
       }}
-      transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+      transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
       {...props}
@@ -207,7 +207,7 @@ export const SidebarLink = ({
           display: animate ? (open ? "inline-block" : "none") : "inline-block",
           opacity: animate ? (open ? 1 : 0) : 1,
         }}
-        transition={{ duration: 0.2 }}
+        transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
         className={cn(
           "text-sm font-medium whitespace-nowrap overflow-hidden",
           "group-hover/sidebar:translate-x-0.5 transition-transform duration-150"
@@ -246,7 +246,7 @@ export const SidebarSection = ({ title, children, onAdd }: SidebarSectionProps) 
           opacity: animate ? (open ? 1 : 0) : 1,
           height: animate ? (open ? "auto" : 0) : "auto",
         }}
-        transition={{ duration: 0.2 }}
+        transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
         className="flex items-center justify-between px-4 mb-3 overflow-hidden"
       >
         <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
