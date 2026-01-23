@@ -152,7 +152,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
   const [_showProjectSelect, _setShowProjectSelect] = useState(false);
   const [_selectedProjectForAdd, _setSelectedProjectForAdd] = useState<string | null>(currentProjectId || null);
   const { incomingVideos } = useFlowStore();
-  const { addVideoToInbox } = useInboxVideos();
+  const { addVideoToInbox, videos: inboxVideos } = useInboxVideos();
   const { history: searchHistory, addToHistory, refetch: refetchHistory, getTodayCache, getAllResultsByQuery } = useSearchHistory();
   useWorkspaceZones(); // keep hook for potential future use
   const { projects, currentProject } = useProjectContext();
@@ -175,10 +175,10 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
   
   // Получаем все видео профиля из inboxVideos (без запросов к API)
   const getProfileVideosFromInbox = useCallback((username: string) => {
-    return inboxVideos.filter(video => {
+    return inboxVideos.filter((video: IncomingVideo) => {
       const ownerUsername = (video as any).owner_username;
       return ownerUsername && ownerUsername.toLowerCase() === username.toLowerCase();
-    }).map(video => {
+    }).map((video: IncomingVideo) => {
       // Преобразуем IncomingVideo в формат RadarReel
       return {
         id: video.id,
@@ -194,7 +194,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
         owner: { username: (video as any).owner_username },
         projectId: currentProjectId,
         savedToInbox: true,
-      } as any;
+      } as InstagramSearchResult;
     });
   }, [inboxVideos, currentProjectId]);
   
@@ -1474,7 +1474,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                   const allProfileReels = getProfileVideosFromInbox(selectedRadarProfile);
                   
                   const profileReels = allProfileReels
-                    .sort((a, b) => {
+                    .sort((a: InstagramSearchResult, b: InstagramSearchResult) => {
                       switch (sortBy) {
                         case 'date':
                           // Сортировка по дате (недавние сначала)
@@ -1510,7 +1510,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
 
                   return (
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
-                      {profileReels.map((reel, idx) => {
+                      {profileReels.map((reel: InstagramSearchResult, idx: number) => {
                         const viralCoef = calculateViralCoefficient(reel.view_count, reel.taken_at);
                         const captionText = typeof reel.caption === 'string' ? reel.caption : 'Видео из Instagram';
                         const thumbnailUrl = proxyImageUrl(reel.thumbnail_url || reel.display_url);
