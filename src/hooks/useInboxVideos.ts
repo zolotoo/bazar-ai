@@ -3,12 +3,12 @@ import { supabase } from '../utils/supabase';
 import { useFlowStore } from '../stores/flowStore';
 import { IncomingVideo } from '../types';
 import { useAuth } from './useAuth';
+import { useProjectContext } from '../contexts/ProjectContext';
 import { toast } from 'sonner';
 import { 
   getOrCreateGlobalVideo, 
   getTranscriptionByShortcode,
   startGlobalTranscription,
-  extractShortcode,
 } from '../services/globalVideoService';
 
 interface SavedVideo {
