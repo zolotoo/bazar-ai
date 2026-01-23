@@ -148,8 +148,6 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
   const [radarUsername, setRadarUsername] = useState('');
   const [isSpinning, setIsSpinning] = useState(false);
   const [selectedRadarProfile, setSelectedRadarProfile] = useState<string | null>(null); // Фильтр по профилю в радаре
-  const [profileReelsCache, setProfileReelsCache] = useState<Map<string, RadarReel[]>>(new Map()); // Кэш всех видео профилей
-  const [loadingProfileReels, setLoadingProfileReels] = useState<string | null>(null);
   const [_spinOffset, setSpinOffset] = useState(0);
   const [_showProjectSelect, _setShowProjectSelect] = useState(false);
   const [_selectedProjectForAdd, _setSelectedProjectForAdd] = useState<string | null>(currentProjectId || null);
@@ -1432,11 +1430,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                     <div>
                       <h2 className="text-lg font-bold text-slate-800">@{selectedRadarProfile}</h2>
                       <p className="text-sm text-slate-500">
-                        {(() => {
-                          const cached = profileReelsCache.get(selectedRadarProfile);
-                          const count = cached && cached.length > 0 ? cached.length : radarReels.filter(r => r.owner?.username === selectedRadarProfile).length;
-                          return `${count} видео`;
-                        })()}
+                        {getProfileVideosFromInbox(selectedRadarProfile).length} видео
                       </p>
                     </div>
                   </div>
@@ -1471,11 +1465,8 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                   // Получаем статистику профиля для расчёта viralMultiplier
                   const profileStats = getProfileStats(selectedRadarProfile);
                   
-                  // Используем кэш всех видео профиля, если есть, иначе используем radarReels
-                  const cachedReels = profileReelsCache.get(selectedRadarProfile);
-                  const allProfileReels = cachedReels && cachedReels.length > 0 
-                    ? cachedReels 
-                    : radarReels.filter(r => r.owner?.username === selectedRadarProfile);
+                  // Получаем все видео профиля из inboxVideos (без запросов к API)
+                  const allProfileReels = getProfileVideosFromInbox(selectedRadarProfile);
                   
                   const profileReels = allProfileReels
                     .sort((a, b) => {
@@ -1501,7 +1492,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                           return 0;
                       }
                     });
-
+                  
                   if (loadingProfileReels === selectedRadarProfile) {
                     return (
                       <div className="text-center py-16">
