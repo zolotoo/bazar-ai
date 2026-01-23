@@ -9,7 +9,8 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        serif: ['Times New Roman', 'Times', 'Georgia', 'serif'],
+        serif: ['Playfair Display', 'serif'],
+        display: ['Playfair Display', 'serif'],
       },
       letterSpacing: {
         tighter: '-0.02em',

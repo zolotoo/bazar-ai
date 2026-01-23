@@ -25,7 +25,7 @@ type SearchTab = 'search' | 'link' | 'radar';
 
 // Цвета для проектов
 const PROJECT_COLORS = [
-  '#f97316', // orange
+  '#ea580c', // orange (насыщенный)
   '#ef4444', // red
   '#ec4899', // pink
   '#8b5cf6', // violet
@@ -69,11 +69,11 @@ function CreateProjectModal({ isOpen, onClose, onCreate }: CreateProjectModalPro
       />
       
       {/* Modal */}
-      <div className="relative w-full max-w-md mx-4 bg-white rounded-3xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-md mx-4 bg-white/90 backdrop-blur-[28px] backdrop-saturate-[180%] rounded-3xl shadow-2xl border border-white/60 animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-100">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#ea580c] to-[#f97316] flex items-center justify-center shadow-lg shadow-[#ea580c]/25">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -101,7 +101,7 @@ function CreateProjectModal({ isOpen, onClose, onCreate }: CreateProjectModalPro
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Например: Кулинарный блог"
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all text-slate-800 placeholder:text-slate-400"
+              className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/80 bg-white/60 backdrop-blur-sm outline-none focus:ring-2 focus:ring-[#ea580c]/30 focus:border-[#ea580c] transition-all text-slate-800 placeholder:text-slate-400 font-medium"
               autoFocus
             />
           </div>
@@ -153,14 +153,14 @@ function CreateProjectModal({ isOpen, onClose, onCreate }: CreateProjectModalPro
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-3 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50 transition-colors"
+              className="flex-1 px-5 py-3.5 rounded-2xl border border-slate-200/80 bg-white/60 backdrop-blur-sm text-slate-600 font-medium hover:bg-white/80 transition-colors"
             >
               Отмена
             </button>
             <button
               type="submit"
               disabled={!name.trim()}
-              className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-medium hover:from-orange-400 hover:to-amber-400 transition-all shadow-lg shadow-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-5 py-3.5 rounded-2xl bg-gradient-to-r from-[#ea580c] to-[#f97316] text-white font-medium hover:from-[#dc2626] hover:to-[#ea580c] transition-all shadow-lg shadow-[#ea580c]/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Создать проект
             </button>
@@ -218,12 +218,12 @@ function EditProjectModal({ isOpen, project, onClose, onSave, onDelete }: EditPr
       />
       
       {/* Modal */}
-      <div className="relative w-full max-w-md mx-4 bg-white rounded-3xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-md mx-4 bg-white/90 backdrop-blur-[28px] backdrop-saturate-[180%] rounded-3xl shadow-2xl border border-white/60 animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-100">
           <div className="flex items-center gap-3">
             <div 
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              className="w-10 h-10 rounded-2xl flex items-center justify-center"
               style={{ backgroundColor: color + '20' }}
             >
               <FolderOpen className="w-5 h-5" style={{ color }} />
@@ -253,7 +253,7 @@ function EditProjectModal({ isOpen, project, onClose, onSave, onDelete }: EditPr
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Например: Кулинарный блог"
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all text-slate-800 placeholder:text-slate-400"
+              className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/80 bg-white/60 backdrop-blur-sm outline-none focus:ring-2 focus:ring-[#ea580c]/30 focus:border-[#ea580c] transition-all text-slate-800 placeholder:text-slate-400 font-medium"
               autoFocus
             />
           </div>
@@ -341,14 +341,14 @@ function EditProjectModal({ isOpen, project, onClose, onSave, onDelete }: EditPr
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-3 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50 transition-colors"
+              className="flex-1 px-5 py-3.5 rounded-2xl border border-slate-200/80 bg-white/60 backdrop-blur-sm text-slate-600 font-medium hover:bg-white/80 transition-colors"
             >
               Отмена
             </button>
             <button
               type="submit"
               disabled={!name.trim()}
-              className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-medium hover:from-orange-400 hover:to-amber-400 transition-all shadow-lg shadow-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-5 py-3.5 rounded-2xl bg-gradient-to-r from-[#ea580c] to-[#f97316] text-white font-medium hover:from-[#dc2626] hover:to-[#ea580c] transition-all shadow-lg shadow-[#ea580c]/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Сохранить
             </button>
@@ -397,23 +397,23 @@ function AppContent() {
 
   if (projectsLoading) {
     return (
-      <div className="w-full h-screen flex items-center justify-center bg-[#f5f5f5]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-lg shadow-orange-500/30 animate-pulse">
+      <div className="w-full h-screen flex items-center justify-center bg-[#fafafa]">
+        <div className="flex flex-col items-center gap-5">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ea580c] to-[#f97316] flex items-center justify-center shadow-lg shadow-[#ea580c]/25 animate-pulse">
             <Video className="w-8 h-8 text-white" />
           </div>
-          <p className="text-slate-500 text-sm">Загрузка проектов...</p>
+          <p className="text-slate-500 text-sm font-medium">Загрузка проектов...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-screen text-foreground overflow-hidden bg-[#f5f5f5] flex">
+    <div className="w-full h-screen text-foreground overflow-hidden bg-[#fafafa] flex">
       {/* Clean gradient blobs - white, orange, black */}
-      <div className="fixed top-[-15%] right-[-10%] w-[50%] h-[50%] bg-gradient-to-bl from-orange-500/40 via-orange-400/20 to-transparent rounded-full blur-[100px] pointer-events-none" />
-      <div className="fixed bottom-[-20%] left-[-10%] w-[60%] h-[60%] bg-gradient-to-tr from-neutral-900/20 via-neutral-800/10 to-transparent rounded-full blur-[120px] pointer-events-none" />
-      <div className="fixed top-[40%] left-[30%] w-[40%] h-[40%] bg-gradient-to-r from-orange-400/25 via-orange-500/15 to-neutral-900/10 rounded-full blur-[80px] pointer-events-none" />
+      <div className="fixed top-[-15%] right-[-10%] w-[50%] h-[50%] bg-gradient-to-bl from-[#ea580c]/30 via-[#f97316]/15 to-transparent rounded-full blur-[120px] pointer-events-none" />
+      <div className="fixed bottom-[-20%] left-[-10%] w-[60%] h-[60%] bg-gradient-to-tr from-neutral-900/15 via-neutral-800/8 to-transparent rounded-full blur-[140px] pointer-events-none" />
+      <div className="fixed top-[40%] left-[30%] w-[40%] h-[40%] bg-gradient-to-r from-[#ea580c]/20 via-[#f97316]/10 to-neutral-900/8 rounded-full blur-[100px] pointer-events-none" />
       
       {/* Noise texture overlay */}
       <div className="fixed inset-0 opacity-[0.02] pointer-events-none" style={{
@@ -469,8 +469,8 @@ function AppContent() {
               <div className="space-y-1">
                 {projects.length === 0 ? (
                   <button
-                    onClick={() => setIsCreateProjectOpen(true)}
-                    className="w-full flex items-center gap-3 px-3 py-3 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 hover:border-orange-300 hover:text-orange-500 transition-all"
+                  onClick={() => setIsCreateProjectOpen(true)}
+                  className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl border-2 border-dashed border-slate-200/60 text-slate-400 hover:border-[#ea580c]/40 hover:text-[#ea580c] transition-all hover:bg-white/30 backdrop-blur-sm"
                   >
                     <Plus className="w-5 h-5 flex-shrink-0" />
                   </button>
@@ -575,12 +575,12 @@ function App() {
 
   if (loading) {
     return (
-      <div className="w-full h-screen flex items-center justify-center bg-[#f5f5f5]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-lg shadow-orange-500/30 animate-pulse">
+      <div className="w-full h-screen flex items-center justify-center bg-[#fafafa]">
+        <div className="flex flex-col items-center gap-5">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ea580c] to-[#f97316] flex items-center justify-center shadow-lg shadow-[#ea580c]/25 animate-pulse">
             <Video className="w-8 h-8 text-white" />
           </div>
-          <p className="text-slate-500 text-sm">Загрузка...</p>
+          <p className="text-slate-500 text-sm font-medium">Загрузка...</p>
         </div>
       </div>
     );
