@@ -81,23 +81,25 @@ export const VideoGradientCard = ({
         ref={cardRef}
         className={cn(
           "relative rounded-2xl overflow-hidden cursor-pointer",
+          "border border-white/20",
+          "backdrop-blur-sm",
           className
         )}
         style={{
           aspectRatio: "9/16",
           boxShadow: isHovered 
-            ? "0 25px 50px -12px rgba(0, 0, 0, 0.4)"
-            : "0 10px 25px -5px rgba(0, 0, 0, 0.2)",
+            ? "0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.1)"
+            : "0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.05)",
         }}
         initial={{ y: 0 }}
         animate={{
-          y: isHovered ? -4 : 0,
-          scale: isHovered ? 1.02 : 1,
+          y: isHovered ? -8 : 0,
+          scale: isHovered ? 1.03 : 1,
         }}
         transition={{
           type: "spring",
-          stiffness: 400,
-          damping: 25
+          stiffness: 300,
+          damping: 20
         }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -110,9 +112,9 @@ export const VideoGradientCard = ({
             backgroundImage: `url(${proxyImageUrl(thumbnailUrl)})`,
           }}
           animate={{
-            scale: isHovered ? 1.1 : 1,
+            scale: isHovered ? 1.08 : 1,
           }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
+          transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
         />
 
         {/* Gradient overlay */}
@@ -138,39 +140,43 @@ export const VideoGradientCard = ({
               {/* Viral badge */}
               <motion.div
                 className={cn(
-                  "px-2.5 py-1 rounded-full backdrop-blur-sm flex items-center gap-1.5",
-                  viralCoef > 10 ? "bg-emerald-500/90 text-white" : 
-                  viralCoef > 5 ? "bg-amber-500/90 text-white" :
-                  viralCoef > 0 ? "bg-white/90 text-slate-700" :
-                  "bg-black/30 text-white/80"
+                  "px-2.5 py-1 rounded-full backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1.5",
+                  "border border-white/20",
+                  "shadow-[0_2px_8px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.2)]",
+                  viralCoef > 10 ? "bg-gradient-to-r from-emerald-500/80 via-emerald-400/70 to-emerald-500/80 text-white" : 
+                  viralCoef > 5 ? "bg-gradient-to-r from-amber-500/80 via-amber-400/70 to-amber-500/80 text-white" :
+                  viralCoef > 0 ? "bg-white/80 text-slate-700" :
+                  "bg-black/40 text-white/80"
                 )}
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
               >
-                <Sparkles className="w-3 h-3" />
-                <span className="text-xs font-bold">{viralCoef > 0 ? Math.round(viralCoef) : '—'}</span>
+                <Sparkles className="w-3 h-3" strokeWidth={2} />
+                <span className="text-xs font-semibold">{viralCoef > 0 ? Math.round(viralCoef) : '—'}</span>
               </motion.div>
               
               {/* Viral multiplier badge (отдельно рядом) */}
               {viralMultiplier !== null && viralMultiplier !== undefined && (
                 <motion.div
                   className={cn(
-                    "px-2 py-1 rounded-full backdrop-blur-sm flex items-center gap-1",
-                    viralMultiplier >= 10 ? "bg-red-500/90 text-white" :
-                    viralMultiplier >= 5 ? "bg-orange-500/90 text-white" :
-                    viralMultiplier >= 3 ? "bg-amber-500/90 text-white" :
-                    viralMultiplier >= 2 ? "bg-lime-500/90 text-white" :
-                    viralMultiplier >= 1.5 ? "bg-green-500/90 text-white" :
-                    "bg-slate-500/90 text-white"
+                    "px-2 py-1 rounded-full backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1",
+                    "border border-white/20",
+                    "shadow-[0_2px_8px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.2)]",
+                    viralMultiplier >= 10 ? "bg-gradient-to-r from-red-500/80 via-red-400/70 to-red-500/80 text-white" :
+                    viralMultiplier >= 5 ? "bg-gradient-to-r from-orange-500/80 via-orange-400/70 to-orange-500/80 text-white" :
+                    viralMultiplier >= 3 ? "bg-gradient-to-r from-amber-500/80 via-amber-400/70 to-amber-500/80 text-white" :
+                    viralMultiplier >= 2 ? "bg-gradient-to-r from-lime-500/80 via-lime-400/70 to-lime-500/80 text-white" :
+                    viralMultiplier >= 1.5 ? "bg-gradient-to-r from-green-500/80 via-green-400/70 to-green-500/80 text-white" :
+                    "bg-slate-500/80 text-white"
                   )}
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.2 }}
                   title={`В ${Math.round(viralMultiplier)}x раз ${viralMultiplier >= 1 ? 'больше' : 'меньше'} среднего у автора`}
                 >
-                  <TrendingUp className="w-3 h-3" />
-                  <span className="text-[10px] font-bold">{Math.round(viralMultiplier)}x</span>
+                  <TrendingUp className="w-3 h-3" strokeWidth={2} />
+                  <span className="text-[10px] font-semibold">{Math.round(viralMultiplier)}x</span>
                 </motion.div>
               )}
             </div>
@@ -192,7 +198,7 @@ export const VideoGradientCard = ({
                 animate={{ opacity: isHovered || showFolderMenu ? 1 : 0 }}
                 transition={{ duration: 0.15 }}
               >
-                <MoreVertical className="w-4 h-4" />
+                <MoreVertical className="w-4 h-4" strokeWidth={2.5} />
               </motion.button>
             )}
             
@@ -214,7 +220,7 @@ export const VideoGradientCard = ({
           <div>
             {/* Username with verified badge */}
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-lg font-bold tracking-tight truncate">
+              <h3 className="text-base font-semibold tracking-tight truncate">
                 @{username || 'instagram'}
               </h3>
               {viralCoef > 5 && (
@@ -227,22 +233,22 @@ export const VideoGradientCard = ({
             </div>
 
             {/* Stats line with icons - все в одну строку */}
-            <div className="flex items-center gap-3 text-white/70 mb-2 flex-wrap">
+            <div className="flex items-center gap-3 text-white/70 mb-2 whitespace-nowrap overflow-hidden">
               {viewCount !== undefined && (
-                <span className="flex items-center gap-1 text-sm font-medium">
-                  <Eye className="w-3.5 h-3.5" />
+                <span className="flex items-center gap-1 text-sm font-medium flex-shrink-0">
+                  <Eye className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={2.5} />
                   {formatNumber(viewCount)}
                 </span>
               )}
               {likeCount !== undefined && (
-                <span className="flex items-center gap-1 text-sm font-medium">
-                  <Heart className="w-3.5 h-3.5" />
+                <span className="flex items-center gap-1 text-sm font-medium flex-shrink-0">
+                  <Heart className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={2.5} />
                   {formatNumber(likeCount)}
                 </span>
               )}
               {commentCount !== undefined && (
-                <span className="flex items-center gap-1 text-sm font-medium">
-                  <MessageCircle className="w-3.5 h-3.5" />
+                <span className="flex items-center gap-1 text-sm font-medium flex-shrink-0">
+                  <MessageCircle className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={2.5} />
                   {formatNumber(commentCount)}
                 </span>
               )}
@@ -261,31 +267,31 @@ export const VideoGradientCard = ({
                 >
                   {transcriptStatus === 'downloading' && (
                     <>
-                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <Loader2 className="w-3 h-3 animate-spin" strokeWidth={2.5} />
                       Скачивание...
                     </>
                   )}
                   {transcriptStatus === 'processing' && (
                     <>
-                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <Loader2 className="w-3 h-3 animate-spin" strokeWidth={2.5} />
                       Транскрибация...
                     </>
                   )}
                   {transcriptStatus === 'queued' && (
                     <>
-                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <Loader2 className="w-3 h-3 animate-spin" strokeWidth={2.5} />
                       В очереди...
                     </>
                   )}
                   {transcriptStatus === 'error' && (
                     <>
-                      <AlertCircle className="w-3 h-3" />
+                      <AlertCircle className="w-3 h-3" strokeWidth={2.5} />
                       Ошибка
                     </>
                   )}
                   {transcriptStatus === 'timeout' && (
                     <>
-                      <AlertCircle className="w-3 h-3" />
+                      <AlertCircle className="w-3 h-3" strokeWidth={2.5} />
                       Таймаут
                     </>
                   )}
@@ -297,7 +303,7 @@ export const VideoGradientCard = ({
             {transcriptStatus === 'completed' && (
               <div className="mb-2">
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-500/20 text-emerald-200 border border-emerald-500/30">
-                  <FileText className="w-3 h-3" />
+                  <FileText className="w-3 h-3" strokeWidth={2.5} />
                   Текст готов
                 </span>
               </div>
@@ -337,7 +343,7 @@ export const VideoGradientCard = ({
                 whileTap={{ scale: 0.98 }}
               >
                 <span className="text-sm font-semibold">Добавить</span>
-                <ArrowRight className="h-4 w-4" />
+                <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
               </motion.button>
             )}
           </div>

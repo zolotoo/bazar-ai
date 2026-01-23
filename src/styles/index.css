@@ -14,8 +14,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 8%;
 
-    /* Насыщенный оранжевый без кислотности: hsl(20, 90%, 50%) ≈ #ea580c */
-    --primary: 20 90% 50%;
+    /* Мягкий оранжевый: hsl(25, 95%, 53%) ≈ #f97316 */
+    --primary: 25 95% 53%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 0 0% 97%;
@@ -24,7 +24,7 @@
     --muted: 0 0% 97%;
     --muted-foreground: 0 0% 40%;
 
-    --accent: 20 90% 50%;
+    --accent: 25 95% 53%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 50%;
@@ -32,7 +32,7 @@
 
     --border: 0 0% 92%;
     --input: 0 0% 98%;
-    --ring: 20 90% 50%;
+    --ring: 25 95% 53%;
 
     --radius: 0.875rem;
   }
@@ -105,7 +105,7 @@
   }
   html {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    font-weight: 500;
+    font-weight: 600;
     letter-spacing: -0.01em;
     line-height: 1.5;
   }
@@ -114,21 +114,22 @@
     font-feature-settings: "rlig" 1, "calt" 1;
     min-height: 100vh;
     background: #fafafa;
-    font-weight: 500;
+    font-weight: 600;
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Playfair Display', serif;
-    font-weight: 400;
+    font-weight: 300;
     font-style: normal;
     letter-spacing: -0.02em;
     line-height: 1.2;
   }
   h1, h2 {
     font-style: italic;
+    font-weight: 300;
   }
   p {
     line-height: 1.6;
-    font-weight: 500;
+    font-weight: 600;
   }
 }
 
@@ -343,12 +344,13 @@ body {
 }
 
 .glass-tab-button.active {
-  background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+  background: linear-gradient(135deg, #f97316 0%, #fb923c 50%, #fdba74 100%);
   color: white;
   box-shadow: 
-    0 4px 15px rgba(234, 88, 12, 0.4),
-    0 2px 4px rgba(0, 0, 0, 0.1),
+    0 4px 15px rgba(249, 115, 22, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(20px) saturate(180%);
 }
 
 .glass-tab-button.active::after {
@@ -356,7 +358,7 @@ body {
   position: absolute;
   inset: -2px;
   border-radius: 1.125rem;
-  background: linear-gradient(135deg, rgba(234, 88, 12, 0.3), rgba(249, 115, 22, 0.1));
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.25), rgba(251, 146, 60, 0.1));
   filter: blur(8px);
   z-index: -1;
 }

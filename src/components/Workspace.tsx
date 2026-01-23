@@ -453,7 +453,7 @@ export function Workspace() {
           onClick={() => setIsFolderWidgetOpen(!isFolderWidgetOpen)}
         >
           <div className="flex items-center gap-2">
-            <FolderOpen className="w-5 h-5 text-orange-500" />
+            <FolderOpen className="w-5 h-5 text-[#f97316]" strokeWidth={2.5} />
             <span className="text-sm font-semibold text-slate-700">Папки</span>
           </div>
           {isFolderWidgetOpen ? (
@@ -480,7 +480,7 @@ export function Workspace() {
                 "w-8 h-8 rounded-lg flex items-center justify-center",
                 selectedFolderId === null ? "bg-orange-200" : "bg-slate-100"
               )}>
-                <Inbox className="w-4 h-4" style={{ color: selectedFolderId === null ? '#ea580c' : '#64748b' }} />
+                <Inbox className="w-4 h-4" style={{ color: selectedFolderId === null ? '#f97316' : '#64748b' }} strokeWidth={2.5} />
               </div>
               <div className="flex-1 min-w-0">
                 <span className="text-sm font-medium block truncate">Все видео</span>
@@ -560,8 +560,8 @@ export function Workspace() {
                   </>
                 ) : (
                   <>
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
-                      <Sparkles className="w-6 h-6 text-white" />
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#f97316] via-[#fb923c] to-[#fdba74] flex items-center justify-center shadow-lg shadow-[#f97316]/20 backdrop-blur-sm">
+                      <Sparkles className="w-6 h-6 text-white" strokeWidth={2.5} />
                     </div>
                     <div>
                       <h1 className="text-2xl font-bold text-slate-800">Все видео</h1>
@@ -586,7 +586,7 @@ export function Workspace() {
                 )}
                 <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-2xl p-1.5 shadow-lg border border-white/50 mr-72">
                 {[
-                  { value: 'viral', label: 'Вирал', icon: Sparkles, color: 'from-orange-500 to-amber-500' },
+                  { value: 'viral', label: 'Виральность', icon: Sparkles, color: 'from-[#f97316] via-[#fb923c] to-[#fdba74]' },
                   { value: 'views', label: 'Просмотры', icon: Eye, color: 'from-blue-500 to-cyan-500' },
                   { value: 'likes', label: 'Лайки', icon: Heart, color: 'from-pink-500 to-rose-500' },
                   { value: 'recent', label: 'Недавно', icon: Inbox, color: 'from-purple-500 to-indigo-500' },
@@ -597,11 +597,11 @@ export function Workspace() {
                     className={cn(
                       "flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold transition-all active:scale-95",
                       sortBy === value 
-                        ? `bg-gradient-to-r ${color} text-white shadow-md` 
+                        ? `bg-gradient-to-r ${color} text-white shadow-md backdrop-blur-sm` 
                         : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
                     )}
                   >
-                    <Icon className="w-4 h-4" />
+                    <Icon className="w-4 h-4" strokeWidth={2.5} />
                     {label}
                   </button>
                 ))}
@@ -833,7 +833,7 @@ export function Workspace() {
                       {/* Color picker */}
                       <div className="relative group">
                         <button className="p-1.5 rounded-lg hover:bg-slate-200 transition-colors">
-                          <Palette className="w-4 h-4 text-slate-400" />
+                          <Palette className="w-4 h-4 text-slate-400" strokeWidth={2.5} />
                         </button>
                         <div className="absolute right-0 top-full mt-1 p-2 bg-white rounded-xl shadow-xl border border-slate-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 grid grid-cols-5 gap-1">
                           {FOLDER_COLORS.map(color => (
