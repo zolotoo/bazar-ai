@@ -410,10 +410,11 @@ function AppContent() {
 
   return (
     <div className="w-full h-screen text-foreground overflow-hidden bg-[#fafafa] flex">
-      {/* Clean gradient blobs - white, orange, black */}
-      <div className="fixed top-[-15%] right-[-10%] w-[50%] h-[50%] bg-gradient-to-bl from-[#f97316]/25 via-[#fb923c]/12 to-transparent rounded-full blur-[120px] pointer-events-none" />
+      {/* Clean gradient blobs - orange gradient from top */}
+      <div className="fixed top-[-10%] right-[-5%] w-[60%] h-[60%] bg-gradient-to-b from-[#f97316]/40 via-[#fb923c]/25 to-transparent rounded-full blur-[140px] pointer-events-none" />
+      <div className="fixed top-[-5%] left-[-5%] w-[50%] h-[50%] bg-gradient-to-br from-[#f97316]/35 via-[#fb923c]/20 to-transparent rounded-full blur-[120px] pointer-events-none" />
       <div className="fixed bottom-[-20%] left-[-10%] w-[60%] h-[60%] bg-gradient-to-tr from-neutral-900/15 via-neutral-800/8 to-transparent rounded-full blur-[140px] pointer-events-none" />
-      <div className="fixed top-[40%] left-[30%] w-[40%] h-[40%] bg-gradient-to-r from-[#f97316]/15 via-[#fb923c]/8 to-neutral-900/8 rounded-full blur-[100px] pointer-events-none" />
+      <div className="fixed top-[40%] left-[30%] w-[40%] h-[40%] bg-gradient-to-r from-[#f97316]/20 via-[#fb923c]/12 to-neutral-900/8 rounded-full blur-[100px] pointer-events-none" />
       
       {/* Noise texture overlay */}
       <div className="fixed inset-0 opacity-[0.02] pointer-events-none" style={{

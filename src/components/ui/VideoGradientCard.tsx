@@ -81,15 +81,15 @@ export const VideoGradientCard = ({
         ref={cardRef}
         className={cn(
           "relative rounded-2xl overflow-hidden cursor-pointer",
-          "border border-white/20",
+          "border-2 border-slate-300/50",
           "backdrop-blur-sm",
           className
         )}
         style={{
           aspectRatio: "9/16",
           boxShadow: isHovered 
-            ? "0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.1)"
-            : "0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.05)",
+            ? "0 12px 40px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.15)"
+            : "0 8px 24px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
         }}
         initial={{ y: 0 }}
         animate={{
@@ -232,25 +232,40 @@ export const VideoGradientCard = ({
               )}
             </div>
 
-            {/* Stats line with icons - все в одну строку */}
-            <div className="flex items-center gap-3 text-white/70 mb-2 whitespace-nowrap overflow-hidden">
+            {/* Stats line with icons - iOS 26 style liquid glass buttons */}
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
               {viewCount !== undefined && (
-                <span className="flex items-center gap-1 text-sm font-medium flex-shrink-0">
-                  <Eye className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={2.5} />
-                  {formatNumber(viewCount)}
-                </span>
+                <motion.div
+                  className="px-2.5 py-1.5 rounded-2xl backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1.5 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <Eye className="w-3 h-3 flex-shrink-0" strokeWidth={2} />
+                  <span className="text-[11px] font-semibold text-white/90">{formatNumber(viewCount)}</span>
+                </motion.div>
               )}
               {likeCount !== undefined && (
-                <span className="flex items-center gap-1 text-sm font-medium flex-shrink-0">
-                  <Heart className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={2.5} />
-                  {formatNumber(likeCount)}
-                </span>
+                <motion.div
+                  className="px-2.5 py-1.5 rounded-2xl backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1.5 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.25 }}
+                >
+                  <Heart className="w-3 h-3 flex-shrink-0" strokeWidth={2} />
+                  <span className="text-[11px] font-semibold text-white/90">{formatNumber(likeCount)}</span>
+                </motion.div>
               )}
               {commentCount !== undefined && (
-                <span className="flex items-center gap-1 text-sm font-medium flex-shrink-0">
-                  <MessageCircle className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={2.5} />
-                  {formatNumber(commentCount)}
-                </span>
+                <motion.div
+                  className="px-2.5 py-1.5 rounded-2xl backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1.5 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <MessageCircle className="w-3 h-3 flex-shrink-0" strokeWidth={2} />
+                  <span className="text-[11px] font-semibold text-white/90">{formatNumber(commentCount)}</span>
+                </motion.div>
               )}
             </div>
 

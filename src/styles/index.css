@@ -118,14 +118,14 @@
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Playfair Display', serif;
-    font-weight: 300;
+    font-weight: 200;
     font-style: normal;
     letter-spacing: -0.02em;
     line-height: 1.2;
   }
   h1, h2 {
     font-style: italic;
-    font-weight: 300;
+    font-weight: 200;
   }
   p {
     line-height: 1.6;
