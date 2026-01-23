@@ -1471,10 +1471,20 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                   // Получаем статистику профиля для расчёта viralMultiplier
                   const profileStats = getProfileStats(selectedRadarProfile);
                   
-                  const profileReels = radarReels
-                    .filter(r => r.owner?.username === selectedRadarProfile)
+                  // Используем кэш всех видео профиля, если есть, иначе используем radarReels
+                  const cachedReels = profileReelsCache.get(selectedRadarProfile);
+                  const allProfileReels = cachedReels && cachedReels.length > 0 
+                    ? cachedReels 
+                    : radarReels.filter(r => r.owner?.username === selectedRadarProfile);
+                  
+                  const profileReels = allProfileReels
                     .sort((a, b) => {
                       switch (sortBy) {
+                        case 'date':
+                          // Сортировка по дате (недавние сначала)
+                          const dateA = a.taken_at ? (typeof a.taken_at === 'number' ? a.taken_at : Number(a.taken_at)) : 0;
+                          const dateB = b.taken_at ? (typeof b.taken_at === 'number' ? b.taken_at : Number(b.taken_at)) : 0;
+                          return dateB - dateA; // Новые сначала
                         case 'views':
                           return (b.view_count || 0) - (a.view_count || 0);
                         case 'likes':
