@@ -174,24 +174,30 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
     getProfileStats,
   } = useRadar(currentProjectId, radarUserId);
   
-  // Загружаем все видео профиля при клике
-  useEffect(() => {
-    if (selectedRadarProfile && currentProjectId) {
-      const cached = profileReelsCache.get(selectedRadarProfile);
-      if (!cached || cached.length === 0) {
-        // Загружаем все видео профиля
-        setLoadingProfileReels(selectedRadarProfile);
-        fetchUserReels(selectedRadarProfile, currentProjectId).then(reels => {
-          if (reels && reels.length > 0) {
-            setProfileReelsCache(prev => new Map(prev).set(selectedRadarProfile, reels));
-          }
-          setLoadingProfileReels(null);
-        }).catch(() => {
-          setLoadingProfileReels(null);
-        });
-      }
-    }
-  }, [selectedRadarProfile, currentProjectId, fetchUserReels, profileReelsCache]);
+  // Получаем все видео профиля из inboxVideos (без запросов к API)
+  const getProfileVideosFromInbox = useCallback((username: string) => {
+    return inboxVideos.filter(video => {
+      const ownerUsername = (video as any).owner_username;
+      return ownerUsername && ownerUsername.toLowerCase() === username.toLowerCase();
+    }).map(video => {
+      // Преобразуем IncomingVideo в формат RadarReel
+      return {
+        id: video.id,
+        shortcode: (video as any).shortcode,
+        url: video.url,
+        thumbnail_url: video.previewUrl,
+        display_url: video.previewUrl,
+        caption: video.title,
+        view_count: (video as any).view_count,
+        like_count: (video as any).like_count,
+        comment_count: (video as any).comment_count,
+        taken_at: (video as any).taken_at,
+        owner: { username: (video as any).owner_username },
+        projectId: currentProjectId,
+        savedToInbox: true,
+      } as any;
+    });
+  }, [inboxVideos, currentProjectId]);
   
   // Минимум просмотров для показа в поиске
   const MIN_VIEWS = 30000;
