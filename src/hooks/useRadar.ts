@@ -308,7 +308,7 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
           }
         }
 
-        // Обновляем recent reels для UI
+        // Обновляем recent reels для UI (только последние 6 для мини-превью)
         setRecentReels(prev => {
           const filtered = prev.filter(r => r.owner?.username?.toLowerCase() !== cleanUsername);
           return [...savedReels.slice(0, 6), ...filtered].slice(0, 30);
@@ -327,7 +327,13 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
             : p
         ));
 
-        return savedReels;
+        // Возвращаем ВСЕ видео профиля (не только последние 6)
+        return data.reels.map((reel: any) => ({
+          ...reel,
+          isNew: savedReels.some(sr => sr.shortcode === reel.shortcode && sr.isNew),
+          projectId: targetProjectId,
+          savedToInbox: savedReels.some(sr => sr.shortcode === reel.shortcode),
+        }));
       }
       
       return [];
