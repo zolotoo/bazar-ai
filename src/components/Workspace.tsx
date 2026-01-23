@@ -650,8 +650,9 @@ export function Workspace() {
                     caption={video.title}
                     viewCount={video.view_count}
                     likeCount={video.like_count}
+                    commentCount={video.comment_count}
                     viralCoef={finalViralCoef}
-                    viralMultiplier={null}
+                    viralMultiplier={viralMult}
                     folderBadge={folderBadge}
                     transcriptStatus={video.transcript_status}
                     onClick={() => setSelectedVideo(video)}

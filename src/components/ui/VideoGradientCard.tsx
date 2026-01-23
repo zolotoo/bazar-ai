@@ -2,7 +2,7 @@
 import React, { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { cn } from "../../utils/cn";
-import { Sparkles, MoreVertical, ArrowRight, Eye, Heart, Loader2, FileText, AlertCircle } from "lucide-react";
+import { Sparkles, MoreVertical, ArrowRight, Eye, Heart, Loader2, FileText, AlertCircle, MessageCircle } from "lucide-react";
 
 // Проксирование Instagram изображений через наш API
 function proxyImageUrl(url?: string): string {
@@ -20,6 +20,7 @@ export interface VideoGradientCardProps {
   caption?: string;
   viewCount?: number;
   likeCount?: number;
+  commentCount?: number;
   date?: string;
   viralCoef?: number;
   viralMultiplier?: number | null; // Множитель залётности (во сколько раз больше среднего автора)
@@ -47,6 +48,7 @@ export const VideoGradientCard = ({
   caption,
   viewCount,
   likeCount,
+  commentCount,
   date,
   viralCoef = 0,
   viralMultiplier,
@@ -150,10 +152,17 @@ export const VideoGradientCard = ({
                 <span className="text-xs font-bold">{viralCoef > 0 ? Math.round(viralCoef) : '—'}</span>
                 {viralMultiplier !== null && viralMultiplier !== undefined && (
                   <span 
-                    className="text-[8px] opacity-70 ml-0.5"
+                    className={cn(
+                      "text-[9px] font-semibold px-1 py-0.5 rounded ml-1",
+                      viralMultiplier >= 4 ? "bg-red-500/90 text-white" :
+                      viralMultiplier >= 3 ? "bg-amber-500/90 text-white" :
+                      viralMultiplier >= 2 ? "bg-lime-500/90 text-white" :
+                      viralMultiplier >= 1.5 ? "bg-green-500/90 text-white" :
+                      "bg-slate-500/90 text-white"
+                    )}
                     title={`В ${Math.round(viralMultiplier)}x раз ${viralMultiplier >= 1 ? 'больше' : 'меньше'} среднего у автора`}
                   >
-                    ({Math.round(viralMultiplier)}x)
+                    {Math.round(viralMultiplier)}x
                   </span>
                 )}
               </motion.div>
@@ -210,8 +219,8 @@ export const VideoGradientCard = ({
               )}
             </div>
 
-            {/* Stats line with icons */}
-            <div className="flex items-center gap-3 text-white/70 mb-2">
+            {/* Stats line with icons - все в одну строку */}
+            <div className="flex items-center gap-3 text-white/70 mb-2 flex-wrap">
               {viewCount !== undefined && (
                 <span className="flex items-center gap-1 text-sm font-medium">
                   <Eye className="w-3.5 h-3.5" />
@@ -222,6 +231,12 @@ export const VideoGradientCard = ({
                 <span className="flex items-center gap-1 text-sm font-medium">
                   <Heart className="w-3.5 h-3.5" />
                   {formatNumber(likeCount)}
+                </span>
+              )}
+              {commentCount !== undefined && (
+                <span className="flex items-center gap-1 text-sm font-medium">
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  {formatNumber(commentCount)}
                 </span>
               )}
             </div>

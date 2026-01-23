@@ -535,7 +535,7 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
           {/* Left: Video preview */}
           <div className="w-64 flex-shrink-0 flex flex-col gap-3 overflow-y-auto custom-scrollbar-light">
             {/* Video card - 9:16 aspect ratio */}
-            <div className="relative rounded-2xl overflow-hidden shadow-xl bg-black w-full" style={{ aspectRatio: '9/16', maxWidth: '256px' }}>
+            <div className="relative rounded-2xl overflow-hidden shadow-xl bg-black" style={{ width: '256px', aspectRatio: '9/16' }}>
               {showVideo && directVideoUrl ? (
                 <video
                   src={directVideoUrl}
