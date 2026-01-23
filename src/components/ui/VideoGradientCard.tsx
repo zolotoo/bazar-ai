@@ -218,19 +218,22 @@ export const VideoGradientCard = ({
 
           {/* Bottom content */}
           <div>
-            {/* Username with verified badge */}
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-base font-semibold tracking-tight truncate">
-                @{username || 'instagram'}
-              </h3>
+            {/* Username as iOS 26 button - маленький и белый */}
+            <motion.div
+              className="px-2.5 py-1 rounded-xl backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1.5 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20 mb-2 inline-flex"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.15 }}
+            >
+              <span className="text-[10px] font-semibold text-white/90 truncate max-w-[120px]">@{username || 'instagram'}</span>
               {viralCoef > 5 && (
-                <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <div className="w-2.5 h-2.5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-1.5 h-1.5 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
                 </div>
               )}
-            </div>
+            </motion.div>
 
             {/* Stats line with icons - iOS 26 style liquid glass buttons */}
             <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -265,6 +268,17 @@ export const VideoGradientCard = ({
                 >
                   <MessageCircle className="w-3 h-3 flex-shrink-0" strokeWidth={2} />
                   <span className="text-[11px] font-semibold text-white/90">{formatNumber(commentCount)}</span>
+                </motion.div>
+              )}
+              {date && (
+                <motion.div
+                  className="px-2.5 py-1.5 rounded-xl backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1.5 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.35 }}
+                >
+                  <Calendar className="w-3 h-3 flex-shrink-0" strokeWidth={2} />
+                  <span className="text-[11px] font-semibold text-white/90">{date}</span>
                 </motion.div>
               )}
             </div>
