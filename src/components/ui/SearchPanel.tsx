@@ -137,7 +137,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
   const [_error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('carousel');
   const [activeIndex, setActiveIndex] = useState(0);
-  const [sortBy, setSortBy] = useState<SortOption>('views');
+  const [sortBy, setSortBy] = useState<SortOption>('date');
   const [selectedVideo, setSelectedVideo] = useState<InstagramSearchResult | null>(null);
   const [activeTab, setActiveTab] = useState<SearchTab>(initialTab);
   const [linkUrl, setLinkUrl] = useState('');
@@ -148,6 +148,8 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
   const [radarUsername, setRadarUsername] = useState('');
   const [isSpinning, setIsSpinning] = useState(false);
   const [selectedRadarProfile, setSelectedRadarProfile] = useState<string | null>(null); // Фильтр по профилю в радаре
+  const [profileReelsCache, setProfileReelsCache] = useState<Map<string, RadarReel[]>>(new Map()); // Кэш всех видео профилей
+  const [loadingProfileReels, setLoadingProfileReels] = useState<string | null>(null);
   const [_spinOffset, setSpinOffset] = useState(0);
   const [_showProjectSelect, _setShowProjectSelect] = useState(false);
   const [_selectedProjectForAdd, _setSelectedProjectForAdd] = useState<string | null>(currentProjectId || null);
@@ -170,8 +172,28 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
     addProfile: addRadarProfile, 
     removeProfile: removeRadarProfile,
     refreshAll: refreshRadar,
+    fetchUserReels,
     getProfileStats,
   } = useRadar(currentProjectId, radarUserId);
+  
+  // Загружаем все видео профиля при клике
+  useEffect(() => {
+    if (selectedRadarProfile && currentProjectId) {
+      const cached = profileReelsCache.get(selectedRadarProfile);
+      if (!cached || cached.length === 0) {
+        // Загружаем все видео профиля
+        setLoadingProfileReels(selectedRadarProfile);
+        fetchUserReels(selectedRadarProfile, currentProjectId).then(reels => {
+          if (reels && reels.length > 0) {
+            setProfileReelsCache(prev => new Map(prev).set(selectedRadarProfile, reels));
+          }
+          setLoadingProfileReels(null);
+        }).catch(() => {
+          setLoadingProfileReels(null);
+        });
+      }
+    }
+  }, [selectedRadarProfile, currentProjectId, fetchUserReels, profileReelsCache]);
   
   // Минимум просмотров для показа в поиске
   const MIN_VIEWS = 30000;
@@ -1410,7 +1432,11 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                     <div>
                       <h2 className="text-lg font-bold text-slate-800">@{selectedRadarProfile}</h2>
                       <p className="text-sm text-slate-500">
-                        {radarReels.filter(r => r.owner?.username === selectedRadarProfile).length} видео
+                        {(() => {
+                          const cached = profileReelsCache.get(selectedRadarProfile);
+                          const count = cached && cached.length > 0 ? cached.length : radarReels.filter(r => r.owner?.username === selectedRadarProfile).length;
+                          return `${count} видео`;
+                        })()}
                       </p>
                     </div>
                   </div>
@@ -1418,9 +1444,10 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                   {/* Sort */}
                   <div className="flex items-center gap-1.5 bg-white/80 backdrop-blur-sm rounded-2xl p-1.5 shadow-lg border border-white/50">
                     {[
+                      { value: 'date', label: 'Недавние', icon: Calendar },
+                      { value: 'viral', label: 'Вирал', icon: Sparkles },
                       { value: 'views', label: 'Просмотры', icon: Eye },
                       { value: 'likes', label: 'Лайки', icon: Heart },
-                      { value: 'viral', label: 'Вирал', icon: Sparkles },
                     ].map(({ value, label, icon: Icon }) => (
                       <button
                         key={value}
@@ -1465,6 +1492,15 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                       }
                     });
 
+                  if (loadingProfileReels === selectedRadarProfile) {
+                    return (
+                      <div className="text-center py-16">
+                        <Loader2 className="w-16 h-16 text-orange-500 animate-spin mx-auto mb-4" />
+                        <p className="text-slate-500 text-lg mb-2">Загружаем видео @{selectedRadarProfile}...</p>
+                      </div>
+                    );
+                  }
+                  
                   if (profileReels.length === 0) {
                     return (
                       <div className="text-center py-16">
