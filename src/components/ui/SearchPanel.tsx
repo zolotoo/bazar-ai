@@ -170,7 +170,6 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
     addProfile: addRadarProfile, 
     removeProfile: removeRadarProfile,
     refreshAll: refreshRadar,
-    fetchUserReels,
     getProfileStats,
   } = useRadar(currentProjectId, radarUserId);
   
@@ -1498,15 +1497,6 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                           return 0;
                       }
                     });
-                  
-                  if (loadingProfileReels === selectedRadarProfile) {
-                    return (
-                      <div className="text-center py-16">
-                        <Loader2 className="w-16 h-16 text-orange-500 animate-spin mx-auto mb-4" />
-                        <p className="text-slate-500 text-lg mb-2">Загружаем видео @{selectedRadarProfile}...</p>
-                      </div>
-                    );
-                  }
                   
                   if (profileReels.length === 0) {
                     return (
