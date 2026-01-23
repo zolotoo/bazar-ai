@@ -495,6 +495,12 @@ export function useInboxVideos() {
     return videoData;
   }, [setIncomingVideos, getUserId, videos]);
 
+  // Вспомогательная функция для извлечения shortcode
+  const extractShortcode = (url: string): string | undefined => {
+    const match = url.match(/\/(reel|p)\/([A-Za-z0-9_-]+)/);
+    return match ? match[2] : undefined;
+  };
+
   /**
    * Восстановить удаленное видео
    */
@@ -539,13 +545,7 @@ export function useInboxVideos() {
       console.error('Error restoring video:', err);
       return false;
     }
-  }, [getUserId, fetchVideos]);
-
-  // Вспомогательная функция для извлечения shortcode
-  const extractShortcode = (url: string): string | undefined => {
-    const match = url.match(/\/(reel|p)\/([A-Za-z0-9_-]+)/);
-    return match ? match[2] : undefined;
-  };
+  }, [getUserId, fetchVideos, extractShortcode]);
 
   /**
    * Для совместимости со старым кодом
