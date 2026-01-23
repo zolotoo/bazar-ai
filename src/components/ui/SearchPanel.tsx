@@ -1527,9 +1527,10 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                             caption={captionText}
                             viewCount={reel.view_count}
                             likeCount={reel.like_count}
+                            commentCount={reel.comment_count}
                             date={dateText || '—'}
                             viralCoef={finalViralCoef}
-                            viralMultiplier={null}
+                            viralMultiplier={viralMult}
                             onClick={() => setSelectedVideo(reel)}
                             onDragStart={(e) => handleDragStart(e, reel)}
                             showFolderMenu={cardFolderSelect === `radar-profile-${reel.shortcode}-${idx}`}
