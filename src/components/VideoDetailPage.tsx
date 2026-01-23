@@ -535,7 +535,7 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
           {/* Left: Video preview */}
           <div className="w-64 flex-shrink-0 flex flex-col gap-3 overflow-y-auto custom-scrollbar-light">
             {/* Video card - 9:16 aspect ratio */}
-            <div className="relative rounded-2xl overflow-hidden shadow-xl bg-black" style={{ aspectRatio: '9/16' }}>
+            <div className="relative rounded-2xl overflow-hidden shadow-xl bg-black w-full" style={{ aspectRatio: '9/16', maxWidth: '256px' }}>
               {showVideo && directVideoUrl ? (
                 <video
                   src={directVideoUrl}
@@ -663,10 +663,17 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
                     </span>
                     {viralMultiplier !== null && viralMultiplier !== undefined && (
                       <span 
-                        className="text-xs text-slate-400"
+                        className={cn(
+                          "text-xs px-2 py-0.5 rounded-full font-semibold",
+                          viralMultiplier >= 4 ? "bg-red-100 text-red-700" :
+                          viralMultiplier >= 3 ? "bg-amber-100 text-amber-700" :
+                          viralMultiplier >= 2 ? "bg-lime-100 text-lime-700" :
+                          viralMultiplier >= 1.5 ? "bg-green-100 text-green-700" :
+                          "bg-slate-100 text-slate-600"
+                        )}
                         title={`В ${Math.round(viralMultiplier)}x раз ${viralMultiplier >= 1 ? 'больше' : 'меньше'} среднего у автора`}
                       >
-                        ({Math.round(viralMultiplier)}x)
+                        {Math.round(viralMultiplier)}x
                       </span>
                     )}
                   </div>
