@@ -351,6 +351,13 @@ export function useInboxVideos() {
         data = result.data;
         error = result.error;
         
+        // Отправляем событие синхронизации для общих проектов
+        if (targetProjectId) {
+          window.dispatchEvent(new CustomEvent('videos-updated', { 
+            detail: { projectId: targetProjectId } 
+          }));
+        }
+        
       } else {
         // 3b. Создаём новое видео для пользователя
         console.log('[InboxVideos] Creating new user video');
@@ -418,6 +425,13 @@ export function useInboxVideos() {
               description: 'Видео уже было обработано ранее',
             });
           }
+        }
+        
+        // Отправляем событие синхронизации для общих проектов
+        if (targetProjectId) {
+          window.dispatchEvent(new CustomEvent('videos-updated', { 
+            detail: { projectId: targetProjectId } 
+          }));
         }
         
         return savedVideo;
