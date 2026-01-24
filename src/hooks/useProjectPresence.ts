@@ -45,6 +45,11 @@ export function useProjectPresence(projectId: string | null) {
           onConflict: 'project_id,user_id,entity_type,entity_id',
         });
     } catch (err) {
+      // Если таблица не существует, просто игнорируем
+      if (err instanceof Error && (err.message?.includes('relation') || err.message?.includes('does not exist'))) {
+        console.warn('[ProjectPresence] Table project_presence does not exist. Please run the migration.');
+        return;
+      }
       console.error('Error updating presence:', err);
     }
   }, [projectId, userId]);
@@ -55,14 +60,24 @@ export function useProjectPresence(projectId: string | null) {
 
     // Загружаем текущий presence
     const fetchPresence = async () => {
-      const { data } = await supabase
-        .from('project_presence')
-        .select('*')
-        .eq('project_id', projectId)
-        .gt('last_seen', new Date(Date.now() - 30000).toISOString()); // Только активные за последние 30 секунд
+      try {
+        const { data } = await supabase
+          .from('project_presence')
+          .select('*')
+          .eq('project_id', projectId)
+          .gt('last_seen', new Date(Date.now() - 30000).toISOString()); // Только активные за последние 30 секунд
 
-      if (data) {
-        setPresence(data.filter(p => p.user_id !== userId)); // Исключаем себя
+        if (data) {
+          setPresence(data.filter(p => p.user_id !== userId)); // Исключаем себя
+        }
+      } catch (err) {
+        // Если таблица не существует, просто игнорируем
+        if (err instanceof Error && (err.message?.includes('relation') || err.message?.includes('does not exist'))) {
+          console.warn('[ProjectPresence] Table project_presence does not exist. Please run the migration.');
+          setPresence([]);
+        } else {
+          console.error('Error fetching presence:', err);
+        }
       }
     };
 
@@ -80,6 +95,7 @@ export function useProjectPresence(projectId: string | null) {
           filter: `project_id=eq.${projectId}`,
         },
         (payload) => {
+          // Игнорируем ошибки если таблица не существует
           if (payload.new && typeof payload.new === 'object' && 'user_id' in payload.new) {
             const newPresence = payload.new as ProjectPresence;
             if (newPresence.user_id !== userId) {
@@ -95,7 +111,16 @@ export function useProjectPresence(projectId: string | null) {
           }
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (err) {
+          // Игнорируем ошибки подписки если таблица не существует
+          if (err.message?.includes('relation') || err.message?.includes('does not exist')) {
+            console.warn('[ProjectPresence] Table project_presence does not exist. Please run the migration.');
+          } else {
+            console.error('[ProjectPresence] Subscription error:', err);
+          }
+        }
+      });
 
     channelRef.current = channel;
 

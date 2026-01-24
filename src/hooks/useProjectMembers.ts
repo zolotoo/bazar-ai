@@ -65,13 +65,25 @@ export function useProjectMembers(projectId: string | null) {
         .order('joined_at', { ascending: false, nullsFirst: false });
 
       if (fetchError) {
+        // Если таблица не существует, просто возвращаем пустой массив
+        if (fetchError.code === 'PGRST116' || fetchError.message?.includes('relation') || fetchError.message?.includes('does not exist')) {
+          console.warn('[ProjectMembers] Table project_members does not exist. Please run the migration.');
+          setMembers([]);
+          setLoading(false);
+          return;
+        }
         throw fetchError;
       }
 
       setMembers(data || []);
     } catch (err) {
       console.error('Error fetching project members:', err);
-      setError(err instanceof Error ? err : new Error('Failed to fetch members'));
+      // Graceful fallback - если таблица не существует, просто показываем пустой список
+      if (err instanceof Error && (err.message?.includes('relation') || err.message?.includes('does not exist'))) {
+        setMembers([]);
+      } else {
+        setError(err instanceof Error ? err : new Error('Failed to fetch members'));
+      }
     } finally {
       setLoading(false);
     }
