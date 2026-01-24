@@ -36,7 +36,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
     subscribe: () => ({} as any),
   } as any);
   
-  supabase.rpc = () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } });
+  supabase.rpc = (() => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } })) as any;
 } else {
   supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
