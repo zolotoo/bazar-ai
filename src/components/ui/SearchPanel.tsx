@@ -591,6 +591,37 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
     }
   };
 
+  // Обработка добавления профиля в радар (по username или ссылке)
+  const handleAddRadarProfile = useCallback((input: string) => {
+    if (!input.trim() || !currentProjectId) return;
+    
+    let username = input.trim();
+    
+    // Если это ссылка на профиль - извлекаем username
+    const profileMatch = input.match(/instagram\.com\/([^\/\?]+)\/?$/);
+    if (profileMatch) {
+      username = profileMatch[1].replace('@', '').toLowerCase();
+    } else {
+      // Убираем @ если есть
+      username = username.replace(/^@/, '').toLowerCase();
+    }
+    
+    if (!username) {
+      toast.error('Не удалось определить username из ссылки');
+      return;
+    }
+    
+    const added = addRadarProfile(username, currentProjectId);
+    if (added) {
+      toast.success(`@${username} добавлен в радар`, {
+        description: `Проект: ${currentProjectName}. Загружаем видео...`,
+      });
+      setRadarUsername('');
+    } else {
+      toast.error('Профиль уже отслеживается в этом проекте');
+    }
+  }, [addRadarProfile, currentProjectId, currentProjectName]);
+
   // Обработка ссылки на рилс - сразу сохраняем в "Все видео" текущего проекта
   const handleParseLink = async () => {
     if (!linkUrl.trim()) return;
@@ -626,25 +657,10 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
         }
       }
       
-      // Если это ролик - получаем данные и добавляем автора в радар
+      // Если это ролик - получаем данные (НЕ добавляем автора в радар)
       const reel = await getReelByUrl(linkUrl);
       
       if (reel) {
-        // Добавляем автора в радар если его там нет
-        if (reel.owner?.username) {
-          const username = reel.owner.username.toLowerCase();
-          const alreadyInRadar = radarProfiles.some(p => 
-            p.username.toLowerCase() === username && p.projectId === currentProjectId
-          );
-          
-          if (!alreadyInRadar) {
-            addRadarProfile(username, currentProjectId);
-            toast.info(`@${username} добавлен в радар`, {
-              description: 'Автор видео автоматически добавлен',
-            });
-          }
-        }
-        
         // Извлекаем shortcode
         let shortcode = reel.shortcode;
         if (!shortcode && reel.url) {
@@ -1220,57 +1236,46 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                 )}
                 
                 {/* Add new profile */}
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="relative flex-1">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">@</span>
-                    <input
-                      type="text"
-                      value={radarUsername}
-                      onChange={(e) => setRadarUsername(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && radarUsername.trim() && currentProjectId) {
-                          const added = addRadarProfile(radarUsername, currentProjectId);
-                          if (added) {
-                            toast.success(`@${radarUsername} добавлен в радар`, {
-                              description: `Проект: ${currentProjectName}. Загружаем видео...`,
-                            });
-                          } else {
-                            toast.error('Профиль уже отслеживается в этом проекте');
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">@</span>
+                      <input
+                        type="text"
+                        value={radarUsername}
+                        onChange={(e) => setRadarUsername(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && radarUsername.trim() && currentProjectId) {
+                            handleAddRadarProfile(radarUsername);
                           }
-                          setRadarUsername('');
+                        }}
+                        placeholder="username или ссылка на профиль"
+                        disabled={!currentProjectId}
+                        className="w-full pl-9 pr-4 py-3 rounded-xl border border-slate-200 bg-white/80 outline-none focus:ring-2 focus:ring-orange-500/30 text-sm disabled:opacity-50"
+                      />
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (radarUsername.trim() && currentProjectId) {
+                          handleAddRadarProfile(radarUsername);
                         }
                       }}
-                      placeholder="username"
-                      disabled={!currentProjectId}
-                      className="w-full pl-9 pr-4 py-3 rounded-xl border border-slate-200 bg-white/80 outline-none focus:ring-2 focus:ring-orange-500/30 text-sm disabled:opacity-50"
-                    />
+                      disabled={!radarUsername.trim() || !currentProjectId}
+                      className={cn(
+                        "px-5 py-3 rounded-xl font-medium text-sm transition-all active:scale-95 flex items-center gap-2",
+                        "bg-gradient-to-r from-orange-500 to-amber-600 text-white",
+                        "hover:from-orange-400 hover:to-amber-500",
+                        "disabled:opacity-40 disabled:cursor-not-allowed",
+                        "shadow-lg shadow-orange-500/30"
+                      )}
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      Добавить
+                    </button>
                   </div>
-                  <button
-                    onClick={() => {
-                      if (radarUsername.trim() && currentProjectId) {
-                        const added = addRadarProfile(radarUsername, currentProjectId);
-                        if (added) {
-                          toast.success(`@${radarUsername} добавлен в радар`, {
-                            description: `Проект: ${currentProjectName}. Загружаем видео...`,
-                          });
-                        } else {
-                          toast.error('Профиль уже отслеживается в этом проекте');
-                        }
-                        setRadarUsername('');
-                      }
-                    }}
-                    disabled={!radarUsername.trim() || !currentProjectId}
-                    className={cn(
-                      "px-5 py-3 rounded-xl font-medium text-sm transition-all active:scale-95 flex items-center gap-2",
-                      "bg-gradient-to-r from-orange-500 to-amber-600 text-white",
-                      "hover:from-orange-400 hover:to-amber-500",
-                      "disabled:opacity-40 disabled:cursor-not-allowed",
-                      "shadow-lg shadow-orange-500/30"
-                    )}
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    Добавить
-                  </button>
+                  <p className="text-xs text-slate-400 px-1">
+                    Можно ввести username (например: username) или ссылку на профиль Instagram
+                  </p>
                 </div>
 
                 {/* Tracked profiles */}

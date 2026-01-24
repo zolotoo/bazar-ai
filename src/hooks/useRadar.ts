@@ -169,9 +169,7 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
 
   // Сохранение профилей в localStorage
   useEffect(() => {
-    if (profiles.length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles));
-    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles));
   }, [profiles]);
 
   // Профили текущего проекта
@@ -230,18 +228,28 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
 
   // Удалить профиль из радара
   const removeProfile = useCallback((username: string, projectId?: string) => {
-    const cleanUsername = username.toLowerCase();
+    const cleanUsername = username.replace(/^@/, '').trim().toLowerCase();
     const targetProjectId = projectId || currentProjectId;
     
-    setProfiles(prev => prev.filter(p => 
-      !(p.username.toLowerCase() === cleanUsername && 
-        (targetProjectId ? p.projectId === targetProjectId : true))
-    ));
+    console.log('[Radar] removeProfile called:', { cleanUsername, targetProjectId, currentProjectId });
+    
+    setProfiles(prev => {
+      const filtered = prev.filter(p => {
+        const matchesUsername = p.username.toLowerCase() === cleanUsername;
+        const matchesProject = targetProjectId ? p.projectId === targetProjectId : true;
+        return !(matchesUsername && matchesProject);
+      });
+      console.log('[Radar] Profiles after removal:', filtered.length, 'from', prev.length);
+      return filtered;
+    });
     
     // Убираем из recent reels
-    setRecentReels(prev => prev.filter(r => 
-      r.owner?.username?.toLowerCase() !== cleanUsername
-    ));
+    setRecentReels(prev => prev.filter(r => {
+      const reelUsername = r.owner?.username?.toLowerCase();
+      const reelProjectId = r.projectId;
+      return !(reelUsername === cleanUsername && 
+               (targetProjectId ? reelProjectId === targetProjectId : true));
+    }));
   }, [currentProjectId]);
 
   // Получить рилсы одного пользователя и сохранить в inbox проекта

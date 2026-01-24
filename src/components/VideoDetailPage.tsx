@@ -29,6 +29,10 @@ interface VideoData {
   script_text?: string;
   download_url?: string;
   folder_id?: string;
+  draft_link?: string;
+  final_link?: string;
+  script_responsible?: string;
+  editing_responsible?: string;
 }
 
 interface VideoDetailPageProps {
@@ -121,8 +125,58 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
   const [isSavingTranscript, setIsSavingTranscript] = useState(false);
   const [viralMultiplier, setViralMultiplier] = useState<number | null>(null);
   const [isCalculatingViral, setIsCalculatingViral] = useState(false);
+  const [draftLink, setDraftLink] = useState(video.draft_link || '');
+  const [finalLink, setFinalLink] = useState(video.final_link || '');
+  const [scriptResponsible, setScriptResponsible] = useState(video.script_responsible || '');
+  const [editingResponsible, setEditingResponsible] = useState(video.editing_responsible || '');
+  const [isSavingLinks, setIsSavingLinks] = useState(false);
+  const [isSavingResponsible, setIsSavingResponsible] = useState(false);
   
   const { updateVideoFolder, updateVideoScript, updateVideoTranscript } = useInboxVideos();
+  
+  // Сохранение ссылок
+  const handleSaveLinks = async () => {
+    setIsSavingLinks(true);
+    try {
+      const { error } = await supabase
+        .from('saved_videos')
+        .update({ 
+          draft_link: draftLink || null,
+          final_link: finalLink || null,
+        })
+        .eq('id', video.id);
+      
+      if (error) throw error;
+      toast.success('Ссылки сохранены');
+    } catch (err) {
+      console.error('Error saving links:', err);
+      toast.error('Ошибка сохранения ссылок');
+    } finally {
+      setIsSavingLinks(false);
+    }
+  };
+  
+  // Сохранение ответственных
+  const handleSaveResponsible = async () => {
+    setIsSavingResponsible(true);
+    try {
+      const { error } = await supabase
+        .from('saved_videos')
+        .update({ 
+          script_responsible: scriptResponsible || null,
+          editing_responsible: editingResponsible || null,
+        })
+        .eq('id', video.id);
+      
+      if (error) throw error;
+      toast.success('Ответственные сохранены');
+    } catch (err) {
+      console.error('Error saving responsible:', err);
+      toast.error('Ошибка сохранения ответственных');
+    } finally {
+      setIsSavingResponsible(false);
+    }
+  };
   const { currentProject } = useProjectContext();
   const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at);
   
@@ -714,6 +768,88 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
               <ExternalLink className="w-4 h-4" />
               Открыть в Instagram
             </a>
+            
+            {/* Links section */}
+            <div className="bg-white rounded-xl p-3 shadow-sm space-y-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-slate-400 font-medium">Ссылки</span>
+                <button
+                  onClick={handleSaveLinks}
+                  disabled={isSavingLinks}
+                  className="px-2 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium transition-all flex items-center gap-1 disabled:opacity-50"
+                >
+                  {isSavingLinks ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Save className="w-3 h-3" />
+                  )}
+                </button>
+              </div>
+              
+              <div className="space-y-2">
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block">Заготовка</label>
+                  <input
+                    type="text"
+                    value={draftLink}
+                    onChange={(e) => setDraftLink(e.target.value)}
+                    placeholder="Ссылка на заготовку"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-300"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block">Готовое</label>
+                  <input
+                    type="text"
+                    value={finalLink}
+                    onChange={(e) => setFinalLink(e.target.value)}
+                    placeholder="Ссылка на готовое"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-300"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            {/* Responsible section */}
+            <div className="bg-white rounded-xl p-3 shadow-sm space-y-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-slate-400 font-medium">Ответственные</span>
+                <button
+                  onClick={handleSaveResponsible}
+                  disabled={isSavingResponsible}
+                  className="px-2 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium transition-all flex items-center gap-1 disabled:opacity-50"
+                >
+                  {isSavingResponsible ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Save className="w-3 h-3" />
+                  )}
+                </button>
+              </div>
+              
+              <div className="space-y-2">
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block">За сценарий</label>
+                  <input
+                    type="text"
+                    value={scriptResponsible}
+                    onChange={(e) => setScriptResponsible(e.target.value)}
+                    placeholder="Кто отвечает за сценарий"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-300"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block">За монтаж</label>
+                  <input
+                    type="text"
+                    value={editingResponsible}
+                    onChange={(e) => setEditingResponsible(e.target.value)}
+                    placeholder="Кто отвечает за монтаж"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-300"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Middle: Transcript */}

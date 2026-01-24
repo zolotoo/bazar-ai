@@ -36,6 +36,12 @@ interface SavedVideo {
   // Проекты
   project_id?: string;
   folder_id?: string;
+  // Ссылки
+  draft_link?: string;
+  final_link?: string;
+  // Ответственные
+  script_responsible?: string;
+  editing_responsible?: string;
 }
 
 /**
@@ -72,6 +78,10 @@ export function useInboxVideos() {
     script_text?: string;
     download_url?: string;
     taken_at?: number;
+    draft_link?: string;
+    final_link?: string;
+    script_responsible?: string;
+    editing_responsible?: string;
   } => ({
     id: video.id,
     title: video.caption || 'Без названия',
@@ -91,6 +101,10 @@ export function useInboxVideos() {
     script_text: video.script_text,
     download_url: video.download_url,
     taken_at: video.taken_at,
+    draft_link: video.draft_link,
+    final_link: video.final_link,
+    script_responsible: video.script_responsible,
+    editing_responsible: video.editing_responsible,
   }), []);
 
   // Загрузка видео пользователя
