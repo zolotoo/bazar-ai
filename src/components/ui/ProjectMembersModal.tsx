@@ -116,9 +116,11 @@ export function ProjectMembersModal({ projectId, isOpen, onClose }: ProjectMembe
             <label className="block text-sm font-medium text-slate-700 mb-3">
               Пригласить участника
             </label>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="relative flex-1">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-semibold text-base">@</span>
+            
+            {/* Поле ввода username - отдельная строка */}
+            <div className="mb-3">
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-semibold text-lg">@</span>
                 <input
                   type="text"
                   value={inviteUsername}
@@ -129,13 +131,17 @@ export function ProjectMembersModal({ projectId, isOpen, onClose }: ProjectMembe
                     }
                   }}
                   placeholder="username"
-                  className="w-full pl-10 pr-4 py-3.5 rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-sm outline-none focus:ring-2 focus:ring-[#f97316]/20 focus:border-[#f97316]/30 transition-all text-slate-800 placeholder:text-slate-400 text-base"
+                  className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-sm outline-none focus:ring-2 focus:ring-[#f97316]/20 focus:border-[#f97316]/30 transition-all text-slate-800 placeholder:text-slate-400 text-base"
                 />
               </div>
+            </div>
+            
+            {/* Роль и кнопка - отдельная строка */}
+            <div className="flex items-center gap-2">
               <select
                 value={selectedRole}
                 onChange={(e) => setSelectedRole(e.target.value as any)}
-                className="px-4 py-3.5 rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-sm outline-none focus:ring-2 focus:ring-[#f97316]/20 text-base text-slate-700 font-medium"
+                className="flex-1 px-4 py-3.5 rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-sm outline-none focus:ring-2 focus:ring-[#f97316]/20 text-base text-slate-700 font-medium"
               >
                 <option value="read">Читатель</option>
                 <option value="write">Редактор</option>
@@ -144,7 +150,7 @@ export function ProjectMembersModal({ projectId, isOpen, onClose }: ProjectMembe
               <button
                 onClick={handleInvite}
                 disabled={!inviteUsername.trim() || isInviting}
-                className="px-5 py-3.5 rounded-xl bg-gradient-to-r from-[#f97316] via-[#fb923c] to-[#fdba74] text-white font-medium hover:from-[#f97316] hover:via-[#fb923c] hover:to-[#fdba74] transition-all shadow-lg shadow-[#f97316]/20 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm flex items-center gap-2 text-base whitespace-nowrap"
+                className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-[#f97316] via-[#fb923c] to-[#fdba74] text-white font-medium hover:from-[#f97316] hover:via-[#fb923c] hover:to-[#fdba74] transition-all shadow-lg shadow-[#f97316]/20 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm flex items-center gap-2 text-base whitespace-nowrap"
               >
                 {isInviting ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -154,7 +160,8 @@ export function ProjectMembersModal({ projectId, isOpen, onClose }: ProjectMembe
                 Пригласить
               </button>
             </div>
-            <p className="text-xs text-slate-500 mt-2 px-1">
+            
+            <p className="text-xs text-slate-500 mt-3 px-1">
               Введите Telegram username без @ (например: <span className="font-mono text-slate-600">username</span> или <span className="font-mono text-slate-600">@username</span> — оба варианта работают)
             </p>
           </div>
