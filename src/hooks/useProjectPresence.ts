@@ -36,14 +36,12 @@ export function useProjectPresence(projectId: string | null) {
       await setUserContext(userId);
       
       // Из-за уникального индекса с COALESCE, используем DELETE + INSERT вместо upsert
-      // Сначала удаляем старую запись для этой комбинации project_id + user_id + entity
+      // Удаляем все записи для этого пользователя в проекте (для упрощения)
       await supabase
         .from('project_presence')
         .delete()
         .eq('project_id', projectId)
-        .eq('user_id', userId)
-        .eq('entity_type', entityType ?? null)
-        .eq('entity_id', entityId ?? null);
+        .eq('user_id', userId);
       
       // Затем вставляем новую запись
       const { error } = await supabase
