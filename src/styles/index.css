@@ -204,19 +204,29 @@ body {
 
   /* iOS 26 Safe Area Padding */
   .safe-top {
-    padding-top: max(20px, var(--safe-area-inset-top));
+    padding-top: max(20px, env(safe-area-inset-top, 20px));
   }
 
   .safe-bottom {
-    padding-bottom: max(20px, var(--safe-area-inset-bottom));
+    padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));
   }
 
   .safe-left {
-    padding-left: max(16px, var(--safe-area-inset-left));
+    padding-left: max(16px, env(safe-area-inset-left, 16px));
   }
 
   .safe-right {
-    padding-right: max(16px, var(--safe-area-inset-right));
+    padding-right: max(16px, env(safe-area-inset-right, 16px));
+  }
+
+  .safe-x {
+    padding-left: max(16px, env(safe-area-inset-left, 16px));
+    padding-right: max(16px, env(safe-area-inset-right, 16px));
+  }
+
+  .safe-y {
+    padding-top: max(20px, env(safe-area-inset-top, 20px));
+    padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));
   }
 
   /* iOS 26 Scroll Behavior */

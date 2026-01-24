@@ -92,14 +92,14 @@ function CreateProjectModal({ onSave, onClose }: CreateProjectModalProps) {
             <label className="block text-sm font-medium text-slate-700 mb-2">
               Название проекта
             </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Например: Кулинарный блог"
-              className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/80 bg-white/60 backdrop-blur-sm outline-none focus:ring-2 focus:ring-[#f97316]/20 focus:border-[#f97316]/30 transition-all text-slate-800 placeholder:text-slate-400 font-medium"
-              autoFocus
-            />
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Например: Кулинарный блог"
+                className="w-full px-5 py-3.5 min-h-[44px] rounded-2xl border border-slate-200/80 bg-white/60 backdrop-blur-sm outline-none focus:ring-2 focus:ring-[#f97316]/20 focus:border-[#f97316]/30 transition-all text-slate-800 placeholder:text-slate-400 font-medium text-base touch-manipulation"
+                autoFocus
+              />
           </div>
 
           {/* Color picker */}
@@ -237,7 +237,7 @@ function EditProjectModal({ project, onSave, onDelete, onClose }: EditProjectMod
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5 safe-x">
           {/* Name input */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -248,7 +248,7 @@ function EditProjectModal({ project, onSave, onDelete, onClose }: EditProjectMod
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Например: Кулинарный блог"
-              className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/80 bg-white/60 backdrop-blur-sm outline-none focus:ring-2 focus:ring-[#f97316]/20 focus:border-[#f97316]/30 transition-all text-slate-800 placeholder:text-slate-400 font-medium"
+              className="w-full px-5 py-3.5 min-h-[44px] rounded-2xl border border-slate-200/80 bg-white/60 backdrop-blur-sm outline-none focus:ring-2 focus:ring-[#f97316]/20 focus:border-[#f97316]/30 transition-all text-slate-800 placeholder:text-slate-400 font-medium text-base touch-manipulation"
               autoFocus
             />
           </div>
@@ -332,18 +332,18 @@ function EditProjectModal({ project, onSave, onDelete, onClose }: EditProjectMod
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-2 flex-wrap">
+          <div className="flex gap-3 pt-2 flex-wrap safe-bottom">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 min-w-[120px] px-5 py-3.5 rounded-2xl border border-slate-200/80 bg-white/60 backdrop-blur-sm text-slate-600 font-medium hover:bg-white/80 transition-colors"
+              className="flex-1 min-w-[120px] px-5 py-3.5 min-h-[44px] rounded-2xl border border-slate-200/80 bg-white/60 backdrop-blur-sm text-slate-600 font-medium hover:bg-white/80 active:scale-95 transition-all touch-manipulation"
             >
               Отмена
             </button>
             <button
               type="submit"
               disabled={!name.trim()}
-              className="flex-1 min-w-[120px] px-5 py-3.5 rounded-2xl bg-gradient-to-r from-[#f97316] via-[#fb923c] to-[#fdba74] text-white font-medium hover:from-[#f97316] hover:via-[#fb923c] hover:to-[#fdba74] transition-all shadow-lg shadow-[#f97316]/20 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm"
+              className="flex-1 min-w-[120px] px-5 py-3.5 min-h-[44px] rounded-2xl bg-gradient-to-r from-[#f97316] via-[#fb923c] to-[#fdba74] text-white font-medium hover:from-[#f97316] hover:via-[#fb923c] hover:to-[#fdba74] active:scale-95 transition-all shadow-lg shadow-[#f97316]/20 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm touch-manipulation"
             >
               Сохранить
             </button>
