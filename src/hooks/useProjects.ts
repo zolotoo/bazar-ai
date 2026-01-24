@@ -75,6 +75,21 @@ export function useProjects() {
         .eq('user_id', userId)
         .in('status', ['active', 'pending']); // Включаем pending приглашения
 
+      // Проверяем, какие из собственных проектов являются общими (есть участники или is_shared=true)
+      const ownProjectIds = (ownProjects || []).map(p => p.id);
+      let ownProjectsWithMembers: string[] = [];
+      
+      if (ownProjectIds.length > 0) {
+        // Проверяем, есть ли участники у собственных проектов
+        const { data: membersForOwnProjects } = await supabase
+          .from('project_members')
+          .select('project_id')
+          .in('project_id', ownProjectIds)
+          .in('status', ['active', 'pending']);
+        
+        ownProjectsWithMembers = membersForOwnProjects?.map(m => m.project_id) || [];
+      }
+
       let sharedProjects = [];
       if (sharedMemberships && sharedMemberships.length > 0) {
         const sharedProjectIds = sharedMemberships.map(m => m.project_id);
@@ -96,8 +111,19 @@ export function useProjects() {
         throw ownError;
       }
 
+      // Помечаем собственные проекты как общие, если у них есть участники или is_shared=true
+      const ownProjectsMapped = (ownProjects || []).map(p => ({
+        ...p,
+        isShared: p.is_shared === true || ownProjectsWithMembers.includes(p.id),
+        membershipStatus: undefined
+      }));
+
+      // Убираем дубликаты: если проект и собственный, и в списке общих, оставляем только в списке общих
+      const sharedProjectIds = new Set(sharedProjects.map(p => p.id));
+      const ownProjectsFiltered = ownProjectsMapped.filter(p => !sharedProjectIds.has(p.id));
+
       const allProjects = [
-        ...(ownProjects || []).map(p => ({ ...p, isShared: false, membershipStatus: undefined })),
+        ...ownProjectsFiltered,
         ...sharedProjects.map(p => ({ ...p, isShared: true })),
       ];
 

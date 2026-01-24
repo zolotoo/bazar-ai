@@ -101,16 +101,48 @@ export function useInboxVideos() {
     try {
       let query = supabase
         .from('saved_videos')
-        .select('*')
-        .eq('user_id', userId);
+        .select('*');
       
       // Фильтруем строго по проекту - если проект выбран, показываем ТОЛЬКО видео этого проекта
       // Видео с project_id = null или другим project_id не должны показываться
       if (currentProjectId) {
-        query = query.eq('project_id', currentProjectId);
+        // Проверяем, является ли проект общим (есть ли участники)
+        const { data: membersData } = await supabase
+          .from('project_members')
+          .select('user_id')
+          .eq('project_id', currentProjectId)
+          .in('status', ['active', 'pending']);
+        
+        const isSharedProject = membersData && membersData.length > 0;
+        
+        if (isSharedProject) {
+          // Для общих проектов загружаем видео всех участников проекта
+          const memberUserIds = membersData.map(m => m.user_id);
+          // Добавляем владельца проекта
+          const { data: projectData } = await supabase
+            .from('projects')
+            .select('owner_id')
+            .eq('id', currentProjectId)
+            .single();
+          
+          const allUserIds = [...new Set([...memberUserIds, projectData?.owner_id].filter(Boolean))];
+          
+          query = query
+            .eq('project_id', currentProjectId)
+            .in('user_id', allUserIds);
+          
+          console.log('[InboxVideos] Shared project detected, loading videos for all members:', allUserIds);
+        } else {
+          // Для обычных проектов загружаем только видео текущего пользователя
+          query = query
+            .eq('project_id', currentProjectId)
+            .eq('user_id', userId);
+        }
       } else {
-        // Если проект не выбран, показываем только видео без проекта (project_id IS NULL)
-        query = query.is('project_id', null);
+        // Если проект не выбран, показываем только видео без проекта (project_id IS NULL) текущего пользователя
+        query = query
+          .is('project_id', null)
+          .eq('user_id', userId);
       }
       
       const { data, error: fetchError } = await query
