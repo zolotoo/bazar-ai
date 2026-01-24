@@ -48,12 +48,10 @@ function CreateProjectModal({ onSave, onClose }: CreateProjectModalProps) {
   const [name, setName] = useState('');
   const [color, setColor] = useState(PROJECT_COLORS[0]);
 
-  if (!isOpen) return null;
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim()) {
-      onCreate(name.trim(), color);
+      onSave(name.trim(), color);
       setName('');
       setColor(PROJECT_COLORS[0]);
       onClose();
@@ -180,7 +178,7 @@ interface EditProjectModalProps {
   onDelete: (projectId: string) => void;
 }
 
-function EditProjectModal({ isOpen, project, onClose, onSave, onDelete }: EditProjectModalProps) {
+function EditProjectModal({ project, onSave, onDelete, onClose }: EditProjectModalProps) {
   const [name, setName] = useState('');
   const [color, setColor] = useState(PROJECT_COLORS[0]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -194,7 +192,7 @@ function EditProjectModal({ isOpen, project, onClose, onSave, onDelete }: EditPr
     }
   }, [project]);
 
-  if (!isOpen || !project) return null;
+  if (!project) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
