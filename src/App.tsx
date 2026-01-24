@@ -5,6 +5,7 @@ import { History } from './components/History';
 import { ProfilePage } from './components/ProfilePage';
 import { IncomingVideosDrawer } from './components/sidebar/IncomingVideosDrawer';
 import { SearchPanel } from './components/ui/SearchPanel';
+import { ProjectMembersModal } from './components/ui/ProjectMembersModal';
 import { 
   Sidebar, SidebarBody, SidebarLink, SidebarSection, SidebarProject, 
   SidebarLogo, SidebarDivider 
@@ -14,7 +15,7 @@ import { useInboxVideos } from './hooks/useInboxVideos';
 import { ProjectProvider, useProjectContext } from './contexts/ProjectContext';
 import { 
   Video, Settings, Search, LayoutGrid, Clock, User, LogOut, 
-  Link, Radar, Plus, FolderOpen, X, Palette, Sparkles, Trash2
+  Link, Radar, Plus, FolderOpen, X, Palette, Sparkles, Trash2, Users
 } from 'lucide-react';
 import { cn } from './utils/cn';
 import { Toaster, toast } from 'sonner';
@@ -366,6 +367,7 @@ function AppContent() {
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<{ id: string; name: string; color: string } | null>(null);
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const { logout } = useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>('workspace');
   const { videos } = useInboxVideos();
@@ -476,17 +478,66 @@ function AppContent() {
                     <Plus className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
                   </button>
                 ) : (
-                  projects.map(project => (
-                    <SidebarProject
-                      key={project.id}
-                      name={project.name}
-                      color={project.color}
-                      isActive={currentProjectId === project.id}
-                      onClick={() => selectProject(project.id)}
-                      onEdit={() => setEditingProject({ id: project.id, name: project.name, color: project.color })}
-                      icon={<FolderOpen className="w-4 h-4" style={{ color: project.color || '#f97316' }} strokeWidth={2.5} />}
-                    />
-                  ))
+                  <>
+                    {/* Свои проекты */}
+                    {projects.filter((p: any) => !p.isShared).length > 0 && (
+                      <div className="space-y-1">
+                        {projects.filter((p: any) => !p.isShared).map((project: any) => (
+                          <div key={project.id} className="relative group">
+                            <SidebarProject
+                              name={project.name}
+                              color={project.color}
+                              isActive={currentProjectId === project.id}
+                              onClick={() => selectProject(project.id)}
+                              onEdit={() => setEditingProject({ id: project.id, name: project.name, color: project.color })}
+                              icon={<FolderOpen className="w-4 h-4" style={{ color: project.color || '#f97316' }} strokeWidth={2.5} />}
+                            />
+                            {currentProjectId === project.id && (
+                              <button
+                                onClick={() => setIsMembersModalOpen(true)}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-white/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/80"
+                                title="Управление участниками"
+                              >
+                                <Users className="w-3.5 h-3.5 text-slate-600" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Общие проекты */}
+                    {projects.filter((p: any) => p.isShared).length > 0 && (
+                      <>
+                        <div className="pt-2 mt-2 border-t border-slate-200/60">
+                          <p className="px-3 py-1 text-xs font-medium text-slate-500 uppercase tracking-wider">Общие проекты</p>
+                        </div>
+                        <div className="space-y-1">
+                          {projects.filter((p: any) => p.isShared).map((project: any) => (
+                            <div key={project.id} className="relative group">
+                              <SidebarProject
+                                name={project.name}
+                                color={project.color}
+                                isActive={currentProjectId === project.id}
+                                onClick={() => selectProject(project.id)}
+                                onEdit={() => setEditingProject({ id: project.id, name: project.name, color: project.color })}
+                                icon={<FolderOpen className="w-4 h-4" style={{ color: project.color || '#f97316' }} strokeWidth={2.5} />}
+                              />
+                              {currentProjectId === project.id && (
+                                <button
+                                  onClick={() => setIsMembersModalOpen(true)}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-white/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/80"
+                                  title="Управление участниками"
+                                >
+                                  <Users className="w-3.5 h-3.5 text-slate-600" />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </>
                 )}
               </div>
             </SidebarSection>

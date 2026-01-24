@@ -17,6 +17,7 @@ export interface Project {
   icon: string;
   folders: ProjectFolder[];
   createdAt: Date;
+  isShared?: boolean; // Флаг для общих проектов
 }
 
 const DEFAULT_FOLDERS: Omit<ProjectFolder, 'id'>[] = [
@@ -130,6 +131,7 @@ export function useProjects() {
           await supabase.from('projects').insert({
             id: defaultProject.id,
             user_id: userId,
+            owner_id: userId, // Устанавливаем владельца
             name: defaultProject.name,
             color: defaultProject.color,
             icon: defaultProject.icon,
@@ -181,6 +183,7 @@ export function useProjects() {
         .insert({
           id: newProject.id,
           user_id: userId,
+          owner_id: userId, // Устанавливаем владельца
           name: newProject.name,
           color: newProject.color,
           icon: newProject.icon,
