@@ -96,19 +96,19 @@ export default async function handler(req, res) {
       }
     }
 
-    // Нормализуем username
-    const inviteeId = username.startsWith('@') 
-      ? `tg-${username}` 
-      : `tg-@${username}`;
+    // Нормализуем username (убираем @ если есть, добавляем префикс tg-)
+    const normalizedInviteeId = username.startsWith('@') 
+      ? `tg-${username.slice(1)}` 
+      : `tg-${username}`;
     
-    console.log('[Invite] Normalized invitee ID:', { username, inviteeId });
+    console.log('[Invite] Normalized invitee ID:', { username, normalizedInviteeId });
 
     // Проверяем, не добавлен ли уже участник
     const { data: existing, error: existingError } = await supabase
       .from('project_members')
       .select('id, status')
       .eq('project_id', projectId)
-      .eq('user_id', inviteeId)
+      .eq('user_id', normalizedInviteeId)
       .maybeSingle();
 
     // Если таблица не существует, возвращаем ошибку
@@ -152,12 +152,12 @@ export default async function handler(req, res) {
     }
 
     // Создаем новую запись участника
-    console.log('[Invite] Creating new member:', { projectId, inviteeId, userId });
+    console.log('[Invite] Creating new member:', { projectId, normalizedInviteeId, userId });
     const { data: member, error: insertError } = await supabase
       .from('project_members')
       .insert({
         project_id: projectId,
-        user_id: inviteeId,
+        user_id: normalizedInviteeId,
         role: 'write',
         invited_by: userId,
         status: 'pending',
@@ -199,7 +199,7 @@ export default async function handler(req, res) {
         entity_type: 'member',
         entity_id: member.id,
         old_data: null,
-        new_data: { user_id: inviteeId, role: 'write' },
+        new_data: { user_id: normalizedInviteeId, role: 'write' },
         vector_clock: {},
       });
     } catch (changeError) {

@@ -21,7 +21,7 @@ export function useProjectPresence(projectId: string | null) {
   const channelRef = useRef<any>(null);
   const updateIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const userId = user?.telegram_username ? `tg-@${user.telegram_username}` : null;
+  const userId = user?.telegram_username ? `tg-${user.telegram_username}` : null;
 
   // Обновление своего presence
   const updatePresence = useCallback(async (
