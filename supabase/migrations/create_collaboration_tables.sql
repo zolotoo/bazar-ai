@@ -57,9 +57,12 @@ CREATE TABLE IF NOT EXISTS project_presence (
   cursor_position JSONB, -- Для показа курсора
   last_seen TIMESTAMPTZ DEFAULT NOW(),
   
-  UNIQUE(project_id, user_id, COALESCE(entity_type, ''), COALESCE(entity_id::text, '')),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Уникальный индекс для project_presence (вместо UNIQUE constraint с COALESCE)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_project_presence_unique 
+ON project_presence(project_id, user_id, COALESCE(entity_type, ''), COALESCE(entity_id::text, ''));
 
 -- Индексы для project_presence
 CREATE INDEX IF NOT EXISTS idx_presence_project ON project_presence(project_id);
