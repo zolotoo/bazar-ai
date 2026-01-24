@@ -80,9 +80,10 @@ export const VideoGradientCard = ({
       <motion.div
         ref={cardRef}
         className={cn(
-          "relative rounded-2xl overflow-hidden cursor-pointer",
-          "border-[4px] border-slate-300/60",
+          "relative rounded-2xl md:rounded-2xl overflow-hidden cursor-pointer",
+          "border-[2px] md:border-[4px] border-slate-300/60",
           "backdrop-blur-sm",
+          "touch-manipulation", // iOS optimization
           className
         )}
         style={{
@@ -103,6 +104,8 @@ export const VideoGradientCard = ({
         }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
+        onTouchStart={() => setIsHovered(true)}
+        onTouchEnd={() => setTimeout(() => setIsHovered(false), 150)}
         onClick={onClick}
       >
         {/* Background image with zoom on hover */}

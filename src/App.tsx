@@ -10,9 +10,7 @@ import {
   Sidebar, SidebarBody, SidebarLink, SidebarSection, SidebarProject, 
   SidebarLogo, SidebarDivider 
 } from './components/ui/AnimatedSidebar';
-import { useAuth } from './hooks/useAuth';
-import { useInboxVideos } from './hooks/useInboxVideos';
-import { ProjectProvider, useProjectContext } from './contexts/ProjectContext';
+import { useProjectMembers } from './hooks/useProjectMembers';
 import { 
   Video, Settings, Search, LayoutGrid, Clock, User, LogOut, 
   Link, Radar, Plus, FolderOpen, X, Palette, Sparkles, Trash2, Users
@@ -81,14 +79,14 @@ function CreateProjectModal({ onSave, onClose }: CreateProjectModalProps) {
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+            className="p-2 -m-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors touch-manipulation"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5 safe-x">
           {/* Name input */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -147,18 +145,18 @@ function CreateProjectModal({ onSave, onClose }: CreateProjectModalProps) {
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-2 safe-bottom">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-5 py-3.5 rounded-2xl border border-slate-200/80 bg-white/60 backdrop-blur-sm text-slate-600 font-medium hover:bg-white/80 transition-colors"
+              className="flex-1 px-5 py-3.5 min-h-[44px] rounded-2xl border border-slate-200/80 bg-white/60 backdrop-blur-sm text-slate-600 font-medium hover:bg-white/80 active:scale-95 transition-all touch-manipulation"
             >
               Отмена
             </button>
             <button
               type="submit"
               disabled={!name.trim()}
-              className="flex-1 px-5 py-3.5 rounded-2xl bg-gradient-to-r from-[#f97316] via-[#fb923c] to-[#fdba74] text-white font-medium hover:from-[#f97316] hover:via-[#fb923c] hover:to-[#fdba74] transition-all shadow-lg shadow-[#f97316]/20 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm"
+              className="flex-1 px-5 py-3.5 min-h-[44px] rounded-2xl bg-gradient-to-r from-[#f97316] via-[#fb923c] to-[#fdba74] text-white font-medium hover:from-[#f97316] hover:via-[#fb923c] hover:to-[#fdba74] active:scale-95 transition-all shadow-lg shadow-[#f97316]/20 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm touch-manipulation"
             >
               Создать проект
             </button>
@@ -207,7 +205,7 @@ function EditProjectModal({ project, onSave, onDelete, onClose }: EditProjectMod
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center safe-top safe-bottom safe-left safe-right">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -215,9 +213,9 @@ function EditProjectModal({ project, onSave, onDelete, onClose }: EditProjectMod
       />
       
       {/* Modal */}
-      <div className="relative w-full max-w-md mx-4 bg-white/90 backdrop-blur-[28px] backdrop-saturate-[180%] rounded-3xl shadow-2xl border border-white/60 animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-md mx-0 md:mx-4 bg-white/90 backdrop-blur-[28px] backdrop-saturate-[180%] rounded-t-3xl md:rounded-3xl shadow-2xl border border-white/60 animate-in fade-in zoom-in-95 duration-200 safe-bottom">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-100">
+        <div className="flex items-center justify-between p-6 border-b border-slate-100 safe-top safe-x">
           <div className="flex items-center gap-3">
             <div 
               className="w-10 h-10 rounded-2xl flex items-center justify-center"
@@ -232,7 +230,7 @@ function EditProjectModal({ project, onSave, onDelete, onClose }: EditProjectMod
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+            className="p-2 -m-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors touch-manipulation"
           >
             <X className="w-5 h-5" />
           </button>
@@ -364,12 +362,65 @@ function AppContent() {
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<{ id: string; name: string; color: string } | null>(null);
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>('workspace');
   const { videos } = useInboxVideos();
   
   // Используем контекст проектов
-  const { projects, currentProject, currentProjectId, selectProject, createProject, updateProject, deleteProject, loading: projectsLoading } = useProjectContext();
+  const { projects, currentProject, currentProjectId, selectProject, createProject, updateProject, deleteProject, loading: projectsLoading, refetch: refetchProjects } = useProjectContext();
+  
+  // Хук для управления участниками (для принятия приглашений)
+  const { members, acceptInvitation } = useProjectMembers(currentProjectId);
+  
+  // Обработка уведомлений о pending приглашениях
+  useEffect(() => {
+    const handlePendingInvitations = (event: CustomEvent) => {
+      const { count, projects: pendingProjects } = event.detail;
+      if (count > 0) {
+        const projectNames = pendingProjects.map((p: any) => p.name).join(', ');
+        toast.info(
+          `У вас ${count} ${count === 1 ? 'новое приглашение' : 'новых приглашений'}`,
+          {
+            description: projectNames,
+            duration: 5000,
+            action: {
+              label: 'Посмотреть',
+              onClick: () => {
+                // Можно открыть список проектов или перейти к первому pending проекту
+                if (pendingProjects.length > 0) {
+                  selectProject(pendingProjects[0].id);
+                }
+              }
+            }
+          }
+        );
+      }
+    };
+
+    window.addEventListener('pending-invitations', handlePendingInvitations as EventListener);
+    return () => {
+      window.removeEventListener('pending-invitations', handlePendingInvitations as EventListener);
+    };
+  }, [selectProject]);
+  
+  // Обработка клика на проект - если pending, предлагаем принять приглашение
+  const handleProjectClick = async (project: any) => {
+    if (project.membershipStatus === 'pending') {
+      // Находим membership для этого проекта
+      const pendingMember = members.find(m => m.project_id === project.id && m.status === 'pending');
+      if (pendingMember) {
+        try {
+          await acceptInvitation(pendingMember.id);
+          toast.success(`Вы приняли приглашение в проект "${project.name}"`);
+          refetchProjects(); // Обновляем список проектов
+        } catch (error) {
+          toast.error('Не удалось принять приглашение');
+        }
+      }
+    } else {
+      selectProject(project.id);
+    }
+  };
 
   // Создание проекта
   const handleCreateProject = async (name: string, color: string) => {
@@ -407,7 +458,7 @@ function AppContent() {
   }
 
   return (
-    <div className="w-full h-screen text-foreground overflow-hidden bg-[#fafafa] flex">
+    <div className="w-full h-screen text-foreground overflow-hidden bg-[#fafafa] flex flex-col md:flex-row safe-top safe-bottom">
       {/* Clean gradient blobs - orange gradient from top - более контрастный */}
       <div className="fixed top-[-10%] right-[-5%] w-[70%] h-[70%] bg-gradient-to-b from-[#f97316]/60 via-[#fb923c]/40 to-transparent rounded-full blur-[140px] pointer-events-none" />
       <div className="fixed top-[-5%] left-[-5%] w-[60%] h-[60%] bg-gradient-to-br from-[#f97316]/55 via-[#fb923c]/35 to-transparent rounded-full blur-[120px] pointer-events-none" />
@@ -509,27 +560,34 @@ function AppContent() {
                           <p className="px-3 py-1 text-xs font-medium text-slate-500 uppercase tracking-wider">Общие проекты</p>
                         </div>
                         <div className="space-y-1">
-                          {projects.filter((p: any) => p.isShared).map((project: any) => (
-                            <div key={project.id} className="relative group">
-                              <SidebarProject
-                                name={project.name}
-                                color={project.color}
-                                isActive={currentProjectId === project.id}
-                                onClick={() => selectProject(project.id)}
-                                onEdit={() => setEditingProject({ id: project.id, name: project.name, color: project.color })}
-                                icon={<FolderOpen className="w-4 h-4" style={{ color: project.color || '#f97316' }} strokeWidth={2.5} />}
-                              />
-                              {currentProjectId === project.id && (
-                                <button
-                                  onClick={() => setIsMembersModalOpen(true)}
-                                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-white/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/80"
-                                  title="Управление участниками"
-                                >
-                                  <Users className="w-3.5 h-3.5 text-slate-600" />
-                                </button>
-                              )}
-                            </div>
-                          ))}
+                          {projects.filter((p: any) => p.isShared).map((project: any) => {
+                            const isPending = project.membershipStatus === 'pending';
+                            return (
+                              <div key={project.id} className="relative group">
+                                <SidebarProject
+                                  name={project.name}
+                                  color={project.color}
+                                  isActive={currentProjectId === project.id}
+                                  onClick={() => handleProjectClick(project)}
+                                  onEdit={() => setEditingProject({ id: project.id, name: project.name, color: project.color })}
+                                  icon={<FolderOpen className="w-4 h-4" style={{ color: project.color || '#f97316' }} strokeWidth={2.5} />}
+                                  badge={isPending ? 'Новое' : undefined}
+                                />
+                                {isPending && (
+                                  <div className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                                )}
+                                {currentProjectId === project.id && !isPending && (
+                                  <button
+                                    onClick={() => setIsMembersModalOpen(true)}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-white/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/80"
+                                    title="Управление участниками"
+                                  >
+                                    <Users className="w-3.5 h-3.5 text-slate-600" />
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       </>
                     )}
@@ -564,7 +622,7 @@ function AppContent() {
       </Sidebar>
 
       {/* Main Content */}
-      <div className="flex-1 h-screen overflow-hidden">
+      <div className="flex-1 h-screen overflow-hidden md:h-auto">
         {viewMode === 'workspace' && <Workspace />}
         {viewMode === 'history' && <History />}
         {viewMode === 'profile' && <ProfilePage />}
@@ -614,14 +672,16 @@ function AppContent() {
 
       {/* Toast notifications */}
       <Toaster 
-        position="bottom-right"
+        position="bottom-center"
         toastOptions={{
           style: {
             background: '#18181b',
             color: '#fff',
             border: 'none',
             borderRadius: '1rem',
+            marginBottom: 'max(20px, env(safe-area-inset-bottom))',
           },
+          className: 'safe-bottom',
         }}
       />
     </div>

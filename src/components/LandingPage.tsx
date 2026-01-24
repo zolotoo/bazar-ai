@@ -63,7 +63,7 @@ export function LandingPage() {
       }} />
 
       {/* Content */}
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 py-16">
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 py-16 safe-top safe-bottom safe-left safe-right">
         {!showAuth ? (
           // Landing content
           <>
@@ -76,10 +76,10 @@ export function LandingPage() {
 
             {/* Main Heading */}
             <h1 className="text-center mb-5">
-              <span className="block text-5xl md:text-7xl font-bold text-slate-800">
+              <span className="block text-4xl md:text-5xl lg:text-7xl font-bold text-slate-800">
                 Найди
               </span>
-              <span className="block text-5xl md:text-7xl font-light text-orange-500 tracking-tight">
+              <span className="block text-4xl md:text-5xl lg:text-7xl font-light text-orange-500 tracking-tight">
                 свой контент
               </span>
             </h1>
@@ -99,10 +99,13 @@ export function LandingPage() {
                 "group px-8 py-4 rounded-2xl mb-12",
                 "bg-gradient-to-r from-orange-500 to-amber-600",
                 "hover:from-orange-400 hover:to-amber-500",
+                "active:scale-95",
                 "text-white font-semibold text-base",
                 "transition-all duration-300",
                 "shadow-2xl shadow-orange-500/40",
-                "flex items-center gap-3"
+                "flex items-center gap-3",
+                "min-h-[44px]", // iOS touch target
+                "touch-manipulation"
               )}
             >
               НАЧАТЬ РАБОТУ

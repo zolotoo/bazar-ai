@@ -18,6 +18,7 @@ export interface Project {
   folders: ProjectFolder[];
   createdAt: Date;
   isShared?: boolean; // Флаг для общих проектов
+  membershipStatus?: 'active' | 'pending'; // Статус членства для общих проектов
 }
 
 const DEFAULT_FOLDERS: Omit<ProjectFolder, 'id'>[] = [
@@ -67,22 +68,28 @@ export function useProjects() {
         .eq('user_id', userId)
         .order('created_at', { ascending: true });
 
-      // Загружаем общие проекты (где пользователь является участником)
+      // Загружаем общие проекты (где пользователь является участником, включая pending)
       const { data: sharedMemberships } = await supabase
         .from('project_members')
-        .select('project_id')
+        .select('project_id, status')
         .eq('user_id', userId)
-        .eq('status', 'active');
+        .in('status', ['active', 'pending']); // Включаем pending приглашения
 
       let sharedProjects = [];
       if (sharedMemberships && sharedMemberships.length > 0) {
         const sharedProjectIds = sharedMemberships.map(m => m.project_id);
+        const membershipMap = new Map(sharedMemberships.map(m => [m.project_id, m.status]));
+        
         const { data: shared } = await supabase
           .from('projects')
           .select('*')
           .in('id', sharedProjectIds)
           .order('created_at', { ascending: true });
-        sharedProjects = shared || [];
+        
+        sharedProjects = (shared || []).map(p => ({
+          ...p,
+          membershipStatus: membershipMap.get(p.id) || 'active'
+        }));
       }
 
       if (ownError) {
@@ -90,7 +97,7 @@ export function useProjects() {
       }
 
       const allProjects = [
-        ...(ownProjects || []).map(p => ({ ...p, isShared: false })),
+        ...(ownProjects || []).map(p => ({ ...p, isShared: false, membershipStatus: undefined })),
         ...sharedProjects.map(p => ({ ...p, isShared: true })),
       ];
 
@@ -103,7 +110,17 @@ export function useProjects() {
           folders: p.folders || DEFAULT_FOLDERS.map((f, i) => ({ ...f, id: `folder-${i}` })),
           createdAt: new Date(p.created_at),
           isShared: p.isShared || false,
+          membershipStatus: p.membershipStatus,
         }));
+        
+        // Проверяем наличие pending приглашений для уведомлений
+        const pendingInvitations = loadedProjects.filter(p => p.membershipStatus === 'pending');
+        if (pendingInvitations.length > 0) {
+          // Отправляем событие для показа уведомления
+          window.dispatchEvent(new CustomEvent('pending-invitations', { 
+            detail: { count: pendingInvitations.length, projects: pendingInvitations } 
+          }));
+        }
         setProjects(loadedProjects);
         
         // Устанавливаем текущий проект

@@ -114,15 +114,19 @@ export const MobileSidebar = ({
           "h-16 px-5 py-4 flex flex-row md:hidden items-center justify-between w-full",
           "bg-white/75 backdrop-blur-[28px] backdrop-saturate-[180%]",
           "border-b border-white/60",
-          "shadow-[0_1px_0_rgba(255,255,255,0.85)_inset,0_2px_8px_rgba(0,0,0,0.04)]"
+          "shadow-[0_1px_0_rgba(255,255,255,0.85)_inset,0_2px_8px_rgba(0,0,0,0.04)]",
+          "safe-top safe-left safe-right"
         )}
         {...props}
       >
         <div className="flex justify-end z-20 w-full">
-          <Menu
-            className="text-slate-700 cursor-pointer w-6 h-6"
+          <button
             onClick={() => setOpen(!open)}
-          />
+            className="p-2 -m-2 min-w-[44px] min-h-[44px] flex items-center justify-center touch-manipulation"
+            aria-label="Toggle menu"
+          >
+            <Menu className="text-slate-700 w-6 h-6" />
+          </button>
         </div>
         <AnimatePresence>
           {open && (
@@ -138,15 +142,17 @@ export const MobileSidebar = ({
                 "fixed h-full w-full inset-0 z-[100] flex flex-col justify-between",
                 "bg-white/85 backdrop-blur-[32px] backdrop-saturate-[180%]",
                 "p-8",
+                "safe-top safe-bottom safe-left safe-right",
                 className
               )}
             >
-              <div
-                className="absolute right-8 top-8 z-50 text-slate-700 cursor-pointer w-6 h-6"
+              <button
                 onClick={() => setOpen(!open)}
+                className="absolute right-8 top-8 z-50 p-2 -m-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-700 touch-manipulation safe-top safe-right"
+                aria-label="Close menu"
               >
-                <X className="w-full h-full" />
-              </div>
+                <X className="w-6 h-6" />
+              </button>
               {children}
             </motion.div>
           )}
@@ -280,6 +286,7 @@ interface SidebarProjectProps {
   onClick?: () => void;
   onEdit?: () => void;
   icon?: ReactNode;
+  badge?: string; // Текст бейджа (например, "Новое")
 }
 
 export const SidebarProject = ({ 
@@ -288,7 +295,8 @@ export const SidebarProject = ({
   isActive, 
   onClick, 
   onEdit,
-  icon 
+  icon,
+  badge
 }: SidebarProjectProps) => {
   const { open, animate } = useSidebar();
   
@@ -296,7 +304,7 @@ export const SidebarProject = ({
     <div
       onClick={onClick}
       className={cn(
-        "group flex items-center gap-3 py-2 rounded-2xl transition-all cursor-pointer",
+        "group flex items-center gap-3 py-2 rounded-2xl transition-all cursor-pointer relative",
         open ? "px-4" : "px-3 justify-center",
         isActive 
           ? "bg-white/80 backdrop-blur-sm shadow-sm" 
@@ -332,6 +340,16 @@ export const SidebarProject = ({
       >
         {name}
       </motion.span>
+      {badge && open && (
+        <motion.span
+          animate={{
+            opacity: animate ? (open ? 1 : 0) : 1,
+          }}
+          className="px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-600 text-xs font-semibold"
+        >
+          {badge}
+        </motion.span>
+      )}
       {open && onEdit && (
         <button
           onClick={(e) => {

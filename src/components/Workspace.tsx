@@ -521,7 +521,9 @@ export function Workspace() {
       {/* Floating Folder Widget */}
       <div className={cn(
         "absolute top-4 right-4 z-40 bg-white/95 backdrop-blur-xl rounded-xl shadow-xl border border-white/50 transition-all duration-300",
-        isFolderWidgetOpen ? "w-56" : "w-auto"
+        "md:top-4 md:right-4",
+        "top-safe-top right-safe-right",
+        isFolderWidgetOpen ? "w-56 md:w-56" : "w-auto"
       )}>
         {/* Widget Header */}
         <div 
@@ -615,8 +617,8 @@ export function Workspace() {
       </div>
 
       {/* Main Content - Video Feed */}
-      <div className="h-full overflow-y-auto custom-scrollbar-light px-4">
-        <div className="max-w-6xl mx-auto py-6">
+      <div className="h-full overflow-y-auto custom-scrollbar-light px-4 safe-left safe-right">
+        <div className="max-w-6xl mx-auto py-6 safe-top safe-bottom">
           {/* Header */}
           <div className="mb-6">
             <div className="flex items-center justify-between flex-wrap gap-4">
@@ -660,7 +662,7 @@ export function Workspace() {
                     Отменить
                   </button>
                 )}
-                <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-2xl p-1.5 shadow-lg border border-white/50 mr-72">
+                <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-2xl p-1.5 shadow-lg border border-white/50 md:mr-72 overflow-x-auto">
                 {[
                   { value: 'viral', label: 'Виральность', icon: Sparkles, color: 'from-[#f97316] via-[#fb923c] to-[#fdba74]' },
                   { value: 'views', label: 'Просмотры', icon: Eye, color: 'from-blue-500 to-cyan-500' },
@@ -700,7 +702,7 @@ export function Workspace() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 pb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-5 pb-6 safe-bottom">
               {feedVideos.map((video, idx) => {
                 const thumbnailUrl = proxyImageUrl(video.preview_url);
                 const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at || video.created_at);
@@ -822,8 +824,8 @@ export function Workspace() {
       
       {/* Folder Settings Modal */}
       {showFolderSettings && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4 safe-top safe-bottom safe-left safe-right">
+          <div className="bg-white rounded-t-3xl md:rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] md:max-h-[85vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200 safe-bottom">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-slate-100">
               <h2 className="text-xl font-semibold text-slate-800">Настройка папок</h2>

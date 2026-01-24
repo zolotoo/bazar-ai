@@ -139,6 +139,214 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+/* iOS 26 Mobile Adaptations */
+@supports (padding: max(0px)) {
+  :root {
+    --safe-area-inset-top: env(safe-area-inset-top, 0px);
+    --safe-area-inset-right: env(safe-area-inset-right, 0px);
+    --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-inset-left: env(safe-area-inset-left, 0px);
+  }
+}
+
+/* iOS 26 Style Variables */
+:root {
+  --ios-blur: blur(30px) saturate(180%);
+  --ios-border-radius: 20px;
+  --ios-border-radius-large: 28px;
+  --ios-border-radius-small: 12px;
+  --ios-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --ios-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --ios-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.16);
+  --ios-touch-target: 44px; /* Minimum touch target size */
+}
+
+/* Mobile-first responsive breakpoints */
+@media (max-width: 640px) {
+  /* iOS 26 Glass Morphism for Mobile */
+  .glass {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: var(--ios-blur);
+    -webkit-backdrop-filter: var(--ios-blur);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    box-shadow: var(--ios-shadow-md);
+  }
+
+  .glass-dark {
+    background: rgba(30, 25, 20, 0.9);
+    backdrop-filter: var(--ios-blur);
+    -webkit-backdrop-filter: var(--ios-blur);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  /* iOS 26 Button Styles */
+  button, .button {
+    min-height: var(--ios-touch-target);
+    min-width: var(--ios-touch-target);
+    padding: 12px 20px;
+    border-radius: var(--ios-border-radius-small);
+    font-size: 16px; /* Prevent zoom on iOS */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* iOS 26 Card Styles */
+  .card, [class*="card"] {
+    border-radius: var(--ios-border-radius);
+    box-shadow: var(--ios-shadow-md);
+  }
+
+  /* iOS 26 Modal Styles */
+  .modal, [role="dialog"] {
+    border-radius: var(--ios-border-radius-large) var(--ios-border-radius-large) 0 0;
+    margin-top: auto;
+    padding-bottom: max(20px, var(--safe-area-inset-bottom));
+  }
+
+  /* iOS 26 Safe Area Padding */
+  .safe-top {
+    padding-top: max(20px, var(--safe-area-inset-top));
+  }
+
+  .safe-bottom {
+    padding-bottom: max(20px, var(--safe-area-inset-bottom));
+  }
+
+  .safe-left {
+    padding-left: max(16px, var(--safe-area-inset-left));
+  }
+
+  .safe-right {
+    padding-right: max(16px, var(--safe-area-inset-right));
+  }
+
+  /* iOS 26 Scroll Behavior */
+  * {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  /* iOS 26 Text Selection */
+  ::selection {
+    background: rgba(249, 115, 22, 0.2);
+    color: inherit;
+  }
+
+  /* iOS 26 Focus States */
+  :focus-visible {
+    outline: 2px solid rgba(249, 115, 22, 0.5);
+    outline-offset: 2px;
+    border-radius: var(--ios-border-radius-small);
+  }
+
+  /* iOS 26 Input Styles */
+  input, textarea, select {
+    font-size: 16px; /* Prevent zoom on iOS */
+    border-radius: var(--ios-border-radius-small);
+    padding: 14px 16px;
+    min-height: var(--ios-touch-target);
+  }
+
+  /* iOS 26 Large Title Style */
+  h1 {
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  h2 {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  /* iOS 26 Navigation Bar Style */
+  nav, [role="navigation"] {
+    backdrop-filter: var(--ios-blur);
+    -webkit-backdrop-filter: var(--ios-blur);
+    background: rgba(255, 255, 255, 0.8);
+    border-bottom: 0.5px solid rgba(0, 0, 0, 0.1);
+  }
+
+  /* iOS 26 Tab Bar Style */
+  [role="tablist"] {
+    backdrop-filter: var(--ios-blur);
+    -webkit-backdrop-filter: var(--ios-blur);
+    background: rgba(255, 255, 255, 0.85);
+    border-top: 0.5px solid rgba(0, 0, 0, 0.1);
+    padding-bottom: max(8px, var(--safe-area-inset-bottom));
+  }
+
+  /* iOS 26 List Styles */
+  ul, ol {
+    padding-left: 0;
+  }
+
+  li {
+    padding: 12px 16px;
+    min-height: var(--ios-touch-target);
+    border-radius: var(--ios-border-radius-small);
+  }
+
+  /* iOS 26 Grid Adjustments */
+  .grid {
+    gap: 12px;
+  }
+
+  /* iOS 26 Spacing Adjustments */
+  .space-y-4 > * + * {
+    margin-top: 16px;
+  }
+
+  .space-y-6 > * + * {
+    margin-top: 20px;
+  }
+
+  /* iOS 26 Animation Improvements */
+  @media (prefers-reduced-motion: no-preference) {
+    * {
+      transition-duration: 0.2s;
+      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+  }
+
+  /* iOS 26 Haptic Feedback Simulation */
+  @media (hover: none) and (pointer: coarse) {
+    button:active, a:active, [role="button"]:active {
+      transform: scale(0.97);
+      opacity: 0.8;
+    }
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 641px) and (max-width: 1024px) {
+  :root {
+    --ios-border-radius: 24px;
+    --ios-border-radius-large: 32px;
+  }
+}
+
+/* iOS 26 Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  @media (max-width: 640px) {
+    .glass {
+      background: rgba(30, 25, 20, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    nav, [role="navigation"] {
+      background: rgba(30, 25, 20, 0.85);
+      border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
+    }
+
+    [role="tablist"] {
+      background: rgba(30, 25, 20, 0.9);
+      border-top: 0.5px solid rgba(255, 255, 255, 0.1);
+    }
+  }
+}
+
 /* React Flow custom styles */
 .react-flow {
   background: transparent !important;
@@ -154,8 +362,28 @@ body {
   cursor: grabbing;
 }
 
-.react-flow__node:hover {
-  transform: translateY(-4px);
+@media (hover: hover) {
+  .react-flow__node:hover {
+    transform: translateY(-4px);
+  }
+}
+
+/* Mobile React Flow adjustments */
+@media (max-width: 640px) {
+  .react-flow__node {
+    min-width: 120px;
+    min-height: 120px;
+  }
+
+  .react-flow__controls {
+    transform: scale(0.9);
+    bottom: max(20px, var(--safe-area-inset-bottom)) !important;
+  }
+
+  .react-flow__minimap {
+    transform: scale(0.8);
+    bottom: max(80px, calc(var(--safe-area-inset-bottom) + 60px)) !important;
+  }
 }
 
 /* Light theme controls */
