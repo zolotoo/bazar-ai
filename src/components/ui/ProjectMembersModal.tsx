@@ -137,25 +137,46 @@ export function ProjectMembersModal({ projectId, isOpen, onClose }: ProjectMembe
             </div>
             
             {/* Роль и кнопка - отдельная строка */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mb-2">
               <div className="relative flex-1 group">
                 <select
                   value={selectedRole}
                   onChange={(e) => setSelectedRole(e.target.value as any)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-sm outline-none focus:ring-2 focus:ring-[#f97316]/20 text-sm text-slate-700 font-medium"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-sm outline-none focus:ring-2 focus:ring-[#f97316]/20 text-sm text-slate-700 font-medium pr-10"
                 >
                   <option value="read">Читатель</option>
                   <option value="write">Редактор</option>
                   <option value="admin">Администратор</option>
                 </select>
-                <button
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
-                  title="Читатель: только просмотр видео и папок
-Редактор: может добавлять, перемещать и удалять видео, создавать папки
-Администратор: все права редактора + управление участниками"
-                >
-                  <HelpCircle className="w-4 h-4" />
-                </button>
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <HelpCircle className="w-4 h-4 text-slate-400" />
+                </div>
+                {/* Tooltip при наведении */}
+                <div className="absolute left-0 top-full mt-2 w-64 p-3 bg-slate-900/95 backdrop-blur-sm text-white text-xs rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none">
+                  <div className="space-y-2">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Eye className="w-3.5 h-3.5" />
+                        <span className="font-semibold">Читатель</span>
+                      </div>
+                      <p className="text-slate-300 pl-5.5">Только просмотр видео и папок</p>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Edit className="w-3.5 h-3.5" />
+                        <span className="font-semibold">Редактор</span>
+                      </div>
+                      <p className="text-slate-300 pl-5.5">Может добавлять, перемещать и удалять видео, создавать папки</p>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Shield className="w-3.5 h-3.5" />
+                        <span className="font-semibold">Администратор</span>
+                      </div>
+                      <p className="text-slate-300 pl-5.5">Все права редактора + управление участниками</p>
+                    </div>
+                  </div>
+                </div>
               </div>
               <button
                 onClick={handleInvite}
