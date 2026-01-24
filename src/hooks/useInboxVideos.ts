@@ -147,6 +147,23 @@ export function useInboxVideos() {
     }
   }, [user, currentProjectId, fetchVideos]);
 
+  // Слушаем события обновления видео от других участников проекта
+  useEffect(() => {
+    const handleVideosUpdated = (event: CustomEvent) => {
+      const { projectId } = event.detail;
+      // Перезагружаем видео если это текущий проект
+      if (projectId === currentProjectId) {
+        console.log('[InboxVideos] Videos updated by another user, refetching...');
+        fetchVideos();
+      }
+    };
+
+    window.addEventListener('videos-updated', handleVideosUpdated as EventListener);
+    return () => {
+      window.removeEventListener('videos-updated', handleVideosUpdated as EventListener);
+    };
+  }, [currentProjectId, fetchVideos]);
+
   /**
    * Добавляет видео в сохранённые
    * Использует глобальную таблицу videos для транскрибаций
