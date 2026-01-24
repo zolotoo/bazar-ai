@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../utils/supabase';
+import { supabase, setUserContext } from '../utils/supabase';
 import { useAuth } from './useAuth';
 
 export interface ProjectMember {
@@ -57,6 +57,9 @@ export function useProjectMembers(projectId: string | null) {
     }
 
     try {
+      // Устанавливаем контекст пользователя для RLS
+      await setUserContext(userId);
+      
       const { data, error: fetchError } = await supabase
         .from('project_members')
         .select('*')

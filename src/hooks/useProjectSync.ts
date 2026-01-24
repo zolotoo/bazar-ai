@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useRef } from 'react';
-import { supabase } from '../utils/supabase';
+import { supabase, setUserContext } from '../utils/supabase';
 import { useAuth } from './useAuth';
 import { useInboxVideos } from './useInboxVideos';
 import { toast } from 'sonner';
@@ -51,6 +51,9 @@ export function useProjectSync(projectId: string | null) {
     }
 
     try {
+      // Устанавливаем контекст пользователя для RLS
+      await setUserContext(userId);
+      
       const { data, error } = await supabase
         .from('project_changes')
         .insert({

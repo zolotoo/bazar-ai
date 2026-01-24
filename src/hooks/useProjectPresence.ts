@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '../utils/supabase';
+import { supabase, setUserContext } from '@/utils/supabase';
 import { useAuth } from './useAuth';
 
 export interface ProjectPresence {
@@ -32,7 +32,10 @@ export function useProjectPresence(projectId: string | null) {
     if (!projectId || !userId) return;
 
     try {
-      await supabase
+      // Устанавливаем контекст пользователя для RLS
+      await setUserContext(userId);
+      
+      const { error } = await supabase
         .from('project_presence')
         .upsert({
           project_id: projectId,
@@ -44,13 +47,22 @@ export function useProjectPresence(projectId: string | null) {
         }, {
           onConflict: 'project_id,user_id,entity_type,entity_id',
         });
+
+      if (error) {
+        // Игнорируем ошибки если таблица не существует
+        if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+          console.warn('[ProjectPresence] Table project_presence does not exist. Please run the migration.');
+          return;
+        }
+        throw error;
+      }
     } catch (err) {
       // Если таблица не существует, просто игнорируем
       if (err instanceof Error && (err.message?.includes('relation') || err.message?.includes('does not exist'))) {
         console.warn('[ProjectPresence] Table project_presence does not exist. Please run the migration.');
-        return;
+      } else {
+        console.error('Error updating presence:', err);
       }
-      console.error('Error updating presence:', err);
     }
   }, [projectId, userId]);
 
@@ -61,11 +73,24 @@ export function useProjectPresence(projectId: string | null) {
     // Загружаем текущий presence
     const fetchPresence = async () => {
       try {
-        const { data } = await supabase
+        // Устанавливаем контекст пользователя для RLS
+        await setUserContext(userId);
+        
+        const { data, error } = await supabase
           .from('project_presence')
           .select('*')
           .eq('project_id', projectId)
           .gt('last_seen', new Date(Date.now() - 30000).toISOString()); // Только активные за последние 30 секунд
+
+        if (error) {
+          // Игнорируем ошибки если таблица не существует
+          if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+            console.warn('[ProjectPresence] Table project_presence does not exist. Please run the migration.');
+            setPresence([]);
+            return;
+          }
+          throw error;
+        }
 
         if (data) {
           setPresence(data.filter(p => p.user_id !== userId)); // Исключаем себя

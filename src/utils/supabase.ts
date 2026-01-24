@@ -35,6 +35,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
     on: () => ({ subscribe: () => {} } as any),
     subscribe: () => ({} as any),
   } as any);
+  
+  supabase.rpc = () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } });
 } else {
   supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
@@ -42,6 +44,23 @@ if (!supabaseUrl || !supabaseAnonKey) {
       autoRefreshToken: false,
     },
   });
+}
+
+/**
+ * Устанавливает контекст пользователя для RLS политик
+ * Вызывайте эту функцию перед запросами к таблицам с RLS
+ */
+export async function setUserContext(userId: string): Promise<void> {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return; // Игнорируем если Supabase не настроен
+  }
+  
+  try {
+    await supabase.rpc('set_user_context', { p_user_id: userId });
+  } catch (error) {
+    // Игнорируем ошибки если функция не существует (миграция не применена)
+    console.warn('[Supabase] Failed to set user context:', error);
+  }
 }
 
 export { supabase };

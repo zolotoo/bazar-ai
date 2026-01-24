@@ -130,6 +130,18 @@ BEGIN
 END;
 $$;
 
+-- 7.6. Функция для установки контекста пользователя (для RLS)
+CREATE OR REPLACE FUNCTION public.set_user_context(p_user_id TEXT)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  PERFORM set_config('app.current_user_id', p_user_id, false);
+END;
+$$;
+
 -- 8. RLS Policies для project_members
 ALTER TABLE project_members ENABLE ROW LEVEL SECURITY;
 
