@@ -97,6 +97,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Удаляем триггер если он уже существует
+DROP TRIGGER IF EXISTS update_project_members_updated_at ON project_members;
+
 CREATE TRIGGER update_project_members_updated_at
   BEFORE UPDATE ON project_members
   FOR EACH ROW
