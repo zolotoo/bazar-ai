@@ -104,15 +104,19 @@ export function useInboxVideos() {
         .select('*')
         .eq('user_id', userId);
       
-      // Фильтруем по проекту если он выбран
+      // Фильтруем строго по проекту - если проект выбран, показываем ТОЛЬКО видео этого проекта
+      // Видео с project_id = null или другим project_id не должны показываться
       if (currentProjectId) {
         query = query.eq('project_id', currentProjectId);
+      } else {
+        // Если проект не выбран, показываем только видео без проекта (project_id IS NULL)
+        query = query.is('project_id', null);
       }
       
       const { data, error: fetchError } = await query
         .order('added_at', { ascending: false });
 
-      console.log('[InboxVideos] Fetch result:', { count: data?.length, error: fetchError });
+      console.log('[InboxVideos] Fetch result:', { count: data?.length, error: fetchError, projectId: currentProjectId });
 
       if (fetchError) {
         console.error('Error fetching saved videos:', fetchError);
@@ -122,7 +126,11 @@ export function useInboxVideos() {
         const transformedVideos = data.map(transformVideo);
         setVideos(transformedVideos);
         setIncomingVideos(transformedVideos);
-        console.log('[InboxVideos] Loaded', transformedVideos.length, 'videos');
+        console.log('[InboxVideos] Loaded', transformedVideos.length, 'videos for project', currentProjectId);
+      } else {
+        // Если данных нет, очищаем состояние
+        setVideos([]);
+        setIncomingVideos([]);
       }
     } catch (err) {
       console.error('Error loading saved videos:', err);
@@ -130,7 +138,7 @@ export function useInboxVideos() {
     } finally {
       setLoading(false);
     }
-  }, [setIncomingVideos, transformVideo, getUserId]);
+  }, [setIncomingVideos, transformVideo, getUserId, currentProjectId]);
 
   // Перезагружаем видео при смене пользователя или проекта
   useEffect(() => {
