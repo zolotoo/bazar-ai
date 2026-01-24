@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { useProjectMembers } from '../hooks/useProjectMembers';
-import { useAuth } from '../hooks/useAuth';
+import { useProjectMembers } from '@/hooks/useProjectMembers';
+import { useAuth } from '@/hooks/useAuth';
 import { UserPlus, X, Shield, Edit, Eye, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '../utils/cn';
+import { cn } from '@/utils/cn';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ProjectMembersModalProps {

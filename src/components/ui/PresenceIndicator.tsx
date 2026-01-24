@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { ProjectPresence } from '../hooks/useProjectPresence';
+import type { ProjectPresence } from '@/hooks/useProjectPresence';
 
 interface PresenceIndicatorProps {
   presence: ProjectPresence[];
