@@ -24,14 +24,31 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Проверяем переменные окружения
+  if (!supabaseUrl || !supabaseServiceKey) {
+    console.error('[Invite] Missing Supabase environment variables:', {
+      hasUrl: !!supabaseUrl,
+      hasKey: !!supabaseServiceKey
+    });
+    return res.status(500).json({ 
+      error: 'Supabase not configured',
+      message: 'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables'
+    });
+  }
+
   if (!supabase) {
     return res.status(500).json({ error: 'Supabase not configured' });
   }
 
   const { projectId, username, userId } = req.body;
 
+  console.log('[Invite] Request received:', { projectId, username, userId });
+
   if (!projectId || !username || !userId) {
-    return res.status(400).json({ error: 'Missing required parameters' });
+    return res.status(400).json({ 
+      error: 'Missing required parameters',
+      received: { projectId: !!projectId, username: !!username, userId: !!userId }
+    });
   }
 
   try {
@@ -152,11 +169,25 @@ export default async function handler(req, res) {
       .single();
 
     if (insertError) {
-      console.error('[Invite] Error inserting member:', insertError);
+      console.error('[Invite] Error inserting member:', {
+        code: insertError.code,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint
+      });
       return res.status(500).json({ 
         error: 'Failed to invite member',
         details: insertError.message,
-        code: insertError.code
+        code: insertError.code,
+        hint: insertError.hint
+      });
+    }
+
+    if (!member) {
+      console.error('[Invite] Member insert returned no data');
+      return res.status(500).json({ 
+        error: 'Failed to invite member',
+        details: 'Insert succeeded but no member data returned'
       });
     }
 
@@ -197,10 +228,15 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('[Invite] Unexpected error:', error);
+    console.error('[Invite] Unexpected error:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
     return res.status(500).json({ 
       error: 'Failed to invite member',
       details: error.message,
+      type: error.name,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
