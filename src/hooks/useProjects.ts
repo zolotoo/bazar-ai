@@ -95,13 +95,14 @@ export function useProjects() {
       ];
 
       if (allProjects.length > 0) {
-        const loadedProjects: Project[] = allProjects.map(p => ({
+        const loadedProjects: Project[] = allProjects.map((p: any) => ({
           id: p.id,
           name: p.name,
           color: p.color || '#f97316',
           icon: p.icon || 'folder',
           folders: p.folders || DEFAULT_FOLDERS.map((f, i) => ({ ...f, id: `folder-${i}` })),
           createdAt: new Date(p.created_at),
+          isShared: p.isShared || false,
         }));
         setProjects(loadedProjects);
         
@@ -110,9 +111,6 @@ export function useProjects() {
         if (savedProjectId && loadedProjects.find(p => p.id === savedProjectId)) {
           setCurrentProjectId(savedProjectId);
         } else {
-          setCurrentProjectId(loadedProjects[0].id);
-        }
-      } else {
           setCurrentProjectId(loadedProjects[0].id);
         }
       } else {

@@ -40,12 +40,11 @@ const PROJECT_COLORS = [
 
 // Модальное окно создания проекта
 interface CreateProjectModalProps {
-  isOpen: boolean;
+  onSave: (name: string, color: string) => void;
   onClose: () => void;
-  onCreate: (name: string, color: string) => void;
 }
 
-function CreateProjectModal({ isOpen, onClose, onCreate }: CreateProjectModalProps) {
+function CreateProjectModal({ onSave, onClose }: CreateProjectModalProps) {
   const [name, setName] = useState('');
   const [color, setColor] = useState(PROJECT_COLORS[0]);
 
@@ -590,20 +589,31 @@ function AppContent() {
       />
 
       {/* Create Project Modal */}
-      <CreateProjectModal
-        isOpen={isCreateProjectOpen}
-        onClose={() => setIsCreateProjectOpen(false)}
-        onCreate={handleCreateProject}
-      />
+      {isCreateProjectOpen && (
+        <CreateProjectModal
+          onSave={handleCreateProject}
+          onClose={() => setIsCreateProjectOpen(false)}
+        />
+      )}
 
       {/* Edit Project Modal */}
-      <EditProjectModal
-        isOpen={!!editingProject}
-        project={editingProject}
-        onClose={() => setEditingProject(null)}
-        onSave={handleEditProject}
-        onDelete={handleDeleteProject}
-      />
+      {editingProject && (
+        <EditProjectModal
+          project={editingProject}
+          onSave={handleEditProject}
+          onDelete={handleDeleteProject}
+          onClose={() => setEditingProject(null)}
+        />
+      )}
+
+      {/* Members Modal */}
+      {isMembersModalOpen && currentProjectId && (
+        <ProjectMembersModal
+          projectId={currentProjectId}
+          isOpen={isMembersModalOpen}
+          onClose={() => setIsMembersModalOpen(false)}
+        />
+      )}
 
       {/* Toast notifications */}
       <Toaster 
