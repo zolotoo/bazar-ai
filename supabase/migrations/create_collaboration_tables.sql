@@ -4,7 +4,7 @@
 -- 1. Таблица участников проектов
 CREATE TABLE IF NOT EXISTS project_members (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   user_id TEXT NOT NULL, -- Telegram username: tg-@username
   role TEXT NOT NULL CHECK (role IN ('read', 'write', 'admin')),
   invited_by TEXT NOT NULL, -- Telegram username пригласившего
@@ -25,7 +25,7 @@ CREATE INDEX IF NOT EXISTS idx_project_members_status ON project_members(status)
 -- 2. Таблица изменений проектов (Event Sourcing)
 CREATE TABLE IF NOT EXISTS project_changes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   user_id TEXT NOT NULL,
   change_type TEXT NOT NULL CHECK (change_type IN (
     'video_added', 'video_moved', 'video_deleted', 
@@ -50,7 +50,7 @@ CREATE INDEX IF NOT EXISTS idx_project_changes_user ON project_changes(user_id);
 -- 3. Таблица presence (кто сейчас редактирует)
 CREATE TABLE IF NOT EXISTS project_presence (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   user_id TEXT NOT NULL,
   entity_type TEXT, -- 'video', 'folder', null (общий просмотр)
   entity_id UUID,
