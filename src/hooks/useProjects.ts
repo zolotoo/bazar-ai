@@ -53,37 +53,48 @@ export function useProjects() {
     return 'anonymous';
   }, [user]);
 
-  // Загрузка проектов
+  // Загрузка проектов (включая общие)
   const fetchProjects = useCallback(async () => {
     const userId = getUserId();
     setLoading(true);
     
     try {
-      const { data, error } = await supabase
+      // Загружаем собственные проекты
+      const { data: ownProjects, error: ownError } = await supabase
         .from('projects')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: true });
 
-      if (error) {
-        console.error('Error fetching projects:', error);
-        // Создаем дефолтный проект локально если база не работает
-        const defaultProject: Project = {
-          id: `project-${Date.now()}`,
-          name: 'Мой проект',
-          color: '#f97316',
-          icon: 'folder',
-          folders: DEFAULT_FOLDERS.map((f, i) => ({ ...f, id: `folder-${Date.now()}-${i}` })),
-          createdAt: new Date(),
-        };
-        setProjects([defaultProject]);
-        setCurrentProjectId(defaultProject.id);
-        setLoading(false);
-        return;
+      // Загружаем общие проекты (где пользователь является участником)
+      const { data: sharedMemberships } = await supabase
+        .from('project_members')
+        .select('project_id')
+        .eq('user_id', userId)
+        .eq('status', 'active');
+
+      let sharedProjects = [];
+      if (sharedMemberships && sharedMemberships.length > 0) {
+        const sharedProjectIds = sharedMemberships.map(m => m.project_id);
+        const { data: shared } = await supabase
+          .from('projects')
+          .select('*')
+          .in('id', sharedProjectIds)
+          .order('created_at', { ascending: true });
+        sharedProjects = shared || [];
       }
 
-      if (data && data.length > 0) {
-        const loadedProjects: Project[] = data.map(p => ({
+      if (ownError) {
+        throw ownError;
+      }
+
+      const allProjects = [
+        ...(ownProjects || []).map(p => ({ ...p, isShared: false })),
+        ...sharedProjects.map(p => ({ ...p, isShared: true })),
+      ];
+
+      if (allProjects.length > 0) {
+        const loadedProjects: Project[] = allProjects.map(p => ({
           id: p.id,
           name: p.name,
           color: p.color || '#f97316',
@@ -98,6 +109,9 @@ export function useProjects() {
         if (savedProjectId && loadedProjects.find(p => p.id === savedProjectId)) {
           setCurrentProjectId(savedProjectId);
         } else {
+          setCurrentProjectId(loadedProjects[0].id);
+        }
+      } else {
           setCurrentProjectId(loadedProjects[0].id);
         }
       } else {
