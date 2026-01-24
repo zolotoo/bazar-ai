@@ -12,6 +12,10 @@ import {
 } from './components/ui/AnimatedSidebar';
 import { useProjectMembers } from './hooks/useProjectMembers';
 import { supabase, setUserContext } from './utils/supabase';
+import { useAuth } from './hooks/useAuth';
+import { useInboxVideos } from './hooks/useInboxVideos';
+import { ProjectProvider, useProjectContext } from './contexts/ProjectContext';
+import type { Project } from './hooks/useProjects';
 import { 
   Video, Settings, Search, LayoutGrid, Clock, User, LogOut, 
   Link, Radar, Plus, FolderOpen, X, Palette, Sparkles, Trash2, Users
@@ -371,7 +375,7 @@ function AppContent() {
   const { projects, currentProject, currentProjectId, selectProject, createProject, updateProject, deleteProject, loading: projectsLoading, refetch: refetchProjects } = useProjectContext();
   
   // Хук для управления участниками (для принятия приглашений)
-  const { members, acceptInvitation } = useProjectMembers(currentProjectId);
+  const { acceptInvitation } = useProjectMembers(currentProjectId);
   
   // Обработка уведомлений о pending приглашениях
   useEffect(() => {
@@ -545,7 +549,7 @@ function AppContent() {
                     {/* Свои проекты */}
                     {projects.filter((p: any) => !p.isShared).length > 0 && (
                       <div className="space-y-1">
-                        {projects.filter((p: any) => !p.isShared).map((project: any) => (
+                        {projects.filter((p: Project) => !p.isShared).map((project: Project) => (
                           <div key={project.id} className="relative group">
                             <SidebarProject
                               name={project.name}
@@ -576,7 +580,7 @@ function AppContent() {
                           <p className="px-3 py-1 text-xs font-medium text-slate-500 uppercase tracking-wider">Общие проекты</p>
                         </div>
                         <div className="space-y-1">
-                          {projects.filter((p: any) => p.isShared).map((project: any) => {
+                          {projects.filter((p: Project) => p.isShared).map((project: Project) => {
                             const isPending = project.membershipStatus === 'pending';
                             return (
                               <div key={project.id} className="relative group">

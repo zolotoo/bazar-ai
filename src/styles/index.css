@@ -229,6 +229,26 @@ body {
     padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));
   }
 
+  /* Touch manipulation optimization */
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* iOS 26 Scroll Snap for better mobile UX */
+  .scroll-snap-y {
+    scroll-snap-type: y mandatory;
+    scroll-padding: max(20px, env(safe-area-inset-top, 20px)) max(16px, env(safe-area-inset-left, 16px));
+  }
+
+  .scroll-snap-start {
+    scroll-snap-align: start;
+  }
+
+  .scroll-snap-center {
+    scroll-snap-align: center;
+  }
+
   /* iOS 26 Scroll Behavior */
   * {
     -webkit-overflow-scrolling: touch;

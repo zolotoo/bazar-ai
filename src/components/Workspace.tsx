@@ -607,7 +607,7 @@ export function Workspace() {
             <div className="h-px bg-slate-100 my-2" />
             <button
               onClick={() => setShowFolderSettings(true)}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 text-slate-500 text-sm transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-xl hover:bg-slate-50 active:bg-slate-100 text-slate-500 text-sm transition-colors touch-manipulation"
             >
               <Settings className="w-4 h-4" />
               Настроить папки
@@ -655,7 +655,7 @@ export function Workspace() {
                 {canUndo && (
                   <button
                     onClick={handleUndo}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-all shadow-sm"
+                    className="flex items-center gap-2 px-3 py-1.5 min-h-[44px] rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 text-xs font-medium transition-all shadow-sm touch-manipulation"
                     title="Отменить последнее действие"
                   >
                     <Undo2 className="w-3.5 h-3.5" />
@@ -673,10 +673,10 @@ export function Workspace() {
                     key={value}
                     onClick={() => setSortBy(value as typeof sortBy)}
                     className={cn(
-                      "flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold transition-all active:scale-95",
+                      "flex items-center gap-1.5 px-3 py-1 min-h-[44px] rounded-xl text-xs font-semibold transition-all active:scale-95 touch-manipulation",
                       sortBy === value 
                         ? `bg-gradient-to-r ${color} text-white shadow-md backdrop-blur-sm` 
-                        : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                        : "text-slate-500 hover:text-slate-700 hover:bg-slate-100 active:bg-slate-200"
                     )}
                   >
                     <Icon className="w-4 h-4" strokeWidth={2.5} />
