@@ -1,15 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('Missing Supabase environment variables');
-}
-
-const supabase = supabaseUrl && supabaseServiceKey 
-  ? createClient(supabaseUrl, supabaseServiceKey)
-  : null;
+// Переменные окружения читаются внутри handler для каждого запроса
+// Это гарантирует, что они будут доступны после добавления в Vercel без перезапуска
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
