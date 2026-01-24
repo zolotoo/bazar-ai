@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   ChevronLeft, Play, Eye, Heart, MessageCircle, Calendar, 
   Sparkles, FileText, Copy, ExternalLink, Loader2, Check,
-  Languages, ChevronDown, Mic, Save
+  Languages, ChevronDown, Mic, Save, X
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { checkTranscriptionStatus, downloadAndTranscribe } from '../services/transcriptionService';
@@ -131,6 +131,7 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
   const [editingResponsible, setEditingResponsible] = useState(video.editing_responsible || '');
   const [isSavingLinks, setIsSavingLinks] = useState(false);
   const [isSavingResponsible, setIsSavingResponsible] = useState(false);
+  const [showVideoFrame, setShowVideoFrame] = useState(false);
   
   const { updateVideoFolder, updateVideoScript, updateVideoTranscript } = useInboxVideos();
   
@@ -263,6 +264,7 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
   const handleLoadVideo = async () => {
     if (directVideoUrl) {
       setShowVideo(true);
+      setShowVideoFrame(true);
       return;
     }
     
@@ -285,6 +287,7 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
       if (data.success && data.videoUrl) {
         setDirectVideoUrl(data.videoUrl);
         setShowVideo(true);
+        setShowVideoFrame(true);
         
         // Сохраняем URL в базу для будущего использования
         await supabase
@@ -300,6 +303,15 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
       toast.error('Ошибка загрузки видео');
     } finally {
       setIsLoadingVideo(false);
+    }
+  };
+  
+  // Открытие видео в углу
+  const handleOpenVideoFrame = async () => {
+    if (!directVideoUrl) {
+      await handleLoadVideo();
+    } else {
+      setShowVideoFrame(true);
     }
   };
 
@@ -537,7 +549,28 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
   const thumbnailUrl = proxyImageUrl(video.preview_url);
 
   return (
-    <div className="h-full overflow-hidden flex flex-col bg-[#f5f5f5]">
+    <div className="h-full overflow-hidden flex flex-col bg-[#f5f5f5] relative">
+      {/* Video frame in corner */}
+      {showVideoFrame && directVideoUrl && (
+        <div className="fixed top-20 right-6 z-50 bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200" style={{ width: '320px' }}>
+          <div className="relative" style={{ aspectRatio: '9/16', width: '100%' }}>
+            <video
+              src={directVideoUrl}
+              className="w-full h-full object-cover"
+              controls
+              autoPlay
+              playsInline
+            />
+            <button
+              onClick={() => setShowVideoFrame(false)}
+              className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors z-10 backdrop-blur-sm"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+      
       <div className="w-full h-full p-6 flex flex-col overflow-hidden">
         {/* Header */}
         <div className="mb-4 flex items-center justify-between flex-shrink-0">
@@ -759,6 +792,24 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
             </div>
 
             {/* Actions */}
+            <button
+              onClick={handleOpenVideoFrame}
+              disabled={isLoadingVideo}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white text-sm font-medium transition-all shadow-sm disabled:opacity-50"
+            >
+              {isLoadingVideo ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Загрузка...
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4" fill="currentColor" />
+                  Смотреть видео
+                </>
+              )}
+            </button>
+            
             <a
               href={video.url}
               target="_blank"
