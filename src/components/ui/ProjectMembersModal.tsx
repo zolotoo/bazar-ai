@@ -113,12 +113,12 @@ export function ProjectMembersModal({ projectId, isOpen, onClose }: ProjectMembe
         <div className="p-6 max-h-[60vh] overflow-y-auto custom-scrollbar-light">
           {/* Приглашение нового участника */}
           <div className="mb-6 p-4 rounded-2xl bg-slate-50/80 backdrop-blur-sm border border-slate-200/60">
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-slate-700 mb-3">
               Пригласить участника
             </label>
             <div className="flex items-center gap-2 mb-2">
               <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">@</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-semibold text-base">@</span>
                 <input
                   type="text"
                   value={inviteUsername}
@@ -129,13 +129,13 @@ export function ProjectMembersModal({ projectId, isOpen, onClose }: ProjectMembe
                     }
                   }}
                   placeholder="username"
-                  className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-sm outline-none focus:ring-2 focus:ring-[#f97316]/20 focus:border-[#f97316]/30 transition-all text-slate-800 placeholder:text-slate-400"
+                  className="w-full pl-10 pr-4 py-3.5 rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-sm outline-none focus:ring-2 focus:ring-[#f97316]/20 focus:border-[#f97316]/30 transition-all text-slate-800 placeholder:text-slate-400 text-base"
                 />
               </div>
               <select
                 value={selectedRole}
                 onChange={(e) => setSelectedRole(e.target.value as any)}
-                className="px-3 py-2.5 rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-sm outline-none focus:ring-2 focus:ring-[#f97316]/20 text-sm text-slate-700"
+                className="px-4 py-3.5 rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-sm outline-none focus:ring-2 focus:ring-[#f97316]/20 text-base text-slate-700 font-medium"
               >
                 <option value="read">Читатель</option>
                 <option value="write">Редактор</option>
@@ -144,12 +144,12 @@ export function ProjectMembersModal({ projectId, isOpen, onClose }: ProjectMembe
               <button
                 onClick={handleInvite}
                 disabled={!inviteUsername.trim() || isInviting}
-                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#f97316] via-[#fb923c] to-[#fdba74] text-white font-medium hover:from-[#f97316] hover:via-[#fb923c] hover:to-[#fdba74] transition-all shadow-lg shadow-[#f97316]/20 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm flex items-center gap-2"
+                className="px-5 py-3.5 rounded-xl bg-gradient-to-r from-[#f97316] via-[#fb923c] to-[#fdba74] text-white font-medium hover:from-[#f97316] hover:via-[#fb923c] hover:to-[#fdba74] transition-all shadow-lg shadow-[#f97316]/20 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm flex items-center gap-2 text-base whitespace-nowrap"
               >
                 {isInviting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
-                  <UserPlus className="w-4 h-4" />
+                  <UserPlus className="w-5 h-5" />
                 )}
                 Пригласить
               </button>
