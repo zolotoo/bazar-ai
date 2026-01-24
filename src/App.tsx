@@ -11,6 +11,7 @@ import {
   SidebarLogo, SidebarDivider 
 } from './components/ui/AnimatedSidebar';
 import { useProjectMembers } from './hooks/useProjectMembers';
+import { supabase, setUserContext } from './utils/supabase';
 import { 
   Video, Settings, Search, LayoutGrid, Clock, User, LogOut, 
   Link, Radar, Plus, FolderOpen, X, Palette, Sparkles, Trash2, Users
@@ -406,16 +407,31 @@ function AppContent() {
   // Обработка клика на проект - если pending, предлагаем принять приглашение
   const handleProjectClick = async (project: any) => {
     if (project.membershipStatus === 'pending') {
-      // Находим membership для этого проекта
-      const pendingMember = members.find(m => m.project_id === project.id && m.status === 'pending');
-      if (pendingMember) {
-        try {
-          await acceptInvitation(pendingMember.id);
+      // Загружаем membership для этого проекта
+      const userId = user?.telegram_username ? `tg-${user.telegram_username}` : null;
+      if (!userId) return;
+      
+      try {
+        await setUserContext(userId);
+        const { data: projectMember } = await supabase
+          .from('project_members')
+          .select('id, status')
+          .eq('project_id', project.id)
+          .eq('user_id', userId)
+          .eq('status', 'pending')
+          .maybeSingle();
+        
+        if (projectMember) {
+          await acceptInvitation(projectMember.id);
           toast.success(`Вы приняли приглашение в проект "${project.name}"`);
           refetchProjects(); // Обновляем список проектов
-        } catch (error) {
-          toast.error('Не удалось принять приглашение');
+          selectProject(project.id); // Выбираем проект
+        } else {
+          toast.error('Приглашение не найдено');
         }
+      } catch (error) {
+        console.error('Error accepting invitation:', error);
+        toast.error('Не удалось принять приглашение');
       }
     } else {
       selectProject(project.id);
