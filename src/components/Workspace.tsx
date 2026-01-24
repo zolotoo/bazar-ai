@@ -3,6 +3,9 @@ import { useWorkspaceZones, ZoneVideo } from '../hooks/useWorkspaceZones';
 import { useInboxVideos } from '../hooks/useInboxVideos';
 import { useProjectContext, ProjectFolder } from '../contexts/ProjectContext';
 import { useActionHistory } from '../hooks/useActionHistory';
+import { useProjectSync } from '../hooks/useProjectSync';
+import { useProjectPresence } from '../hooks/useProjectPresence';
+import { PresenceIndicator } from './ui/PresenceIndicator';
 import { Sparkles, Star, FileText, Trash2, ExternalLink, Plus, Inbox, Lightbulb, Camera, Scissors, Check, FolderOpen, Settings, GripVertical, X, Palette, Eye, Heart, ChevronDown, ChevronRight, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../utils/cn';
@@ -109,6 +112,8 @@ export function Workspace() {
     refetch: refetchProjects,
   } = useProjectContext();
   const { addAction, undoLastAction, canUndo } = useActionHistory();
+  const { sendChange } = useProjectSync(currentProjectId);
+  const { presence, updatePresence, getUsername } = useProjectPresence(currentProjectId);
   const [selectedVideo, setSelectedVideo] = useState<ZoneVideo | null>(null);
   const [moveMenuVideoId, setMoveMenuVideoId] = useState<string | null>(null);
   const [cardMenuVideoId, setCardMenuVideoId] = useState<string | null>(null);
@@ -142,9 +147,22 @@ export function Workspace() {
   // Перемещение видео в другую папку
   const handleMoveToFolder = async (video: ZoneVideo, targetFolderId: string) => {
     const targetFolder = folderConfigs.find(f => f.id === targetFolderId);
+    const oldFolderId = (video as any).folder_id || null;
+    
     try {
       const success = await updateVideoFolder(video.id, targetFolderId);
       if (success) {
+        // Отправляем изменение для синхронизации
+        if (currentProjectId) {
+          await sendChange(
+            'video_moved',
+            'video',
+            video.id,
+            { folder_id: oldFolderId },
+            { folder_id: targetFolderId }
+          );
+        }
+        
         setMoveMenuVideoId(null);
         setCardMenuVideoId(null);
         toast.success(`Перемещено в "${targetFolder?.title || 'папку'}"`);
@@ -158,8 +176,21 @@ export function Workspace() {
   };
 
   const handleDeleteVideo = async (videoId: string) => {
+    const video = inboxVideos.find(v => v.id === videoId);
     const videoData = await removeInboxVideo(videoId);
+    
     if (videoData) {
+      // Отправляем изменение для синхронизации
+      if (currentProjectId && video) {
+        await sendChange(
+          'video_deleted',
+          'video',
+          videoId,
+          { folder_id: (video as any).folder_id },
+          null
+        );
+      }
+      
       addAction('delete_video', videoData);
       toast.success('Видео удалено', {
         action: {
@@ -378,17 +409,47 @@ export function Workspace() {
   // Обработчик создания папки
   const handleCreateFolder = async () => {
     if (!currentProjectId || !newFolderName.trim()) return;
-    await addFolder(currentProjectId, newFolderName.trim());
+    const folderName = newFolderName.trim();
+    await addFolder(currentProjectId, folderName);
     setNewFolderName('');
-    await refetchProjects(); // Обновляем проекты чтобы новая папка появилась
+    await refetchProjects();
+    
+    // Отправляем изменение для синхронизации после обновления проектов
+    if (currentProjectId) {
+      const updatedProject = currentProject;
+      const newFolder = updatedProject?.folders?.find(f => f.name === folderName);
+      if (newFolder) {
+        await sendChange(
+          'folder_created',
+          'folder',
+          newFolder.id,
+          null,
+          { name: newFolder.name, color: newFolder.color, icon: newFolder.icon, order: newFolder.order }
+        );
+      }
+    }
+    
     toast.success('Папка создана');
   };
   
   // Обработчик удаления папки
   const handleDeleteFolder = async (folderId: string) => {
     if (!currentProjectId) return;
+    const folder = folderConfigs.find(f => f.id === folderId);
     const folderData = await removeFolder(currentProjectId, folderId);
+    
     if (folderData) {
+      // Отправляем изменение для синхронизации
+      if (currentProjectId) {
+        await sendChange(
+          'folder_deleted',
+          'folder',
+          folderId,
+          { name: folderData.name, color: folderData.color, icon: folderData.icon },
+          null
+        );
+      }
+      
       addAction('delete_folder', folderData);
       toast.success('Папка удалена', {
         action: {
@@ -403,7 +464,23 @@ export function Workspace() {
   // Обработчик обновления папки
   const handleUpdateFolder = async (folderId: string, updates: Partial<Omit<ProjectFolder, 'id'>>) => {
     if (!currentProjectId) return;
+    const folder = currentProject?.folders?.find(f => f.id === folderId);
+    const oldData = folder ? { name: folder.name, color: folder.color, icon: folder.icon } : null;
+    
     await updateFolder(currentProjectId, folderId, updates);
+    
+    // Отправляем изменение для синхронизации
+    if (currentProjectId && oldData) {
+      const changeType = updates.name ? 'folder_renamed' : 'project_updated';
+      await sendChange(
+        changeType,
+        'folder',
+        folderId,
+        oldData,
+        { ...oldData, ...updates }
+      );
+    }
+    
     setEditingFolder(null);
   };
   
@@ -892,6 +969,8 @@ export function Workspace() {
           </div>
         </div>
       )}
+      {/* Presence Indicator */}
+      <PresenceIndicator presence={presence} getUsername={getUsername} />
     </div>
   );
 }

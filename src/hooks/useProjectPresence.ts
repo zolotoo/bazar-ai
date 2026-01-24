@@ -1,0 +1,127 @@
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { supabase } from '../utils/supabase';
+import { useAuth } from './useAuth';
+
+export interface ProjectPresence {
+  id: string;
+  project_id: string;
+  user_id: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  cursor_position: any;
+  last_seen: string;
+}
+
+/**
+ * Хук для управления presence (кто сейчас работает над проектом)
+ */
+export function useProjectPresence(projectId: string | null) {
+  const { user } = useAuth();
+  const [presence, setPresence] = useState<ProjectPresence[]>([]);
+  const channelRef = useRef<any>(null);
+  const updateIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const userId = user?.telegram_username ? `tg-@${user.telegram_username}` : null;
+
+  // Обновление своего presence
+  const updatePresence = useCallback(async (
+    entityType: string | null = null,
+    entityId: string | null = null,
+    cursorPosition: any = null
+  ) => {
+    if (!projectId || !userId) return;
+
+    try {
+      await supabase
+        .from('project_presence')
+        .upsert({
+          project_id: projectId,
+          user_id: userId,
+          entity_type: entityType,
+          entity_id: entityId,
+          cursor_position: cursorPosition,
+          last_seen: new Date().toISOString(),
+        }, {
+          onConflict: 'project_id,user_id,entity_type,entity_id',
+        });
+    } catch (err) {
+      console.error('Error updating presence:', err);
+    }
+  }, [projectId, userId]);
+
+  // Подписка на изменения presence
+  useEffect(() => {
+    if (!projectId || !userId) return;
+
+    // Загружаем текущий presence
+    const fetchPresence = async () => {
+      const { data } = await supabase
+        .from('project_presence')
+        .select('*')
+        .eq('project_id', projectId)
+        .gt('last_seen', new Date(Date.now() - 30000).toISOString()); // Только активные за последние 30 секунд
+
+      if (data) {
+        setPresence(data.filter(p => p.user_id !== userId)); // Исключаем себя
+      }
+    };
+
+    fetchPresence();
+
+    // Подписываемся на изменения
+    const channel = supabase
+      .channel(`presence:${projectId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'project_presence',
+          filter: `project_id=eq.${projectId}`,
+        },
+        (payload) => {
+          if (payload.new.user_id !== userId) {
+            // Обновляем presence других пользователей
+            setPresence(prev => {
+              const filtered = prev.filter(p => p.user_id !== payload.new.user_id);
+              if (payload.eventType !== 'DELETE') {
+                return [...filtered, payload.new as ProjectPresence];
+              }
+              return filtered;
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    channelRef.current = channel;
+
+    // Обновляем свой presence каждые 10 секунд
+    updateIntervalRef.current = setInterval(() => {
+      updatePresence();
+    }, 10000);
+
+    // Первоначальное обновление
+    updatePresence();
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+      }
+      if (updateIntervalRef.current) {
+        clearInterval(updateIntervalRef.current);
+      }
+    };
+  }, [projectId, userId, updatePresence]);
+
+  // Получить username из user_id
+  const getUsername = useCallback((userId: string): string => {
+    return userId.replace('tg-@', '').replace('tg-', '');
+  }, []);
+
+  return {
+    presence,
+    updatePresence,
+    getUsername,
+  };
+}
