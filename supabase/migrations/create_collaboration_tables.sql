@@ -143,7 +143,9 @@ END;
 $$;
 
 -- 8. RLS Policies для project_members
-ALTER TABLE project_members ENABLE ROW LEVEL SECURITY;
+-- ВРЕМЕННО ОТКЛЮЧАЕМ RLS для отладки
+-- TODO: Включить RLS после настройки правильного механизма аутентификации
+-- ALTER TABLE project_members ENABLE ROW LEVEL SECURITY;
 
 -- Удаляем старые политики если они существуют
 DROP POLICY IF EXISTS "Users can view memberships in their projects" ON project_members;
@@ -151,45 +153,46 @@ DROP POLICY IF EXISTS "Users can view their own memberships" ON project_members;
 DROP POLICY IF EXISTS "Owners can view project members" ON project_members;
 DROP POLICY IF EXISTS "Owners and admins can add members" ON project_members;
 DROP POLICY IF EXISTS "Owners and admins can update members" ON project_members;
+DROP POLICY IF EXISTS "Owners can add members" ON project_members;
+DROP POLICY IF EXISTS "Owners can update members" ON project_members;
 
--- Упрощенные политики без рекурсии
--- Пользователи видят свои членства
-CREATE POLICY "Users can view their own memberships"
-  ON project_members FOR SELECT
-  USING (user_id = current_setting('app.current_user_id', true));
+-- ВРЕМЕННО: Отключаем RLS для project_members
+ALTER TABLE project_members DISABLE ROW LEVEL SECURITY;
 
--- Владельцы проектов могут видеть всех участников своих проектов
-CREATE POLICY "Owners can view project members"
-  ON project_members FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM projects p
-      WHERE p.id = project_members.project_id
-      AND p.owner_id = current_setting('app.current_user_id', true)
-    )
-  );
-
--- Только владельцы могут добавлять участников (без проверки через project_members)
-CREATE POLICY "Owners can add members"
-  ON project_members FOR INSERT
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM projects p
-      WHERE p.id = project_id
-      AND p.owner_id = current_setting('app.current_user_id', true)
-    )
-  );
-
--- Только владельцы могут обновлять участников (без проверки через project_members)
-CREATE POLICY "Owners can update members"
-  ON project_members FOR UPDATE
-  USING (
-    EXISTS (
-      SELECT 1 FROM projects p
-      WHERE p.id = project_id
-      AND p.owner_id = current_setting('app.current_user_id', true)
-    )
-  );
+-- Упрощенные политики без рекурсии (закомментированы до настройки правильной аутентификации)
+-- CREATE POLICY "Users can view their own memberships"
+--   ON project_members FOR SELECT
+--   USING (user_id = current_setting('app.current_user_id', true));
+--
+-- CREATE POLICY "Owners can view project members"
+--   ON project_members FOR SELECT
+--   USING (
+--     EXISTS (
+--       SELECT 1 FROM projects p
+--       WHERE p.id = project_members.project_id
+--       AND p.owner_id = current_setting('app.current_user_id', true)
+--     )
+--   );
+--
+-- CREATE POLICY "Owners can add members"
+--   ON project_members FOR INSERT
+--   WITH CHECK (
+--     EXISTS (
+--       SELECT 1 FROM projects p
+--       WHERE p.id = project_id
+--       AND p.owner_id = current_setting('app.current_user_id', true)
+--     )
+--   );
+--
+-- CREATE POLICY "Owners can update members"
+--   ON project_members FOR UPDATE
+--   USING (
+--     EXISTS (
+--       SELECT 1 FROM projects p
+--       WHERE p.id = project_id
+--       AND p.owner_id = current_setting('app.current_user_id', true)
+--     )
+--   );
 
 -- 9. RLS Policies для project_changes
 -- ВРЕМЕННО ОТКЛЮЧАЕМ RLS для отладки
