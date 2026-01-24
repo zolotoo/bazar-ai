@@ -116,9 +116,9 @@ export function ProjectMembersModal({ projectId, isOpen, onClose }: ProjectMembe
             <label className="block text-sm font-medium text-slate-700 mb-2">
               Пригласить участника
             </label>
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-2">
               <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">@</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">@</span>
                 <input
                   type="text"
                   value={inviteUsername}
@@ -154,6 +154,9 @@ export function ProjectMembersModal({ projectId, isOpen, onClose }: ProjectMembe
                 Пригласить
               </button>
             </div>
+            <p className="text-xs text-slate-500 mt-2 px-1">
+              Введите Telegram username без @ (например: <span className="font-mono text-slate-600">username</span> или <span className="font-mono text-slate-600">@username</span> — оба варианта работают)
+            </p>
           </div>
 
           {/* Список участников */}
