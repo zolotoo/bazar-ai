@@ -16,21 +16,26 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Проверяем переменные окружения (читаем их заново на каждый запрос)
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
   // Проверяем переменные окружения
   if (!supabaseUrl || !supabaseServiceKey) {
     console.error('[Invite] Missing Supabase environment variables:', {
       hasUrl: !!supabaseUrl,
-      hasKey: !!supabaseServiceKey
+      hasKey: !!supabaseServiceKey,
+      envKeys: Object.keys(process.env).filter(k => k.includes('SUPABASE'))
     });
     return res.status(500).json({ 
       error: 'Supabase not configured',
-      message: 'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables'
+      message: 'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables',
+      hint: 'Please add these variables in Vercel Settings → Environment Variables and redeploy'
     });
   }
 
-  if (!supabase) {
-    return res.status(500).json({ error: 'Supabase not configured' });
-  }
+  // Создаем клиент Supabase с переменными окружения
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   const { projectId, username, userId } = req.body;
 
