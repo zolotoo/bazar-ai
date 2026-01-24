@@ -167,6 +167,9 @@ export function useInboxVideos() {
   }) => {
     const userId = getUserId();
     
+    // Используем currentProjectId из контекста, если projectId не передан явно
+    const targetProjectId = video.projectId !== undefined ? video.projectId : currentProjectId || null;
+    
     // Извлекаем shortcode из URL если его нет
     const shortcode = video.shortcode || extractShortcode(video.url) || undefined;
     const videoId = video.videoId || shortcode || `video-${Date.now()}`;
@@ -175,7 +178,7 @@ export function useInboxVideos() {
       userId, 
       videoId, 
       shortcode,
-      projectId: video.projectId, 
+      projectId: targetProjectId, 
       folderId: video.folderId,
       url: video.url 
     });
@@ -263,6 +266,9 @@ export function useInboxVideos() {
         // 3a. Обновляем существующее видео пользователя
         console.log('[InboxVideos] User video exists, updating:', existingUserVideo.id);
         
+        // Используем currentProjectId из контекста, если projectId не передан явно
+        const targetProjectId = video.projectId !== undefined ? video.projectId : currentProjectId || null;
+        
         // Если у пользователя нет транскрибации, но есть в глобальной - копируем
         const updateData: Record<string, unknown> = {
           thumbnail_url: video.previewUrl,
@@ -272,7 +278,7 @@ export function useInboxVideos() {
           view_count: video.viewCount,
           like_count: video.likeCount,
           comment_count: video.commentCount,
-          project_id: video.projectId,
+          project_id: targetProjectId,
           folder_id: video.folderId || null,
           taken_at: takenAtTimestamp,
         };
@@ -300,6 +306,9 @@ export function useInboxVideos() {
         // 3b. Создаём новое видео для пользователя
         console.log('[InboxVideos] Creating new user video');
         
+        // Используем currentProjectId из контекста, если projectId не передан явно
+        const targetProjectId = video.projectId !== undefined ? video.projectId : currentProjectId || null;
+        
         const insertData: Record<string, unknown> = {
           user_id: userId,
           video_id: videoId,
@@ -311,7 +320,7 @@ export function useInboxVideos() {
           view_count: video.viewCount,
           like_count: video.likeCount,
           comment_count: video.commentCount,
-          project_id: video.projectId,
+          project_id: targetProjectId,
           folder_id: video.folderId || null,
           taken_at: takenAtTimestamp,
         };
@@ -454,7 +463,7 @@ export function useInboxVideos() {
       fetchVideos();
       return false;
     }
-  }, [getUserId, fetchVideos]);
+  }, [getUserId, currentProjectId, fetchVideos]);
 
   /**
    * Удаляет видео из сохранённых
