@@ -102,6 +102,34 @@ CREATE TRIGGER update_project_members_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+-- 7.5. Helper function для RLS (избегает рекурсии при проверке членства)
+-- Эта функция обходит RLS на project_members, используя SECURITY DEFINER
+CREATE OR REPLACE FUNCTION public.is_project_member_role(
+  p_project_id TEXT,
+  p_user_id TEXT,
+  p_min_role TEXT
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1
+    FROM public.project_members pm
+    WHERE pm.project_id = p_project_id
+      AND pm.user_id = p_user_id
+      AND pm.status = 'active'
+      AND (
+        p_min_role = 'read'
+        OR (p_min_role = 'write' AND pm.role IN ('write', 'admin'))
+        OR (p_min_role = 'admin' AND pm.role = 'admin')
+      )
+  );
+END;
+$$;
+
 -- 8. RLS Policies для project_members
 ALTER TABLE project_members ENABLE ROW LEVEL SECURITY;
 
@@ -154,15 +182,17 @@ CREATE POLICY "Owners can update members"
 -- 9. RLS Policies для project_changes
 ALTER TABLE project_changes ENABLE ROW LEVEL SECURITY;
 
--- Участники проекта могут видеть изменения в проекте
+DROP POLICY IF EXISTS "Members can view project changes" ON project_changes;
+DROP POLICY IF EXISTS "Write members can create changes" ON project_changes;
+
+-- Участники проекта могут видеть изменения в проекте (используем функцию для избежания рекурсии)
 CREATE POLICY "Members can view project changes"
   ON project_changes FOR SELECT
   USING (
-    EXISTS (
-      SELECT 1 FROM project_members pm
-      WHERE pm.project_id = project_changes.project_id
-      AND pm.user_id = current_setting('app.current_user_id', true)
-      AND pm.status = 'active'
+    public.is_project_member_role(
+      project_changes.project_id,
+      current_setting('app.current_user_id', true),
+      'read'
     )
   );
 
@@ -170,27 +200,27 @@ CREATE POLICY "Members can view project changes"
 CREATE POLICY "Write members can create changes"
   ON project_changes FOR INSERT
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM project_members pm
-      WHERE pm.project_id = project_changes.project_id
-      AND pm.user_id = current_setting('app.current_user_id', true)
-      AND pm.role IN ('write', 'admin')
-      AND pm.status = 'active'
+    public.is_project_member_role(
+      project_changes.project_id,
+      current_setting('app.current_user_id', true),
+      'write'
     )
   );
 
 -- 10. RLS Policies для project_presence
 ALTER TABLE project_presence ENABLE ROW LEVEL SECURITY;
 
--- Участники проекта могут видеть presence
+DROP POLICY IF EXISTS "Members can view presence" ON project_presence;
+DROP POLICY IF EXISTS "Members can update their presence" ON project_presence;
+
+-- Участники проекта могут видеть presence (используем функцию для избежания рекурсии)
 CREATE POLICY "Members can view presence"
   ON project_presence FOR SELECT
   USING (
-    EXISTS (
-      SELECT 1 FROM project_members pm
-      WHERE pm.project_id = project_presence.project_id
-      AND pm.user_id = current_setting('app.current_user_id', true)
-      AND pm.status = 'active'
+    public.is_project_member_role(
+      project_presence.project_id,
+      current_setting('app.current_user_id', true),
+      'read'
     )
   );
 
@@ -199,10 +229,17 @@ CREATE POLICY "Members can update their presence"
   ON project_presence FOR ALL
   USING (
     user_id = current_setting('app.current_user_id', true) AND
-    EXISTS (
-      SELECT 1 FROM project_members pm
-      WHERE pm.project_id = project_presence.project_id
-      AND pm.user_id = current_setting('app.current_user_id', true)
-      AND pm.status = 'active'
+    public.is_project_member_role(
+      project_presence.project_id,
+      current_setting('app.current_user_id', true),
+      'read'
+    )
+  )
+  WITH CHECK (
+    user_id = current_setting('app.current_user_id', true) AND
+    public.is_project_member_role(
+      project_presence.project_id,
+      current_setting('app.current_user_id', true),
+      'read'
     )
   );
