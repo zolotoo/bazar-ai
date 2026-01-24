@@ -113,7 +113,7 @@ export function Workspace() {
   } = useProjectContext();
   const { addAction, undoLastAction, canUndo } = useActionHistory();
   const { sendChange } = useProjectSync(currentProjectId);
-  const { presence, updatePresence, getUsername } = useProjectPresence(currentProjectId);
+  const { presence, getUsername } = useProjectPresence(currentProjectId);
   const [selectedVideo, setSelectedVideo] = useState<ZoneVideo | null>(null);
   const [moveMenuVideoId, setMoveMenuVideoId] = useState<string | null>(null);
   const [cardMenuVideoId, setCardMenuVideoId] = useState<string | null>(null);
@@ -435,7 +435,6 @@ export function Workspace() {
   // Обработчик удаления папки
   const handleDeleteFolder = async (folderId: string) => {
     if (!currentProjectId) return;
-    const folder = folderConfigs.find(f => f.id === folderId);
     const folderData = await removeFolder(currentProjectId, folderId);
     
     if (folderData) {

@@ -80,15 +80,18 @@ export function useProjectPresence(projectId: string | null) {
           filter: `project_id=eq.${projectId}`,
         },
         (payload) => {
-          if (payload.new.user_id !== userId) {
-            // Обновляем presence других пользователей
-            setPresence(prev => {
-              const filtered = prev.filter(p => p.user_id !== payload.new.user_id);
-              if (payload.eventType !== 'DELETE') {
-                return [...filtered, payload.new as ProjectPresence];
-              }
-              return filtered;
-            });
+          if (payload.new && typeof payload.new === 'object' && 'user_id' in payload.new) {
+            const newPresence = payload.new as ProjectPresence;
+            if (newPresence.user_id !== userId) {
+              // Обновляем presence других пользователей
+              setPresence(prev => {
+                const filtered = prev.filter(p => p.user_id !== newPresence.user_id);
+                if (payload.eventType !== 'DELETE') {
+                  return [...filtered, newPresence];
+                }
+                return filtered;
+              });
+            }
           }
         }
       )

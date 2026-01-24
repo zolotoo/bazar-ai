@@ -23,8 +23,7 @@ export interface ProjectChange {
  */
 export function useProjectSync(projectId: string | null) {
   const { user } = useAuth();
-  const { currentProject, updateProject } = useProjectContext();
-  const { videos, updateVideoFolder, removeVideo: removeInboxVideo } = useInboxVideos();
+  const { updateVideoFolder } = useInboxVideos();
   const channelRef = useRef<any>(null);
   const lastChangeIdRef = useRef<string | null>(null);
 

@@ -80,7 +80,7 @@ export function useProjectMembers(projectId: string | null) {
   // Приглашение участника через API
   const inviteMember = useCallback(async (
     username: string,
-    role: 'read' | 'write' | 'admin' = 'write'
+    _role: 'read' | 'write' | 'admin' = 'write'
   ) => {
     if (!projectId || !userId) {
       throw new Error('Project ID or user ID is missing');

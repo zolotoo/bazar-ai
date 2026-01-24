@@ -1,5 +1,4 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '../utils/cn';
 import { ProjectPresence } from '../hooks/useProjectPresence';
 
 interface PresenceIndicatorProps {
