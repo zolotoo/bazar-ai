@@ -35,17 +35,26 @@ export function useProjectPresence(projectId: string | null) {
       // Устанавливаем контекст пользователя для RLS
       await setUserContext(userId);
       
+      // Из-за уникального индекса с COALESCE, используем DELETE + INSERT вместо upsert
+      // Сначала удаляем старую запись для этой комбинации project_id + user_id + entity
+      await supabase
+        .from('project_presence')
+        .delete()
+        .eq('project_id', projectId)
+        .eq('user_id', userId)
+        .eq('entity_type', entityType ?? null)
+        .eq('entity_id', entityId ?? null);
+      
+      // Затем вставляем новую запись
       const { error } = await supabase
         .from('project_presence')
-        .upsert({
+        .insert({
           project_id: projectId,
           user_id: userId,
           entity_type: entityType,
           entity_id: entityId,
           cursor_position: cursorPosition,
           last_seen: new Date().toISOString(),
-        }, {
-          onConflict: 'project_id,user_id,entity_type,entity_id',
         });
 
       if (error) {
