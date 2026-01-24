@@ -111,7 +111,7 @@ export function useProjectPresence(projectId: string | null) {
           }
         }
       )
-      .subscribe((status, err) => {
+      .subscribe((_status, err) => {
         if (err) {
           // Игнорируем ошибки подписки если таблица не существует
           if (err.message?.includes('relation') || err.message?.includes('does not exist')) {

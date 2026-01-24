@@ -105,52 +105,49 @@ CREATE TRIGGER update_project_members_updated_at
 -- 8. RLS Policies для project_members
 ALTER TABLE project_members ENABLE ROW LEVEL SECURITY;
 
--- Пользователи видят только свои членства и членства в проектах, где они участники
-CREATE POLICY "Users can view memberships in their projects"
+-- Удаляем старые политики если они существуют
+DROP POLICY IF EXISTS "Users can view memberships in their projects" ON project_members;
+DROP POLICY IF EXISTS "Users can view their own memberships" ON project_members;
+DROP POLICY IF EXISTS "Owners can view project members" ON project_members;
+DROP POLICY IF EXISTS "Owners and admins can add members" ON project_members;
+DROP POLICY IF EXISTS "Owners and admins can update members" ON project_members;
+
+-- Упрощенные политики без рекурсии
+-- Пользователи видят свои членства
+CREATE POLICY "Users can view their own memberships"
+  ON project_members FOR SELECT
+  USING (user_id = current_setting('app.current_user_id', true));
+
+-- Владельцы проектов могут видеть всех участников своих проектов
+CREATE POLICY "Owners can view project members"
   ON project_members FOR SELECT
   USING (
-    user_id = current_setting('app.current_user_id', true) OR
     EXISTS (
-      SELECT 1 FROM project_members pm 
-      WHERE pm.project_id = project_members.project_id 
-      AND pm.user_id = current_setting('app.current_user_id', true)
-      AND pm.status = 'active'
+      SELECT 1 FROM projects p
+      WHERE p.id = project_members.project_id
+      AND p.owner_id = current_setting('app.current_user_id', true)
     )
   );
 
--- Только владельцы и админы могут добавлять участников
-CREATE POLICY "Owners and admins can add members"
+-- Только владельцы могут добавлять участников (без проверки через project_members)
+CREATE POLICY "Owners can add members"
   ON project_members FOR INSERT
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM projects p
       WHERE p.id = project_id
       AND p.owner_id = current_setting('app.current_user_id', true)
-    ) OR
-    EXISTS (
-      SELECT 1 FROM project_members pm
-      WHERE pm.project_id = project_id
-      AND pm.user_id = current_setting('app.current_user_id', true)
-      AND pm.role = 'admin'
-      AND pm.status = 'active'
     )
   );
 
--- Только владельцы и админы могут обновлять участников
-CREATE POLICY "Owners and admins can update members"
+-- Только владельцы могут обновлять участников (без проверки через project_members)
+CREATE POLICY "Owners can update members"
   ON project_members FOR UPDATE
   USING (
     EXISTS (
       SELECT 1 FROM projects p
       WHERE p.id = project_id
       AND p.owner_id = current_setting('app.current_user_id', true)
-    ) OR
-    EXISTS (
-      SELECT 1 FROM project_members pm
-      WHERE pm.project_id = project_id
-      AND pm.user_id = current_setting('app.current_user_id', true)
-      AND pm.role = 'admin'
-      AND pm.status = 'active'
     )
   );
 
