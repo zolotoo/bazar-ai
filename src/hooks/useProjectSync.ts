@@ -2,7 +2,6 @@ import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../utils/supabase';
 import { useAuth } from './useAuth';
 import { useInboxVideos } from './useInboxVideos';
-import { useProjectContext } from '../contexts/ProjectContext';
 import { toast } from 'sonner';
 
 export interface ProjectChange {

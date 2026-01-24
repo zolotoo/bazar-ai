@@ -20,7 +20,7 @@ export function ProjectMembersModal({ projectId, isOpen, onClose }: ProjectMembe
   const [selectedRole, setSelectedRole] = useState<'read' | 'write' | 'admin'>('write');
 
   const userId = user?.telegram_username ? `tg-@${user.telegram_username}` : null;
-  const currentMember = members.find(m => m.user_id === userId);
+  const currentMember = members.find((m: any) => m.user_id === userId);
 
   const handleInvite = async () => {
     if (!inviteUsername.trim()) {
@@ -169,7 +169,7 @@ export function ProjectMembersModal({ projectId, isOpen, onClose }: ProjectMembe
           ) : (
             <div className="space-y-2">
               <AnimatePresence>
-                {members.map((member) => {
+                {members.map((member: any) => {
                   const username = member.user_id.replace('tg-@', '').replace('tg-', '');
                   const isCurrentUser = member.user_id === userId;
                   const canManage = currentMember?.role === 'admin' || currentMember?.user_id === member.user_id;

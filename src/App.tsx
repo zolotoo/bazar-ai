@@ -171,7 +171,6 @@ function CreateProjectModal({ onSave, onClose }: CreateProjectModalProps) {
 
 // Модальное окно редактирования проекта
 interface EditProjectModalProps {
-  isOpen: boolean;
   project: { id: string; name: string; color: string } | null;
   onClose: () => void;
   onSave: (projectId: string, name: string, color: string) => void;
