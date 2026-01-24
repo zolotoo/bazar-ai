@@ -43,15 +43,17 @@ export default async function handler(req, res) {
       .single();
 
     if (projectError) {
-      console.error('Error fetching project:', projectError);
-      return res.status(404).json({ error: 'Project not found' });
+      console.error('[Invite] Error fetching project:', projectError);
+      return res.status(404).json({ error: 'Project not found', details: projectError.message });
     }
 
     if (!project) {
+      console.error('[Invite] Project not found:', projectId);
       return res.status(404).json({ error: 'Project not found' });
     }
 
     const isOwner = project.owner_id === userId;
+    console.log('[Invite] Project owner check:', { projectId, userId, ownerId: project.owner_id, isOwner });
     
     if (!isOwner) {
       // Проверяем, является ли пользователь админом
@@ -69,7 +71,13 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: 'Collaboration tables not set up. Please run migrations.' });
       }
 
-      if (memberError || !member || member.role !== 'admin') {
+      if (memberError) {
+        console.error('[Invite] Error checking member:', memberError);
+        return res.status(500).json({ error: 'Failed to check permissions', details: memberError.message });
+      }
+
+      if (!member || member.role !== 'admin') {
+        console.warn('[Invite] Insufficient permissions:', { userId, member });
         return res.status(403).json({ error: 'Insufficient permissions' });
       }
     }
@@ -78,6 +86,8 @@ export default async function handler(req, res) {
     const inviteeId = username.startsWith('@') 
       ? `tg-${username}` 
       : `tg-@${username}`;
+    
+    console.log('[Invite] Normalized invitee ID:', { username, inviteeId });
 
     // Проверяем, не добавлен ли уже участник
     const { data: existing, error: existingError } = await supabase
@@ -89,6 +99,7 @@ export default async function handler(req, res) {
 
     // Если таблица не существует, возвращаем ошибку
     if (existingError && (existingError.code === 'PGRST116' || existingError.message?.includes('relation') || existingError.message?.includes('does not exist'))) {
+      console.error('[Invite] Table project_members does not exist');
       return res.status(500).json({ 
         error: 'Collaboration tables not set up',
         message: 'Please run the migration: create_collaboration_tables.sql in your Supabase database'
@@ -96,6 +107,7 @@ export default async function handler(req, res) {
     }
 
     if (existingError && existingError.code !== 'PGRST116') {
+      console.error('[Invite] Error checking existing member:', existingError);
       throw existingError;
     }
 
@@ -114,6 +126,7 @@ export default async function handler(req, res) {
         .eq('id', existing.id);
 
       if (updateError) {
+        console.error('[Invite] Error reactivating member:', updateError);
         throw updateError;
       }
 
@@ -125,6 +138,7 @@ export default async function handler(req, res) {
     }
 
     // Создаем новую запись участника
+    console.log('[Invite] Creating new member:', { projectId, inviteeId, userId });
     const { data: member, error: insertError } = await supabase
       .from('project_members')
       .insert({
@@ -138,9 +152,15 @@ export default async function handler(req, res) {
       .single();
 
     if (insertError) {
-      console.error('Error inserting member:', insertError);
-      throw insertError;
+      console.error('[Invite] Error inserting member:', insertError);
+      return res.status(500).json({ 
+        error: 'Failed to invite member',
+        details: insertError.message,
+        code: insertError.code
+      });
     }
+
+    console.log('[Invite] Member created successfully:', member.id);
 
     // Записываем изменение (если таблица существует)
     try {
@@ -157,7 +177,7 @@ export default async function handler(req, res) {
     } catch (changeError) {
       // Игнорируем ошибки если таблица не существует
       if (!changeError.message?.includes('relation') && !changeError.message?.includes('does not exist')) {
-        console.error('Error recording change:', changeError);
+        console.error('[Invite] Error recording change:', changeError);
       }
     }
 
@@ -177,10 +197,11 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('Error inviting member:', error);
+    console.error('[Invite] Unexpected error:', error);
     return res.status(500).json({ 
       error: 'Failed to invite member',
-      details: error.message 
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }
