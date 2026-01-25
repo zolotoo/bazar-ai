@@ -135,15 +135,15 @@ export const VideoGradientCard = ({
         />
 
         {/* Content */}
-        <div className="relative flex flex-col justify-end h-full p-4 z-20 text-white">
+        <div className="relative flex flex-col justify-end h-full p-3 md:p-4 z-20 text-white min-h-0">
           {/* Top badges */}
-          <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
+          <div className="absolute top-2 md:top-3 left-2 md:left-3 right-2 md:right-3 flex items-center justify-between gap-1">
             {/* Badges container */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1 md:gap-1.5 flex-wrap">
               {/* Viral badge */}
               <motion.div
                 className={cn(
-                  "px-2.5 py-1 rounded-full backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1.5",
+                  "px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-full backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 md:gap-1.5",
                   "border border-white/20",
                   "shadow-[0_2px_8px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.2)]",
                   viralCoef > 10 ? "bg-gradient-to-r from-emerald-500/80 via-emerald-400/70 to-emerald-500/80 text-white" : 
@@ -155,15 +155,15 @@ export const VideoGradientCard = ({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
               >
-                <Sparkles className="w-3 h-3" strokeWidth={2} />
-                <span className="text-xs font-semibold">{viralCoef > 0 ? Math.round(viralCoef) : '—'}</span>
+                <Sparkles className="w-2.5 h-2.5 md:w-3 md:h-3 flex-shrink-0" strokeWidth={2} />
+                <span className="text-[10px] md:text-xs font-semibold whitespace-nowrap">{viralCoef > 0 ? Math.round(viralCoef) : '—'}</span>
               </motion.div>
               
               {/* Viral multiplier badge (отдельно рядом) */}
               {viralMultiplier !== null && viralMultiplier !== undefined && (
                 <motion.div
                   className={cn(
-                    "px-2 py-1 rounded-full backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1",
+                    "px-1.5 md:px-2 py-0.5 md:py-1 rounded-full backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-0.5 md:gap-1",
                     "border border-white/20",
                     "shadow-[0_2px_8px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.2)]",
                     viralMultiplier >= 10 ? "bg-gradient-to-r from-red-500/80 via-red-400/70 to-red-500/80 text-white" :
@@ -178,8 +178,8 @@ export const VideoGradientCard = ({
                   transition={{ delay: 0.2 }}
                   title={`В ${Math.round(viralMultiplier)}x раз ${viralMultiplier >= 1 ? 'больше' : 'меньше'} среднего у автора`}
                 >
-                  <TrendingUp className="w-3 h-3" strokeWidth={2} />
-                  <span className="text-[10px] font-semibold">{Math.round(viralMultiplier)}x</span>
+                  <TrendingUp className="w-2.5 h-2.5 md:w-3 md:h-3 flex-shrink-0" strokeWidth={2} />
+                  <span className="text-[9px] md:text-[10px] font-semibold whitespace-nowrap">{Math.round(viralMultiplier)}x</span>
                 </motion.div>
               )}
             </div>
@@ -223,12 +223,12 @@ export const VideoGradientCard = ({
           <div>
             {/* Username as iOS 26 button - маленький и белый */}
             <motion.div
-              className="px-2.5 py-1 rounded-xl backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1.5 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20 mb-2 inline-flex"
+              className="px-2 py-0.5 md:px-2.5 md:py-1 rounded-xl backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20 mb-2 inline-flex max-w-full"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.15 }}
             >
-              <span className="text-[10px] font-semibold text-white/90 truncate max-w-[120px]">@{username || 'instagram'}</span>
+              <span className="text-[9px] md:text-[10px] font-semibold text-white/90 truncate max-w-[100px] md:max-w-[120px]">@{username || 'instagram'}</span>
               {viralCoef > 5 && (
                 <div className="w-2.5 h-2.5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
                   <svg className="w-1.5 h-1.5 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -239,38 +239,38 @@ export const VideoGradientCard = ({
             </motion.div>
 
             {/* Stats line with icons - iOS 26 style liquid glass buttons */}
-            <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <div className="flex items-center gap-1.5 md:gap-2 mb-2 flex-wrap">
               {viewCount !== undefined && (
                 <motion.div
-                  className="px-2.5 py-1.5 rounded-xl backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1.5 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
+                  className="px-2 py-1 md:px-2.5 md:py-1.5 rounded-xl backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.2 }}
                 >
-                  <Eye className="w-3 h-3 flex-shrink-0" strokeWidth={2} />
-                  <span className="text-[11px] font-semibold text-white/90">{formatNumber(viewCount)}</span>
+                  <Eye className="w-2.5 h-2.5 md:w-3 md:h-3 flex-shrink-0" strokeWidth={2} />
+                  <span className="text-[10px] md:text-[11px] font-semibold text-white/90 whitespace-nowrap">{formatNumber(viewCount)}</span>
                 </motion.div>
               )}
               {likeCount !== undefined && (
                 <motion.div
-                  className="px-2.5 py-1.5 rounded-xl backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1.5 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
+                  className="px-2 py-1 md:px-2.5 md:py-1.5 rounded-xl backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.25 }}
                 >
-                  <Heart className="w-3 h-3 flex-shrink-0" strokeWidth={2} />
-                  <span className="text-[11px] font-semibold text-white/90">{formatNumber(likeCount)}</span>
+                  <Heart className="w-2.5 h-2.5 md:w-3 md:h-3 flex-shrink-0" strokeWidth={2} />
+                  <span className="text-[10px] md:text-[11px] font-semibold text-white/90 whitespace-nowrap">{formatNumber(likeCount)}</span>
                 </motion.div>
               )}
               {commentCount !== undefined && (
                 <motion.div
-                  className="px-2.5 py-1.5 rounded-xl backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1.5 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
+                  className="px-2 py-1 md:px-2.5 md:py-1.5 rounded-xl backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.3 }}
                 >
-                  <MessageCircle className="w-3 h-3 flex-shrink-0" strokeWidth={2} />
-                  <span className="text-[11px] font-semibold text-white/90">{formatNumber(commentCount)}</span>
+                  <MessageCircle className="w-2.5 h-2.5 md:w-3 md:h-3 flex-shrink-0" strokeWidth={2} />
+                  <span className="text-[10px] md:text-[11px] font-semibold text-white/90 whitespace-nowrap">{formatNumber(commentCount)}</span>
                 </motion.div>
               )}
               {date && (
@@ -359,8 +359,8 @@ export const VideoGradientCard = ({
 
             {/* Caption */}
             {caption && !folderBadge && (
-              <p className="text-white/60 text-xs leading-relaxed line-clamp-2 mb-3">
-                {caption.slice(0, 80)}{caption.length > 80 ? '...' : ''}
+              <p className="text-white/60 text-xs leading-relaxed line-clamp-2 mb-3 break-words overflow-hidden">
+                {caption}
               </p>
             )}
 

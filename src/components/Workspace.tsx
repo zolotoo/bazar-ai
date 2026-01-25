@@ -518,12 +518,10 @@ export function Workspace() {
 
   return (
     <div className="h-full overflow-hidden relative">
-      {/* Floating Folder Widget */}
+      {/* Floating Folder Widget - Desktop */}
       <div className={cn(
-        "absolute top-4 right-4 z-40 bg-white/95 backdrop-blur-xl rounded-xl shadow-xl border border-white/50 transition-all duration-300",
-        "md:top-4 md:right-4",
-        "top-safe-top right-safe-right",
-        isFolderWidgetOpen ? "w-56 md:w-56" : "w-auto"
+        "hidden md:block absolute top-4 right-4 z-40 bg-white/95 backdrop-blur-xl rounded-xl shadow-xl border border-white/50 transition-all duration-300",
+        isFolderWidgetOpen ? "w-56" : "w-auto"
       )}>
         {/* Widget Header */}
         <div 
@@ -616,12 +614,122 @@ export function Workspace() {
         )}
       </div>
 
+      {/* Floating Folder Widget - Mobile Modal */}
+      {isFolderWidgetOpen && (
+        <>
+          <div
+            className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+            onClick={() => setIsFolderWidgetOpen(false)}
+          />
+          <div className={cn(
+            "md:hidden fixed top-0 right-0 bottom-0 z-50 bg-white/95 backdrop-blur-xl shadow-2xl border-l border-white/50 transition-all duration-300 w-72 safe-top safe-bottom safe-right"
+          )}>
+            {/* Widget Header */}
+            <div 
+              className="flex items-center justify-between px-4 py-3 border-b border-slate-100 safe-top"
+            >
+              <div className="flex items-center gap-2">
+                <FolderOpen className="w-5 h-5 text-[#f97316]" strokeWidth={2.5} />
+                <span className="text-sm font-semibold text-slate-700">Папки</span>
+              </div>
+              <button
+                onClick={() => setIsFolderWidgetOpen(false)}
+                className="p-2 -m-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors touch-manipulation"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* Widget Content */}
+            <div className="px-2 pb-3 h-full overflow-y-auto custom-scrollbar-light safe-bottom">
+              {/* Все видео (лента) */}
+              <button
+                onClick={() => { setSelectedFolderId(null); setIsFolderWidgetOpen(false); }}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left mb-1 mt-2",
+                  selectedFolderId === null 
+                    ? "bg-orange-100 text-orange-700" 
+                    : "hover:bg-slate-100 text-slate-600"
+                )}
+              >
+                <div className={cn(
+                  "w-8 h-8 rounded-lg flex items-center justify-center",
+                  selectedFolderId === null ? "bg-orange-200" : "bg-slate-100"
+                )}>
+                  <Inbox className="w-4 h-4" style={{ color: selectedFolderId === null ? '#f97316' : '#64748b' }} strokeWidth={2.5} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium block truncate">Все видео</span>
+                  <span className="text-xs text-slate-400">{totalVideos} видео</span>
+                </div>
+              </button>
+              
+              <div className="h-px bg-slate-100 my-2" />
+              
+              {/* Папки */}
+              {folderConfigs.map(folder => {
+                const count = getVideoCountInFolder(folder.id);
+                const isSelected = selectedFolderId === folder.id;
+                const isRejected = folder.iconType === 'rejected';
+                
+                return (
+                  <button
+                    key={folder.id}
+                    onClick={() => { setSelectedFolderId(folder.id); setIsFolderWidgetOpen(false); }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-left",
+                      isSelected 
+                        ? "bg-slate-100" 
+                        : "hover:bg-slate-50 text-slate-600",
+                      isRejected && "opacity-70"
+                    )}
+                  >
+                    <div 
+                      className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: `${folder.color}20` }}
+                    >
+                      {getIconComponent(folder.iconType, folder.color, "w-4 h-4")}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className={cn(
+                        "text-sm font-medium block truncate",
+                        isSelected && "text-slate-800"
+                      )}>{folder.title}</span>
+                      <span className="text-xs text-slate-400">{count} видео</span>
+                    </div>
+                  </button>
+                );
+              })}
+              
+              {/* Settings button */}
+              <div className="h-px bg-slate-100 my-2" />
+              <button
+                onClick={() => { setShowFolderSettings(true); setIsFolderWidgetOpen(false); }}
+                className="w-full flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-xl hover:bg-slate-50 active:bg-slate-100 text-slate-500 text-sm transition-colors touch-manipulation"
+              >
+                <Settings className="w-4 h-4" />
+                Настроить папки
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Mobile Folder Button */}
+      <button
+        onClick={() => setIsFolderWidgetOpen(true)}
+        className="md:hidden fixed top-4 right-4 z-30 bg-white/95 backdrop-blur-xl rounded-xl shadow-xl border border-white/50 px-4 py-3 flex items-center gap-2 touch-manipulation safe-top safe-right"
+      >
+        <FolderOpen className="w-5 h-5 text-[#f97316]" strokeWidth={2.5} />
+        <span className="text-sm font-semibold text-slate-700">Папки</span>
+      </button>
+
       {/* Main Content - Video Feed */}
-      <div className="h-full overflow-y-auto custom-scrollbar-light px-4 safe-left safe-right">
-        <div className="max-w-6xl mx-auto py-6 safe-top safe-bottom">
+      <div className="h-full overflow-y-auto custom-scrollbar-light px-3 md:px-4 safe-left safe-right">
+        <div className="max-w-6xl mx-auto py-4 md:py-6 safe-top safe-bottom">
           {/* Header */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="mb-4 md:mb-6">
+            <div className="flex items-start md:items-center justify-between flex-wrap gap-3 md:gap-4">
               <div className="flex items-center gap-3">
                 {currentFolderConfig ? (
                   <>
@@ -632,8 +740,8 @@ export function Workspace() {
                       {getIconComponent(currentFolderConfig.iconType, '#ffffff', "w-6 h-6")}
                     </div>
                     <div>
-                      <h1 className="text-2xl font-bold text-slate-800">{currentFolderConfig.title}</h1>
-                      <p className="text-slate-500 text-sm">{feedVideos.length} видео</p>
+                      <h1 className="text-xl md:text-2xl font-bold text-slate-800">{currentFolderConfig.title}</h1>
+                      <p className="text-slate-500 text-xs md:text-sm">{feedVideos.length} видео</p>
                     </div>
                   </>
                 ) : (
@@ -642,15 +750,15 @@ export function Workspace() {
                       <Sparkles className="w-6 h-6 text-white" strokeWidth={2.5} />
                     </div>
                     <div>
-                      <h1 className="text-2xl font-bold text-slate-800">Все видео</h1>
-                      <p className="text-slate-500 text-sm">{feedVideos.length} видео • отсортировано по виральности</p>
+                      <h1 className="text-xl md:text-2xl font-bold text-slate-800">Все видео</h1>
+                      <p className="text-slate-500 text-xs md:text-sm">{feedVideos.length} видео • отсортировано по виральности</p>
                     </div>
                   </>
                 )}
               </div>
 
               {/* Сортировка и кнопка отмены */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 {/* Undo button */}
                 {canUndo && (
                   <button
@@ -659,10 +767,10 @@ export function Workspace() {
                     title="Отменить последнее действие"
                   >
                     <Undo2 className="w-3.5 h-3.5" />
-                    Отменить
+                    <span className="hidden sm:inline">Отменить</span>
                   </button>
                 )}
-                <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-2xl p-1.5 shadow-lg border border-white/50 md:mr-72 overflow-x-auto">
+                <div className="flex items-center gap-1.5 md:gap-2 bg-white/80 backdrop-blur-sm rounded-2xl p-1 md:p-1.5 shadow-lg border border-white/50 overflow-x-auto flex-1 min-w-0">
                 {[
                   { value: 'viral', label: 'Виральность', icon: Sparkles, color: 'from-[#f97316] via-[#fb923c] to-[#fdba74]' },
                   { value: 'views', label: 'Просмотры', icon: Eye, color: 'from-blue-500 to-cyan-500' },
@@ -673,14 +781,14 @@ export function Workspace() {
                     key={value}
                     onClick={() => setSortBy(value as typeof sortBy)}
                     className={cn(
-                      "flex items-center gap-1.5 px-3 py-1 min-h-[44px] rounded-xl text-xs font-semibold transition-all active:scale-95 touch-manipulation",
+                      "flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1 min-h-[44px] rounded-xl text-[10px] md:text-xs font-semibold transition-all active:scale-95 touch-manipulation whitespace-nowrap",
                       sortBy === value 
                         ? `bg-gradient-to-r ${color} text-white shadow-md backdrop-blur-sm` 
                         : "text-slate-500 hover:text-slate-700 hover:bg-slate-100 active:bg-slate-200"
                     )}
                   >
-                    <Icon className="w-4 h-4" strokeWidth={2.5} />
-                    {label}
+                    <Icon className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" strokeWidth={2.5} />
+                    <span className="hidden sm:inline">{label}</span>
                   </button>
                 ))}
                 </div>
@@ -702,7 +810,7 @@ export function Workspace() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-5 pb-6 safe-bottom">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-5 pb-20 md:pb-6 safe-bottom">
               {feedVideos.map((video, idx) => {
                 const thumbnailUrl = proxyImageUrl(video.preview_url);
                 const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at || video.created_at);
