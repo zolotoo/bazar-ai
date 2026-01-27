@@ -26,15 +26,17 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
         ref={ref}
         className={cn(
           "md:hidden fixed bottom-0 left-0 right-0 z-[9998]",
-          "px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]",
-          "bg-white/80 backdrop-blur-xl border-t border-white/60",
-          "shadow-[0_-4px_24px_rgba(0,0,0,0.06)]",
+          "px-2 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))]",
+          "bg-white/70 backdrop-blur-2xl",
+          "rounded-t-[20px] border-t border-x border-white/50",
+          "shadow-[0_-8px_32px_rgba(0,0,0,0.08),0_-1px_0_rgba(255,255,255,0.5)_inset]",
           "touch-manipulation",
           className
         )}
+        style={{ paddingLeft: "max(8px, env(safe-area-inset-left))", paddingRight: "max(8px, env(safe-area-inset-right))" }}
         {...props}
       >
-        <ul className="flex items-center justify-around gap-1 max-w-lg mx-auto">
+        <ul className="flex items-center justify-around gap-0.5 max-w-sm mx-auto">
           {items.map((item) => {
             const Icon = item.icon;
             const isActive = item.id === activeId;
@@ -45,29 +47,29 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
                   type="button"
                   onClick={() => onTabClick(item.id)}
                   className={cn(
-                    "flex flex-col items-center gap-0.5 py-2 px-1.5 min-h-[52px] rounded-xl w-full max-w-[72px]",
-                    "transition-colors duration-200 active:scale-95",
+                    "flex flex-col items-center justify-center gap-0.5 py-1.5 px-1 min-h-[44px] w-full max-w-[56px]",
+                    "rounded-2xl transition-all duration-200 active:scale-95",
                     isActive
-                      ? "text-[#f97316]"
-                      : "text-slate-500"
+                      ? "bg-[#f97316]/10 text-[#f97316]"
+                      : "text-slate-500 active:bg-black/5"
                   )}
                   aria-label={item.label}
                   aria-current={isActive ? "true" : undefined}
                 >
                   <span
                     className={cn(
-                      "flex items-center justify-center w-8 h-8 rounded-xl transition-colors",
-                      isActive ? "bg-[#f97316]/12" : ""
+                      "flex items-center justify-center w-7 h-7 rounded-full transition-colors flex-shrink-0",
+                      isActive ? "bg-[#f97316]/15" : ""
                     )}
                   >
                     <Icon
-                      className={cn("w-5 h-5 flex-shrink-0", isActive ? "text-[#f97316]" : item.iconColor)}
-                      strokeWidth={2.5}
+                      className={cn("w-[22px] h-[22px] flex-shrink-0", isActive ? "text-[#f97316]" : "text-slate-600")}
+                      strokeWidth={2.25}
                     />
                   </span>
                   <span
                     className={cn(
-                      "text-[10px] font-medium truncate w-full text-center",
+                      "text-[9px] font-medium truncate w-full text-center leading-tight",
                       isActive ? "text-[#f97316]" : "text-slate-500"
                     )}
                   >

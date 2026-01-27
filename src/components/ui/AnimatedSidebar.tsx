@@ -133,8 +133,7 @@ export const MobileSidebar = ({
   const { open, setOpen } = useSidebar();
   return (
     <>
-      {/* Верхняя полоска убрана: на мобильных меню открывается из нижнего таб-бара (Меню) */}
-      {/* Оверлей меню — поверх всего, высокий z-index */}
+      {/* Оверлей — стекло iOS 26 */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -142,38 +141,39 @@ export const MobileSidebar = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="md:hidden fixed inset-0 z-[9999] bg-black/30 touch-none"
-            style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+            className="md:hidden fixed inset-0 z-[9999] bg-black/25 backdrop-blur-sm touch-none safe-top safe-bottom safe-left safe-right"
             onClick={() => setOpen(false)}
             aria-hidden
           />
         )}
       </AnimatePresence>
+      {/* Панель Меню — стекло, выдвигается слева, кнопки как в iOS 26 */}
       <AnimatePresence>
         {open && (
           <motion.div
             initial={{ x: "-100%" }}
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
-            transition={{ type: "tween", duration: 0.2 }}
+            transition={{ type: "tween", duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
             className={cn(
-              "md:hidden fixed inset-y-0 left-0 z-[9999] w-[min(320px,85vw)] flex flex-col",
-              "bg-white shadow-2xl",
+              "md:hidden fixed inset-y-0 left-0 z-[9999] w-[min(300px,88vw)] flex flex-col",
+              "bg-white/65 backdrop-blur-3xl",
+              "rounded-r-[24px] border-r border-white/50",
               "safe-top safe-bottom safe-left safe-right overflow-hidden"
             )}
-            style={{ willChange: "transform" }}
+            style={{ willChange: "transform", boxShadow: "8px 0 32px rgba(0,0,0,0.1), -2px 0 0 rgba(255,255,255,0.3) inset" }}
           >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0">
-              <span className="text-sm font-semibold text-slate-500 uppercase">Меню</span>
+            <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0 safe-top">
+              <span className="text-[13px] font-semibold text-slate-600">Меню</span>
               <button
                 onClick={() => setOpen(false)}
-                className="p-3 -m-1 min-w-[48px] min-h-[48px] flex items-center justify-center touch-manipulation active:bg-slate-100 rounded-xl text-slate-600"
+                className="p-2 -m-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-full bg-white/40 backdrop-blur-sm text-slate-500 active:bg-white/60 transition-colors touch-manipulation"
                 aria-label="Закрыть"
               >
-                <X className="w-6 h-6" strokeWidth={2.5} />
+                <X className="w-5 h-5" strokeWidth={2.5} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4 -mt-1">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-3 pt-1 space-y-1">
               {children}
             </div>
           </motion.div>
