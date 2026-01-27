@@ -163,19 +163,19 @@ body {
 
 /* Mobile-first responsive breakpoints */
 @media (max-width: 640px) {
-  /* iOS 26 Glass Morphism for Mobile */
+  /* Меньше blur на мобильных — меньше фризов */
   .glass {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: var(--ios-blur);
-    -webkit-backdrop-filter: var(--ios-blur);
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(255, 255, 255, 0.9);
     box-shadow: var(--ios-shadow-md);
   }
 
   .glass-dark {
-    background: rgba(30, 25, 20, 0.9);
-    backdrop-filter: var(--ios-blur);
-    -webkit-backdrop-filter: var(--ios-blur);
+    background: rgba(30, 25, 20, 0.94);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(255, 255, 255, 0.15);
   }
 

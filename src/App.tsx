@@ -555,7 +555,7 @@ function AppContent() {
                               name={project.name}
                               color={project.color}
                               isActive={currentProjectId === project.id}
-                              onClick={() => selectProject(project.id)}
+                              onClick={() => { selectProject(project.id); setSidebarExpanded(false); }}
                               onEdit={() => setEditingProject({ id: project.id, name: project.name, color: project.color })}
                               icon={<FolderOpen className="w-4 h-4" style={{ color: project.color || '#f97316' }} strokeWidth={2.5} />}
                             />
@@ -588,7 +588,7 @@ function AppContent() {
                                   name={project.name}
                                   color={project.color}
                                   isActive={currentProjectId === project.id}
-                                  onClick={() => handleProjectClick(project)}
+                                  onClick={async () => { await handleProjectClick(project); setSidebarExpanded(false); }}
                                   onEdit={() => setEditingProject({ id: project.id, name: project.name, color: project.color })}
                                   icon={<FolderOpen className="w-4 h-4" style={{ color: project.color || '#f97316' }} strokeWidth={2.5} />}
                                   badge={isPending ? 'Новое' : undefined}
@@ -641,8 +641,8 @@ function AppContent() {
         </SidebarBody>
       </Sidebar>
 
-      {/* Main Content */}
-      <div className="flex-1 h-screen overflow-hidden md:h-auto">
+      {/* Main Content — отступ сверху под фиксированный мобильный хедер */}
+      <div className="flex-1 h-screen overflow-hidden md:h-auto pt-16 md:pt-0">
         {viewMode === 'workspace' && <Workspace />}
         {viewMode === 'history' && <History />}
         {viewMode === 'profile' && <ProfilePage />}

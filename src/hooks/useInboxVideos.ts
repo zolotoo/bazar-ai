@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { supabase } from '../utils/supabase';
+import { supabase, setUserContext } from '../utils/supabase';
 import { useFlowStore } from '../stores/flowStore';
 import { IncomingVideo } from '../types';
 import { useAuth } from './useAuth';
@@ -678,6 +678,92 @@ export function useInboxVideos() {
   }, []);
 
   /**
+   * Обновляет ссылки (заготовка, готовое видео)
+   */
+  const updateVideoLinks = useCallback(async (
+    videoId: string,
+    draftLink: string,
+    finalLink: string
+  ) => {
+    try {
+      const userId = getUserId();
+      await setUserContext(userId);
+
+      const { data, error } = await supabase
+        .from('saved_videos')
+        .update({
+          draft_link: draftLink || null,
+          final_link: finalLink || null,
+        })
+        .eq('id', videoId)
+        .select('id')
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error updating video links:', error);
+        return false;
+      }
+      if (!data) {
+        console.warn('updateVideoLinks: no row updated, check RLS or video id');
+        return false;
+      }
+
+      setVideos(prev => prev.map(v =>
+        v.id === videoId
+          ? { ...v, draft_link: draftLink || undefined, final_link: finalLink || undefined } as any
+          : v
+      ));
+      return true;
+    } catch (err) {
+      console.error('Error updating video links:', err);
+      return false;
+    }
+  }, [getUserId]);
+
+  /**
+   * Обновляет ответственных за сценарий и монтаж
+   */
+  const updateVideoResponsible = useCallback(async (
+    videoId: string,
+    scriptResponsible: string,
+    editingResponsible: string
+  ) => {
+    try {
+      const userId = getUserId();
+      await setUserContext(userId);
+
+      const { data, error } = await supabase
+        .from('saved_videos')
+        .update({
+          script_responsible: scriptResponsible || null,
+          editing_responsible: editingResponsible || null,
+        })
+        .eq('id', videoId)
+        .select('id')
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error updating video responsible:', error);
+        return false;
+      }
+      if (!data) {
+        console.warn('updateVideoResponsible: no row updated, check RLS or video id');
+        return false;
+      }
+
+      setVideos(prev => prev.map(v =>
+        v.id === videoId
+          ? { ...v, script_responsible: scriptResponsible || undefined, editing_responsible: editingResponsible || undefined } as any
+          : v
+      ));
+      return true;
+    } catch (err) {
+      console.error('Error updating video responsible:', err);
+      return false;
+    }
+  }, [getUserId]);
+
+  /**
    * Обновляет транскрипцию видео
    * Синхронизирует с глобальной таблицей videos
    */
@@ -740,6 +826,8 @@ export function useInboxVideos() {
     updateVideoFolder,
     updateVideoScript,
     updateVideoTranscript,
+    updateVideoResponsible,
+    updateVideoLinks,
     restoreVideo,
     startVideoProcessing, // Ручной запуск транскрибации
     markVideoAsOnCanvas,

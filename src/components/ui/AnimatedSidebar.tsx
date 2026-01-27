@@ -109,55 +109,72 @@ export const MobileSidebar = ({
   const { open, setOpen } = useSidebar();
   return (
     <>
+      {/* Мобильный хедер — всегда сверху, фиксированный, кликабельный */}
       <div
         className={cn(
-          "h-16 px-5 py-4 flex flex-row md:hidden items-center justify-between w-full",
-          "bg-white/75 backdrop-blur-[28px] backdrop-saturate-[180%]",
-          "border-b border-white/60",
-          "shadow-[0_1px_0_rgba(255,255,255,0.85)_inset,0_2px_8px_rgba(0,0,0,0.04)]",
-          "safe-top safe-left safe-right"
+          "md:hidden h-16 px-4 py-3 flex flex-row items-center justify-between w-full",
+          "bg-white/95 backdrop-blur-md border-b border-white/60",
+          "shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_2px_8px_rgba(0,0,0,0.04)]",
+          "fixed top-0 left-0 right-0 z-[9998] safe-top safe-left safe-right",
+          "touch-manipulation"
         )}
         {...props}
       >
-        <div className="flex justify-end z-20 w-full">
+        <div className="flex justify-end w-full">
           <button
             onClick={() => setOpen(!open)}
-            className="p-2 -m-2 min-w-[44px] min-h-[44px] flex items-center justify-center touch-manipulation"
-            aria-label="Toggle menu"
+            className="p-3 -m-1 min-w-[48px] min-h-[48px] flex items-center justify-center touch-manipulation active:bg-slate-100 rounded-xl"
+            aria-label="Меню"
           >
-            <Menu className="text-slate-700 w-6 h-6" />
+            <Menu className="text-slate-700 w-6 h-6" strokeWidth={2.5} />
           </button>
         </div>
-        <AnimatePresence>
-          {open && (
-            <motion.div
-              initial={{ x: "-100%", opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: "-100%", opacity: 0 }}
-              transition={{
-                duration: 0.3,
-                ease: "easeInOut",
-              }}
-              className={cn(
-                "fixed h-full w-full inset-0 z-[100] flex flex-col justify-between",
-                "bg-white/85 backdrop-blur-[32px] backdrop-saturate-[180%]",
-                "p-8",
-                "safe-top safe-bottom safe-left safe-right",
-                className
-              )}
-            >
-              <button
-                onClick={() => setOpen(!open)}
-                className="absolute right-8 top-8 z-50 p-2 -m-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-700 touch-manipulation safe-top safe-right"
-                aria-label="Close menu"
-              >
-                <X className="w-6 h-6" />
-              </button>
-              {children}
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
+      {/* Оверлей меню — поверх всего, высокий z-index */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="md:hidden fixed inset-0 z-[9999] bg-black/30 touch-none"
+            style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+            onClick={() => setOpen(false)}
+            aria-hidden
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ x: "-100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "-100%" }}
+            transition={{ type: "tween", duration: 0.2 }}
+            className={cn(
+              "md:hidden fixed inset-y-0 left-0 z-[9999] w-[min(320px,85vw)] flex flex-col",
+              "bg-white shadow-2xl",
+              "safe-top safe-bottom safe-left safe-right overflow-hidden"
+            )}
+            style={{ willChange: "transform" }}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0">
+              <span className="text-sm font-semibold text-slate-500 uppercase">Меню</span>
+              <button
+                onClick={() => setOpen(false)}
+                className="p-3 -m-1 min-w-[48px] min-h-[48px] flex items-center justify-center touch-manipulation active:bg-slate-100 rounded-xl text-slate-600"
+                aria-label="Закрыть"
+              >
+                <X className="w-6 h-6" strokeWidth={2.5} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4 -mt-1">
+              {children}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };

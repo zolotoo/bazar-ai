@@ -35,6 +35,10 @@ export interface ZoneVideo {
   translation_text?: string;
   script_text?: string;
   download_url?: string;
+  script_responsible?: string;
+  editing_responsible?: string;
+  draft_link?: string;
+  final_link?: string;
 }
 
 // Дефолтные зоны

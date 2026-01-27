@@ -246,6 +246,10 @@ export function Workspace() {
     translation_text: (v as any).translation_text,
     script_text: (v as any).script_text,
     download_url: (v as any).download_url,
+    script_responsible: (v as any).script_responsible,
+    editing_responsible: (v as any).editing_responsible,
+    draft_link: (v as any).draft_link,
+    final_link: (v as any).final_link,
     status: 'active',
   });
 
@@ -400,6 +404,10 @@ export function Workspace() {
           script_text: (selectedVideo as any).script_text,
           download_url: (selectedVideo as any).download_url,
           folder_id: selectedVideo.folder_id,
+          script_responsible: (selectedVideo as any).script_responsible,
+          editing_responsible: (selectedVideo as any).editing_responsible,
+          draft_link: (selectedVideo as any).draft_link,
+          final_link: (selectedVideo as any).final_link,
         }}
         onBack={() => setSelectedVideo(null)}
       />
@@ -614,15 +622,16 @@ export function Workspace() {
         )}
       </div>
 
-      {/* Floating Folder Widget - Mobile Modal */}
+      {/* Floating Folder Widget - Mobile Modal: поверх всего, без blur для фпс */}
       {isFolderWidgetOpen && (
         <>
           <div
-            className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+            className="md:hidden fixed inset-0 bg-black/40 z-[200] touch-manipulation"
             onClick={() => setIsFolderWidgetOpen(false)}
+            aria-hidden
           />
           <div className={cn(
-            "md:hidden fixed top-0 right-0 bottom-0 z-50 bg-white/95 backdrop-blur-xl shadow-2xl border-l border-white/50 transition-all duration-300 w-72 safe-top safe-bottom safe-right"
+            "md:hidden fixed top-0 right-0 bottom-0 z-[201] bg-white shadow-2xl border-l border-slate-200 w-72 safe-top safe-bottom safe-right overflow-hidden flex flex-col"
           )}>
             {/* Widget Header */}
             <div 
@@ -715,10 +724,10 @@ export function Workspace() {
         </>
       )}
 
-      {/* Mobile Folder Button */}
+      {/* Mobile Folder Button — ниже хедера меню, но выше контента */}
       <button
         onClick={() => setIsFolderWidgetOpen(true)}
-        className="md:hidden fixed top-4 right-4 z-30 bg-white/95 backdrop-blur-xl rounded-xl shadow-xl border border-white/50 px-4 py-3 flex items-center gap-2 touch-manipulation safe-top safe-right"
+        className="md:hidden fixed top-4 right-4 z-[100] bg-white rounded-xl shadow-lg border border-slate-200 px-4 py-3 flex items-center gap-2 touch-manipulation min-h-[48px] safe-top safe-right"
       >
         <FolderOpen className="w-5 h-5 text-[#f97316]" strokeWidth={2.5} />
         <span className="text-sm font-semibold text-slate-700">Папки</span>

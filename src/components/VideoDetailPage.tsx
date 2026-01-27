@@ -131,51 +131,30 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
   const [editingResponsible, setEditingResponsible] = useState(video.editing_responsible || '');
   const [isSavingLinks, setIsSavingLinks] = useState(false);
   const [isSavingResponsible, setIsSavingResponsible] = useState(false);
-  const [showVideoFrame, setShowVideoFrame] = useState(false);
   
-  const { updateVideoFolder, updateVideoScript, updateVideoTranscript } = useInboxVideos();
+  const { updateVideoFolder, updateVideoScript, updateVideoTranscript, updateVideoResponsible, updateVideoLinks } = useInboxVideos();
   
-  // Сохранение ссылок
+  // Сохранение ссылок (через хук — обновляет БД и локальное состояние)
   const handleSaveLinks = async () => {
     setIsSavingLinks(true);
-    try {
-      const { error } = await supabase
-        .from('saved_videos')
-        .update({ 
-          draft_link: draftLink || null,
-          final_link: finalLink || null,
-        })
-        .eq('id', video.id);
-      
-      if (error) throw error;
+    const success = await updateVideoLinks(video.id, draftLink, finalLink);
+    setIsSavingLinks(false);
+    if (success) {
       toast.success('Ссылки сохранены');
-    } catch (err) {
-      console.error('Error saving links:', err);
-      toast.error('Ошибка сохранения ссылок');
-    } finally {
-      setIsSavingLinks(false);
+    } else {
+      toast.error('Ошибка сохранения ссылок. Проверьте, что миграция add_video_fields.sql применена.');
     }
   };
   
-  // Сохранение ответственных
+  // Сохранение ответственных (через хук — обновляет БД и локальное состояние)
   const handleSaveResponsible = async () => {
     setIsSavingResponsible(true);
-    try {
-      const { error } = await supabase
-        .from('saved_videos')
-        .update({ 
-          script_responsible: scriptResponsible || null,
-          editing_responsible: editingResponsible || null,
-        })
-        .eq('id', video.id);
-      
-      if (error) throw error;
+    const success = await updateVideoResponsible(video.id, scriptResponsible, editingResponsible);
+    setIsSavingResponsible(false);
+    if (success) {
       toast.success('Ответственные сохранены');
-    } catch (err) {
-      console.error('Error saving responsible:', err);
-      toast.error('Ошибка сохранения ответственных');
-    } finally {
-      setIsSavingResponsible(false);
+    } else {
+      toast.error('Ошибка сохранения ответственных. Проверьте, что миграция add_video_fields.sql применена.');
     }
   };
   const { currentProject } = useProjectContext();
@@ -287,7 +266,6 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
       if (data.success && data.videoUrl) {
         setDirectVideoUrl(data.videoUrl);
         setShowVideo(true);
-        setShowVideoFrame(true);
         
         // Сохраняем URL в базу для будущего использования
         await supabase
@@ -303,15 +281,6 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
       toast.error('Ошибка загрузки видео');
     } finally {
       setIsLoadingVideo(false);
-    }
-  };
-  
-  // Открытие видео в углу
-  const handleOpenVideoFrame = async () => {
-    if (!directVideoUrl) {
-      await handleLoadVideo();
-    } else {
-      setShowVideoFrame(true);
     }
   };
 
@@ -549,28 +518,7 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
   const thumbnailUrl = proxyImageUrl(video.preview_url);
 
   return (
-    <div className="h-full overflow-hidden flex flex-col bg-[#f5f5f5] relative">
-      {/* Video frame in corner */}
-      {showVideoFrame && directVideoUrl && (
-        <div className="fixed top-20 right-6 z-50 bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200" style={{ width: '320px' }}>
-          <div className="relative" style={{ aspectRatio: '9/16', width: '100%' }}>
-            <video
-              src={directVideoUrl}
-              className="w-full h-full object-cover"
-              controls
-              autoPlay
-              playsInline
-            />
-            <button
-              onClick={() => setShowVideoFrame(false)}
-              className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors z-10 backdrop-blur-sm"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
-      
+    <div className="h-full overflow-hidden flex flex-col bg-[#f5f5f5]">
       <div className="w-full h-full p-6 flex flex-col overflow-hidden">
         {/* Header */}
         <div className="mb-4 flex items-center justify-between flex-shrink-0">
@@ -619,10 +567,9 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
 
         {/* Main content - 3 columns */}
         <div className="flex-1 flex gap-4 overflow-hidden min-h-0">
-          {/* Left: Video preview */}
-          <div className="w-64 flex-shrink-0 flex flex-col gap-3 overflow-y-auto custom-scrollbar-light">
-            {/* Video card - 9:16 aspect ratio */}
-            <div className="relative rounded-2xl overflow-hidden shadow-xl bg-black" style={{ width: '256px', aspectRatio: '9/16' }}>
+          {/* Left: превью 9:16 — по клику загружается и проигрывается тут же */}
+          <div className="flex-shrink-0 flex flex-col gap-3 overflow-y-auto custom-scrollbar-light" style={{ width: 'min(256px, 28vw)' }}>
+            <div className="relative rounded-2xl overflow-hidden shadow-xl bg-black w-full" style={{ aspectRatio: '9/16' }}>
               {showVideo && directVideoUrl ? (
                 <video
                   src={directVideoUrl}
@@ -632,28 +579,27 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
                   playsInline
                 />
               ) : (
-                <div className="relative group w-full h-full">
+                <button
+                  type="button"
+                  onClick={handleLoadVideo}
+                  disabled={isLoadingVideo}
+                  className="absolute inset-0 w-full h-full flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors group"
+                >
                   <img
                     src={thumbnailUrl}
                     alt=""
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover absolute inset-0"
                   />
-                  
-                  {/* Play button overlay */}
-                  <button
-                    onClick={handleLoadVideo}
-                    disabled={isLoadingVideo}
-                    className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <div className="w-14 h-14 rounded-full bg-white/95 flex items-center justify-center shadow-2xl">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-14 h-14 rounded-full bg-white/95 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
                       {isLoadingVideo ? (
                         <Loader2 className="w-6 h-6 text-slate-800 animate-spin" />
                       ) : (
                         <Play className="w-6 h-6 text-slate-800 ml-1" fill="currentColor" />
                       )}
                     </div>
-                  </button>
-                </div>
+                  </div>
+                </button>
               )}
             </div>
 
@@ -792,24 +738,6 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
             </div>
 
             {/* Actions */}
-            <button
-              onClick={handleOpenVideoFrame}
-              disabled={isLoadingVideo}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white text-sm font-medium transition-all shadow-sm disabled:opacity-50"
-            >
-              {isLoadingVideo ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Загрузка...
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4" fill="currentColor" />
-                  Смотреть видео
-                </>
-              )}
-            </button>
-            
             <a
               href={video.url}
               target="_blank"
