@@ -98,7 +98,13 @@ const getIconComponent = (iconType: string, color: string, size: string = "w-5 h
   }
 };
 
-export function Workspace() {
+interface WorkspaceProps {
+  externalFolderPanelOpen?: boolean;
+  onExternalFolderPanelClose?: () => void;
+}
+
+export function Workspace(props?: WorkspaceProps) {
+  const { externalFolderPanelOpen, onExternalFolderPanelClose } = props ?? {};
   const { loading } = useWorkspaceZones();
   const { videos: inboxVideos, removeVideo: removeInboxVideo, restoreVideo, updateVideoFolder } = useInboxVideos();
   const { 
@@ -125,6 +131,18 @@ export function Workspace() {
   const [draggedFolderIndex, setDraggedFolderIndex] = useState<number | null>(null);
   const [isFolderWidgetOpen, setIsFolderWidgetOpen] = useState(true);
   const [profileStatsCache, setProfileStatsCache] = useState<Map<string, any>>(new Map());
+
+  // Открытие панели папок с нижнего бара (мобильные)
+  useEffect(() => {
+    if (externalFolderPanelOpen) {
+      setIsFolderWidgetOpen(true);
+    }
+  }, [externalFolderPanelOpen]);
+
+  const closeFolderPanel = () => {
+    setIsFolderWidgetOpen(false);
+    onExternalFolderPanelClose?.();
+  };
   
   // Преобразуем папки проекта в FolderConfig формат
   const projectFolders: FolderConfig[] = currentProject?.folders
@@ -627,55 +645,53 @@ export function Workspace() {
         <>
           <div
             className="md:hidden fixed inset-0 bg-black/40 z-[200] touch-manipulation"
-            onClick={() => setIsFolderWidgetOpen(false)}
+            onClick={closeFolderPanel}
             aria-hidden
           />
           <div className={cn(
-            "md:hidden fixed top-0 right-0 bottom-0 z-[201] bg-white shadow-2xl border-l border-slate-200 w-72 safe-top safe-bottom safe-right overflow-hidden flex flex-col"
+            "md:hidden fixed top-0 right-0 bottom-0 z-[201] bg-white shadow-2xl border-l border-slate-200 w-[min(260px,82vw)] safe-top safe-bottom safe-right overflow-hidden flex flex-col"
           )}>
-            {/* Widget Header */}
+            {/* Компактный хедер панели папок на мобильных */}
             <div 
-              className="flex items-center justify-between px-4 py-3 border-b border-slate-100 safe-top"
+              className="flex items-center justify-between px-3 py-2.5 border-b border-slate-100 safe-top"
             >
-              <div className="flex items-center gap-2">
-                <FolderOpen className="w-5 h-5 text-[#f97316]" strokeWidth={2.5} />
-                <span className="text-sm font-semibold text-slate-700">Папки</span>
+              <div className="flex items-center gap-1.5">
+                <FolderOpen className="w-4 h-4 text-[#f97316]" strokeWidth={2.5} />
+                <span className="text-xs font-semibold text-slate-700">Папки</span>
               </div>
               <button
-                onClick={() => setIsFolderWidgetOpen(false)}
-                className="p-2 -m-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors touch-manipulation"
+                onClick={closeFolderPanel}
+                className="p-1.5 -m-1.5 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors touch-manipulation"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
             
-            {/* Widget Content */}
-            <div className="px-2 pb-3 h-full overflow-y-auto custom-scrollbar-light safe-bottom">
-              {/* Все видео (лента) */}
+            {/* Компактный контент панели папок */}
+            <div className="px-1.5 pb-2 h-full overflow-y-auto custom-scrollbar-light safe-bottom">
               <button
-                onClick={() => { setSelectedFolderId(null); setIsFolderWidgetOpen(false); }}
+                onClick={() => { setSelectedFolderId(null); closeFolderPanel(); }}
                 className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left mb-1 mt-2",
+                  "w-full flex items-center gap-2 px-2.5 py-2 rounded-lg transition-all text-left mb-0.5 mt-1.5",
                   selectedFolderId === null 
                     ? "bg-orange-100 text-orange-700" 
                     : "hover:bg-slate-100 text-slate-600"
                 )}
               >
                 <div className={cn(
-                  "w-8 h-8 rounded-lg flex items-center justify-center",
+                  "w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0",
                   selectedFolderId === null ? "bg-orange-200" : "bg-slate-100"
                 )}>
-                  <Inbox className="w-4 h-4" style={{ color: selectedFolderId === null ? '#f97316' : '#64748b' }} strokeWidth={2.5} />
+                  <Inbox className="w-3.5 h-3.5" style={{ color: selectedFolderId === null ? '#f97316' : '#64748b' }} strokeWidth={2.5} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium block truncate">Все видео</span>
-                  <span className="text-xs text-slate-400">{totalVideos} видео</span>
+                  <span className="text-xs font-medium block truncate">Все видео</span>
+                  <span className="text-[10px] text-slate-400">{totalVideos}</span>
                 </div>
               </button>
               
-              <div className="h-px bg-slate-100 my-2" />
+              <div className="h-px bg-slate-100 my-1.5" />
               
-              {/* Папки */}
               {folderConfigs.map(folder => {
                 const count = getVideoCountInFolder(folder.id);
                 const isSelected = selectedFolderId === folder.id;
@@ -684,39 +700,36 @@ export function Workspace() {
                 return (
                   <button
                     key={folder.id}
-                    onClick={() => { setSelectedFolderId(folder.id); setIsFolderWidgetOpen(false); }}
+                    onClick={() => { setSelectedFolderId(folder.id); closeFolderPanel(); }}
                     className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-left",
-                      isSelected 
-                        ? "bg-slate-100" 
-                        : "hover:bg-slate-50 text-slate-600",
+                      "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all text-left",
+                      isSelected ? "bg-slate-100" : "hover:bg-slate-50 text-slate-600",
                       isRejected && "opacity-70"
                     )}
                   >
                     <div 
-                      className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0"
                       style={{ backgroundColor: `${folder.color}20` }}
                     >
-                      {getIconComponent(folder.iconType, folder.color, "w-4 h-4")}
+                      {getIconComponent(folder.iconType, folder.color, "w-3.5 h-3.5")}
                     </div>
                     <div className="flex-1 min-w-0">
                       <span className={cn(
-                        "text-sm font-medium block truncate",
+                        "text-xs font-medium block truncate",
                         isSelected && "text-slate-800"
                       )}>{folder.title}</span>
-                      <span className="text-xs text-slate-400">{count} видео</span>
+                      <span className="text-[10px] text-slate-400">{count}</span>
                     </div>
                   </button>
                 );
               })}
               
-              {/* Settings button */}
-              <div className="h-px bg-slate-100 my-2" />
+              <div className="h-px bg-slate-100 my-1.5" />
               <button
-                onClick={() => { setShowFolderSettings(true); setIsFolderWidgetOpen(false); }}
-                className="w-full flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-xl hover:bg-slate-50 active:bg-slate-100 text-slate-500 text-sm transition-colors touch-manipulation"
+                onClick={() => { setShowFolderSettings(true); closeFolderPanel(); }}
+                className="w-full flex items-center gap-1.5 px-2.5 py-2 min-h-[40px] rounded-lg hover:bg-slate-50 active:bg-slate-100 text-slate-500 text-xs transition-colors touch-manipulation"
               >
-                <Settings className="w-4 h-4" />
+                <Settings className="w-3.5 h-3.5" />
                 Настроить папки
               </button>
             </div>
@@ -724,14 +737,7 @@ export function Workspace() {
         </>
       )}
 
-      {/* Mobile Folder Button — ниже хедера меню, но выше контента */}
-      <button
-        onClick={() => setIsFolderWidgetOpen(true)}
-        className="md:hidden fixed top-4 right-4 z-[100] bg-white rounded-xl shadow-lg border border-slate-200 px-4 py-3 flex items-center gap-2 touch-manipulation min-h-[48px] safe-top safe-right"
-      >
-        <FolderOpen className="w-5 h-5 text-[#f97316]" strokeWidth={2.5} />
-        <span className="text-sm font-semibold text-slate-700">Папки</span>
-      </button>
+      {/* Кнопка «Папки» на мобильных убрана — открытие только через нижний таб-бар */}
 
       {/* Main Content - Video Feed */}
       <div className="h-full overflow-y-auto custom-scrollbar-light px-3 md:px-4 safe-left safe-right">

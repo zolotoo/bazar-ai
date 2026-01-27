@@ -3,7 +3,7 @@
 import { cn } from "../../utils/cn";
 import React, { useState, createContext, useContext, ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { X, PanelLeftClose, PanelRightOpen } from "lucide-react";
 
 interface SidebarContextProps {
   open: boolean;
@@ -64,7 +64,9 @@ export const Sidebar = ({
   );
 };
 
-export const SidebarBody = (props: React.ComponentProps<typeof motion.div>) => {
+type SidebarBodyProps = { className?: string; children?: React.ReactNode };
+
+export const SidebarBody = (props: SidebarBodyProps) => {
   return (
     <>
       <DesktopSidebar {...props} />
@@ -73,11 +75,12 @@ export const SidebarBody = (props: React.ComponentProps<typeof motion.div>) => {
   );
 };
 
+type DesktopSidebarProps = SidebarBodyProps;
+
 export const DesktopSidebar = ({
   className,
   children,
-  ...props
-}: React.ComponentProps<typeof motion.div>) => {
+}: DesktopSidebarProps) => {
   const { open, setOpen, animate } = useSidebar();
   return (
     <motion.div
@@ -92,44 +95,45 @@ export const DesktopSidebar = ({
         width: animate ? (open ? "260px" : "88px") : "260px",
       }}
       transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-      {...props}
     >
+      {/* Кнопка «Скрыть меню» / «Развернуть» — меню постоянно, сворачивается только по клику */}
+      <div className={cn(
+        "flex items-center shrink-0 mb-3 -mx-1",
+        open ? "justify-end px-2" : "justify-center"
+      )}>
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          className={cn(
+            "flex items-center gap-2 py-2 rounded-xl transition-colors touch-manipulation",
+            "text-slate-500 hover:text-slate-700 hover:bg-white/50",
+            !open && "w-full justify-center min-h-[44px]"
+          )}
+          title={open ? "Скрыть меню" : "Показать меню"}
+          aria-label={open ? "Скрыть меню" : "Показать меню"}
+        >
+          {open ? (
+            <>
+              <PanelLeftClose className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
+              <span className="text-sm font-medium whitespace-nowrap">Скрыть меню</span>
+            </>
+          ) : (
+            <PanelRightOpen className="w-5 h-5" strokeWidth={2.5} />
+          )}
+        </button>
+      </div>
       {children}
     </motion.div>
   );
 };
 
 export const MobileSidebar = ({
-  className,
   children,
-  ...props
-}: React.ComponentProps<"div">) => {
+}: { className?: string; children?: React.ReactNode }) => {
   const { open, setOpen } = useSidebar();
   return (
     <>
-      {/* Мобильный хедер — всегда сверху, фиксированный, кликабельный */}
-      <div
-        className={cn(
-          "md:hidden h-16 px-4 py-3 flex flex-row items-center justify-between w-full",
-          "bg-white/95 backdrop-blur-md border-b border-white/60",
-          "shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_2px_8px_rgba(0,0,0,0.04)]",
-          "fixed top-0 left-0 right-0 z-[9998] safe-top safe-left safe-right",
-          "touch-manipulation"
-        )}
-        {...props}
-      >
-        <div className="flex justify-end w-full">
-          <button
-            onClick={() => setOpen(!open)}
-            className="p-3 -m-1 min-w-[48px] min-h-[48px] flex items-center justify-center touch-manipulation active:bg-slate-100 rounded-xl"
-            aria-label="Меню"
-          >
-            <Menu className="text-slate-700 w-6 h-6" strokeWidth={2.5} />
-          </button>
-        </div>
-      </div>
+      {/* Верхняя полоска убрана: на мобильных меню открывается из нижнего таб-бара (Меню) */}
       {/* Оверлей меню — поверх всего, высокий z-index */}
       <AnimatePresence>
         {open && (

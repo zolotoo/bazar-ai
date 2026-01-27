@@ -18,8 +18,9 @@ import { ProjectProvider, useProjectContext } from './contexts/ProjectContext';
 import type { Project } from './hooks/useProjects';
 import { 
   Video, Settings, Search, LayoutGrid, Clock, User, LogOut, 
-  Link, Radar, Plus, FolderOpen, X, Palette, Sparkles, Trash2, Users
+  Link, Radar, Plus, FolderOpen, X, Palette, Sparkles, Trash2, Users, Menu
 } from 'lucide-react';
+import { MobileBottomBar, type MobileTabId } from './components/ui/MobileBottomBar';
 import { cn } from './utils/cn';
 import { Toaster, toast } from 'sonner';
 
@@ -369,7 +370,41 @@ function AppContent() {
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const { logout, user } = useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>('workspace');
+  const [mobileFoldersOpen, setMobileFoldersOpen] = useState(false);
   const { videos } = useInboxVideos();
+
+  const mobileTabs = [
+    { id: 'workspace' as MobileTabId, icon: LayoutGrid, label: 'Лента', iconColor: 'text-slate-500' },
+    { id: 'folders' as MobileTabId, icon: FolderOpen, label: 'Папки', iconColor: 'text-amber-600' },
+    { id: 'search' as MobileTabId, icon: Search, label: 'Поиск', iconColor: 'text-slate-500' },
+    { id: 'profile' as MobileTabId, icon: User, label: 'Профиль', iconColor: 'text-slate-500' },
+    { id: 'menu' as MobileTabId, icon: Menu, label: 'Меню', iconColor: 'text-slate-500' },
+  ];
+
+  const mobileActiveId: MobileTabId | null =
+    sidebarExpanded ? 'menu'
+    : isSearchOpen ? 'search'
+    : viewMode === 'workspace' && mobileFoldersOpen ? 'folders'
+    : viewMode === 'profile' ? 'profile'
+    : 'workspace';
+
+  const handleMobileTabClick = (id: MobileTabId) => {
+    if (id === 'workspace') {
+      setViewMode('workspace');
+      setMobileFoldersOpen(false);
+    } else if (id === 'folders') {
+      setViewMode('workspace');
+      setMobileFoldersOpen(true);
+    } else if (id === 'search') {
+      setSearchTab('search');
+      setIsSearchOpen(true);
+    } else if (id === 'profile') {
+      setViewMode('profile');
+      setMobileFoldersOpen(false);
+    } else if (id === 'menu') {
+      setSidebarExpanded(true);
+    }
+  };
   
   // Используем контекст проектов
   const { projects, currentProject, currentProjectId, selectProject, createProject, updateProject, deleteProject, loading: projectsLoading, refetch: refetchProjects } = useProjectContext();
@@ -641,12 +676,24 @@ function AppContent() {
         </SidebarBody>
       </Sidebar>
 
-      {/* Main Content — отступ сверху под фиксированный мобильный хедер */}
-      <div className="flex-1 h-screen overflow-hidden md:h-auto pt-16 md:pt-0">
-        {viewMode === 'workspace' && <Workspace />}
+      {/* Main Content — на мобильных отступ снизу под нижний таб-бар, верхняя полоска убрана */}
+      <div className="flex-1 h-screen overflow-hidden md:h-auto pt-0 pb-20 md:pt-0 md:pb-0">
+        {viewMode === 'workspace' && (
+          <Workspace
+            externalFolderPanelOpen={mobileFoldersOpen}
+            onExternalFolderPanelClose={() => setMobileFoldersOpen(false)}
+          />
+        )}
         {viewMode === 'history' && <History />}
         {viewMode === 'profile' && <ProfilePage />}
       </div>
+
+      {/* Нижнее меню в стиле iOS — только на мобильных */}
+      <MobileBottomBar
+        items={mobileTabs}
+        activeId={mobileActiveId}
+        onTabClick={handleMobileTabClick}
+      />
 
       {/* Incoming Videos Drawer */}
       <IncomingVideosDrawer
