@@ -3,6 +3,7 @@ import { ArrowRight, ArrowLeft, Sparkles, TrendingUp, Video, Zap, Send, Loader2 
 import { cn } from '../utils/cn';
 import { useAuth } from '../hooks/useAuth';
 import ScrollMorphHero from './ui/ScrollMorphHero';
+import { GlassCardStatic } from './ui/GlassCard';
 
 export function LandingPage() {
   const [showAuth, setShowAuth] = useState(false);
@@ -51,7 +52,7 @@ export function LandingPage() {
   }
 
   return (
-    <div className="relative w-full min-h-screen overflow-hidden bg-[#f5f5f5]">
+    <div className="relative w-full min-h-screen overflow-hidden bg-base">
       {/* Clean gradient blobs - white, orange, black */}
       <div className="absolute top-[-15%] right-[-10%] w-[50%] h-[50%] bg-gradient-to-bl from-orange-500/40 via-orange-400/20 to-transparent rounded-full blur-[100px]" />
       <div className="absolute bottom-[-20%] left-[-10%] w-[60%] h-[60%] bg-gradient-to-tr from-neutral-900/20 via-neutral-800/10 to-transparent rounded-full blur-[120px]" />
@@ -67,9 +68,9 @@ export function LandingPage() {
         {!showAuth ? (
           // Landing content
           <>
-            {/* Badge */}
-            <div className="mb-6 px-4 py-1.5 rounded-full glass">
-              <span className="text-sm text-orange-600 font-semibold tracking-wide">
+            {/* Badge — floating pill */}
+            <div className="mb-8 px-5 py-2 rounded-pill bg-glass-white/80 backdrop-blur-glass shadow-glass-sm border border-white/[0.4]">
+              <span className="text-sm text-slate-600 font-semibold tracking-wide">
                 AI-ПОИСК КОНТЕНТА
               </span>
             </div>
@@ -88,7 +89,7 @@ export function LandingPage() {
             <p className="text-center text-slate-600 text-base md:text-lg max-w-lg mb-2">
               <span className="text-slate-800 font-semibold">Bazar AI</span> — персональный ассистент для поиска вирусного контента
             </p>
-            <p className="text-center text-slate-500 text-sm max-w-md mb-10">
+            <p className="text-center text-slate-500 text-sm max-w-md mb-12">
               Ищи трендовые видео, сохраняй идеи, создавай сценарии
             </p>
 
@@ -96,7 +97,7 @@ export function LandingPage() {
             <button
               onClick={() => setShowAuth(true)}
               className={cn(
-                "group px-8 py-4 rounded-2xl mb-12",
+                "group px-8 py-4 rounded-card-xl mb-14",
                 "bg-gradient-to-r from-orange-500 to-amber-600",
                 "hover:from-orange-400 hover:to-amber-500",
                 "active:scale-95",
@@ -112,8 +113,8 @@ export function LandingPage() {
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
 
-            {/* Features */}
-            <div className="flex flex-wrap justify-center gap-5 md:gap-10">
+            {/* Features — floating pills */}
+            <div className="flex flex-wrap justify-center gap-6 md:gap-8">
               <Feature icon={TrendingUp} label="Трендовые видео" />
               <Feature icon={Sparkles} label="AI рекомендации" />
               <Feature icon={Video} label="1M+ рилсов" />
@@ -131,9 +132,9 @@ export function LandingPage() {
               Назад
             </button>
 
-            <div className="glass rounded-3xl p-8 shadow-xl">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-orange-500/30">
+            <GlassCardStatic className="p-8 md:p-10">
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 rounded-card-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center mx-auto mb-5 shadow-glass">
                   <Video className="w-8 h-8 text-white" />
                 </div>
                 <h2 className="text-xl font-bold text-slate-800 mb-1">
@@ -144,9 +145,10 @@ export function LandingPage() {
                 </p>
               </div>
 
+              <div className="space-y-5">
               {!codeSent ? (
                 // Step 1: Enter username
-                <form onSubmit={handleSendCode} className="space-y-4">
+                <form onSubmit={handleSendCode} className="space-y-5">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
                       Telegram username
@@ -215,7 +217,7 @@ export function LandingPage() {
                 </form>
               ) : (
                 // Step 2: Enter code
-                <form onSubmit={handleVerifyCode} className="space-y-4">
+                <form onSubmit={handleVerifyCode} className="space-y-5">
                   <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 mb-4">
                     <p className="text-sm text-emerald-700">
                       Код отправлен в Telegram на @{username.replace('@', '')}
@@ -271,7 +273,8 @@ export function LandingPage() {
                   </button>
                 </form>
               )}
-            </div>
+              </div>
+            </GlassCardStatic>
           </div>
         )}
       </div>
@@ -281,11 +284,11 @@ export function LandingPage() {
 
 function Feature({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
   return (
-    <div className="flex items-center gap-2 text-slate-600">
-      <div className="p-2 rounded-lg glass-button">
-        <Icon className="w-3.5 h-3.5 text-orange-500" />
+    <div className="flex items-center gap-3 text-slate-600">
+      <div className="p-2.5 rounded-pill bg-glass-white/80 backdrop-blur-glass shadow-glass-sm border border-white/[0.4]">
+        <Icon className="w-4 h-4 text-accent-violet" />
       </div>
-      <span className="text-xs font-medium">{label}</span>
+      <span className="text-sm font-medium">{label}</span>
     </div>
   );
 }

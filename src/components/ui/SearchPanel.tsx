@@ -3,6 +3,7 @@ import { Search, X, ExternalLink, Plus, Eye, Heart, MessageCircle, ChevronLeft, 
 import { TextShimmer } from './TextShimmer';
 import { VideoGradientCard } from './VideoGradientCard';
 import { GlassTabButton, GlassTabGroup } from './GlassTabButton';
+import { GlassCardStatic } from './GlassCard';
 import { 
   searchInstagramVideos,
   getReelByUrl,
@@ -886,7 +887,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
   const activeVideo = incomingVideos[activeIndex];
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[#f5f5f5]">
+    <div className="fixed inset-0 z-50 flex flex-col bg-base">
       {/* Clean gradient blobs - white, orange, black */}
       <div className="absolute top-[-10%] right-[10%] w-[45%] h-[45%] bg-gradient-to-bl from-orange-500/35 via-orange-400/15 to-transparent rounded-full blur-[80px] pointer-events-none" />
       <div className="absolute bottom-[5%] left-[-5%] w-[50%] h-[50%] bg-gradient-to-tr from-neutral-900/15 via-neutral-800/8 to-transparent rounded-full blur-[100px] pointer-events-none" />
@@ -959,8 +960,8 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
             {/* Search Tab Content */}
             {activeTab === 'search' && (
               <>
-                <div className="glass rounded-2xl shadow-xl shadow-orange-500/10">
-                  <div className="flex items-center gap-3 px-5 py-3.5">
+                <GlassCardStatic className="shadow-glass">
+                  <div className="flex items-center gap-3 px-5 py-4">
                     <Search className="w-5 h-5 text-orange-500" />
                     <input
                       ref={inputRef}
@@ -985,7 +986,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                       Найти
                     </button>
                   </div>
-                </div>
+                </GlassCardStatic>
 
                 {/* History pills */}
                 {(viewMode === 'carousel' || viewMode === 'trending') && searchHistory.length > 0 && (
@@ -1006,8 +1007,8 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
 
             {/* Link Tab Content */}
             {activeTab === 'link' && (
-              <div className="space-y-4">
-                <div className="glass rounded-2xl p-5 shadow-xl shadow-orange-500/10">
+              <div className="space-y-5">
+                <GlassCardStatic className="p-5 shadow-glass">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
                       <Link className="w-5 h-5 text-white" />
@@ -1045,11 +1046,11 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                       Найти
                     </button>
                   </div>
-                </div>
+                </GlassCardStatic>
 
                 {/* Link Preview Card */}
                 {linkPreview && (
-                  <div className="glass rounded-2xl p-5 shadow-xl shadow-orange-500/10 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                  <GlassCardStatic className="p-5 shadow-glass animate-in fade-in slide-in-from-bottom-4 duration-300">
                     <div className="flex gap-5">
                       {/* Video Thumbnail */}
                       <div className="relative w-48 flex-shrink-0">
@@ -1164,14 +1165,14 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </GlassCardStatic>
                 )}
               </div>
             )}
 
             {/* Radar Tab Content - скрываем когда выбран профиль */}
             {activeTab === 'radar' && !selectedRadarProfile && (
-              <div className="glass rounded-2xl p-5 shadow-xl shadow-orange-500/10">
+              <GlassCardStatic className="p-5 shadow-glass">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center relative">
@@ -1413,7 +1414,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                     <p className="text-slate-400 text-xs">Добавьте Instagram профили для автоматического сбора видео</p>
                   </div>
                 )}
-              </div>
+              </GlassCardStatic>
             )}
           </div>
         </div>

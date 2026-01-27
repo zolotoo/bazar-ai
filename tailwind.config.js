@@ -37,11 +37,46 @@ export default {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
+        /* iOS 26 / visionOS design tokens — base & glass */
+        base: '#F5F7FA',
+        'base-alt': '#F7F9FC',
+        'glass-white': 'rgba(255, 255, 255, 0.65)',
+        'glass-white/80': 'rgba(255, 255, 255, 0.8)',
+        'glass-border': 'rgba(255, 255, 255, 0.4)',
+        /* Muted system-style accents */
+        'accent-blue': '#5E9FED',
+        'accent-violet': '#9B7DD9',
+        'accent-mint': '#5EC9B0',
       },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+        /* iOS / visionOS card & pill */
+        'card': '24px',
+        'card-xl': '28px',
+        'card-2xl': '32px',
+        'pill': '9999px',
+      },
+      boxShadow: {
+        /* Floating, diffused, spatial — no hard shadows */
+        'glass-sm':
+          '0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02), inset 0 1px 0 rgba(255, 255, 255, 0.6)',
+        'glass':
+          '0 8px 32px rgba(0, 0, 0, 0.06), 0 2px 12px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.7)',
+        'glass-lg':
+          '0 16px 48px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+        'glass-hover':
+          '0 20px 56px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.85)',
+        'float':
+          '0 24px 64px -12px rgba(0, 0, 0, 0.12), 0 12px 32px -8px rgba(0, 0, 0, 0.06)',
+        'float-lg':
+          '0 32px 80px -16px rgba(0, 0, 0, 0.14), 0 16px 40px -12px rgba(0, 0, 0, 0.08)',
+      },
+      backdropBlur: {
+        'glass': '20px',
+        'glass-xl': '24px',
+        'glass-2xl': '32px',
       },
     },
   },

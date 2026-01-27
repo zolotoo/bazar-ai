@@ -110,11 +110,10 @@ export function MarketingBadges({ badges = defaultBadges, onBadgeClick, classNam
           <div
             key={badge.id}
             className={cn(
-              "absolute cursor-pointer select-none rounded-full font-semibold transition-all duration-500 ease-out",
-              "bg-gradient-to-b shadow-lg",
+              "absolute cursor-pointer select-none rounded-pill font-semibold transition-all duration-500 ease-out",
+              "bg-gradient-to-b border border-white/[0.35]",
               badge.color,
               sizeClasses[badge.size],
-              "hover:shadow-2xl",
             )}
             style={{
               transform: `
@@ -125,10 +124,10 @@ export function MarketingBadges({ badges = defaultBadges, onBadgeClick, classNam
               `,
               zIndex: isHovered || isClicked ? 100 : badge.zIndex,
               boxShadow: isHovered
-                ? "0 25px 50px -12px rgba(251, 146, 60, 0.35), 0 12px 24px -8px rgba(0, 0, 0, 0.15), inset 0 2px 4px rgba(255, 255, 255, 0.3)"
+                ? "0 16px 48px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.8)"
                 : isClicked
-                  ? "0 30px 60px -15px rgba(251, 146, 60, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.4)"
-                  : "0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 4px 10px -2px rgba(0, 0, 0, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.2)",
+                  ? "0 20px 56px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.85)"
+                  : "0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02), inset 0 1px 0 rgba(255, 255, 255, 0.6)",
             }}
             onMouseEnter={() => setHoveredId(badge.id)}
             onMouseLeave={() => setHoveredId(null)}
@@ -147,7 +146,7 @@ export function MarketingBadges({ badges = defaultBadges, onBadgeClick, classNam
             </span>
             {/* Inner highlight effect */}
             <div
-              className="pointer-events-none absolute inset-0 rounded-full opacity-50"
+              className="pointer-events-none absolute inset-0 rounded-pill opacity-50"
               style={{
                 background: "linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 50%)",
               }}
