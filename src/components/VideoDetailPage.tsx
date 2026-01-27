@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   ChevronLeft, Play, Eye, Heart, MessageCircle, Calendar, 
   Sparkles, FileText, Copy, ExternalLink, Loader2, Check,
-  Languages, ChevronDown, Mic, Save, X
+  Languages, ChevronDown, Mic, Save
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { checkTranscriptionStatus, downloadAndTranscribe } from '../services/transcriptionService';
@@ -243,7 +243,6 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
   const handleLoadVideo = async () => {
     if (directVideoUrl) {
       setShowVideo(true);
-      setShowVideoFrame(true);
       return;
     }
     

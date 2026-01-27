@@ -1,6 +1,5 @@
-// Vercel Serverless Function - перевод текста через бесплатный Google Translate API
+// Vercel Serverless Function — перевод через Gemini API или бесплатный Google Translate
 export default async function handler(req, res) {
-  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -21,8 +20,50 @@ export default async function handler(req, res) {
 
   console.log(`Translating ${text.length} chars to ${to}`);
 
+  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
+
   try {
-    // Бесплатный Google Translate API (gtx client)
+    if (geminiKey) {
+      // Перевод через Gemini API
+      const targetLang = to === 'ru' ? 'русский' : to === 'en' ? 'английский' : to;
+      const prompt = `Translate the following text to ${targetLang}. Output only the translation, no explanations or extra text.\n\n${text}`;
+
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.2 },
+          }),
+        }
+      );
+
+      if (!geminiRes.ok) {
+        const errBody = await geminiRes.text();
+        console.error('Gemini API error:', geminiRes.status, errBody);
+        throw new Error(`Gemini API: ${geminiRes.status}`);
+      }
+
+      const geminiData = await geminiRes.json();
+      const translated =
+        geminiData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+
+      if (!translated) {
+        throw new Error('Gemini returned empty translation');
+      }
+
+      return res.status(200).json({
+        success: true,
+        original: text,
+        translated,
+        from: 'auto',
+        to,
+      });
+    }
+
+    // Fallback: бесплатный Google Translate API (gtx client)
     // Автоопределение языка, перевод на русский
     // Лимит ~5000 символов за запрос
     
