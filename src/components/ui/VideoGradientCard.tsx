@@ -80,17 +80,16 @@ export const VideoGradientCard = ({
       <motion.div
         ref={cardRef}
         className={cn(
-          "relative rounded-2xl md:rounded-2xl overflow-hidden cursor-pointer",
-          "border-[2px] md:border-[4px] border-slate-300/60",
-          "backdrop-blur-sm",
-          "touch-manipulation", // iOS optimization
+          "relative rounded-card-xl overflow-hidden cursor-pointer",
+          "border border-white/[0.25] backdrop-blur-sm",
+          "touch-manipulation",
           className
         )}
         style={{
           aspectRatio: "9/16",
           boxShadow: isHovered 
-            ? "0 12px 40px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.15)"
-            : "0 8px 24px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
+            ? "0 20px 56px rgba(0, 0, 0, 0.12), 0 8px 24px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.2)"
+            : "0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 12px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.15)",
         }}
         initial={{ y: 0 }}
         animate={{
@@ -143,11 +142,11 @@ export const VideoGradientCard = ({
               {/* Viral badge */}
               <motion.div
                 className={cn(
-                  "px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-full backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 md:gap-1.5",
+                  "px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 md:gap-1.5",
                   "border border-white/20",
-                  "shadow-[0_2px_8px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.2)]",
-                  viralCoef > 10 ? "bg-gradient-to-r from-emerald-500/80 via-emerald-400/70 to-emerald-500/80 text-white" : 
-                  viralCoef > 5 ? "bg-gradient-to-r from-amber-500/80 via-amber-400/70 to-amber-500/80 text-white" :
+                  "shadow-[0_2px_8px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.25)]",
+                  viralCoef > 10 ? "bg-accent-positive/90 text-white" : 
+                  viralCoef > 5 ? "bg-amber-400/80 text-slate-800" :
                   viralCoef > 0 ? "bg-white/80 text-slate-700" :
                   "bg-black/40 text-white/80"
                 )}
@@ -163,14 +162,14 @@ export const VideoGradientCard = ({
               {viralMultiplier !== null && viralMultiplier !== undefined && (
                 <motion.div
                   className={cn(
-                    "px-1.5 md:px-2 py-0.5 md:py-1 rounded-full backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-0.5 md:gap-1",
+                    "px-1.5 md:px-2 py-0.5 md:py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-0.5 md:gap-1",
                     "border border-white/20",
-                    "shadow-[0_2px_8px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.2)]",
-                    viralMultiplier >= 10 ? "bg-gradient-to-r from-red-500/80 via-red-400/70 to-red-500/80 text-white" :
-                    viralMultiplier >= 5 ? "bg-gradient-to-r from-orange-500/80 via-orange-400/70 to-orange-500/80 text-white" :
-                    viralMultiplier >= 3 ? "bg-gradient-to-r from-amber-500/80 via-amber-400/70 to-amber-500/80 text-white" :
-                    viralMultiplier >= 2 ? "bg-gradient-to-r from-lime-500/80 via-lime-400/70 to-lime-500/80 text-white" :
-                    viralMultiplier >= 1.5 ? "bg-gradient-to-r from-green-500/80 via-green-400/70 to-green-500/80 text-white" :
+                    "shadow-[0_2px_8px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.25)]",
+                    viralMultiplier >= 10 ? "bg-accent-negative/90 text-white" :
+                    viralMultiplier >= 5 ? "bg-amber-400/80 text-slate-800" :
+                    viralMultiplier >= 3 ? "bg-accent-positive/80 text-white" :
+                    viralMultiplier >= 2 ? "bg-accent-positive/70 text-white" :
+                    viralMultiplier >= 1.5 ? "bg-accent-positive/60 text-white" :
                     "bg-slate-500/80 text-white"
                   )}
                   initial={{ opacity: 0, scale: 0.8 }}
@@ -223,7 +222,7 @@ export const VideoGradientCard = ({
           <div>
             {/* Username as iOS 26 button - маленький и белый */}
             <motion.div
-              className="px-2 py-0.5 md:px-2.5 md:py-1 rounded-xl backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20 mb-2 inline-flex max-w-full"
+              className="px-2 py-0.5 md:px-2.5 md:py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20 mb-2 inline-flex max-w-full"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.15 }}
@@ -242,7 +241,7 @@ export const VideoGradientCard = ({
             <div className="flex items-center gap-1.5 md:gap-2 mb-2 flex-wrap">
               {viewCount !== undefined && (
                 <motion.div
-                  className="px-2 py-1 md:px-2.5 md:py-1.5 rounded-xl backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
+                  className="px-2 py-1 md:px-2.5 md:py-1.5 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.2 }}
@@ -253,7 +252,7 @@ export const VideoGradientCard = ({
               )}
               {likeCount !== undefined && (
                 <motion.div
-                  className="px-2 py-1 md:px-2.5 md:py-1.5 rounded-xl backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
+                  className="px-2 py-1 md:px-2.5 md:py-1.5 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.25 }}
@@ -264,7 +263,7 @@ export const VideoGradientCard = ({
               )}
               {commentCount !== undefined && (
                 <motion.div
-                  className="px-2 py-1 md:px-2.5 md:py-1.5 rounded-xl backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
+                  className="px-2 py-1 md:px-2.5 md:py-1.5 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.3 }}
@@ -275,7 +274,7 @@ export const VideoGradientCard = ({
               )}
               {date && (
                 <motion.div
-                  className="px-2.5 py-1.5 rounded-xl backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1.5 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
+                  className="px-2.5 py-1.5 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1.5 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.35 }}

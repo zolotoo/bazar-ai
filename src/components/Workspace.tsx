@@ -546,12 +546,12 @@ export function Workspace(props?: WorkspaceProps) {
     <div className="h-full overflow-hidden relative">
       {/* Floating Folder Widget - Desktop */}
       <div className={cn(
-        "hidden md:block absolute top-4 right-4 z-40 bg-white/95 backdrop-blur-xl rounded-xl shadow-xl border border-white/50 transition-all duration-300",
+        "hidden md:block absolute top-4 right-4 z-40 bg-glass-white/80 backdrop-blur-glass-xl rounded-card-xl shadow-glass border border-white/[0.35] transition-all duration-300",
         isFolderWidgetOpen ? "w-56" : "w-auto"
       )}>
         {/* Widget Header */}
-        <div 
-          className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-slate-50/50 rounded-t-2xl transition-colors"
+          <div 
+          className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-white/[0.08] rounded-t-card-xl transition-colors"
           onClick={() => setIsFolderWidgetOpen(!isFolderWidgetOpen)}
         >
           <div className="flex items-center gap-2">
@@ -572,17 +572,17 @@ export function Workspace(props?: WorkspaceProps) {
             <button
               onClick={() => setSelectedFolderId(null)}
               className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left mb-1",
+                "w-full flex items-center gap-3 px-3 py-2.5 rounded-card transition-all text-left mb-2",
                 selectedFolderId === null 
-                  ? "bg-orange-100 text-orange-700" 
-                  : "hover:bg-slate-100 text-slate-600"
+                  ? "bg-accent-violet/15 text-accent-violet shadow-glass-sm" 
+                  : "hover:bg-glass-white/60 text-slate-600"
               )}
             >
               <div className={cn(
                 "w-8 h-8 rounded-lg flex items-center justify-center",
-                selectedFolderId === null ? "bg-orange-200" : "bg-slate-100"
+                selectedFolderId === null ? "bg-accent-violet/25" : "bg-slate-100/80"
               )}>
-                <Inbox className="w-4 h-4" style={{ color: selectedFolderId === null ? '#f97316' : '#64748b' }} strokeWidth={2.5} />
+                <Inbox className="w-4 h-4" style={{ color: selectedFolderId === null ? '#9B7DD9' : '#64748b' }} strokeWidth={2.5} />
               </div>
               <div className="flex-1 min-w-0">
                 <span className="text-sm font-medium block truncate">Все видео</span>
@@ -590,7 +590,7 @@ export function Workspace(props?: WorkspaceProps) {
               </div>
             </button>
             
-            <div className="h-px bg-slate-100 my-2" />
+            <div className="my-3" aria-hidden />
             
             {/* Папки */}
             {folderConfigs.map(folder => {
@@ -628,7 +628,7 @@ export function Workspace(props?: WorkspaceProps) {
             })}
             
             {/* Settings button */}
-            <div className="h-px bg-slate-100 my-2" />
+            <div className="my-3" aria-hidden />
             <button
               onClick={() => setShowFolderSettings(true)}
               className="w-full flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-xl hover:bg-slate-50 active:bg-slate-100 text-slate-500 text-sm transition-colors touch-manipulation"
@@ -737,11 +737,11 @@ export function Workspace(props?: WorkspaceProps) {
       {/* Кнопка «Папки» на мобильных убрана — открытие только через нижний таб-бар */}
 
       {/* Main Content - Video Feed */}
-      <div className="h-full overflow-y-auto custom-scrollbar-light px-3 md:px-4 safe-left safe-right">
-        <div className="max-w-6xl mx-auto py-4 md:py-6 safe-top safe-bottom">
-          {/* Header */}
-          <div className="mb-4 md:mb-6">
-            <div className="flex items-start md:items-center justify-between flex-wrap gap-3 md:gap-4">
+      <div className="h-full overflow-y-auto custom-scrollbar-light px-4 md:px-6 safe-left safe-right">
+        <div className="max-w-6xl mx-auto py-5 md:py-8 safe-top safe-bottom">
+          {/* Header — glass bar */}
+          <div className="mb-6 md:mb-8 rounded-card-xl bg-glass-white/80 backdrop-blur-glass-xl shadow-glass border border-white/[0.35] px-5 py-4 md:px-6 md:py-5">
+            <div className="flex items-start md:items-center justify-between flex-wrap gap-4 md:gap-5">
               <div className="flex items-center gap-3">
                 {currentFolderConfig ? (
                   <>
@@ -758,8 +758,8 @@ export function Workspace(props?: WorkspaceProps) {
                   </>
                 ) : (
                   <>
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#f97316] via-[#fb923c] to-[#fdba74] flex items-center justify-center shadow-lg shadow-[#f97316]/20 backdrop-blur-sm">
-                      <Sparkles className="w-6 h-6 text-white" strokeWidth={2.5} />
+                    <div className="w-12 h-12 rounded-card-xl bg-accent-violet/20 flex items-center justify-center shadow-glass-sm">
+                      <Sparkles className="w-6 h-6 text-accent-violet" strokeWidth={2.5} />
                     </div>
                     <div>
                       <h1 className="text-xl md:text-2xl font-bold text-slate-800">Все видео</h1>
@@ -782,21 +782,21 @@ export function Workspace(props?: WorkspaceProps) {
                     <span className="hidden sm:inline">Отменить</span>
                   </button>
                 )}
-                <div className="flex items-center gap-1.5 md:gap-2 bg-white/80 backdrop-blur-sm rounded-2xl p-1 md:p-1.5 shadow-lg border border-white/50 overflow-x-auto flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 md:gap-2 bg-glass-white/60 backdrop-blur-glass rounded-pill p-1.5 md:p-2 shadow-glass-sm border border-white/[0.35] overflow-x-auto flex-1 min-w-0">
                 {[
-                  { value: 'viral', label: 'Виральность', icon: Sparkles, color: 'from-[#f97316] via-[#fb923c] to-[#fdba74]' },
-                  { value: 'views', label: 'Просмотры', icon: Eye, color: 'from-blue-500 to-cyan-500' },
-                  { value: 'likes', label: 'Лайки', icon: Heart, color: 'from-pink-500 to-rose-500' },
-                  { value: 'recent', label: 'Недавно', icon: Inbox, color: 'from-purple-500 to-indigo-500' },
-                ].map(({ value, label, icon: Icon, color }) => (
+                  { value: 'viral', label: 'Виральность', icon: Sparkles },
+                  { value: 'views', label: 'Просмотры', icon: Eye },
+                  { value: 'likes', label: 'Лайки', icon: Heart },
+                  { value: 'recent', label: 'Недавно', icon: Inbox },
+                ].map(({ value, label, icon: Icon }) => (
                   <button
                     key={value}
                     onClick={() => setSortBy(value as typeof sortBy)}
                     className={cn(
-                      "flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1 min-h-[44px] rounded-xl text-[10px] md:text-xs font-semibold transition-all active:scale-95 touch-manipulation whitespace-nowrap",
+                      "flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 min-h-[44px] rounded-pill text-[10px] md:text-xs font-semibold transition-all active:scale-95 touch-manipulation whitespace-nowrap",
                       sortBy === value 
-                        ? `bg-gradient-to-r ${color} text-white shadow-md backdrop-blur-sm` 
-                        : "text-slate-500 hover:text-slate-700 hover:bg-slate-100 active:bg-slate-200"
+                        ? "bg-accent-violet/20 text-accent-violet shadow-glass-sm border border-accent-violet/30" 
+                        : "text-slate-600 hover:text-slate-800 hover:bg-glass-white/60"
                     )}
                   >
                     <Icon className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" strokeWidth={2.5} />
@@ -822,7 +822,7 @@ export function Workspace(props?: WorkspaceProps) {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-5 pb-20 md:pb-6 safe-bottom">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 pb-20 md:pb-6 safe-bottom">
               {feedVideos.map((video, idx) => {
                 const thumbnailUrl = proxyImageUrl(video.preview_url);
                 const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at || video.created_at);
@@ -860,7 +860,7 @@ export function Workspace(props?: WorkspaceProps) {
                       setMoveMenuVideoId(null);
                     }}
                     folderMenu={
-                      <div className="bg-white rounded-xl shadow-2xl border border-slate-100 p-1.5 min-w-[140px] animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="bg-glass-white/90 backdrop-blur-glass-xl rounded-card-xl shadow-glass border border-white/[0.35] p-1.5 min-w-[140px] animate-in fade-in slide-in-from-top-2 duration-200">
                         <button
                           onClick={(e) => { e.stopPropagation(); setSelectedVideo(video); setCardMenuVideoId(null); }}
                           className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-orange-50 transition-colors text-left"
@@ -884,7 +884,7 @@ export function Workspace(props?: WorkspaceProps) {
                           
                           {/* Подменю с папками */}
                           {moveMenuVideoId === video.id && (
-                            <div className="absolute left-full top-0 ml-1 bg-white rounded-lg shadow-xl border border-slate-100 p-1.5 min-w-[140px] z-[110] animate-in fade-in slide-in-from-left-2 duration-150">
+                            <div className="absolute left-full top-0 ml-1 bg-glass-white/90 backdrop-blur-glass-xl rounded-card shadow-glass border border-white/[0.35] p-1.5 min-w-[140px] z-[110] animate-in fade-in slide-in-from-left-2 duration-150">
                               {folderConfigs.map(folder => (
                                 <button
                                   key={folder.id}

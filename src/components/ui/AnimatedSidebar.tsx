@@ -86,9 +86,9 @@ export const DesktopSidebar = ({
     <motion.div
       className={cn(
         "h-full px-5 py-6 hidden md:flex md:flex-col flex-shrink-0",
-        "bg-white/75 backdrop-blur-[28px] backdrop-saturate-[180%]",
-        "border-r border-white/60",
-        "shadow-[0_0_0_1px_rgba(255,255,255,0.85)_inset,0_8px_32px_rgba(0,0,0,0.06)]",
+        "bg-glass-white/80 backdrop-blur-glass-xl backdrop-saturate-[180%]",
+        "border-r border-white/[0.35]",
+        "shadow-glass",
         className
       )}
       animate={{
@@ -157,11 +157,11 @@ export const MobileSidebar = ({
             transition={{ type: "tween", duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
             className={cn(
               "md:hidden fixed inset-y-0 left-0 z-[9999] w-[min(300px,88vw)] flex flex-col",
-              "bg-white/65 backdrop-blur-3xl",
-              "rounded-r-[24px] border-r border-white/50",
-              "safe-top safe-bottom safe-left safe-right overflow-hidden"
+              "bg-glass-white/80 backdrop-blur-glass-2xl",
+              "rounded-r-card border-r border-white/[0.35]",
+              "shadow-glass safe-top safe-bottom safe-left safe-right overflow-hidden"
             )}
-            style={{ willChange: "transform", boxShadow: "8px 0 32px rgba(0,0,0,0.1), -2px 0 0 rgba(255,255,255,0.3) inset" }}
+            style={{ willChange: "transform" }}
           >
             <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0 safe-top">
               <span className="text-[13px] font-semibold text-slate-600">Меню</span>
@@ -212,17 +212,17 @@ export const SidebarLink = ({
         "font-medium",
         open ? "px-3" : "px-2 justify-center",
         isActive 
-          ? "bg-white/80 backdrop-blur-sm text-[#f97316] shadow-sm" 
+          ? "bg-glass-white/80 backdrop-blur-glass text-accent-violet shadow-glass-sm" 
           : variant === 'danger'
-            ? "text-red-500 hover:bg-white/50 hover:backdrop-blur-sm"
-            : "text-slate-700 hover:bg-white/50 hover:backdrop-blur-sm",
+            ? "text-accent-negative hover:bg-glass-white/60 hover:backdrop-blur-glass"
+            : "text-slate-700 hover:bg-glass-white/60 hover:backdrop-blur-glass",
         className
       )}
     >
       <div className={cn(
         "flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg transition-all",
-        isActive && "bg-[#f97316]/10",
-        !open && isActive && "bg-[#f97316]/15"
+        isActive && "bg-accent-violet/15",
+        !open && isActive && "bg-accent-violet/20"
       )}>
         {React.cloneElement(icon as React.ReactElement, { 
           className: "w-3.5 h-3.5",
@@ -248,7 +248,7 @@ export const SidebarLink = ({
             display: animate ? (open ? "flex" : "none") : "flex",
             opacity: animate ? (open ? 1 : 0) : 1,
           }}
-          className="ml-auto px-2.5 py-1 rounded-full bg-[#f97316]/10 text-[#f97316] text-xs font-semibold"
+          className="ml-auto px-2.5 py-1 rounded-pill bg-accent-negative/15 text-accent-negative text-xs font-semibold shadow-glass-sm"
         >
           {badge}
         </motion.span>
@@ -282,7 +282,7 @@ export const SidebarSection = ({ title, children, onAdd }: SidebarSectionProps) 
         {onAdd && (
           <button
             onClick={onAdd}
-            className="p-1.5 rounded-xl hover:bg-white/60 backdrop-blur-sm text-slate-400 hover:text-[#f97316] transition-all"
+            className="p-1.5 rounded-pill hover:bg-glass-white/60 backdrop-blur-glass text-slate-400 hover:text-accent-violet transition-all"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -328,8 +328,8 @@ export const SidebarProject = ({
         "group flex items-center gap-3 py-2 rounded-2xl transition-all cursor-pointer relative",
         open ? "px-4" : "px-3 justify-center",
         isActive 
-          ? "bg-white/80 backdrop-blur-sm shadow-sm" 
-          : "hover:bg-white/50 hover:backdrop-blur-sm"
+          ? "bg-glass-white/80 backdrop-blur-glass shadow-glass-sm" 
+          : "hover:bg-glass-white/50 hover:backdrop-blur-glass"
       )}
     >
       <div 

@@ -47,6 +47,9 @@ export default {
         'accent-blue': '#5E9FED',
         'accent-violet': '#9B7DD9',
         'accent-mint': '#5EC9B0',
+        /* Positive / negative (muted) */
+        'accent-positive': '#5EC9B0',
+        'accent-negative': '#E07B7B',
       },
       borderRadius: {
         lg: 'var(--radius)',

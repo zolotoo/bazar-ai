@@ -501,7 +501,7 @@ function AppContent() {
 
   if (projectsLoading) {
     return (
-      <div className="w-full h-screen flex items-center justify-center bg-[#fafafa]">
+      <div className="w-full h-screen flex items-center justify-center bg-base">
         <div className="flex flex-col items-center gap-5">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#f97316] via-[#fb923c] to-[#fdba74] flex items-center justify-center shadow-lg shadow-[#f97316]/20 animate-pulse">
             <Video className="w-8 h-8 text-white" strokeWidth={2.5} />
@@ -513,15 +513,13 @@ function AppContent() {
   }
 
   return (
-    <div className="w-full h-screen text-foreground overflow-hidden bg-[#fafafa] flex flex-col md:flex-row safe-top safe-bottom">
-      {/* Clean gradient blobs - orange gradient from top - более контрастный */}
-      <div className="fixed top-[-10%] right-[-5%] w-[70%] h-[70%] bg-gradient-to-b from-[#f97316]/60 via-[#fb923c]/40 to-transparent rounded-full blur-[140px] pointer-events-none" />
-      <div className="fixed top-[-5%] left-[-5%] w-[60%] h-[60%] bg-gradient-to-br from-[#f97316]/55 via-[#fb923c]/35 to-transparent rounded-full blur-[120px] pointer-events-none" />
-      <div className="fixed bottom-[-20%] left-[-10%] w-[60%] h-[60%] bg-gradient-to-tr from-neutral-900/20 via-neutral-800/12 to-transparent rounded-full blur-[140px] pointer-events-none" />
-      <div className="fixed top-[40%] left-[30%] w-[40%] h-[40%] bg-gradient-to-r from-[#f97316]/30 via-[#fb923c]/20 to-neutral-900/10 rounded-full blur-[100px] pointer-events-none" />
+    <div className="w-full h-screen text-foreground overflow-hidden bg-base flex flex-col md:flex-row safe-top safe-bottom">
+      {/* Subtle cool blobs — non-distracting, spatial depth only */}
+      <div className="fixed top-[-15%] right-[-5%] w-[50%] h-[50%] bg-gradient-to-bl from-slate-200/30 via-transparent to-transparent rounded-full blur-[120px] pointer-events-none" />
+      <div className="fixed bottom-[-15%] left-[-5%] w-[45%] h-[45%] bg-gradient-to-tr from-slate-100/40 via-transparent to-transparent rounded-full blur-[100px] pointer-events-none" />
       
       {/* Noise texture overlay */}
-      <div className="fixed inset-0 opacity-[0.02] pointer-events-none" style={{
+      <div className="fixed inset-0 opacity-[0.015] pointer-events-none" style={{
         backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`
       }} />
 
@@ -761,7 +759,7 @@ function App() {
 
   if (loading) {
     return (
-      <div className="w-full h-screen flex items-center justify-center bg-[#fafafa]">
+      <div className="w-full h-screen flex items-center justify-center bg-base">
         <div className="flex flex-col items-center gap-5">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#f97316] via-[#fb923c] to-[#fdba74] flex items-center justify-center shadow-lg shadow-[#f97316]/20 animate-pulse">
             <Video className="w-8 h-8 text-white" strokeWidth={2.5} />
