@@ -640,98 +640,95 @@ export function Workspace(props?: WorkspaceProps) {
         )}
       </div>
 
-      {/* Панель Папки на мобильных — стекло iOS 26, выдвигающиеся кнопки */}
+      {/* Панель Папки на мобильных — сетка полупрозрачных карточек как на референсах */}
       {isFolderWidgetOpen && (
         <>
           <div
-            className="md:hidden fixed inset-0 z-[200] bg-black/25 backdrop-blur-sm touch-manipulation safe-top safe-bottom safe-left safe-right"
+            className="md:hidden fixed inset-0 z-[200] bg-black/30 backdrop-blur-sm touch-manipulation safe-top safe-bottom safe-left safe-right"
             onClick={closeFolderPanel}
             aria-hidden
           />
           <div
             className={cn(
-              "md:hidden fixed top-0 right-0 bottom-0 z-[201] w-[min(280px,88vw)]",
-              "bg-white/65 backdrop-blur-3xl",
-              "rounded-l-[24px] border-l border-white/50",
-              "safe-top safe-bottom safe-right overflow-hidden flex flex-col"
+              "md:hidden fixed inset-0 z-[201] flex flex-col",
+              "bg-white/60 backdrop-blur-3xl",
+              "safe-top safe-bottom safe-left safe-right overflow-hidden"
             )}
-            style={{ boxShadow: '-8px 0 32px rgba(0,0,0,0.1), 2px 0 0 rgba(255,255,255,0.3) inset' }}
           >
-            <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0 safe-top">
-              <span className="text-[13px] font-semibold text-slate-600">Папки</span>
+            <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0 safe-top">
+              <span className="text-[15px] font-semibold text-slate-700">Папки</span>
               <button
                 onClick={closeFolderPanel}
-                className="p-2 -m-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-full bg-white/40 backdrop-blur-sm text-slate-500 active:bg-white/60 transition-colors touch-manipulation"
+                className="p-2.5 -m-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-white/50 backdrop-blur-sm text-slate-500 active:bg-white/70 transition-colors touch-manipulation border border-white/60"
                 aria-label="Закрыть"
               >
                 <X className="w-5 h-5" strokeWidth={2.5} />
               </button>
             </div>
-            <div className="px-3 pb-6 pt-1 h-full overflow-y-auto overflow-x-hidden custom-scrollbar-light safe-bottom space-y-2">
-              <button
-                onClick={() => { setSelectedFolderId(null); closeFolderPanel(); }}
-                className={cn(
-                  "w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-left active:scale-[0.98] touch-manipulation",
-                  "bg-white/50 backdrop-blur-sm border border-white/60",
-                  selectedFolderId === null
-                    ? "ring-1 ring-[#f97316]/30 shadow-sm"
-                    : "hover:bg-white/60 border-white/70"
-                )}
-              >
-                <div className={cn(
-                  "w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0",
-                  selectedFolderId === null ? "bg-[#f97316]/15" : "bg-slate-100/80"
-                )}>
-                  <Inbox className="w-4 h-4" style={{ color: selectedFolderId === null ? '#f97316' : '#64748b' }} strokeWidth={2.5} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className={cn("text-sm font-medium block truncate", selectedFolderId === null ? "text-[#f97316]" : "text-slate-700")}>Все видео</span>
-                  <span className="text-[11px] text-slate-400">{totalVideos}</span>
-                </div>
-              </button>
+            <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-6 safe-bottom">
+              {/* Сетка карточек как Invoices/Figma — 2 колонки, полупрозрачные карточки */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Карточка «Все видео» */}
+                <button
+                  onClick={() => { setSelectedFolderId(null); closeFolderPanel(); }}
+                  className={cn(
+                    "flex flex-col items-center rounded-2xl p-4 min-h-[120px] transition-all active:scale-[0.97] touch-manipulation",
+                    "bg-white/50 backdrop-blur-md border border-white/60",
+                    "shadow-[0_2px_12px_rgba(0,0,0,0.06)]",
+                    selectedFolderId === null && "ring-2 ring-[#f97316]/40 bg-white/70"
+                  )}
+                >
+                  <div className={cn(
+                    "w-12 h-12 rounded-2xl flex items-center justify-center mb-2 flex-shrink-0",
+                    selectedFolderId === null ? "bg-[#f97316]/20" : "bg-slate-100/80"
+                  )}>
+                    <Inbox className="w-6 h-6" style={{ color: selectedFolderId === null ? '#f97316' : '#64748b' }} strokeWidth={2.5} />
+                  </div>
+                  <span className={cn("text-sm font-semibold truncate w-full text-center", selectedFolderId === null ? "text-[#f97316]" : "text-slate-700")}>Все видео</span>
+                  <span className="text-xs text-slate-400 mt-0.5">{totalVideos}</span>
+                </button>
 
-              {folderConfigs.map(folder => {
-                const count = getVideoCountInFolder(folder.id);
-                const isSelected = selectedFolderId === folder.id;
-                const isRejected = folder.iconType === 'rejected';
-                return (
-                  <button
-                    key={folder.id}
-                    onClick={() => { setSelectedFolderId(folder.id); closeFolderPanel(); }}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-left active:scale-[0.98] touch-manipulation",
-                      "bg-white/50 backdrop-blur-sm border border-white/60",
-                      isSelected ? "ring-1 ring-slate-300/50 bg-white/60" : "hover:bg-white/60 border-white/70",
-                      isRejected && "opacity-75"
-                    )}
-                  >
-                    <div
-                      className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{ backgroundColor: `${folder.color}25` }}
+                {folderConfigs.map(folder => {
+                  const count = getVideoCountInFolder(folder.id);
+                  const isSelected = selectedFolderId === folder.id;
+                  const isRejected = folder.iconType === 'rejected';
+                  return (
+                    <button
+                      key={folder.id}
+                      onClick={() => { setSelectedFolderId(folder.id); closeFolderPanel(); }}
+                      className={cn(
+                        "flex flex-col items-center rounded-2xl p-4 min-h-[120px] transition-all active:scale-[0.97] touch-manipulation",
+                        "bg-white/50 backdrop-blur-md border border-white/60",
+                        "shadow-[0_2px_12px_rgba(0,0,0,0.06)]",
+                        isSelected && "ring-2 ring-slate-300/50 bg-white/70",
+                        isRejected && "opacity-70"
+                      )}
                     >
-                      {getIconComponent(folder.iconType, folder.color, "w-4 h-4")}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className={cn("text-sm font-medium block truncate", isSelected && "text-slate-800")}>{folder.title}</span>
-                      <span className="text-[11px] text-slate-400">{count}</span>
-                    </div>
-                  </button>
-                );
-              })}
+                      <div
+                        className="w-12 h-12 rounded-2xl flex items-center justify-center mb-2 flex-shrink-0"
+                        style={{ backgroundColor: `${folder.color}22` }}
+                      >
+                        {getIconComponent(folder.iconType, folder.color, "w-6 h-6")}
+                      </div>
+                      <span className={cn("text-sm font-semibold truncate w-full text-center", isSelected && "text-slate-800")}>{folder.title}</span>
+                      <span className="text-xs text-slate-400 mt-0.5">{count}</span>
+                    </button>
+                  );
+                })}
 
-              <button
-                onClick={() => { setShowFolderSettings(true); closeFolderPanel(); }}
-                className={cn(
-                  "w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-left active:scale-[0.98] touch-manipulation mt-1",
-                  "bg-white/40 backdrop-blur-sm border border-white/50 text-slate-500",
-                  "hover:bg-white/50 active:bg-white/60"
-                )}
-              >
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-slate-100/60">
-                  <Settings className="w-4 h-4" strokeWidth={2.5} />
-                </div>
-                <span className="text-sm font-medium">Настроить папки</span>
-              </button>
+                {/* Карточка «Настроить папки» — на всю ширину */}
+                <button
+                  onClick={() => { setShowFolderSettings(true); closeFolderPanel(); }}
+                  className={cn(
+                    "col-span-2 flex items-center justify-center gap-2 rounded-2xl py-3 px-4 mt-1 transition-all active:scale-[0.99] touch-manipulation",
+                    "bg-white/40 backdrop-blur-md border border-white/50 text-slate-500",
+                    "hover:bg-white/50 active:bg-white/60"
+                  )}
+                >
+                  <Settings className="w-5 h-5" strokeWidth={2.5} />
+                  <span className="text-sm font-medium">Настроить папки</span>
+                </button>
+              </div>
             </div>
           </div>
         </>

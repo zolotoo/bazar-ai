@@ -1,4 +1,5 @@
 export { ActiveUsers } from './ActiveUsers';
+export { AnimatedFolder3d, type AnimatedFolderProject } from './AnimatedFolder3d';
 export { SearchPanel } from './SearchPanel';
 export { GradientCard } from './GradientCard';
 export { VideoGradientCard } from './VideoGradientCard';
