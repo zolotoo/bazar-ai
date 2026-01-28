@@ -737,7 +737,7 @@ export function Workspace(props?: WorkspaceProps) {
       {/* Кнопка «Папки» на мобильных убрана — открытие только через нижний таб-бар */}
 
       {/* Main Content - Video Feed */}
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 md:px-6 safe-left safe-right custom-scrollbar-light">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 md:px-6 safe-left safe-right custom-scrollbar-light" style={{ maxHeight: '100%' }}>
         <div className="max-w-6xl mx-auto py-5 md:py-8 safe-top safe-bottom">
           {/* Header — glass bar */}
           <div className="mb-6 md:mb-8 rounded-card-xl bg-glass-white/80 backdrop-blur-glass-xl shadow-glass border border-white/[0.35] px-5 py-4 md:px-6 md:py-5">

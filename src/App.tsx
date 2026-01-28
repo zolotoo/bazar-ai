@@ -675,7 +675,7 @@ function AppContent() {
       </Sidebar>
 
       {/* Main Content — на мобильных отступ снизу под нижний таб-бар, верхняя полоска убрана */}
-      <div className="flex-1 h-screen overflow-hidden md:h-auto pt-0 pb-20 md:pt-0 md:pb-0">
+      <div className="flex-1 min-h-0 overflow-hidden pt-0 pb-20 md:pt-0 md:pb-0">
         {viewMode === 'workspace' && (
           <Workspace
             externalFolderPanelOpen={mobileFoldersOpen}
