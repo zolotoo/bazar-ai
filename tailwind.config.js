@@ -8,14 +8,25 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
         serif: ['Playfair Display', 'serif'],
         display: ['Playfair Display', 'serif'],
       },
+      fontWeight: {
+        normal: '400',
+        medium: '500',
+        semibold: '600',
+      },
       letterSpacing: {
         tighter: '-0.02em',
-        tight: '-0.01em',
+        tight: '-0.015em',
+        heading: '-0.01em',
         normal: '0',
+      },
+      lineHeight: {
+        'ui': '1.45',
+        'body': '1.6',
+        'dense': '1.25',
       },
       colors: {
         background: 'hsl(var(--background))',

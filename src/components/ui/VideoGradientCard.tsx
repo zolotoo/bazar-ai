@@ -155,7 +155,7 @@ export const VideoGradientCard = ({
                 transition={{ delay: 0.1 }}
               >
                 <Sparkles className="w-2.5 h-2.5 md:w-3 md:h-3 flex-shrink-0" strokeWidth={2} />
-                <span className="text-[10px] md:text-xs font-semibold whitespace-nowrap">{viralCoef > 0 ? Math.round(viralCoef) : '—'}</span>
+                <span className="text-[10px] md:text-xs font-semibold whitespace-nowrap tabular-nums">{viralCoef > 0 ? Math.round(viralCoef) : '—'}</span>
               </motion.div>
               
               {/* Viral multiplier badge (отдельно рядом) */}
@@ -178,7 +178,7 @@ export const VideoGradientCard = ({
                   title={`В ${Math.round(viralMultiplier)}x раз ${viralMultiplier >= 1 ? 'больше' : 'меньше'} среднего у автора`}
                 >
                   <TrendingUp className="w-2.5 h-2.5 md:w-3 md:h-3 flex-shrink-0" strokeWidth={2} />
-                  <span className="text-[9px] md:text-[10px] font-semibold whitespace-nowrap">{Math.round(viralMultiplier)}x</span>
+                  <span className="text-[9px] md:text-[10px] font-semibold whitespace-nowrap tabular-nums">{Math.round(viralMultiplier)}x</span>
                 </motion.div>
               )}
             </div>
@@ -247,7 +247,7 @@ export const VideoGradientCard = ({
                   transition={{ delay: 0.2 }}
                 >
                   <Eye className="w-2.5 h-2.5 md:w-3 md:h-3 flex-shrink-0" strokeWidth={2} />
-                  <span className="text-[10px] md:text-[11px] font-semibold text-white/90 whitespace-nowrap">{formatNumber(viewCount)}</span>
+                  <span className="text-[10px] md:text-[11px] font-semibold text-white/90 whitespace-nowrap tabular-nums">{formatNumber(viewCount)}</span>
                 </motion.div>
               )}
               {likeCount !== undefined && (
@@ -258,7 +258,7 @@ export const VideoGradientCard = ({
                   transition={{ delay: 0.25 }}
                 >
                   <Heart className="w-2.5 h-2.5 md:w-3 md:h-3 flex-shrink-0" strokeWidth={2} />
-                  <span className="text-[10px] md:text-[11px] font-semibold text-white/90 whitespace-nowrap">{formatNumber(likeCount)}</span>
+                  <span className="text-[10px] md:text-[11px] font-semibold text-white/90 whitespace-nowrap tabular-nums">{formatNumber(likeCount)}</span>
                 </motion.div>
               )}
               {commentCount !== undefined && (
@@ -269,7 +269,7 @@ export const VideoGradientCard = ({
                   transition={{ delay: 0.3 }}
                 >
                   <MessageCircle className="w-2.5 h-2.5 md:w-3 md:h-3 flex-shrink-0" strokeWidth={2} />
-                  <span className="text-[10px] md:text-[11px] font-semibold text-white/90 whitespace-nowrap">{formatNumber(commentCount)}</span>
+                  <span className="text-[10px] md:text-[11px] font-semibold text-white/90 whitespace-nowrap tabular-nums">{formatNumber(commentCount)}</span>
                 </motion.div>
               )}
               {date && (

@@ -3,7 +3,7 @@
 import { cn } from "../../utils/cn";
 import React, { useState, createContext, useContext, ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, PanelLeftClose, PanelRightOpen } from "lucide-react";
+import { X } from "lucide-react";
 
 interface SidebarContextProps {
   open: boolean;
@@ -81,7 +81,6 @@ export const DesktopSidebar = ({
   className,
   children,
 }: DesktopSidebarProps) => {
-  const { open, setOpen, animate } = useSidebar();
   return (
     <motion.div
       className={cn(
@@ -92,36 +91,10 @@ export const DesktopSidebar = ({
         className
       )}
       animate={{
-        width: animate ? (open ? "260px" : "88px") : "260px",
+        width: "260px",
       }}
       transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
     >
-      {/* Кнопка «Скрыть меню» / «Развернуть» — меню постоянно, сворачивается только по клику */}
-      <div className={cn(
-        "flex items-center shrink-0 mb-3 -mx-1",
-        open ? "justify-end px-2" : "justify-center"
-      )}>
-        <button
-          type="button"
-          onClick={() => setOpen(!open)}
-          className={cn(
-            "flex items-center gap-2 py-2 rounded-xl transition-colors touch-manipulation",
-            "text-slate-500 hover:text-slate-700 hover:bg-white/50",
-            !open && "w-full justify-center min-h-[44px]"
-          )}
-          title={open ? "Скрыть меню" : "Показать меню"}
-          aria-label={open ? "Скрыть меню" : "Показать меню"}
-        >
-          {open ? (
-            <>
-              <PanelLeftClose className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
-              <span className="text-sm font-medium whitespace-nowrap">Скрыть меню</span>
-            </>
-          ) : (
-            <PanelRightOpen className="w-5 h-5" strokeWidth={2.5} />
-          )}
-        </button>
-      </div>
       {children}
     </motion.div>
   );
@@ -212,7 +185,7 @@ export const SidebarLink = ({
         "font-medium",
         open ? "px-3" : "px-2 justify-center",
         isActive 
-          ? "bg-glass-white/80 backdrop-blur-glass text-accent-violet shadow-glass-sm" 
+          ? "bg-accent-blue/15 backdrop-blur-glass text-slate-800 shadow-glass-sm" 
           : variant === 'danger'
             ? "text-accent-negative hover:bg-glass-white/60 hover:backdrop-blur-glass"
             : "text-slate-700 hover:bg-glass-white/60 hover:backdrop-blur-glass",
@@ -221,8 +194,8 @@ export const SidebarLink = ({
     >
       <div className={cn(
         "flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg transition-all",
-        isActive && "bg-accent-violet/15",
-        !open && isActive && "bg-accent-violet/20"
+        isActive && "bg-accent-blue/15",
+        !open && isActive && "bg-accent-blue/20"
       )}>
         {React.cloneElement(icon as React.ReactElement, { 
           className: "w-3.5 h-3.5",
@@ -282,7 +255,7 @@ export const SidebarSection = ({ title, children, onAdd }: SidebarSectionProps) 
         {onAdd && (
           <button
             onClick={onAdd}
-            className="p-1.5 rounded-pill hover:bg-glass-white/60 backdrop-blur-glass text-slate-400 hover:text-accent-violet transition-all"
+            className="p-1.5 rounded-pill hover:bg-glass-white/60 backdrop-blur-glass text-slate-400 hover:text-slate-700 transition-all"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />

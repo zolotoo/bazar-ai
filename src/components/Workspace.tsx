@@ -574,19 +574,19 @@ export function Workspace(props?: WorkspaceProps) {
               className={cn(
                 "w-full flex items-center gap-3 px-3 py-2.5 rounded-card transition-all text-left mb-2",
                 selectedFolderId === null 
-                  ? "bg-accent-violet/15 text-accent-violet shadow-glass-sm" 
+                  ? "bg-accent-blue/15 text-slate-800 shadow-glass-sm" 
                   : "hover:bg-glass-white/60 text-slate-600"
               )}
             >
               <div className={cn(
                 "w-8 h-8 rounded-lg flex items-center justify-center",
-                selectedFolderId === null ? "bg-accent-violet/25" : "bg-slate-100/80"
+                selectedFolderId === null ? "bg-accent-blue/20" : "bg-slate-100/80"
               )}>
-                <Inbox className="w-4 h-4" style={{ color: selectedFolderId === null ? '#9B7DD9' : '#64748b' }} strokeWidth={2.5} />
+                <Inbox className="w-4 h-4" style={{ color: selectedFolderId === null ? '#5E9FED' : '#64748b' }} strokeWidth={2.5} />
               </div>
               <div className="flex-1 min-w-0">
                 <span className="text-sm font-medium block truncate">Все видео</span>
-                <span className="text-xs text-slate-400">{totalVideos} видео</span>
+                <span className="text-xs text-slate-400 tabular-nums">{totalVideos} видео</span>
               </div>
             </button>
             
@@ -621,7 +621,7 @@ export function Workspace(props?: WorkspaceProps) {
                       "text-sm font-medium block truncate",
                       isSelected && "text-slate-800"
                     )}>{folder.title}</span>
-                    <span className="text-xs text-slate-400">{count} видео</span>
+                    <span className="text-xs text-slate-400 tabular-nums">{count} видео</span>
                   </div>
                 </button>
               );
@@ -753,17 +753,17 @@ export function Workspace(props?: WorkspaceProps) {
                     </div>
                     <div>
                       <h1 className="text-xl md:text-2xl font-bold text-slate-800">{currentFolderConfig.title}</h1>
-                      <p className="text-slate-500 text-xs md:text-sm">{feedVideos.length} видео</p>
+                      <p className="text-slate-500 text-xs md:text-sm tabular-nums">{feedVideos.length} видео</p>
                     </div>
                   </>
                 ) : (
                   <>
-                    <div className="w-12 h-12 rounded-card-xl bg-accent-violet/20 flex items-center justify-center shadow-glass-sm">
-                      <Sparkles className="w-6 h-6 text-accent-violet" strokeWidth={2.5} />
+                    <div className="w-12 h-12 rounded-card-xl bg-accent-blue/15 flex items-center justify-center shadow-glass-sm">
+                      <Sparkles className="w-6 h-6 text-accent-blue" strokeWidth={2.5} />
                     </div>
                     <div>
                       <h1 className="text-xl md:text-2xl font-bold text-slate-800">Все видео</h1>
-                      <p className="text-slate-500 text-xs md:text-sm">{feedVideos.length} видео • отсортировано по виральности</p>
+                      <p className="text-slate-500 text-xs md:text-sm tabular-nums">{feedVideos.length} видео • отсортировано по виральности</p>
                     </div>
                   </>
                 )}
@@ -795,7 +795,7 @@ export function Workspace(props?: WorkspaceProps) {
                     className={cn(
                       "flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 min-h-[44px] rounded-pill text-[10px] md:text-xs font-semibold transition-all active:scale-95 touch-manipulation whitespace-nowrap",
                       sortBy === value 
-                        ? "bg-accent-violet/20 text-accent-violet shadow-glass-sm border border-accent-violet/30" 
+                        ? "bg-accent-blue/20 text-slate-800 shadow-glass-sm border border-accent-blue/30" 
                         : "text-slate-600 hover:text-slate-800 hover:bg-glass-white/60"
                     )}
                   >

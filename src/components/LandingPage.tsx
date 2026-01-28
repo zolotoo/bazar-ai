@@ -286,7 +286,7 @@ function Feature({ icon: Icon, label }: { icon: React.ElementType; label: string
   return (
     <div className="flex items-center gap-3 text-slate-600">
       <div className="p-2.5 rounded-pill bg-glass-white/80 backdrop-blur-glass shadow-glass-sm border border-white/[0.4]">
-        <Icon className="w-4 h-4 text-accent-violet" />
+        <Icon className="w-4 h-4 text-accent-blue" />
       </div>
       <span className="text-sm font-medium">{label}</span>
     </div>
