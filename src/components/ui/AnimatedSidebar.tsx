@@ -84,7 +84,7 @@ export const DesktopSidebar = ({
   return (
     <motion.div
       className={cn(
-        "h-full px-5 py-6 hidden md:flex md:flex-col flex-shrink-0",
+        "h-full px-4 py-4 hidden md:flex md:flex-col flex-shrink-0",
         "bg-glass-white/80 backdrop-blur-glass-xl backdrop-saturate-[180%]",
         "border-r border-white/[0.35]",
         "shadow-glass",
@@ -181,11 +181,11 @@ export const SidebarLink = ({
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-2.5 py-1.5 rounded-xl transition-all w-full text-left group/sidebar",
+        "flex items-center gap-2 py-1 rounded-lg transition-all w-full text-left group/sidebar",
         "font-medium",
-        open ? "px-3" : "px-2 justify-center",
+        open ? "px-2.5" : "px-2 justify-center",
         isActive 
-          ? "bg-accent-blue/15 backdrop-blur-glass text-slate-800 shadow-glass-sm" 
+          ? "bg-slate-200/40 backdrop-blur-glass text-slate-800 shadow-glass-sm" 
           : variant === 'danger'
             ? "text-accent-negative hover:bg-glass-white/60 hover:backdrop-blur-glass"
             : "text-slate-700 hover:bg-glass-white/60 hover:backdrop-blur-glass",
@@ -194,8 +194,8 @@ export const SidebarLink = ({
     >
       <div className={cn(
         "flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg transition-all",
-        isActive && "bg-accent-blue/15",
-        !open && isActive && "bg-accent-blue/20"
+        isActive && "bg-slate-200/30",
+        !open && isActive && "bg-slate-200/40"
       )}>
         {React.cloneElement(icon as React.ReactElement, { 
           className: "w-3.5 h-3.5",
@@ -240,14 +240,14 @@ export const SidebarSection = ({ title, children, onAdd }: SidebarSectionProps) 
   const { open, animate } = useSidebar();
   
   return (
-    <div className="mb-6">
+    <div className="mb-4">
       <motion.div
         animate={{
           opacity: animate ? (open ? 1 : 0) : 1,
           height: animate ? (open ? "auto" : 0) : "auto",
         }}
         transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-        className="flex items-center justify-between px-4 mb-3 overflow-hidden"
+        className="flex items-center justify-between px-3 mb-2 overflow-hidden"
       >
         <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
           {title}
@@ -264,8 +264,8 @@ export const SidebarSection = ({ title, children, onAdd }: SidebarSectionProps) 
         )}
       </motion.div>
       <div className={cn(
-        "space-y-1.5",
-        !open && "flex flex-col items-center gap-2"
+        "space-y-0.5",
+        !open && "flex flex-col items-center gap-1.5"
       )}>
         {children}
       </div>
@@ -339,7 +339,7 @@ export const SidebarProject = ({
           animate={{
             opacity: animate ? (open ? 1 : 0) : 1,
           }}
-          className="px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-600 text-xs font-semibold"
+          className="px-2 py-0.5 rounded-full bg-slate-200/40 text-slate-700 text-xs font-semibold"
         >
           {badge}
         </motion.span>
@@ -358,7 +358,7 @@ export const SidebarProject = ({
         </button>
       )}
       {isActive && open && (
-        <div className="w-2 h-2 rounded-full bg-[#f97316] flex-shrink-0 shadow-sm" />
+        <div className="w-2 h-2 rounded-full bg-slate-500 flex-shrink-0 shadow-sm" />
       )}
     </div>
   );
@@ -369,11 +369,11 @@ export const SidebarLogo = () => {
   
   return (
     <div className={cn(
-      "flex items-center gap-4 py-3 mb-8 transition-all",
-      open ? "px-4" : "px-3 justify-center"
+      "flex items-center gap-3 py-2 mb-6 transition-all",
+      open ? "px-3" : "px-2 justify-center"
     )}>
-      <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#f97316] via-[#fb923c] to-[#fdba74] flex items-center justify-center shadow-lg shadow-[#f97316]/20 flex-shrink-0">
-        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+      <div className="w-9 h-9 rounded-xl bg-slate-400/30 flex items-center justify-center shadow-glass-sm flex-shrink-0">
+        <svg className="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
         </svg>
       </div>
@@ -384,8 +384,8 @@ export const SidebarLogo = () => {
         }}
         className="overflow-hidden"
       >
-        <h1 className="text-xl font-semibold text-slate-800 whitespace-nowrap font-display">Bazar AI</h1>
-        <p className="text-xs text-slate-500 whitespace-nowrap font-medium">Content Manager</p>
+        <h1 className="text-base font-semibold text-slate-800 whitespace-nowrap">Bazar AI</h1>
+        <p className="text-[10px] text-slate-500 whitespace-nowrap font-medium">Content Manager</p>
       </motion.div>
     </div>
   );
@@ -395,7 +395,7 @@ export const SidebarDivider = () => {
   const { open } = useSidebar();
   return (
     <div className={cn(
-      "h-px bg-slate-200/60 my-6 transition-all",
+      "h-px bg-slate-200/60 my-4 transition-all",
       open ? "mx-4" : "mx-3"
     )} />
   );

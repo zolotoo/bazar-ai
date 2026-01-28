@@ -888,8 +888,8 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-base">
-      {/* Clean gradient blobs - white, orange, black */}
-      <div className="absolute top-[-10%] right-[10%] w-[45%] h-[45%] bg-gradient-to-bl from-orange-500/35 via-orange-400/15 to-transparent rounded-full blur-[80px] pointer-events-none" />
+      {/* Subtle dusty gray blobs */}
+      <div className="absolute top-[-10%] right-[10%] w-[45%] h-[45%] bg-gradient-to-bl from-slate-200/30 via-slate-100/15 to-transparent rounded-full blur-[80px] pointer-events-none" />
       <div className="absolute bottom-[5%] left-[-5%] w-[50%] h-[50%] bg-gradient-to-tr from-neutral-900/15 via-neutral-800/8 to-transparent rounded-full blur-[100px] pointer-events-none" />
       
       {/* Noise texture */}
@@ -924,7 +924,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
 
             {/* Project indicator */}
             <div className="flex items-center justify-center gap-2 mb-3">
-              <div className="px-3 py-1.5 rounded-full bg-orange-100 text-orange-700 text-xs font-medium flex items-center gap-1.5">
+              <div className="px-3 py-1.5 rounded-full bg-slate-200/50 text-slate-700 text-xs font-medium flex items-center gap-1.5">
                 <FolderPlus className="w-3.5 h-3.5" />
                 Проект: {currentProjectName}
               </div>
@@ -962,7 +962,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
               <>
                 <GlassCardStatic className="shadow-glass">
                   <div className="flex items-center gap-3 px-5 py-4">
-                    <Search className="w-5 h-5 text-orange-500" />
+                    <Search className="w-5 h-5 text-slate-600" />
                     <input
                       ref={inputRef}
                       type="text"
@@ -977,10 +977,9 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                       disabled={!query.trim() || loading}
                       className={cn(
                         "px-4 py-2 rounded-xl font-medium text-sm transition-all active:scale-95",
-                        "bg-gradient-to-r from-orange-500 to-amber-600 text-white",
-                        "hover:from-orange-400 hover:to-amber-500",
+                        "bg-slate-600 hover:bg-slate-700 text-white",
                         "disabled:opacity-40 disabled:cursor-not-allowed",
-                        "shadow-lg shadow-orange-500/30"
+                        "shadow-glass hover:shadow-glass-hover"
                       )}
                     >
                       Найти
@@ -1010,7 +1009,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
               <div className="space-y-5">
                 <GlassCardStatic className="p-5 shadow-glass">
                   <div className="flex items-center gap-2 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-slate-500 flex items-center justify-center">
                       <Link className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -1025,17 +1024,16 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                       onChange={(e) => setLinkUrl(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && handleParseLink()}
                       placeholder="https://instagram.com/reel/ABC123..."
-                      className="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-white/80 outline-none focus:ring-2 focus:ring-orange-500/30 text-sm"
+                      className="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-white/80 outline-none focus:ring-2 focus:ring-slate-200/50 focus:border-slate-400/50 text-sm"
                     />
                     <button
                       onClick={handleParseLink}
                       disabled={!linkUrl.trim() || linkLoading}
                       className={cn(
                         "px-5 py-3 rounded-xl font-medium text-sm transition-all active:scale-95 flex items-center gap-2",
-                        "bg-gradient-to-r from-orange-500 to-amber-600 text-white",
-                        "hover:from-orange-400 hover:to-amber-500",
+                        "bg-slate-600 hover:bg-slate-700 text-white",
                         "disabled:opacity-40 disabled:cursor-not-allowed",
-                        "shadow-lg shadow-orange-500/30"
+                        "shadow-glass hover:shadow-glass-hover"
                       )}
                     >
                       {linkLoading ? (
@@ -1111,9 +1109,9 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
 
                         {/* Viral coefficient */}
                         <div className="flex items-center gap-2 mb-4">
-                          <SparklesIcon className="w-4 h-4 text-amber-500" />
+                          <SparklesIcon className="w-4 h-4 text-slate-600" />
                           <span className="text-sm text-slate-600">
-                            Виральность: <span className="font-semibold text-amber-600">
+                            Виральность: <span className="font-semibold text-slate-700">
                               {calculateViralCoefficient(linkPreview.view_count, linkPreview.taken_at).toFixed(1)}
                             </span>
                           </span>
@@ -1141,7 +1139,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                                   onClick={() => handleAddLinkPreviewToAllVideos(folder.id)}
                                   className={cn(
                                     "flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all text-left",
-                                    "border-slate-200 hover:border-orange-300 hover:bg-orange-50"
+                                    "border-slate-200 hover:border-slate-300 hover:bg-slate-100/60"
                                   )}
                                 >
                                   <FolderIcon className="w-4 h-4" style={{ color: folder.color }} />
@@ -1264,10 +1262,9 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                       disabled={!radarUsername.trim() || !currentProjectId}
                       className={cn(
                         "px-5 py-3 rounded-xl font-medium text-sm transition-all active:scale-95 flex items-center gap-2",
-                        "bg-gradient-to-r from-orange-500 to-amber-600 text-white",
-                        "hover:from-orange-400 hover:to-amber-500",
+                        "bg-slate-600 hover:bg-slate-700 text-white",
                         "disabled:opacity-40 disabled:cursor-not-allowed",
-                        "shadow-lg shadow-orange-500/30"
+                        "shadow-glass hover:shadow-glass-hover"
                       )}
                     >
                       <UserPlus className="w-4 h-4" />

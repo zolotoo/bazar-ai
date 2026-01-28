@@ -510,40 +510,23 @@ body {
   color: rgba(255, 255, 255, 0.2) !important;
 }
 
-/* Custom scrollbar for dark areas */
+/* Hide all scrollbars - compact layout */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  display: none;
 }
 
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+.custom-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 999px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-/* Custom scrollbar for light/warm areas */
 .custom-scrollbar-light::-webkit-scrollbar {
-  width: 6px;
+  display: none;
 }
 
-.custom-scrollbar-light::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.custom-scrollbar-light::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 999px;
-}
-
-.custom-scrollbar-light::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.2);
+.custom-scrollbar-light {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* Hide scrollbar when sidebar is closed */

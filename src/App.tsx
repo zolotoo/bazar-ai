@@ -30,7 +30,7 @@ type SearchTab = 'search' | 'link' | 'radar';
 
 // Цвета для проектов
 const PROJECT_COLORS = [
-  '#f97316', // orange (мягкий)
+  '#64748b', // slate (пыльно-серый)
   '#ef4444', // red
   '#ec4899', // pink
   '#8b5cf6', // violet
@@ -75,7 +75,7 @@ function CreateProjectModal({ onSave, onClose }: CreateProjectModalProps) {
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-100">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#f97316] via-[#fb923c] to-[#fdba74] flex items-center justify-center shadow-lg shadow-[#f97316]/20">
+            <div className="w-10 h-10 rounded-2xl bg-slate-500 flex items-center justify-center shadow-glass">
               <Sparkles className="w-5 h-5 text-white" strokeWidth={2.5} />
             </div>
             <div>
@@ -103,7 +103,7 @@ function CreateProjectModal({ onSave, onClose }: CreateProjectModalProps) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Например: Кулинарный блог"
-                className="w-full px-5 py-3.5 min-h-[44px] rounded-2xl border border-slate-200/80 bg-white/60 backdrop-blur-sm outline-none focus:ring-2 focus:ring-[#f97316]/20 focus:border-[#f97316]/30 transition-all text-slate-800 placeholder:text-slate-400 font-medium text-base touch-manipulation"
+                className="w-full px-5 py-3.5 min-h-[44px] rounded-2xl border border-slate-200/80 bg-white/60 backdrop-blur-sm outline-none focus:ring-2 focus:ring-slate-200/50 focus:border-slate-400/50 transition-all text-slate-800 placeholder:text-slate-400 font-medium text-base touch-manipulation"
                 autoFocus
               />
           </div>
@@ -162,7 +162,7 @@ function CreateProjectModal({ onSave, onClose }: CreateProjectModalProps) {
             <button
               type="submit"
               disabled={!name.trim()}
-              className="flex-1 px-5 py-3.5 min-h-[44px] rounded-2xl bg-gradient-to-r from-[#f97316] via-[#fb923c] to-[#fdba74] text-white font-medium hover:from-[#f97316] hover:via-[#fb923c] hover:to-[#fdba74] active:scale-95 transition-all shadow-lg shadow-[#f97316]/20 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm touch-manipulation"
+              className="flex-1 px-5 py-3.5 min-h-[44px] rounded-2xl bg-slate-600 hover:bg-slate-700 text-white font-medium active:scale-95 transition-all shadow-glass hover:shadow-glass-hover disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm touch-manipulation"
             >
               Создать проект
             </button>
@@ -375,7 +375,7 @@ function AppContent() {
 
   const mobileTabs = [
     { id: 'workspace' as MobileTabId, icon: LayoutGrid, label: 'Лента', iconColor: 'text-slate-500' },
-    { id: 'folders' as MobileTabId, icon: FolderOpen, label: 'Папки', iconColor: 'text-amber-600' },
+    { id: 'folders' as MobileTabId, icon: FolderOpen, label: 'Папки', iconColor: 'text-slate-600' },
     { id: 'search' as MobileTabId, icon: Search, label: 'Поиск', iconColor: 'text-slate-500' },
     { id: 'profile' as MobileTabId, icon: User, label: 'Профиль', iconColor: 'text-slate-500' },
     { id: 'menu' as MobileTabId, icon: Menu, label: 'Меню', iconColor: 'text-slate-500' },
@@ -503,7 +503,7 @@ function AppContent() {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-base">
         <div className="flex flex-col items-center gap-5">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#f97316] via-[#fb923c] to-[#fdba74] flex items-center justify-center shadow-lg shadow-[#f97316]/20 animate-pulse">
+          <div className="w-16 h-16 rounded-2xl bg-slate-500 flex items-center justify-center shadow-glass animate-pulse">
             <Video className="w-8 h-8 text-white" strokeWidth={2.5} />
           </div>
           <p className="text-slate-500 text-sm font-medium">Загрузка проектов...</p>
@@ -573,7 +573,7 @@ function AppContent() {
                 {projects.length === 0 ? (
                   <button
                   onClick={() => setIsCreateProjectOpen(true)}
-                  className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl border-2 border-dashed border-slate-200/60 text-slate-400 hover:border-[#f97316]/30 hover:text-[#f97316] transition-all hover:bg-white/30 backdrop-blur-sm"
+                  className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl border-2 border-dashed border-slate-200/60 text-slate-400 hover:border-slate-400/50 hover:text-slate-600 transition-all hover:bg-white/30 backdrop-blur-sm"
                   >
                     <Plus className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
                   </button>
@@ -590,7 +590,7 @@ function AppContent() {
                               isActive={currentProjectId === project.id}
                               onClick={() => { selectProject(project.id); setSidebarExpanded(false); }}
                               onEdit={() => setEditingProject({ id: project.id, name: project.name, color: project.color })}
-                              icon={<FolderOpen className="w-4 h-4" style={{ color: project.color || '#f97316' }} strokeWidth={2.5} />}
+                              icon={<FolderOpen className="w-4 h-4" style={{ color: project.color || '#64748b' }} strokeWidth={2.5} />}
                             />
                             {currentProjectId === project.id && (
                               <button
@@ -623,11 +623,11 @@ function AppContent() {
                                   isActive={currentProjectId === project.id}
                                   onClick={async () => { await handleProjectClick(project); setSidebarExpanded(false); }}
                                   onEdit={() => setEditingProject({ id: project.id, name: project.name, color: project.color })}
-                                  icon={<FolderOpen className="w-4 h-4" style={{ color: project.color || '#f97316' }} strokeWidth={2.5} />}
+                                  icon={<FolderOpen className="w-4 h-4" style={{ color: project.color || '#64748b' }} strokeWidth={2.5} />}
                                   badge={isPending ? 'Новое' : undefined}
                                 />
                                 {isPending && (
-                                  <div className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                                  <div className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-slate-500 animate-pulse" />
                                 )}
                                 {currentProjectId === project.id && !isPending && (
                                   <button
@@ -761,7 +761,7 @@ function App() {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-base">
         <div className="flex flex-col items-center gap-5">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#f97316] via-[#fb923c] to-[#fdba74] flex items-center justify-center shadow-lg shadow-[#f97316]/20 animate-pulse">
+          <div className="w-16 h-16 rounded-2xl bg-slate-500 flex items-center justify-center shadow-glass animate-pulse">
             <Video className="w-8 h-8 text-white" strokeWidth={2.5} />
           </div>
           <p className="text-slate-500 text-sm font-medium">Загрузка...</p>

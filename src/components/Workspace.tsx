@@ -65,13 +65,13 @@ interface FolderConfig {
 
 // Цвета для папок
 const FOLDER_COLORS = [
-  '#64748b', '#f97316', '#6366f1', '#10b981', '#f59e0b', 
+  '#64748b', '#94a3b8', '#6366f1', '#10b981', '#94a3b8', 
   '#8b5cf6', '#ef4444', '#ec4899', '#14b8a6', '#84cc16'
 ];
 
 // Дефолтные папки
 const defaultFolderConfigs: FolderConfig[] = [
-  { id: 'ideas', title: 'Идеи', color: '#f97316', iconType: 'lightbulb' },
+  { id: 'ideas', title: 'Идеи', color: '#94a3b8', iconType: 'lightbulb' },
   { id: '1', title: 'Ожидает сценария', color: '#6366f1', iconType: 'file' },
   { id: '2', title: 'Ожидает съёмок', color: '#f59e0b', iconType: 'camera' },
   { id: '3', title: 'Ожидает монтажа', color: '#10b981', iconType: 'scissors' },
@@ -555,7 +555,7 @@ export function Workspace(props?: WorkspaceProps) {
           onClick={() => setIsFolderWidgetOpen(!isFolderWidgetOpen)}
         >
           <div className="flex items-center gap-2">
-            <FolderOpen className="w-5 h-5 text-[#f97316]" strokeWidth={2.5} />
+            <FolderOpen className="w-5 h-5 text-slate-600" strokeWidth={2.5} />
             <span className="text-sm font-semibold text-slate-700">Папки</span>
           </div>
           {isFolderWidgetOpen ? (
@@ -567,22 +567,22 @@ export function Workspace(props?: WorkspaceProps) {
         
         {/* Widget Content */}
         {isFolderWidgetOpen && (
-          <div className="px-2 pb-3 max-h-[60vh] overflow-y-auto custom-scrollbar-light">
+          <div className="px-2 pb-3">
             {/* Все видео (лента) */}
             <button
               onClick={() => setSelectedFolderId(null)}
               className={cn(
                 "w-full flex items-center gap-3 px-3 py-2.5 rounded-card transition-all text-left mb-2",
                 selectedFolderId === null 
-                  ? "bg-accent-blue/15 text-slate-800 shadow-glass-sm" 
+                  ? "bg-slate-200/40 text-slate-800 shadow-glass-sm" 
                   : "hover:bg-glass-white/60 text-slate-600"
               )}
             >
               <div className={cn(
                 "w-8 h-8 rounded-lg flex items-center justify-center",
-                selectedFolderId === null ? "bg-accent-blue/20" : "bg-slate-100/80"
+                selectedFolderId === null ? "bg-slate-200/30" : "bg-slate-100/80"
               )}>
-                <Inbox className="w-4 h-4" style={{ color: selectedFolderId === null ? '#5E9FED' : '#64748b' }} strokeWidth={2.5} />
+                <Inbox className="w-4 h-4" style={{ color: selectedFolderId === null ? '#64748b' : '#64748b' }} strokeWidth={2.5} />
               </div>
               <div className="flex-1 min-w-0">
                 <span className="text-sm font-medium block truncate">Все видео</span>
@@ -675,16 +675,16 @@ export function Workspace(props?: WorkspaceProps) {
                     "flex flex-col items-center rounded-2xl p-4 min-h-[120px] transition-all active:scale-[0.97] touch-manipulation",
                     "bg-white/50 backdrop-blur-md border border-white/60",
                     "shadow-[0_2px_12px_rgba(0,0,0,0.06)]",
-                    selectedFolderId === null && "ring-2 ring-[#f97316]/40 bg-white/70"
+                    selectedFolderId === null && "ring-2 ring-slate-300/40 bg-white/70"
                   )}
                 >
                   <div className={cn(
                     "w-12 h-12 rounded-2xl flex items-center justify-center mb-2 flex-shrink-0",
-                    selectedFolderId === null ? "bg-[#f97316]/20" : "bg-slate-100/80"
+                    selectedFolderId === null ? "bg-slate-200/40" : "bg-slate-100/80"
                   )}>
-                    <Inbox className="w-6 h-6" style={{ color: selectedFolderId === null ? '#f97316' : '#64748b' }} strokeWidth={2.5} />
+                    <Inbox className="w-6 h-6" style={{ color: selectedFolderId === null ? '#64748b' : '#64748b' }} strokeWidth={2.5} />
                   </div>
-                  <span className={cn("text-sm font-semibold truncate w-full text-center", selectedFolderId === null ? "text-[#f97316]" : "text-slate-700")}>Все видео</span>
+                  <span className={cn("text-sm font-semibold truncate w-full text-center", selectedFolderId === null ? "text-slate-700" : "text-slate-700")}>Все видео</span>
                   <span className="text-xs text-slate-400 mt-0.5">{totalVideos}</span>
                 </button>
 
@@ -737,7 +737,7 @@ export function Workspace(props?: WorkspaceProps) {
       {/* Кнопка «Папки» на мобильных убрана — открытие только через нижний таб-бар */}
 
       {/* Main Content - Video Feed */}
-      <div className="h-full overflow-y-auto custom-scrollbar-light px-4 md:px-6 safe-left safe-right">
+      <div className="h-full overflow-hidden px-4 md:px-6 safe-left safe-right">
         <div className="max-w-6xl mx-auto py-5 md:py-8 safe-top safe-bottom">
           {/* Header — glass bar */}
           <div className="mb-6 md:mb-8 rounded-card-xl bg-glass-white/80 backdrop-blur-glass-xl shadow-glass border border-white/[0.35] px-5 py-4 md:px-6 md:py-5">
@@ -758,8 +758,8 @@ export function Workspace(props?: WorkspaceProps) {
                   </>
                 ) : (
                   <>
-                    <div className="w-12 h-12 rounded-card-xl bg-accent-blue/15 flex items-center justify-center shadow-glass-sm">
-                      <Sparkles className="w-6 h-6 text-accent-blue" strokeWidth={2.5} />
+                    <div className="w-12 h-12 rounded-card-xl bg-slate-200/40 flex items-center justify-center shadow-glass-sm">
+                      <Sparkles className="w-6 h-6 text-slate-700" strokeWidth={2.5} />
                     </div>
                     <div>
                       <h1 className="text-xl md:text-2xl font-bold text-slate-800">Все видео</h1>
@@ -795,7 +795,7 @@ export function Workspace(props?: WorkspaceProps) {
                     className={cn(
                       "flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 min-h-[44px] rounded-pill text-[10px] md:text-xs font-semibold transition-all active:scale-95 touch-manipulation whitespace-nowrap",
                       sortBy === value 
-                        ? "bg-accent-blue/20 text-slate-800 shadow-glass-sm border border-accent-blue/30" 
+                        ? "bg-slate-200/50 text-slate-800 shadow-glass-sm border border-slate-300/40" 
                         : "text-slate-600 hover:text-slate-800 hover:bg-glass-white/60"
                     )}
                   >
@@ -822,7 +822,7 @@ export function Workspace(props?: WorkspaceProps) {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 pb-20 md:pb-6 safe-bottom">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5 pb-20 md:pb-6 safe-bottom">
               {feedVideos.map((video, idx) => {
                 const thumbnailUrl = proxyImageUrl(video.preview_url);
                 const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at || video.created_at);
@@ -863,9 +863,9 @@ export function Workspace(props?: WorkspaceProps) {
                       <div className="bg-glass-white/90 backdrop-blur-glass-xl rounded-card-xl shadow-glass border border-white/[0.35] p-1.5 min-w-[140px] animate-in fade-in slide-in-from-top-2 duration-200">
                         <button
                           onClick={(e) => { e.stopPropagation(); setSelectedVideo(video); setCardMenuVideoId(null); }}
-                          className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-orange-50 transition-colors text-left"
+                          className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-slate-100/60 transition-colors text-left"
                         >
-                          <FileText className="w-4 h-4 text-orange-500" />
+                          <FileText className="w-4 h-4 text-slate-600" />
                           <span className="text-sm text-slate-700">Работать</span>
                         </button>
                         
@@ -961,7 +961,7 @@ export function Workspace(props?: WorkspaceProps) {
             </div>
             
             {/* Content */}
-            <div className="p-6 overflow-y-auto max-h-[60vh]">
+            <div className="p-6">
               {/* Add new folder */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-slate-600 mb-2">
@@ -973,7 +973,7 @@ export function Workspace(props?: WorkspaceProps) {
                     value={newFolderName}
                     onChange={(e) => setNewFolderName(e.target.value)}
                     placeholder="Название папки..."
-                    className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all text-slate-700"
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-200/50 outline-none transition-all text-slate-700"
                     onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
                   />
                   <button
