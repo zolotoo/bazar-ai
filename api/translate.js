@@ -29,7 +29,7 @@ export default async function handler(req, res) {
       const prompt = `Translate the following text to ${targetLang}. Output only the translation, no explanations or extra text.\n\n${text}`;
 
       const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
