@@ -518,15 +518,15 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
 
   return (
     <div className="h-full overflow-hidden flex flex-col bg-[#f5f5f5]">
-      <div className="w-full h-full p-6 flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="mb-4 flex items-center justify-between flex-shrink-0">
+      <div className="w-full h-full p-4 md:p-6 flex flex-col overflow-hidden min-h-0">
+        {/* Header — на мобильных компактнее */}
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-shrink-0">
           <div className="flex items-center gap-4">
             <button
               onClick={onBack}
-              className="flex items-center gap-2 text-slate-500 hover:text-slate-700 transition-colors active:scale-95"
+              className="flex items-center gap-2 min-h-[44px] min-w-[44px] pr-2 -ml-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100/80 transition-colors active:scale-95 touch-manipulation"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="w-5 h-5 flex-shrink-0" />
               <span className="text-sm font-medium">Назад</span>
             </button>
             
@@ -564,11 +564,11 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
           </div>
         </div>
 
-        {/* Main content - 3 columns */}
-        <div className="flex-1 flex gap-4 overflow-hidden min-h-0">
+        {/* Main content — на мобильных колонка, на десктопе 3 колонки */}
+        <div className="flex-1 flex flex-col md:flex-row gap-4 min-h-0 overflow-y-auto md:overflow-hidden">
           {/* Left: превью 9:16 — по клику загружается и проигрывается тут же */}
-          <div className="flex-shrink-0 flex flex-col gap-3 overflow-y-auto custom-scrollbar-light" style={{ width: 'min(256px, 28vw)' }}>
-            <div className="relative rounded-2xl overflow-hidden shadow-xl bg-black w-full" style={{ aspectRatio: '9/16' }}>
+          <div className="flex-shrink-0 flex flex-col gap-3 overflow-y-auto custom-scrollbar-light w-full md:w-auto md:min-w-[256px] md:max-w-[min(256px,28vw)]">
+            <div className="relative rounded-2xl overflow-hidden shadow-xl bg-black w-full max-w-[240px] mx-auto md:max-w-none md:mx-0" style={{ aspectRatio: '9/16' }}>
               {showVideo && directVideoUrl ? (
                 <video
                   src={directVideoUrl}
@@ -830,16 +830,16 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
             </div>
           </div>
 
-          {/* Middle: Transcript */}
-          <div className="flex-1 flex flex-col min-w-0 bg-white rounded-2xl shadow-sm overflow-hidden">
-            {/* Transcript header */}
-            <div className="flex items-center justify-between p-4 border-b border-slate-100">
+          {/* Middle: Transcript — на мобильных с мин. высотой для скролла */}
+          <div className="flex-1 flex flex-col min-w-0 min-h-[320px] md:min-h-0 bg-white rounded-2xl shadow-sm overflow-hidden">
+            {/* Transcript header — на мобильных кнопки переносятся */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-slate-400" />
+                <FileText className="w-5 h-5 text-slate-400 flex-shrink-0" />
                 <h3 className="font-semibold text-slate-800">Транскрибация</h3>
               </div>
               
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {/* Tabs: Original / Translation */}
                 <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
                   <button
@@ -977,12 +977,12 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
             </div>
           </div>
 
-          {/* Right: Script */}
-          <div className="flex-1 flex flex-col min-w-0 bg-white rounded-2xl shadow-sm overflow-hidden">
-            {/* Script header */}
-            <div className="flex items-center justify-between p-4 border-b border-slate-100">
+          {/* Right: Script — на мобильных с мин. высотой */}
+          <div className="flex-1 flex flex-col min-w-0 min-h-[280px] md:min-h-0 bg-white rounded-2xl shadow-sm overflow-hidden">
+            {/* Script header — на мобильных кнопки переносятся */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-violet-500" />
+                <FileText className="w-5 h-5 text-violet-500 flex-shrink-0" />
                 <h3 className="font-semibold text-slate-800">Мой сценарий</h3>
                 {video.script_text && (
                   <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 text-[10px] font-medium">

@@ -841,6 +841,7 @@ export function Workspace(props?: WorkspaceProps) {
                 } : undefined;
                 
                 return (
+                  <div key={`wrap-${video.id}-${idx}`} className={cn("relative", cardMenuVideoId === video.id && "z-[60]")}>
                   <VideoGradientCard
                     key={`feed-${video.id}-${idx}`}
                     thumbnailUrl={thumbnailUrl}
@@ -935,6 +936,7 @@ export function Workspace(props?: WorkspaceProps) {
                       </div>
                     }
                   />
+                  </div>
                 );
               })}
             </div>

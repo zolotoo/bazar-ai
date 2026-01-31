@@ -120,7 +120,7 @@ export const MobileSidebar = ({
           />
         )}
       </AnimatePresence>
-      {/* Панель Меню — стекло, выдвигается слева, кнопки как в iOS 26 */}
+      {/* Панель Меню — стекло, выдвигается слева; на мобильных проекты и навигация видны и кликабельны */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -129,24 +129,29 @@ export const MobileSidebar = ({
             exit={{ x: "-100%" }}
             transition={{ type: "tween", duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
             className={cn(
-              "md:hidden fixed inset-y-0 left-0 z-[9999] w-[min(300px,88vw)] flex flex-col",
-              "bg-glass-white/80 backdrop-blur-glass-2xl",
-              "rounded-r-card border-r border-white/[0.35]",
-              "shadow-glass safe-top safe-bottom safe-left safe-right overflow-hidden"
+              "md:hidden fixed inset-y-0 left-0 z-[9999] w-[min(320px,92vw)] flex flex-col",
+              "bg-white/95 backdrop-blur-2xl",
+              "rounded-r-2xl border-r border-slate-200/80",
+              "shadow-[8px_0_32px_rgba(0,0,0,0.12)]",
+              "safe-top safe-bottom safe-left safe-right overflow-hidden"
             )}
-            style={{ willChange: "transform" }}
+            style={{ willChange: "transform", WebkitOverflowScrolling: "touch" }}
           >
-            <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0 safe-top">
-              <span className="text-[13px] font-semibold text-slate-600">Меню</span>
+            <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0 safe-top border-b border-slate-100">
+              <span className="text-[15px] font-semibold text-slate-700">Меню</span>
               <button
                 onClick={() => setOpen(false)}
-                className="p-2 -m-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-full bg-white/40 backdrop-blur-sm text-slate-500 active:bg-white/60 transition-colors touch-manipulation"
+                className="p-2.5 -m-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-slate-100 text-slate-600 active:bg-slate-200 transition-colors touch-manipulation"
                 aria-label="Закрыть"
               >
                 <X className="w-5 h-5" strokeWidth={2.5} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-3 pt-1 space-y-1">
+            <div className={cn(
+              "flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4 pt-3 space-y-1",
+              "[&_button]:min-h-[44px] [&_button]:touch-manipulation",
+              "[&_[role='button']]:min-h-[44px]"
+            )}>
               {children}
             </div>
           </motion.div>

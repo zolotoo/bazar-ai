@@ -1,5 +1,5 @@
 'use client'
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { cn } from "../../utils/cn";
 import { Sparkles, MoreVertical, ArrowRight, Eye, Heart, Loader2, FileText, AlertCircle, MessageCircle, TrendingUp, Calendar } from "lucide-react";
@@ -64,6 +64,13 @@ export const VideoGradientCard = ({
 }: VideoGradientCardProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const m = () => setIsMobile(window.matchMedia('(max-width: 768px)').matches);
+    m();
+    window.addEventListener('resize', m);
+    return () => window.removeEventListener('resize', m);
+  }, []);
 
   return (
     <div
@@ -183,7 +190,7 @@ export const VideoGradientCard = ({
               )}
             </div>
             
-            {/* Menu button - показывается при наведении или если открыто меню */}
+            {/* Menu button — на мобильных всегда виден, на десктопе при наведении */}
             {onFolderMenuToggle && (
               <motion.button
                 onClick={(e) => {
@@ -191,16 +198,17 @@ export const VideoGradientCard = ({
                   onFolderMenuToggle();
                 }}
                 className={cn(
-                  "p-2 rounded-full backdrop-blur-sm transition-all",
+                  "p-2.5 min-w-[44px] min-h-[44px] rounded-full backdrop-blur-sm transition-all touch-manipulation flex items-center justify-center",
+                  "max-md:!opacity-100 max-md:bg-black/40 max-md:text-white",
                   showFolderMenu 
                     ? "bg-white text-slate-800" 
                     : "bg-black/30 text-white hover:bg-white/20"
                 )}
                 initial={{ opacity: 0 }}
-                animate={{ opacity: isHovered || showFolderMenu ? 1 : 0 }}
+                animate={{ opacity: isMobile || isHovered || showFolderMenu ? 1 : 0 }}
                 transition={{ duration: 0.15 }}
               >
-                <MoreVertical className="w-4 h-4" strokeWidth={2.5} />
+                <MoreVertical className="w-4 h-4 md:w-4 md:h-4" strokeWidth={2.5} />
               </motion.button>
             )}
             
