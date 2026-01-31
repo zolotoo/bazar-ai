@@ -9,12 +9,14 @@ export default async function handler(req, res) {
 
   const body = req.body || {};
   const hasExamples = Array.isArray(body.examples) && body.examples.length > 0;
-  const hasGenerate = body.prompt && typeof body.transcript_text === 'string';
+  const hasGenerate = body.prompt && typeof body.transcript_text === 'string' && !body.feedback;
+  const hasRefine = body.feedback && typeof body.prompt === 'string' && typeof body.transcript_text === 'string' && typeof body.script_text === 'string';
 
   if (hasExamples) return handleAnalyze(req, res);
+  if (hasRefine) return handleRefine(req, res);
   if (hasGenerate) return handleGenerate(req, res);
   return res.status(400).json({
-    error: 'Either examples[] (analyze) or prompt+transcript_text (generate) required',
+    error: 'Use examples[] (analyze), prompt+transcript_text (generate), or feedback+prompt+transcript_text+script_text (refine)',
   });
 }
 
@@ -163,5 +165,95 @@ async function handleGenerate(req, res) {
   } catch (err) {
     console.error('script generate error:', err);
     return res.status(500).json({ error: 'Failed to generate script', details: err.message });
+  }
+}
+
+async function handleRefine(req, res) {
+  const { prompt, transcript_text, translation_text, script_text, feedback } = req.body;
+  if (!feedback || typeof feedback !== 'string' || !feedback.trim()) {
+    return res.status(400).json({ error: 'feedback is required' });
+  }
+  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
+  if (!geminiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
+
+  const userText = `Текущий промт для генерации сценария:
+---
+${prompt.trim()}
+---
+
+По этому промту был сгенерирован сценарий.
+
+Исходный сценарий (оригинал):
+${transcript_text.trim()}
+${translation_text && translation_text.trim() ? '\nПеревод на русский:\n' + translation_text.trim() : ''}
+
+Сгенерированный сценарий:
+${script_text.trim()}
+
+Обратная связь пользователя:
+${feedback.trim()}
+
+Задача: обнови промт так, чтобы в следующий раз нейросеть избегала того, что не так, и сохраняла то, что хорошо. Верни только один валидный JSON без лишнего текста и без запятой перед }. Переносы в строках — только \\n.
+{
+  "prompt": "обновлённый полный текст промта (на русском)",
+  "meta": {
+    "rules": ["правило 1", ...],
+    "doNot": ["чего избегать", ...],
+    "summary": "краткое описание стиля в 1–2 предложения"
+  }
+}`;
+
+  try {
+    const geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: userText }] }],
+          generationConfig: { temperature: 0.2, responseMimeType: 'application/json' },
+        }),
+      }
+    );
+    if (!geminiRes.ok) {
+      const errBody = await geminiRes.text();
+      console.error('Gemini API error:', geminiRes.status, errBody);
+      return res.status(502).json({ error: 'Gemini API error', details: errBody });
+    }
+    const data = await geminiRes.json();
+    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    if (!rawText) return res.status(502).json({ error: 'Gemini returned empty response' });
+    let jsonStr = (rawText.match(/\{[\s\S]*\}/) || [null])[0] || rawText;
+    jsonStr = jsonStr.replace(/,(\s*[}\]])/g, '$1');
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch (parseErr) {
+      const lastBrace = jsonStr.lastIndexOf('}');
+      if (lastBrace > 0) {
+        try {
+          parsed = JSON.parse(jsonStr.slice(0, lastBrace + 1).replace(/,(\s*[}\]])/g, '$1'));
+        } catch (_) {
+          throw parseErr;
+        }
+      } else {
+        throw parseErr;
+      }
+    }
+    const newPrompt = typeof parsed.prompt === 'string' ? parsed.prompt : '';
+    const meta = parsed.meta && typeof parsed.meta === 'object' ? parsed.meta : {};
+    if (!newPrompt) return res.status(502).json({ error: 'Gemini did not return a valid prompt' });
+    return res.status(200).json({
+      success: true,
+      prompt: newPrompt,
+      meta: {
+        rules: Array.isArray(meta.rules) ? meta.rules : [],
+        doNot: Array.isArray(meta.doNot) ? meta.doNot : [],
+        summary: typeof meta.summary === 'string' ? meta.summary : '',
+      },
+    });
+  } catch (err) {
+    console.error('script refine error:', err);
+    return res.status(500).json({ error: 'Failed to refine prompt', details: err.message });
   }
 }

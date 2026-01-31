@@ -187,6 +187,10 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   const [isAnalyzingStyle, setIsAnalyzingStyle] = useState(false);
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
   const [isSavingPrompt, setIsSavingPrompt] = useState(false);
+  const [scriptGeneratedByStyle, setScriptGeneratedByStyle] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [isRefiningPrompt, setIsRefiningPrompt] = useState(false);
   const linksTemplate = currentProject?.linksTemplate ?? DEFAULT_LINKS_TEMPLATE;
   const responsiblesTemplate = currentProject?.responsiblesTemplate ?? DEFAULT_RESPONSIBLES_TEMPLATE;
 
@@ -213,6 +217,10 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
     setLinks(buildMergedLinks());
     setResponsibles(buildMergedResponsibles());
   }, [video.id, video.links, video.responsibles, video.draft_link, video.final_link, video.script_responsible, video.editing_responsible, linksTemplate, responsiblesTemplate]);
+
+  useEffect(() => {
+    setScriptGeneratedByStyle(false);
+  }, [video.id]);
 
   const { videos: projectVideos, updateVideoFolder, updateVideoScript, updateVideoTranscript, updateVideoTranslation, updateVideoResponsible, updateVideoLinks } = useInboxVideos();
 
@@ -633,6 +641,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
       const data = await res.json();
       if (data.success && data.script) {
         setScript(data.script);
+        setScriptGeneratedByStyle(true);
         toast.success('Сценарий сгенерирован по стилю проекта');
       } else {
         toast.error(data.error || 'Ошибка генерации');
@@ -700,6 +709,43 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
     setIsEditingPrompt(false);
     setShowPromptModal(true);
   };
+  // Дообучение промта по обратной связи после «По стилю»
+  const handleRefinePrompt = async () => {
+    if (!currentProject?.id || !feedbackText.trim() || !script?.trim()) return;
+    setIsRefiningPrompt(true);
+    try {
+      const res = await fetch('/api/script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          feedback: feedbackText.trim(),
+          prompt: currentProject.stylePrompt,
+          transcript_text: transcript,
+          translation_text: translation || undefined,
+          script_text: script,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.prompt) {
+        await updateProject(currentProject.id, {
+          stylePrompt: data.prompt,
+          styleMeta: data.meta,
+        });
+        toast.success('Промт обновлён по вашей обратной связи');
+        setShowFeedbackModal(false);
+        setFeedbackText('');
+        setScriptGeneratedByStyle(false);
+      } else {
+        toast.error(data.error || 'Ошибка дообучения');
+      }
+    } catch (err) {
+      console.error('Refine prompt error:', err);
+      toast.error('Ошибка дообучения промта');
+    } finally {
+      setIsRefiningPrompt(false);
+    }
+  };
+
   const handleSaveEditedPrompt = async () => {
     if (!currentProject?.id || editedPromptText.trim() === currentProject?.stylePrompt) {
       setIsEditingPrompt(false);
@@ -1272,6 +1318,16 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                     По стилю
                   </button>
                 )}
+                {scriptGeneratedByStyle && script?.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setShowFeedbackModal(true)}
+                    className="px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-medium transition-all flex items-center gap-1.5"
+                    title="Указать, что не так и что хорошо — промт дообучится"
+                  >
+                    Что не так сделал?
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setShowStyleTrainModal(true)}
@@ -1311,7 +1367,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
             <div className="flex-1 overflow-hidden p-4">
               <textarea
                 value={script}
-                onChange={(e) => setScript(e.target.value)}
+                onChange={(e) => { setScript(e.target.value); setScriptGeneratedByStyle(false); }}
                 className="w-full h-full resize-none text-slate-700 text-sm leading-relaxed focus:outline-none border border-slate-200 rounded-xl p-4 focus:border-violet-300 focus:ring-2 focus:ring-violet-100 transition-all"
                 placeholder="Напишите ваш сценарий здесь...
 
@@ -1464,6 +1520,37 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
               )}
               <button type="button" onClick={() => setShowPromptModal(false)} className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 ml-auto">
                 Закрыть
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно: обратная связь по сгенерированному сценарию — дообучение промта */}
+      {showFeedbackModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !isRefiningPrompt && setShowFeedbackModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-slate-100">
+              <h3 className="font-semibold text-slate-800">Что не так сделал сценарий?</h3>
+              <p className="text-slate-500 text-sm mt-1">
+                Опишите, что не так и что хорошо. Промт проекта обновится, и в следующий раз генерация учтёт вашу обратную связь.
+              </p>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <textarea
+                value={feedbackText}
+                onChange={(e) => setFeedbackText(e.target.value)}
+                placeholder="Например: слишком длинные предложения, не хватало хука в начале, хорошо что сохранил структуру по пунктам..."
+                className="w-full min-h-[120px] p-3 rounded-xl border border-slate-200 text-sm text-slate-700 focus:ring-2 focus:ring-violet-200 focus:border-violet-400 resize-y"
+                disabled={isRefiningPrompt}
+              />
+            </div>
+            <div className="p-4 border-t border-slate-100 flex justify-end gap-2">
+              <button type="button" onClick={() => setShowFeedbackModal(false)} disabled={isRefiningPrompt} className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 disabled:opacity-50">
+                Отмена
+              </button>
+              <button type="button" onClick={handleRefinePrompt} disabled={isRefiningPrompt || !feedbackText.trim()} className="px-4 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50">
+                {isRefiningPrompt ? <><Loader2 className="w-4 h-4 animate-spin" /> Дообучение...</> : <>Отправить и дообучить промт</>}
               </button>
             </div>
           </div>
