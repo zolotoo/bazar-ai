@@ -47,7 +47,7 @@ async function handleAnalyze(req, res) {
 — зафиксировать правила (логика, стиль, структура, типовые трансформации);
 — сформулировать один рабочий промт, пригодный для повторного использования при генерации нового сценария по новому исходнику.
 
-Ответ пришли строго в формате JSON без markdown-блоков и без лишнего текста:
+Ответ пришли строго в формате JSON без markdown-блоков и без лишнего текста. Один валидный JSON: без запятой перед закрывающей скобкой, переносы в строках только как \\n.
 {
   "prompt": "полный текст промта для нейросети (на русском)",
   "meta": {
@@ -87,8 +87,25 @@ async function handleAnalyze(req, res) {
     const data = await geminiRes.json();
     const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
     if (!rawText) return res.status(502).json({ error: 'Gemini returned empty response' });
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : rawText);
+    let jsonStr = (rawText.match(/\{[\s\S]*\}/) || [null])[0] || rawText;
+    // Убираем типичные ошибки Gemini: trailing comma
+    jsonStr = jsonStr.replace(/,(\s*[}\]])/g, '$1');
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch (parseErr) {
+      // Ещё попытка: обрезать до последнего полного объекта (часто модель дописывает текст после })
+      const lastBrace = jsonStr.lastIndexOf('}');
+      if (lastBrace > 0) {
+        try {
+          parsed = JSON.parse(jsonStr.slice(0, lastBrace + 1).replace(/,(\s*[}\]])/g, '$1'));
+        } catch (_) {
+          throw parseErr;
+        }
+      } else {
+        throw parseErr;
+      }
+    }
     const prompt = typeof parsed.prompt === 'string' ? parsed.prompt : '';
     const meta = parsed.meta && typeof parsed.meta === 'object' ? parsed.meta : {};
     if (!prompt) return res.status(502).json({ error: 'Gemini did not return a valid prompt' });
