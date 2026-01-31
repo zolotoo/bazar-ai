@@ -621,7 +621,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
     }
     setIsGeneratingScript(true);
     try {
-      const res = await fetch('/api/script-generate', {
+      const res = await fetch('/api/script', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -668,7 +668,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
     if (examples.length === 0) return;
     setIsAnalyzingStyle(true);
     try {
-      const res = await fetch('/api/script-style-analyze', {
+      const res = await fetch('/api/script', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ examples }),

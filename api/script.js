@@ -1,4 +1,4 @@
-// Vercel Serverless — анализ примеров (оригинал + перевод + моя адаптация) → промт стиля через Gemini
+// Vercel Serverless — стиль сценария: анализ примеров ИЛИ генерация по промту (Gemini). Один файл = одна функция (лимит Hobby 12).
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -7,25 +7,32 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { examples } = req.body;
-  if (!Array.isArray(examples) || examples.length === 0 || examples.length > 10) {
-    return res.status(400).json({
-      error: 'examples is required: array of 1–10 items with transcript_text, translation_text, script_text',
-    });
-  }
+  const body = req.body || {};
+  const hasExamples = Array.isArray(body.examples) && body.examples.length > 0;
+  const hasGenerate = body.prompt && typeof body.transcript_text === 'string';
 
+  if (hasExamples) return handleAnalyze(req, res);
+  if (hasGenerate) return handleGenerate(req, res);
+  return res.status(400).json({
+    error: 'Either examples[] (analyze) or prompt+transcript_text (generate) required',
+  });
+}
+
+async function handleAnalyze(req, res) {
+  const { examples } = req.body;
+  if (examples.length > 10) {
+    return res.status(400).json({ error: 'examples: max 10 items' });
+  }
   for (const ex of examples) {
     if (!ex.transcript_text || !ex.script_text) {
       return res.status(400).json({
-        error: 'Each example must have transcript_text and script_text. translation_text is optional.',
+        error: 'Each example must have transcript_text and script_text.',
       });
     }
   }
 
   const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
-  if (!geminiKey) {
-    return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
-  }
+  if (!geminiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
 
   const parts = [];
   parts.push(`Задача: по примерам адаптации сценариев выявить закономерности и сформулировать промт для нейросети.
@@ -60,8 +67,6 @@ export default async function handler(req, res) {
     parts.push(`Моя адаптация:\n${ex.script_text}\n`);
   });
 
-  const userText = parts.join('');
-
   try {
     const geminiRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`,
@@ -69,39 +74,24 @@ export default async function handler(req, res) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: userText }] }],
+          contents: [{ parts: [{ text: parts.join('') }] }],
           generationConfig: { temperature: 0.3, responseMimeType: 'application/json' },
         }),
       }
     );
-
     if (!geminiRes.ok) {
       const errBody = await geminiRes.text();
       console.error('Gemini API error:', geminiRes.status, errBody);
       return res.status(502).json({ error: 'Gemini API error', details: errBody });
     }
-
     const data = await geminiRes.json();
-    const rawText =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-
-    if (!rawText) {
-      return res.status(502).json({ error: 'Gemini returned empty response' });
-    }
-
-    // Убираем возможные markdown-обёртки
-    let jsonStr = rawText;
+    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    if (!rawText) return res.status(502).json({ error: 'Gemini returned empty response' });
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-    if (jsonMatch) jsonStr = jsonMatch[0];
-
-    const parsed = JSON.parse(jsonStr);
+    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : rawText);
     const prompt = typeof parsed.prompt === 'string' ? parsed.prompt : '';
     const meta = parsed.meta && typeof parsed.meta === 'object' ? parsed.meta : {};
-
-    if (!prompt) {
-      return res.status(502).json({ error: 'Gemini did not return a valid prompt' });
-    }
-
+    if (!prompt) return res.status(502).json({ error: 'Gemini did not return a valid prompt' });
     return res.status(200).json({
       success: true,
       prompt,
@@ -112,10 +102,49 @@ export default async function handler(req, res) {
       },
     });
   } catch (err) {
-    console.error('script-style-analyze error:', err);
-    return res.status(500).json({
-      error: 'Failed to analyze style',
-      details: err.message,
-    });
+    console.error('script analyze error:', err);
+    return res.status(500).json({ error: 'Failed to analyze style', details: err.message });
+  }
+}
+
+async function handleGenerate(req, res) {
+  const { prompt, transcript_text, translation_text } = req.body;
+  if (!prompt.trim()) return res.status(400).json({ error: 'prompt is required' });
+  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
+  if (!geminiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
+
+  const userParts = [];
+  userParts.push('Исходный сценарий (оригинал):\n' + transcript_text.trim());
+  if (translation_text && typeof translation_text === 'string' && translation_text.trim()) {
+    userParts.push('\nПеревод на русский:\n' + translation_text.trim());
+  }
+  userParts.push('\n\nСгенерируй мой сценарий (адаптацию) по этим данным. Выводи только текст сценария, без пояснений.');
+  const userText = userParts.join('');
+
+  try {
+    const geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: userText }] }],
+          systemInstruction: { parts: [{ text: prompt.trim() }] },
+          generationConfig: { temperature: 0.4 },
+        }),
+      }
+    );
+    if (!geminiRes.ok) {
+      const errBody = await geminiRes.text();
+      console.error('Gemini API error:', geminiRes.status, errBody);
+      return res.status(502).json({ error: 'Gemini API error', details: errBody });
+    }
+    const data = await geminiRes.json();
+    const script = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    if (!script) return res.status(502).json({ error: 'Gemini returned empty script' });
+    return res.status(200).json({ success: true, script });
+  } catch (err) {
+    console.error('script generate error:', err);
+    return res.status(500).json({ error: 'Failed to generate script', details: err.message });
   }
 }
