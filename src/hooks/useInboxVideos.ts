@@ -44,12 +44,17 @@ interface SavedVideo {
   editing_responsible?: string;
 }
 
+const PAGE_SIZE = 60;
+
 /**
- * Хук для работы с сохранёнными видео пользователя
+ * Хук для работы с сохранёнными видео пользователя.
+ * Загружает видео страницами, чтобы не лагать на проектах с большим количеством видео.
  */
 export function useInboxVideos() {
   const [videos, setVideos] = useState<IncomingVideo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const { setIncomingVideos } = useFlowStore();
   const { user } = useAuth();
@@ -160,7 +165,8 @@ export function useInboxVideos() {
       }
       
       const { data, error: fetchError } = await query
-        .order('added_at', { ascending: false });
+        .order('added_at', { ascending: false })
+        .range(0, PAGE_SIZE - 1);
 
       console.log('[InboxVideos] Fetch result:', { count: data?.length, error: fetchError, projectId: currentProjectId });
 
@@ -168,15 +174,17 @@ export function useInboxVideos() {
         console.error('Error fetching saved videos:', fetchError);
         setVideos([]);
         setIncomingVideos([]);
+        setHasMore(false);
       } else if (data) {
         const transformedVideos = data.map(transformVideo);
         setVideos(transformedVideos);
         setIncomingVideos(transformedVideos);
+        setHasMore(data.length === PAGE_SIZE);
         console.log('[InboxVideos] Loaded', transformedVideos.length, 'videos for project', currentProjectId);
       } else {
-        // Если данных нет, очищаем состояние
         setVideos([]);
         setIncomingVideos([]);
+        setHasMore(false);
       }
     } catch (err) {
       console.error('Error loading saved videos:', err);
@@ -185,6 +193,56 @@ export function useInboxVideos() {
       setLoading(false);
     }
   }, [setIncomingVideos, transformVideo, getUserId, currentProjectId]);
+
+  // Подгрузить следующую страницу (для проектов с большим количеством видео)
+  const loadMore = useCallback(async () => {
+    if (!hasMore || loadingMore || loading) return;
+    const userId = getUserId();
+    setLoadingMore(true);
+    try {
+      let query = supabase.from('saved_videos').select('*');
+      if (currentProjectId) {
+        const { data: membersData } = await supabase
+          .from('project_members')
+          .select('user_id')
+          .eq('project_id', currentProjectId)
+          .in('status', ['active', 'pending']);
+        const isSharedProject = membersData && membersData.length > 0;
+        if (isSharedProject) {
+          const { data: projectData } = await supabase
+            .from('projects')
+            .select('owner_id')
+            .eq('id', currentProjectId)
+            .single();
+          const memberUserIds = membersData!.map(m => m.user_id);
+          const allUserIds = [...new Set([...memberUserIds, projectData?.owner_id].filter(Boolean))];
+          query = query.eq('project_id', currentProjectId).in('user_id', allUserIds);
+        } else {
+          query = query.eq('project_id', currentProjectId).eq('user_id', userId);
+        }
+      } else {
+        query = query.is('project_id', null).eq('user_id', userId);
+      }
+      const offset = videos.length;
+      const { data, error: fetchError } = await query
+        .order('added_at', { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1);
+      if (fetchError) return;
+      if (data && data.length > 0) {
+        const transformed = data.map(transformVideo);
+        setVideos(prev => {
+          const next = [...prev, ...transformed];
+          setIncomingVideos(next);
+          return next;
+        });
+        setHasMore(data.length === PAGE_SIZE);
+      } else {
+        setHasMore(false);
+      }
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [hasMore, loadingMore, loading, getUserId, currentProjectId, videos.length, transformVideo, setIncomingVideos]);
 
   // Перезагружаем видео при смене пользователя или проекта
   useEffect(() => {
@@ -820,6 +878,9 @@ export function useInboxVideos() {
   return {
     videos,
     loading,
+    loadingMore,
+    hasMore,
+    loadMore,
     error,
     addVideoToInbox,
     removeVideo,

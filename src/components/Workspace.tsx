@@ -106,7 +106,7 @@ interface WorkspaceProps {
 export function Workspace(props?: WorkspaceProps) {
   const { externalFolderPanelOpen, onExternalFolderPanelClose } = props ?? {};
   const { loading } = useWorkspaceZones();
-  const { videos: inboxVideos, removeVideo: removeInboxVideo, restoreVideo, updateVideoFolder } = useInboxVideos();
+  const { videos: inboxVideos, removeVideo: removeInboxVideo, restoreVideo, updateVideoFolder, loadMore, hasMore, loadingMore } = useInboxVideos();
   const { 
     currentProject, 
     currentProjectId, 
@@ -937,6 +937,24 @@ export function Workspace(props?: WorkspaceProps) {
                   />
                 );
               })}
+            </div>
+          )}
+          {feedVideos.length > 0 && hasMore && (
+            <div className="flex justify-center py-6 pb-20 md:pb-6">
+              <button
+                type="button"
+                onClick={() => loadMore()}
+                disabled={loadingMore}
+                className="px-5 py-2.5 rounded-xl bg-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-300 disabled:opacity-60 flex items-center gap-2 transition-colors"
+              >
+                {loadingMore ? (
+                  <>
+                    <span className="animate-pulse">Загрузка...</span>
+                  </>
+                ) : (
+                  'Загрузить ещё видео'
+                )}
+              </button>
             </div>
           )}
         </div>
