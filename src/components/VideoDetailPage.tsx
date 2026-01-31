@@ -188,9 +188,18 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
   const [isSavingPrompt, setIsSavingPrompt] = useState(false);
   const [scriptGeneratedByStyle, setScriptGeneratedByStyle] = useState(false);
+  const [showChoiceModal, setShowChoiceModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showEditScriptModal, setShowEditScriptModal] = useState(false);
+  const [scriptAiForRefine, setScriptAiForRefine] = useState('');
+  const [scriptHumanForRefine, setScriptHumanForRefine] = useState('');
   const [feedbackText, setFeedbackText] = useState('');
   const [isRefiningPrompt, setIsRefiningPrompt] = useState(false);
+  const [clarifyingQuestions, setClarifyingQuestions] = useState<string[]>([]);
+  const [clarifyingIndex, setClarifyingIndex] = useState(0);
+  const [clarifyAnswer, setClarifyAnswer] = useState('');
+  const [showClarifyModal, setShowClarifyModal] = useState(false);
+  const [lastRefinedPrompt, setLastRefinedPrompt] = useState('');
   const linksTemplate = currentProject?.linksTemplate ?? DEFAULT_LINKS_TEMPLATE;
   const responsiblesTemplate = currentProject?.responsiblesTemplate ?? DEFAULT_RESPONSIBLES_TEMPLATE;
 
@@ -709,7 +718,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
     setIsEditingPrompt(false);
     setShowPromptModal(true);
   };
-  // Дообучение промта по обратной связи после «По стилю»
+  // Дообучение промта по обратной связи (текст)
   const handleRefinePrompt = async () => {
     if (!currentProject?.id || !feedbackText.trim() || !script?.trim()) return;
     setIsRefiningPrompt(true);
@@ -727,20 +736,108 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
       });
       const data = await res.json();
       if (data.success && data.prompt) {
-        await updateProject(currentProject.id, {
-          stylePrompt: data.prompt,
-          styleMeta: data.meta,
-        });
-        toast.success('Промт обновлён по вашей обратной связи');
+        await updateProject(currentProject.id, { stylePrompt: data.prompt, styleMeta: data.meta });
+        setLastRefinedPrompt(data.prompt);
         setShowFeedbackModal(false);
         setFeedbackText('');
         setScriptGeneratedByStyle(false);
+        toast.success('Промт обновлён');
+        if (data.clarifying_questions?.length) {
+          setClarifyingQuestions(data.clarifying_questions);
+          setClarifyingIndex(0);
+          setClarifyAnswer('');
+          setShowClarifyModal(true);
+        }
       } else {
         toast.error(data.error || 'Ошибка дообучения');
       }
     } catch (err) {
       console.error('Refine prompt error:', err);
       toast.error('Ошибка дообучения промта');
+    } finally {
+      setIsRefiningPrompt(false);
+    }
+  };
+
+  // Дообучение по diff: сценарий ИИ vs ваш идеальный
+  const handleRefineByDiff = async () => {
+    if (!currentProject?.id || scriptAiForRefine.trim() === '' || scriptHumanForRefine.trim() === '') return;
+    setIsRefiningPrompt(true);
+    try {
+      const res = await fetch('/api/script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: currentProject.stylePrompt,
+          transcript_text: transcript,
+          translation_text: translation || undefined,
+          script_ai: scriptAiForRefine.trim(),
+          script_human: scriptHumanForRefine.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.prompt) {
+        await updateProject(currentProject.id, { stylePrompt: data.prompt, styleMeta: data.meta });
+        setScript(scriptHumanForRefine.trim());
+        setLastRefinedPrompt(data.prompt);
+        setShowEditScriptModal(false);
+        setScriptAiForRefine('');
+        setScriptHumanForRefine('');
+        setScriptGeneratedByStyle(false);
+        toast.success('Промт дообучен на ваших правках');
+        if (data.clarifying_questions?.length) {
+          setClarifyingQuestions(data.clarifying_questions);
+          setClarifyingIndex(0);
+          setClarifyAnswer('');
+          setShowClarifyModal(true);
+        }
+      } else {
+        toast.error(data.error || 'Ошибка дообучения');
+      }
+    } catch (err) {
+      console.error('Refine by diff error:', err);
+      toast.error('Ошибка дообучения промта');
+    } finally {
+      setIsRefiningPrompt(false);
+    }
+  };
+
+  // Ответ на уточняющий вопрос нейросети — ещё один раунд refine
+  const handleClarifySubmit = async () => {
+    const question = clarifyingQuestions[clarifyingIndex];
+    if (!currentProject?.id || !question || !clarifyAnswer.trim() || !lastRefinedPrompt) return;
+    setIsRefiningPrompt(true);
+    try {
+      const res = await fetch('/api/script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          feedback: `Уточняющий вопрос: ${question}\nОтвет: ${clarifyAnswer.trim()}`,
+          prompt: lastRefinedPrompt,
+          transcript_text: transcript,
+          translation_text: translation || undefined,
+          script_text: script,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.prompt) {
+        await updateProject(currentProject.id, { stylePrompt: data.prompt, styleMeta: data.meta });
+        setLastRefinedPrompt(data.prompt);
+        setClarifyAnswer('');
+        if (data.clarifying_questions?.length) {
+          setClarifyingQuestions(data.clarifying_questions);
+          setClarifyingIndex(0);
+        } else {
+          setShowClarifyModal(false);
+          setClarifyingQuestions([]);
+          toast.success('Промт уточнён по вашим ответам');
+        }
+      } else {
+        toast.error(data.error || 'Ошибка');
+      }
+    } catch (err) {
+      console.error('Clarify submit error:', err);
+      toast.error('Ошибка отправки');
     } finally {
       setIsRefiningPrompt(false);
     }
@@ -1321,9 +1418,9 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                 {scriptGeneratedByStyle && script?.trim() && (
                   <button
                     type="button"
-                    onClick={() => setShowFeedbackModal(true)}
+                    onClick={() => setShowChoiceModal(true)}
                     className="px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-medium transition-all flex items-center gap-1.5"
-                    title="Указать, что не так и что хорошо — промт дообучится"
+                    title="Дать обратную связь — промт дообучится"
                   >
                     Что не так сделал?
                   </button>
@@ -1526,6 +1623,40 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
         </div>
       )}
 
+      {/* Модальное окно: выбор способа обратной связи */}
+      {showChoiceModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowChoiceModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-semibold text-slate-800 mb-1">Как хотите дать обратную связь?</h3>
+            <p className="text-slate-500 text-sm mb-4">Нейросеть дообучится на ваших правках или пояснениях.</p>
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={() => { setShowChoiceModal(false); setShowFeedbackModal(true); }}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-left text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                <span className="font-medium">Написать текстом</span> — что не так и что отлично
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowChoiceModal(false);
+                  setScriptAiForRefine(script || '');
+                  setScriptHumanForRefine(script || '');
+                  setShowEditScriptModal(true);
+                }}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-left text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                <span className="font-medium">Сам допилю сценарий</span> — отредактировать сценарий ИИ, нейросеть дообучится на ваших правках
+              </button>
+            </div>
+            <button type="button" onClick={() => setShowChoiceModal(false)} className="mt-4 w-full py-2 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+              Отмена
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Модальное окно: обратная связь по сгенерированному сценарию — дообучение промта */}
       {showFeedbackModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !isRefiningPrompt && setShowFeedbackModal(false)}>
@@ -1552,6 +1683,87 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
               <button type="button" onClick={handleRefinePrompt} disabled={isRefiningPrompt || !feedbackText.trim()} className="px-4 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50">
                 {isRefiningPrompt ? <><Loader2 className="w-4 h-4 animate-spin" /> Дообучение...</> : <>Отправить и дообучить промт</>}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно: сценарий ИИ → ваш идеальный — дообучение на правках */}
+      {showEditScriptModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !isRefiningPrompt && setShowEditScriptModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-4xl w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-slate-100">
+              <h3 className="font-semibold text-slate-800">Сценарий ИИ-помощник → ваш идеальный</h3>
+              <p className="text-slate-500 text-sm mt-1">
+                Слева — что сгенерировала нейросеть. Справа — отредактируйте до своего варианта. Промт дообучится на ваших правках.
+              </p>
+            </div>
+            <div className="flex-1 overflow-hidden flex flex-col md:flex-row gap-4 p-4 min-h-0">
+              <div className="flex-1 flex flex-col min-h-0">
+                <label className="text-xs font-medium text-slate-500 mb-1">Сценарий ИИ</label>
+                <pre className="flex-1 min-h-[200px] p-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-700 overflow-auto whitespace-pre-wrap font-sans">
+                  {scriptAiForRefine || '—'}
+                </pre>
+              </div>
+              <div className="flex-1 flex flex-col min-h-0">
+                <label className="text-xs font-medium text-slate-500 mb-1">Ваш идеальный сценарий</label>
+                <textarea
+                  value={scriptHumanForRefine}
+                  onChange={(e) => setScriptHumanForRefine(e.target.value)}
+                  className="flex-1 min-h-[200px] p-3 rounded-xl border border-slate-200 text-sm text-slate-700 focus:ring-2 focus:ring-violet-200 focus:border-violet-400 resize-none"
+                  placeholder="Отредактируйте сценарий..."
+                  disabled={isRefiningPrompt}
+                />
+              </div>
+            </div>
+            <div className="p-4 border-t border-slate-100 flex justify-end gap-2">
+              <button type="button" onClick={() => setShowEditScriptModal(false)} disabled={isRefiningPrompt} className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 disabled:opacity-50">
+                Отмена
+              </button>
+              <button
+                type="button"
+                onClick={handleRefineByDiff}
+                disabled={isRefiningPrompt || scriptHumanForRefine.trim() === scriptAiForRefine.trim()}
+                className="px-4 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+              >
+                {isRefiningPrompt ? <><Loader2 className="w-4 h-4 animate-spin" /> Дообучение...</> : <>Дообучить промт на этом примере</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно: уточняющий вопрос нейросети */}
+      {showClarifyModal && clarifyingQuestions[clarifyingIndex] && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !isRefiningPrompt && setShowClarifyModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-semibold text-slate-800 mb-1">Нейросеть уточняет</h3>
+            <p className="text-slate-600 text-sm mb-4">{clarifyingQuestions[clarifyingIndex]}</p>
+            <textarea
+              value={clarifyAnswer}
+              onChange={(e) => setClarifyAnswer(e.target.value)}
+              placeholder="Ваш ответ..."
+              className="w-full min-h-[80px] p-3 rounded-xl border border-slate-200 text-sm text-slate-700 focus:ring-2 focus:ring-violet-200 focus:border-violet-400 resize-y mb-4"
+              disabled={isRefiningPrompt}
+            />
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-slate-400">
+                {clarifyingIndex + 1} из {clarifyingQuestions.length}
+              </span>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setShowClarifyModal(false)} disabled={isRefiningPrompt} className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 disabled:opacity-50">
+                  Пропустить
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClarifySubmit}
+                  disabled={isRefiningPrompt || !clarifyAnswer.trim()}
+                  className="px-4 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isRefiningPrompt ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  Отправить
+                </button>
+              </div>
             </div>
           </div>
         </div>

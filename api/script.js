@@ -11,12 +11,14 @@ export default async function handler(req, res) {
   const hasExamples = Array.isArray(body.examples) && body.examples.length > 0;
   const hasGenerate = body.prompt && typeof body.transcript_text === 'string' && !body.feedback;
   const hasRefine = body.feedback && typeof body.prompt === 'string' && typeof body.transcript_text === 'string' && typeof body.script_text === 'string';
+  const hasRefineByDiff = body.script_ai != null && body.script_human != null && typeof body.prompt === 'string' && typeof body.transcript_text === 'string';
 
   if (hasExamples) return handleAnalyze(req, res);
+  if (hasRefineByDiff) return handleRefineByDiff(req, res);
   if (hasRefine) return handleRefine(req, res);
   if (hasGenerate) return handleGenerate(req, res);
   return res.status(400).json({
-    error: 'Use examples[] (analyze), prompt+transcript_text (generate), or feedback+prompt+transcript_text+script_text (refine)',
+    error: 'Use examples[] (analyze), prompt+transcript_text (generate), feedback+script_text (refine), or script_ai+script_human (refine by diff)',
   });
 }
 
@@ -200,8 +202,10 @@ ${feedback.trim()}
     "rules": ["правило 1", ...],
     "doNot": ["чего избегать", ...],
     "summary": "краткое описание стиля в 1–2 предложения"
-  }
-}`;
+  },
+  "clarifying_questions": ["один короткий уточняющий вопрос, если нужен", "второй вопрос или не включай"]
+}
+Если уточнения не нужны — clarifying_questions не включай или пустой массив.`;
 
   try {
     const geminiRes = await fetch(
@@ -242,6 +246,7 @@ ${feedback.trim()}
     }
     const newPrompt = typeof parsed.prompt === 'string' ? parsed.prompt : '';
     const meta = parsed.meta && typeof parsed.meta === 'object' ? parsed.meta : {};
+    const clarifying_questions = Array.isArray(parsed.clarifying_questions) ? parsed.clarifying_questions.filter((q) => typeof q === 'string' && q.trim()) : [];
     if (!newPrompt) return res.status(502).json({ error: 'Gemini did not return a valid prompt' });
     return res.status(200).json({
       success: true,
@@ -251,9 +256,105 @@ ${feedback.trim()}
         doNot: Array.isArray(meta.doNot) ? meta.doNot : [],
         summary: typeof meta.summary === 'string' ? meta.summary : '',
       },
+      clarifying_questions: clarifying_questions.slice(0, 3),
     });
   } catch (err) {
     console.error('script refine error:', err);
+    return res.status(500).json({ error: 'Failed to refine prompt', details: err.message });
+  }
+}
+
+async function handleRefineByDiff(req, res) {
+  const { prompt, transcript_text, translation_text, script_ai, script_human } = req.body;
+  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
+  if (!geminiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
+
+  const userText = `Текущий промт для генерации сценария:
+---
+${prompt.trim()}
+---
+
+По этому промту нейросеть сгенерировала сценарий. Пользователь вручную отредактировал его до своего идеального варианта.
+
+Исходный сценарий (оригинал):
+${transcript_text.trim()}
+${translation_text && String(translation_text).trim() ? '\nПеревод на русский:\n' + String(translation_text).trim() : ''}
+
+Сценарий, который сгенерировала нейросеть:
+---
+${String(script_ai).trim()}
+---
+
+Идеальный сценарий после правок пользователя:
+---
+${String(script_human).trim()}
+---
+
+Задача: пойми, что пользователь изменил и почему это важно (структура, тон, добавления, удаления). Обнови промт так, чтобы в следующий раз нейросеть сразу выдавала сценарий ближе к идеалу пользователя. Верни только один валидный JSON без лишнего текста и без запятой перед }. Переносы в строках — только \\n.
+{
+  "prompt": "обновлённый полный текст промта (на русском)",
+  "meta": {
+    "rules": ["правило 1", ...],
+    "doNot": ["чего избегать", ...],
+    "summary": "краткое описание стиля в 1–2 предложения"
+  },
+  "clarifying_questions": ["один короткий вопрос: почему изменил вот это?", "второй или не включай"]
+}
+Если нужны 1–2 уточняющих вопроса (почему изменил X, зачем добавил Y) — верни в clarifying_questions. Иначе не включай или пустой массив.`;
+
+  try {
+    const geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: userText }] }],
+          generationConfig: { temperature: 0.2, responseMimeType: 'application/json' },
+        }),
+      }
+    );
+    if (!geminiRes.ok) {
+      const errBody = await geminiRes.text();
+      console.error('Gemini API error:', geminiRes.status, errBody);
+      return res.status(502).json({ error: 'Gemini API error', details: errBody });
+    }
+    const data = await geminiRes.json();
+    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    if (!rawText) return res.status(502).json({ error: 'Gemini returned empty response' });
+    let jsonStr = (rawText.match(/\{[\s\S]*\}/) || [null])[0] || rawText;
+    jsonStr = jsonStr.replace(/,(\s*[}\]])/g, '$1');
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch (parseErr) {
+      const lastBrace = jsonStr.lastIndexOf('}');
+      if (lastBrace > 0) {
+        try {
+          parsed = JSON.parse(jsonStr.slice(0, lastBrace + 1).replace(/,(\s*[}\]])/g, '$1'));
+        } catch (_) {
+          throw parseErr;
+        }
+      } else {
+        throw parseErr;
+      }
+    }
+    const newPrompt = typeof parsed.prompt === 'string' ? parsed.prompt : '';
+    const meta = parsed.meta && typeof parsed.meta === 'object' ? parsed.meta : {};
+    const clarifying_questions = Array.isArray(parsed.clarifying_questions) ? parsed.clarifying_questions.filter((q) => typeof q === 'string' && q.trim()) : [];
+    if (!newPrompt) return res.status(502).json({ error: 'Gemini did not return a valid prompt' });
+    return res.status(200).json({
+      success: true,
+      prompt: newPrompt,
+      meta: {
+        rules: Array.isArray(meta.rules) ? meta.rules : [],
+        doNot: Array.isArray(meta.doNot) ? meta.doNot : [],
+        summary: typeof meta.summary === 'string' ? meta.summary : '',
+      },
+      clarifying_questions: clarifying_questions.slice(0, 3),
+    });
+  } catch (err) {
+    console.error('script refineByDiff error:', err);
     return res.status(500).json({ error: 'Failed to refine prompt', details: err.message });
   }
 }
