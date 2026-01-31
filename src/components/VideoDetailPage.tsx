@@ -646,8 +646,9 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   };
 
   // Обучение стиля по примерам (1–5 видео с оригиналом + переводом + моей адаптацией)
-  const styleTrainCandidates = (projectVideos || []).filter(
-    (v: { transcript_text?: string; script_text?: string }) => v.transcript_text?.trim() && v.script_text?.trim()
+  type VideoWithScriptFields = { id: string; title?: string; transcript_text?: string; translation_text?: string; script_text?: string };
+  const styleTrainCandidates = ((projectVideos || []) as VideoWithScriptFields[]).filter(
+    (v) => v.transcript_text?.trim() && v.script_text?.trim()
   );
   const toggleVideoForStyle = (id: string) => {
     setSelectedVideoIdsForStyle((prev) =>
@@ -657,9 +658,9 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   const handleTrainStyle = async () => {
     if (!currentProject?.id || selectedVideoIdsForStyle.length === 0) return;
     const examples = selectedVideoIdsForStyle
-      .map((id) => styleTrainCandidates.find((v: { id: string }) => v.id === id))
-      .filter(Boolean)
-      .map((v: any) => ({
+      .map((id) => styleTrainCandidates.find((v) => v.id === id))
+      .filter((v): v is VideoWithScriptFields => Boolean(v))
+      .map((v) => ({
         transcript_text: v.transcript_text,
         translation_text: v.translation_text || '',
         script_text: v.script_text,
@@ -1344,7 +1345,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
               {styleTrainCandidates.length === 0 ? (
                 <p className="text-slate-500 text-sm">Нет подходящих видео: нужны транскрипция и ваш сценарий.</p>
               ) : (
-                styleTrainCandidates.map((v: { id: string; title?: string }) => (
+                styleTrainCandidates.map((v) => (
                   <label key={v.id} className={cn(
                     "flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors",
                     selectedVideoIdsForStyle.includes(v.id) ? "border-violet-300 bg-violet-50" : "border-slate-200 hover:bg-slate-50"
