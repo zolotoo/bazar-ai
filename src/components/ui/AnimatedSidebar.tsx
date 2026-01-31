@@ -113,21 +113,21 @@ export const MobileSidebar = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
             className="md:hidden fixed inset-0 z-[9999] bg-black/25 backdrop-blur-sm touch-none safe-top safe-bottom safe-left safe-right"
             onClick={() => setOpen(false)}
             aria-hidden
           />
         )}
       </AnimatePresence>
-      {/* Панель Меню — стекло, выдвигается слева; на мобильных проекты и навигация видны и кликабельны */}
+      {/* Панель Меню — плавное выезжание без рывков */}
       <AnimatePresence>
         {open && (
           <motion.div
             initial={{ x: "-100%" }}
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
-            transition={{ type: "tween", duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
+            transition={{ type: "tween", duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
             className={cn(
               "md:hidden fixed inset-y-0 left-0 z-[9999] w-[min(320px,92vw)] flex flex-col",
               "bg-white/95 backdrop-blur-2xl",

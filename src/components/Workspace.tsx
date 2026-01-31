@@ -676,21 +676,30 @@ export function Workspace(props?: WorkspaceProps) {
         )}
       </div>
 
-      {/* Панель Папки на мобильных — сетка полупрозрачных карточек как на референсах */}
-      {isFolderWidgetOpen && (
-        <>
-          <div
-            className="md:hidden fixed inset-0 z-[200] bg-black/30 backdrop-blur-sm touch-manipulation safe-top safe-bottom safe-left safe-right"
-            onClick={closeFolderPanel}
-            aria-hidden
-          />
-          <div
-            className={cn(
-              "md:hidden fixed inset-0 z-[201] flex flex-col",
-              "bg-white/60 backdrop-blur-3xl",
-              "safe-top safe-bottom safe-left safe-right overflow-hidden"
-            )}
-          >
+      {/* Панель Папки на мобильных — плавное появление */}
+      <AnimatePresence>
+        {isFolderWidgetOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="md:hidden fixed inset-0 z-[200] bg-black/30 backdrop-blur-sm touch-manipulation safe-top safe-bottom safe-left safe-right"
+              onClick={closeFolderPanel}
+              aria-hidden
+            />
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className={cn(
+                "md:hidden fixed inset-0 z-[201] flex flex-col",
+                "bg-white/60 backdrop-blur-3xl",
+                "safe-top safe-bottom safe-left safe-right overflow-hidden"
+              )}
+            >
             <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0 safe-top">
               <span className="text-[15px] font-semibold text-slate-700">Папки</span>
               <button
@@ -766,9 +775,10 @@ export function Workspace(props?: WorkspaceProps) {
                 </button>
               </div>
             </div>
-          </div>
-        </>
-      )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Кнопка «Папки» на мобильных убрана — открытие только через нижний таб-бар */}
 

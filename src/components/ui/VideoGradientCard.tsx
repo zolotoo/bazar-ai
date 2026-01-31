@@ -98,33 +98,37 @@ export const VideoGradientCard = ({
             ? "0 20px 56px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.03)"
             : "0 8px 32px rgba(0, 0, 0, 0.06), 0 2px 12px rgba(0, 0, 0, 0.03), 0 0 0 1px rgba(0, 0, 0, 0.02)",
         }}
-        initial={{ y: 0 }}
+        initial={false}
         animate={{
-          y: isHovered ? -8 : 0,
-          scale: isHovered ? 1.03 : 1,
+          y: isMobile ? 0 : isHovered ? -8 : 0,
+          scale: isMobile ? 1 : isHovered ? 1.03 : 1,
         }}
         transition={{
-          type: "spring",
-          stiffness: 300,
-          damping: 20
+          type: "tween",
+          duration: isMobile ? 0.15 : 0.35,
+          ease: [0.25, 0.46, 0.45, 0.94],
         }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        onTouchStart={() => setIsHovered(true)}
-        onTouchEnd={() => setTimeout(() => setIsHovered(false), 150)}
+        onTouchStart={() => !isMobile && setIsHovered(true)}
+        onTouchEnd={() => !isMobile && setTimeout(() => setIsHovered(false), 150)}
         onClick={onClick}
       >
-        {/* Background image with zoom on hover */}
-        <motion.div 
-          className="absolute inset-0 z-0 bg-cover bg-center"
-          style={{ 
-            backgroundImage: `url(${proxyImageUrl(thumbnailUrl)})`,
-          }}
-          animate={{
-            scale: isHovered ? 1.08 : 1,
-          }}
-          transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-        />
+        {/* Превью: img для надёжной загрузки на мобильных, плейсхолдер пока грузится */}
+        <motion.div
+          className="absolute inset-0 z-0 bg-slate-200/80 overflow-hidden"
+          animate={{ scale: isMobile ? 1 : isHovered ? 1.08 : 1 }}
+          transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+        >
+          <img
+            src={proxyImageUrl(thumbnailUrl)}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
+          />
+        </motion.div>
 
         {/* Gradient overlay */}
         <div
