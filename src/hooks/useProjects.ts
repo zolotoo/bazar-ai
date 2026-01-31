@@ -10,16 +10,36 @@ export interface ProjectFolder {
   order: number;
 }
 
+/** Пункт шаблона ссылок/ответственных проекта (название применяется ко всем видео проекта) */
+export interface ProjectTemplateItem {
+  id: string;
+  label: string;
+}
+
 export interface Project {
   id: string;
   name: string;
   color: string;
   icon: string;
   folders: ProjectFolder[];
+  /** Шаблон пунктов ссылок — общий для всех видео проекта (в т.ч. общие проекты) */
+  linksTemplate?: ProjectTemplateItem[];
+  /** Шаблон пунктов ответственных — общий для всех видео проекта */
+  responsiblesTemplate?: ProjectTemplateItem[];
   createdAt: Date;
-  isShared?: boolean; // Флаг для общих проектов
-  membershipStatus?: 'active' | 'pending'; // Статус членства для общих проектов
+  isShared?: boolean;
+  membershipStatus?: 'active' | 'pending';
 }
+
+const DEFAULT_LINKS_TEMPLATE: ProjectTemplateItem[] = [
+  { id: 'link-0', label: 'Заготовка' },
+  { id: 'link-1', label: 'Готовое' },
+];
+
+const DEFAULT_RESPONSIBLES_TEMPLATE: ProjectTemplateItem[] = [
+  { id: 'resp-0', label: 'За сценарий' },
+  { id: 'resp-1', label: 'За монтаж' },
+];
 
 const DEFAULT_FOLDERS: Omit<ProjectFolder, 'id'>[] = [
   { name: 'Все видео', color: '#64748b', icon: 'all', order: 0 },
@@ -134,6 +154,8 @@ export function useProjects() {
           color: p.color || '#f97316',
           icon: p.icon || 'folder',
           folders: p.folders || DEFAULT_FOLDERS.map((f, i) => ({ ...f, id: `folder-${i}` })),
+          linksTemplate: Array.isArray(p.links_template) && p.links_template.length > 0 ? p.links_template : DEFAULT_LINKS_TEMPLATE,
+          responsiblesTemplate: Array.isArray(p.responsibles_template) && p.responsibles_template.length > 0 ? p.responsibles_template : DEFAULT_RESPONSIBLES_TEMPLATE,
           createdAt: new Date(p.created_at),
           isShared: p.isShared || false,
           membershipStatus: p.membershipStatus,
@@ -164,19 +186,23 @@ export function useProjects() {
           color: '#f97316',
           icon: 'folder',
           folders: DEFAULT_FOLDERS.map((f, i) => ({ ...f, id: `folder-${Date.now()}-${i}` })),
+          linksTemplate: DEFAULT_LINKS_TEMPLATE,
+          responsiblesTemplate: DEFAULT_RESPONSIBLES_TEMPLATE,
           createdAt: new Date(),
         };
-        
+
         // Пробуем сохранить в базу
         try {
           await supabase.from('projects').insert({
             id: defaultProject.id,
             user_id: userId,
-            owner_id: userId, // Устанавливаем владельца
+            owner_id: userId,
             name: defaultProject.name,
             color: defaultProject.color,
             icon: defaultProject.icon,
             folders: defaultProject.folders,
+            links_template: defaultProject.linksTemplate,
+            responsibles_template: defaultProject.responsiblesTemplate,
           });
         } catch (e) {
           console.error('Failed to save default project:', e);
@@ -194,6 +220,8 @@ export function useProjects() {
         color: '#f97316',
         icon: 'folder',
         folders: DEFAULT_FOLDERS.map((f, i) => ({ ...f, id: `folder-${Date.now()}-${i}` })),
+        linksTemplate: DEFAULT_LINKS_TEMPLATE,
+        responsiblesTemplate: DEFAULT_RESPONSIBLES_TEMPLATE,
         createdAt: new Date(),
       };
       setProjects([defaultProject]);
@@ -214,6 +242,8 @@ export function useProjects() {
       color,
       icon: 'folder',
       folders: DEFAULT_FOLDERS.map((f, i) => ({ ...f, id: `folder-${Date.now()}-${i}` })),
+      linksTemplate: DEFAULT_LINKS_TEMPLATE,
+      responsiblesTemplate: DEFAULT_RESPONSIBLES_TEMPLATE,
     };
 
     const project: Project = { ...newProject, createdAt: new Date() };
@@ -224,11 +254,13 @@ export function useProjects() {
         .insert({
           id: newProject.id,
           user_id: userId,
-          owner_id: userId, // Устанавливаем владельца
+          owner_id: userId,
           name: newProject.name,
           color: newProject.color,
           icon: newProject.icon,
           folders: newProject.folders,
+          links_template: newProject.linksTemplate,
+          responsibles_template: newProject.responsiblesTemplate,
         });
 
       if (error) {
@@ -244,12 +276,18 @@ export function useProjects() {
     return project;
   }, [getUserId, projects.length]);
 
-  // Обновление проекта
-  const updateProject = useCallback(async (projectId: string, updates: Partial<Pick<Project, 'name' | 'color' | 'icon' | 'folders'>>) => {
+  // Обновление проекта (в т.ч. шаблоны ссылок и ответственных)
+  const updateProject = useCallback(async (projectId: string, updates: Partial<Pick<Project, 'name' | 'color' | 'icon' | 'folders' | 'linksTemplate' | 'responsiblesTemplate'>>) => {
     try {
+      const dbUpdates: Record<string, unknown> = { ...updates };
+      if ('linksTemplate' in updates) dbUpdates.links_template = updates.linksTemplate;
+      if ('responsiblesTemplate' in updates) dbUpdates.responsibles_template = updates.responsiblesTemplate;
+      delete dbUpdates.linksTemplate;
+      delete dbUpdates.responsiblesTemplate;
+
       const { error } = await supabase
         .from('projects')
-        .update(updates)
+        .update(dbUpdates)
         .eq('id', projectId);
 
       if (error) {

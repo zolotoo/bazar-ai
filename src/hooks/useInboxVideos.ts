@@ -42,13 +42,18 @@ interface SavedVideo {
   // Ответственные (legacy)
   script_responsible?: string;
   editing_responsible?: string;
-  // Динамические списки (JSONB)
-  links?: { label: string; value: string }[];
-  responsibles?: { label: string; value: string }[];
+  // Значения ссылок/ответственных: по templateId (из шаблона проекта) или legacy { label, value }
+  links?: { templateId?: string; label?: string; value: string }[];
+  responsibles?: { templateId?: string; label?: string; value: string }[];
 }
 
+/** Элемент списка ссылок/ответственных (label из шаблона проекта, value из видео) */
 export type LinkItem = { label: string; value: string };
 export type ResponsibleItem = { label: string; value: string };
+
+/** Значение по шаблону проекта (сохраняется в saved_videos) */
+export type LinkValueByTemplate = { templateId: string; value: string };
+export type ResponsibleValueByTemplate = { templateId: string; value: string };
 
 const PAGE_SIZE = 60;
 
@@ -93,17 +98,25 @@ export function useInboxVideos() {
     final_link?: string;
     script_responsible?: string;
     editing_responsible?: string;
-    links?: LinkItem[];
-    responsibles?: ResponsibleItem[];
+    links?: { templateId?: string; label?: string; value: string }[];
+    responsibles?: { templateId?: string; label?: string; value: string }[];
   } => {
-    const links: LinkItem[] = Array.isArray(video.links) && video.links.length > 0
-      ? video.links.map(({ label, value }) => ({ label: String(label ?? ''), value: String(value ?? '') }))
+    const links = Array.isArray(video.links) && video.links.length > 0
+      ? video.links.map((row: any) => ({
+          templateId: row.templateId,
+          label: row.label,
+          value: String(row.value ?? ''),
+        }))
       : [
           { label: 'Заготовка', value: video.draft_link || '' },
           { label: 'Готовое', value: video.final_link || '' },
         ];
-    const responsibles: ResponsibleItem[] = Array.isArray(video.responsibles) && video.responsibles.length > 0
-      ? video.responsibles.map(({ label, value }) => ({ label: String(label ?? ''), value: String(value ?? '') }))
+    const responsibles = Array.isArray(video.responsibles) && video.responsibles.length > 0
+      ? video.responsibles.map((row: any) => ({
+          templateId: row.templateId,
+          label: row.label,
+          value: String(row.value ?? ''),
+        }))
       : [
           { label: 'За сценарий', value: video.script_responsible || '' },
           { label: 'За монтаж', value: video.editing_responsible || '' },
@@ -760,17 +773,17 @@ export function useInboxVideos() {
   }, []);
 
   /**
-   * Обновляет ссылки (массив с названиями и URL)
+   * Обновляет значения ссылок по шаблону проекта (только value по templateId)
    */
   const updateVideoLinks = useCallback(async (
     videoId: string,
-    links: LinkItem[]
+    items: LinkValueByTemplate[]
   ) => {
     try {
       const userId = getUserId();
       await setUserContext(userId);
 
-      const payload = links.map(({ label, value }) => ({ label: label || '', value: value || '' }));
+      const payload = items.map(({ templateId, value }) => ({ templateId, value: value || '' }));
 
       const { data, error } = await supabase
         .from('saved_videos')
@@ -799,17 +812,17 @@ export function useInboxVideos() {
   }, [getUserId]);
 
   /**
-   * Обновляет ответственных (массив с названиями ролей и именами)
+   * Обновляет значения ответственных по шаблону проекта (только value по templateId)
    */
   const updateVideoResponsible = useCallback(async (
     videoId: string,
-    responsibles: ResponsibleItem[]
+    items: ResponsibleValueByTemplate[]
   ) => {
     try {
       const userId = getUserId();
       await setUserContext(userId);
 
-      const payload = responsibles.map(({ label, value }) => ({ label: label || '', value: value || '' }));
+      const payload = items.map(({ templateId, value }) => ({ templateId, value: value || '' }));
 
       const { data, error } = await supabase
         .from('saved_videos')

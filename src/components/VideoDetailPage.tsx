@@ -8,9 +8,14 @@ import { cn } from '../utils/cn';
 import { checkTranscriptionStatus, downloadAndTranscribe } from '../services/transcriptionService';
 import { supabase } from '../utils/supabase';
 import { toast } from 'sonner';
-import { useInboxVideos, type LinkItem, type ResponsibleItem } from '../hooks/useInboxVideos';
+import { useInboxVideos } from '../hooks/useInboxVideos';
 import { useProjectContext } from '../contexts/ProjectContext';
+import type { ProjectTemplateItem } from '../hooks/useProjects';
 import { calculateViralMultiplier, getOrUpdateProfileStats, applyViralMultiplierToCoefficient } from '../services/profileStatsService';
+
+/** Сырые данные ссылок/ответственных из БД (по templateId или legacy label) */
+type VideoLinkRow = { templateId?: string; label?: string; value: string };
+type VideoResponsibleRow = { templateId?: string; label?: string; value: string };
 
 interface VideoData {
   id: string;
@@ -33,14 +38,57 @@ interface VideoData {
   final_link?: string;
   script_responsible?: string;
   editing_responsible?: string;
-  links?: LinkItem[];
-  responsibles?: ResponsibleItem[];
+  links?: VideoLinkRow[];
+  responsibles?: VideoResponsibleRow[];
 }
 
 interface VideoDetailPageProps {
   video: VideoData;
   onBack: () => void;
   onRefreshData?: () => Promise<void>;
+}
+
+const DEFAULT_LINKS_TEMPLATE: ProjectTemplateItem[] = [
+  { id: 'link-0', label: 'Заготовка' },
+  { id: 'link-1', label: 'Готовое' },
+];
+const DEFAULT_RESPONSIBLES_TEMPLATE: ProjectTemplateItem[] = [
+  { id: 'resp-0', label: 'За сценарий' },
+  { id: 'resp-1', label: 'За монтаж' },
+];
+
+/** Строка для UI: id = templateId, label из шаблона проекта, value из видео */
+type MergedLinkRow = { id: string; label: string; value: string };
+type MergedResponsibleRow = { id: string; label: string; value: string };
+
+function mergeLinksWithTemplate(
+  template: ProjectTemplateItem[],
+  videoLinks: VideoLinkRow[] | undefined,
+  draftLink?: string,
+  finalLink?: string
+): MergedLinkRow[] {
+  return template.map((t, i) => {
+    const byId = videoLinks?.find((r) => r.templateId === t.id);
+    const byIndex = videoLinks?.[i];
+    const legacy = i === 0 ? draftLink : i === 1 ? finalLink : undefined;
+    const value = byId?.value ?? byIndex?.value ?? legacy ?? '';
+    return { id: t.id, label: t.label, value };
+  });
+}
+
+function mergeResponsiblesWithTemplate(
+  template: ProjectTemplateItem[],
+  videoResponsibles: VideoResponsibleRow[] | undefined,
+  scriptResponsible?: string,
+  editingResponsible?: string
+): MergedResponsibleRow[] {
+  return template.map((t, i) => {
+    const byId = videoResponsibles?.find((r) => r.templateId === t.id);
+    const byIndex = videoResponsibles?.[i];
+    const legacy = i === 0 ? scriptResponsible : i === 1 ? editingResponsible : undefined;
+    const value = byId?.value ?? byIndex?.value ?? legacy ?? '';
+    return { id: t.id, label: t.label, value };
+  });
 }
 
 function formatNumber(num?: number): string {
@@ -128,40 +176,33 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   const [isSavingTranscript, setIsSavingTranscript] = useState(false);
   const [viralMultiplier, setViralMultiplier] = useState<number | null>(null);
   const [isCalculatingViral, setIsCalculatingViral] = useState(false);
-  const buildInitialLinks = () => (video.links && video.links.length > 0)
-    ? video.links.map((item, i) => ({ id: `link-${video.id}-${i}`, label: item.label, value: item.value }))
-    : [
-        { id: `link-${video.id}-0`, label: 'Заготовка', value: video.draft_link || '' },
-        { id: `link-${video.id}-1`, label: 'Готовое', value: video.final_link || '' },
-      ];
-  const buildInitialResponsibles = () => (video.responsibles && video.responsibles.length > 0)
-    ? video.responsibles.map((item, i) => ({ id: `resp-${video.id}-${i}`, label: item.label, value: item.value }))
-    : [
-        { id: `resp-${video.id}-0`, label: 'За сценарий', value: video.script_responsible || '' },
-        { id: `resp-${video.id}-1`, label: 'За монтаж', value: video.editing_responsible || '' },
-      ];
+  const { currentProject, updateProject } = useProjectContext();
+  const linksTemplate = currentProject?.linksTemplate ?? DEFAULT_LINKS_TEMPLATE;
+  const responsiblesTemplate = currentProject?.responsiblesTemplate ?? DEFAULT_RESPONSIBLES_TEMPLATE;
 
-  const [links, setLinks] = useState(() => buildInitialLinks());
-  const [responsibles, setResponsibles] = useState(() => buildInitialResponsibles());
+  const buildMergedLinks = () => mergeLinksWithTemplate(
+    linksTemplate,
+    video.links,
+    video.draft_link,
+    video.final_link
+  );
+  const buildMergedResponsibles = () => mergeResponsiblesWithTemplate(
+    responsiblesTemplate,
+    video.responsibles,
+    video.script_responsible,
+    video.editing_responsible
+  );
+
+  const [links, setLinks] = useState<MergedLinkRow[]>(() => buildMergedLinks());
+  const [responsibles, setResponsibles] = useState<MergedResponsibleRow[]>(() => buildMergedResponsibles());
   const [isSavingLinks, setIsSavingLinks] = useState(false);
   const [isSavingResponsible, setIsSavingResponsible] = useState(false);
   const [isRefreshingData, setIsRefreshingData] = useState(false);
 
-  // Синхронизируем с video при смене видео (например после refresh)
   useEffect(() => {
-    setLinks((video.links && video.links.length > 0)
-      ? video.links.map((item, i) => ({ id: `link-${video.id}-${i}`, label: item.label, value: item.value }))
-      : [
-          { id: `link-${video.id}-0`, label: 'Заготовка', value: video.draft_link || '' },
-          { id: `link-${video.id}-1`, label: 'Готовое', value: video.final_link || '' },
-        ]);
-    setResponsibles((video.responsibles && video.responsibles.length > 0)
-      ? video.responsibles.map((item, i) => ({ id: `resp-${video.id}-${i}`, label: item.label, value: item.value }))
-      : [
-          { id: `resp-${video.id}-0`, label: 'За сценарий', value: video.script_responsible || '' },
-          { id: `resp-${video.id}-1`, label: 'За монтаж', value: video.editing_responsible || '' },
-        ]);
-  }, [video.id, video.links, video.responsibles, video.draft_link, video.final_link, video.script_responsible, video.editing_responsible]);
+    setLinks(buildMergedLinks());
+    setResponsibles(buildMergedResponsibles());
+  }, [video.id, video.links, video.responsibles, video.draft_link, video.final_link, video.script_responsible, video.editing_responsible, linksTemplate, responsiblesTemplate]);
 
   const { updateVideoFolder, updateVideoScript, updateVideoTranscript, updateVideoTranslation, updateVideoResponsible, updateVideoLinks } = useInboxVideos();
 
@@ -176,16 +217,28 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
     setResponsibles(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
 
   const handleSaveLinks = async () => {
+    if (!currentProject?.id) {
+      toast.error('Выберите проект для сохранения шаблона ссылок');
+      return;
+    }
     setIsSavingLinks(true);
-    const success = await updateVideoLinks(video.id, links.map(({ label, value }) => ({ label, value })));
+    const newTemplate = links.map(({ id, label }) => ({ id, label }));
+    await updateProject(currentProject.id, { linksTemplate: newTemplate });
+    const success = await updateVideoLinks(video.id, links.map(({ id, value }) => ({ templateId: id, value })));
     setIsSavingLinks(false);
     if (success) toast.success('Ссылки сохранены');
     else toast.error('Ошибка сохранения ссылок. Примените миграцию add_video_links_responsibles_json.sql.');
   };
 
   const handleSaveResponsible = async () => {
+    if (!currentProject?.id) {
+      toast.error('Выберите проект для сохранения шаблона ответственных');
+      return;
+    }
     setIsSavingResponsible(true);
-    const success = await updateVideoResponsible(video.id, responsibles.map(({ label, value }) => ({ label, value })));
+    const newTemplate = responsibles.map(({ id, label }) => ({ id, label }));
+    await updateProject(currentProject.id, { responsiblesTemplate: newTemplate });
+    const success = await updateVideoResponsible(video.id, responsibles.map(({ id, value }) => ({ templateId: id, value })));
     setIsSavingResponsible(false);
     if (success) toast.success('Ответственные сохранены');
     else toast.error('Ошибка сохранения ответственных. Примените миграцию add_video_links_responsibles_json.sql.');
@@ -205,7 +258,6 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
     }
   };
 
-  const { currentProject } = useProjectContext();
   const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at);
   
   // Применяем множитель к коэффициенту виральности
