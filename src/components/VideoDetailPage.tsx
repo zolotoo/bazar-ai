@@ -193,6 +193,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   const [showEditScriptModal, setShowEditScriptModal] = useState(false);
   const [scriptAiForRefine, setScriptAiForRefine] = useState('');
   const [scriptHumanForRefine, setScriptHumanForRefine] = useState('');
+  const [editScriptLeftTab, setEditScriptLeftTab] = useState<'original' | 'translation' | 'ai'>('ai');
   const [feedbackText, setFeedbackText] = useState('');
   const [isRefiningPrompt, setIsRefiningPrompt] = useState(false);
   const [clarifyingQuestions, setClarifyingQuestions] = useState<string[]>([]);
@@ -1643,6 +1644,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                   setShowChoiceModal(false);
                   setScriptAiForRefine(script || '');
                   setScriptHumanForRefine(script || '');
+                  setEditScriptLeftTab('ai');
                   setShowEditScriptModal(true);
                 }}
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 text-left text-sm text-slate-700 hover:bg-slate-50 transition-colors"
@@ -1695,14 +1697,34 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
             <div className="p-4 border-b border-slate-100">
               <h3 className="font-semibold text-slate-800">Сценарий ИИ-помощник → ваш идеальный</h3>
               <p className="text-slate-500 text-sm mt-1">
-                Слева — что сгенерировала нейросеть. Справа — отредактируйте до своего варианта. Промт дообучится на ваших правках.
+                Слева — переключайте вкладки (исходник, перевод, сценарий ИИ). Справа — ваш идеальный сценарий. Промт дообучится на ваших правках.
               </p>
             </div>
             <div className="flex-1 overflow-hidden flex flex-col md:flex-row gap-4 p-4 min-h-0">
               <div className="flex-1 flex flex-col min-h-0">
-                <label className="text-xs font-medium text-slate-500 mb-1">Сценарий ИИ</label>
+                <div className="flex rounded-lg p-0.5 bg-slate-100 mb-2">
+                  {(['original', 'translation', 'ai'] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setEditScriptLeftTab(tab)}
+                      className={cn(
+                        'flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
+                        editScriptLeftTab === tab
+                          ? 'bg-white text-slate-800 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-700'
+                      )}
+                    >
+                      {tab === 'original' ? 'Изначальный' : tab === 'translation' ? 'Перевод' : 'Сценарий ИИ'}
+                    </button>
+                  ))}
+                </div>
                 <pre className="flex-1 min-h-[200px] p-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-700 overflow-auto whitespace-pre-wrap font-sans">
-                  {scriptAiForRefine || '—'}
+                  {editScriptLeftTab === 'original'
+                    ? (transcript || '—')
+                    : editScriptLeftTab === 'translation'
+                    ? (translation || '—')
+                    : (scriptAiForRefine || '—')}
                 </pre>
               </div>
               <div className="flex-1 flex flex-col min-h-0">
