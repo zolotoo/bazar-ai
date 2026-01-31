@@ -8,7 +8,7 @@ import { cn } from '../utils/cn';
 import { checkTranscriptionStatus, downloadAndTranscribe } from '../services/transcriptionService';
 import { supabase } from '../utils/supabase';
 import { toast } from 'sonner';
-import { useInboxVideos } from '../hooks/useInboxVideos';
+import { useInboxVideos, type LinkItem, type ResponsibleItem } from '../hooks/useInboxVideos';
 import { useProjectContext } from '../contexts/ProjectContext';
 import { calculateViralMultiplier, getOrUpdateProfileStats, applyViralMultiplierToCoefficient } from '../services/profileStatsService';
 
