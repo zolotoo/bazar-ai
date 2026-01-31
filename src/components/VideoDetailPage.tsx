@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   ChevronLeft, Play, Eye, Heart, MessageCircle, Calendar, 
   Sparkles, FileText, Copy, ExternalLink, Loader2, Check,
-  Languages, ChevronDown, Mic, Save, RefreshCw
+  Languages, ChevronDown, Mic, Save, RefreshCw, Plus, Trash2
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { checkTranscriptionStatus, downloadAndTranscribe } from '../services/transcriptionService';
@@ -25,7 +25,7 @@ interface VideoData {
   transcript_id?: string;
   transcript_status?: string;
   transcript_text?: string;
-  translation_text?: string; // Перевод
+  translation_text?: string;
   script_text?: string;
   download_url?: string;
   folder_id?: string;
@@ -33,6 +33,8 @@ interface VideoData {
   final_link?: string;
   script_responsible?: string;
   editing_responsible?: string;
+  links?: LinkItem[];
+  responsibles?: ResponsibleItem[];
 }
 
 interface VideoDetailPageProps {
@@ -126,38 +128,67 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   const [isSavingTranscript, setIsSavingTranscript] = useState(false);
   const [viralMultiplier, setViralMultiplier] = useState<number | null>(null);
   const [isCalculatingViral, setIsCalculatingViral] = useState(false);
-  const [draftLink, setDraftLink] = useState(video.draft_link || '');
-  const [finalLink, setFinalLink] = useState(video.final_link || '');
-  const [scriptResponsible, setScriptResponsible] = useState(video.script_responsible || '');
-  const [editingResponsible, setEditingResponsible] = useState(video.editing_responsible || '');
+  const buildInitialLinks = () => (video.links && video.links.length > 0)
+    ? video.links.map((item, i) => ({ id: `link-${video.id}-${i}`, label: item.label, value: item.value }))
+    : [
+        { id: `link-${video.id}-0`, label: 'Заготовка', value: video.draft_link || '' },
+        { id: `link-${video.id}-1`, label: 'Готовое', value: video.final_link || '' },
+      ];
+  const buildInitialResponsibles = () => (video.responsibles && video.responsibles.length > 0)
+    ? video.responsibles.map((item, i) => ({ id: `resp-${video.id}-${i}`, label: item.label, value: item.value }))
+    : [
+        { id: `resp-${video.id}-0`, label: 'За сценарий', value: video.script_responsible || '' },
+        { id: `resp-${video.id}-1`, label: 'За монтаж', value: video.editing_responsible || '' },
+      ];
+
+  const [links, setLinks] = useState(() => buildInitialLinks());
+  const [responsibles, setResponsibles] = useState(() => buildInitialResponsibles());
   const [isSavingLinks, setIsSavingLinks] = useState(false);
   const [isSavingResponsible, setIsSavingResponsible] = useState(false);
   const [isRefreshingData, setIsRefreshingData] = useState(false);
-  
-  const { updateVideoFolder, updateVideoScript, updateVideoTranscript, updateVideoResponsible, updateVideoLinks } = useInboxVideos();
-  
-  // Сохранение ссылок (через хук — обновляет БД и локальное состояние)
+
+  // Синхронизируем с video при смене видео (например после refresh)
+  useEffect(() => {
+    setLinks((video.links && video.links.length > 0)
+      ? video.links.map((item, i) => ({ id: `link-${video.id}-${i}`, label: item.label, value: item.value }))
+      : [
+          { id: `link-${video.id}-0`, label: 'Заготовка', value: video.draft_link || '' },
+          { id: `link-${video.id}-1`, label: 'Готовое', value: video.final_link || '' },
+        ]);
+    setResponsibles((video.responsibles && video.responsibles.length > 0)
+      ? video.responsibles.map((item, i) => ({ id: `resp-${video.id}-${i}`, label: item.label, value: item.value }))
+      : [
+          { id: `resp-${video.id}-0`, label: 'За сценарий', value: video.script_responsible || '' },
+          { id: `resp-${video.id}-1`, label: 'За монтаж', value: video.editing_responsible || '' },
+        ]);
+  }, [video.id, video.links, video.responsibles, video.draft_link, video.final_link, video.script_responsible, video.editing_responsible]);
+
+  const { updateVideoFolder, updateVideoScript, updateVideoTranscript, updateVideoTranslation, updateVideoResponsible, updateVideoLinks } = useInboxVideos();
+
+  const addLinkRow = () => setLinks(prev => [...prev, { id: `link-${Date.now()}`, label: '', value: '' }]);
+  const removeLinkRow = (id: string) => setLinks(prev => prev.length > 1 ? prev.filter(r => r.id !== id) : prev);
+  const updateLinkRow = (id: string, field: 'label' | 'value', value: string) =>
+    setLinks(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
+
+  const addResponsibleRow = () => setResponsibles(prev => [...prev, { id: `resp-${Date.now()}`, label: '', value: '' }]);
+  const removeResponsibleRow = (id: string) => setResponsibles(prev => prev.length > 1 ? prev.filter(r => r.id !== id) : prev);
+  const updateResponsibleRow = (id: string, field: 'label' | 'value', value: string) =>
+    setResponsibles(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
+
   const handleSaveLinks = async () => {
     setIsSavingLinks(true);
-    const success = await updateVideoLinks(video.id, draftLink, finalLink);
+    const success = await updateVideoLinks(video.id, links.map(({ label, value }) => ({ label, value })));
     setIsSavingLinks(false);
-    if (success) {
-      toast.success('Ссылки сохранены');
-    } else {
-      toast.error('Ошибка сохранения ссылок. Проверьте, что миграция add_video_fields.sql применена.');
-    }
+    if (success) toast.success('Ссылки сохранены');
+    else toast.error('Ошибка сохранения ссылок. Примените миграцию add_video_links_responsibles_json.sql.');
   };
-  
-  // Сохранение ответственных (через хук — обновляет БД и локальное состояние)
+
   const handleSaveResponsible = async () => {
     setIsSavingResponsible(true);
-    const success = await updateVideoResponsible(video.id, scriptResponsible, editingResponsible);
+    const success = await updateVideoResponsible(video.id, responsibles.map(({ label, value }) => ({ label, value })));
     setIsSavingResponsible(false);
-    if (success) {
-      toast.success('Ответственные сохранены');
-    } else {
-      toast.error('Ошибка сохранения ответственных. Проверьте, что миграция add_video_fields.sql применена.');
-    }
+    if (success) toast.success('Ответственные сохранены');
+    else toast.error('Ошибка сохранения ответственных. Примените миграцию add_video_links_responsibles_json.sql.');
   };
 
   // Обновить данные видео (перезагрузка из БД / API)
@@ -478,13 +509,14 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
       if (data.success && data.translated) {
         setTranslation(data.translated);
         setTranscriptTab('translation');
-        
-        // Сохраняем перевод в БД
-        await supabase
-          .from('saved_videos')
-          .update({ translation_text: data.translated })
-          .eq('id', video.id);
-        
+
+        // Сохраняем перевод в saved_videos (с проверкой ошибок и обновлением списка)
+        const saved = await updateVideoTranslation(video.id, data.translated);
+        if (!saved) {
+          toast.error('Не удалось сохранить перевод в БД. Примените миграцию add_saved_videos_translation_text.sql.');
+          return;
+        }
+
         // Также сохраняем в глобальную таблицу по shortcode
         const match = video.url?.match(/\/(reel|p)\/([A-Za-z0-9_-]+)/);
         const shortcode = match ? match[2] : null;
@@ -494,7 +526,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
             .update({ translation_text: data.translated })
             .eq('shortcode', shortcode);
         }
-        
+
         toast.success('Перевод сохранён');
       } else {
         toast.error('Ошибка перевода', { description: data.error || 'Попробуйте позже' });
@@ -778,85 +810,109 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
               Открыть в Instagram
             </a>
             
-            {/* Links section */}
+            {/* Links section — динамические пункты с переименованием и добавлением */}
             <div className="rounded-card-xl p-3 shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] space-y-3">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-slate-400 font-medium">Ссылки</span>
-                <button
-                  onClick={handleSaveLinks}
-                  disabled={isSavingLinks}
-                  className="px-2 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium transition-all flex items-center gap-1 disabled:opacity-50"
-                >
-                  {isSavingLinks ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <Save className="w-3 h-3" />
-                  )}
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={addLinkRow}
+                    className="p-1.5 rounded-lg hover:bg-slate-200/80 text-slate-500 hover:text-slate-700 transition-colors"
+                    title="Добавить пункт"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={handleSaveLinks}
+                    disabled={isSavingLinks}
+                    className="px-2 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium transition-all flex items-center gap-1 disabled:opacity-50"
+                  >
+                    {isSavingLinks ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                  </button>
+                </div>
               </div>
-              
               <div className="space-y-2">
-                <div>
-                  <label className="text-xs text-slate-500 mb-1 block">Заготовка</label>
-                  <textarea
-                    value={draftLink}
-                    onChange={(e) => setDraftLink(e.target.value)}
-                    placeholder="Ссылка на заготовку (можно несколько строк)"
-                    rows={2}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200/80 bg-white/80 text-sm focus:outline-none focus:ring-2 focus:ring-slate-200/50 focus:border-slate-400/50 resize-y min-h-[60px]"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-500 mb-1 block">Готовое</label>
-                  <textarea
-                    value={finalLink}
-                    onChange={(e) => setFinalLink(e.target.value)}
-                    placeholder="Ссылка на готовое (можно несколько строк)"
-                    rows={2}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200/80 bg-white/80 text-sm focus:outline-none focus:ring-2 focus:ring-slate-200/50 focus:border-slate-400/50 resize-y min-h-[60px]"
-                  />
-                </div>
+                {links.map((row) => (
+                  <div key={row.id} className="flex gap-2 items-start">
+                    <input
+                      type="text"
+                      value={row.label}
+                      onChange={(e) => updateLinkRow(row.id, 'label', e.target.value)}
+                      placeholder="Название"
+                      className="flex-shrink-0 w-24 px-2 py-1.5 rounded-lg border border-slate-200/80 bg-white/80 text-xs focus:outline-none focus:ring-2 focus:ring-slate-200/50 focus:border-slate-400/50"
+                    />
+                    <input
+                      type="text"
+                      value={row.value}
+                      onChange={(e) => updateLinkRow(row.id, 'value', e.target.value)}
+                      placeholder="URL"
+                      className="flex-1 min-w-0 px-2 py-1.5 rounded-lg border border-slate-200/80 bg-white/80 text-xs focus:outline-none focus:ring-2 focus:ring-slate-200/50 focus:border-slate-400/50"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeLinkRow(row.id)}
+                      disabled={links.length <= 1}
+                      className="p-1.5 rounded-lg hover:bg-red-100 text-slate-400 hover:text-red-600 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                      title="Удалить пункт"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
-            
-            {/* Responsible section */}
+
+            {/* Ответственные — динамические пункты с переименованием и добавлением */}
             <div className="rounded-card-xl p-3 shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] space-y-3">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-slate-400 font-medium">Ответственные</span>
-                <button
-                  onClick={handleSaveResponsible}
-                  disabled={isSavingResponsible}
-                  className="px-2 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium transition-all flex items-center gap-1 disabled:opacity-50"
-                >
-                  {isSavingResponsible ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <Save className="w-3 h-3" />
-                  )}
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={addResponsibleRow}
+                    className="p-1.5 rounded-lg hover:bg-slate-200/80 text-slate-500 hover:text-slate-700 transition-colors"
+                    title="Добавить пункт"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={handleSaveResponsible}
+                    disabled={isSavingResponsible}
+                    className="px-2 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium transition-all flex items-center gap-1 disabled:opacity-50"
+                  >
+                    {isSavingResponsible ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                  </button>
+                </div>
               </div>
-              
               <div className="space-y-2">
-                <div>
-                  <label className="text-xs text-slate-500 mb-1 block">За сценарий</label>
-                  <textarea
-                    value={scriptResponsible}
-                    onChange={(e) => setScriptResponsible(e.target.value)}
-                    placeholder="Кто отвечает за сценарий (можно несколько строк)"
-                    rows={2}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200/80 bg-white/80 text-sm focus:outline-none focus:ring-2 focus:ring-slate-200/50 focus:border-slate-400/50 resize-y min-h-[60px]"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-500 mb-1 block">За монтаж</label>
-                  <textarea
-                    value={editingResponsible}
-                    onChange={(e) => setEditingResponsible(e.target.value)}
-                    placeholder="Кто отвечает за монтаж (можно несколько строк)"
-                    rows={2}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200/80 bg-white/80 text-sm focus:outline-none focus:ring-2 focus:ring-slate-200/50 focus:border-slate-400/50 resize-y min-h-[60px]"
-                  />
-                </div>
+                {responsibles.map((row) => (
+                  <div key={row.id} className="flex gap-2 items-center">
+                    <input
+                      type="text"
+                      value={row.label}
+                      onChange={(e) => updateResponsibleRow(row.id, 'label', e.target.value)}
+                      placeholder="Роль (название)"
+                      className="flex-shrink-0 w-28 px-2 py-1.5 rounded-lg border border-slate-200/80 bg-white/80 text-xs focus:outline-none focus:ring-2 focus:ring-slate-200/50 focus:border-slate-400/50"
+                    />
+                    <input
+                      type="text"
+                      value={row.value}
+                      onChange={(e) => updateResponsibleRow(row.id, 'value', e.target.value)}
+                      placeholder="Имя"
+                      className="flex-1 min-w-0 px-2 py-1.5 rounded-lg border border-slate-200/80 bg-white/80 text-xs focus:outline-none focus:ring-2 focus:ring-slate-200/50 focus:border-slate-400/50"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeResponsibleRow(row.id)}
+                      disabled={responsibles.length <= 1}
+                      className="p-1.5 rounded-lg hover:bg-red-100 text-slate-400 hover:text-red-600 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                      title="Удалить пункт"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

@@ -36,13 +36,19 @@ interface SavedVideo {
   // Проекты
   project_id?: string;
   folder_id?: string;
-  // Ссылки
+  // Ссылки (legacy)
   draft_link?: string;
   final_link?: string;
-  // Ответственные
+  // Ответственные (legacy)
   script_responsible?: string;
   editing_responsible?: string;
+  // Динамические списки (JSONB)
+  links?: { label: string; value: string }[];
+  responsibles?: { label: string; value: string }[];
 }
+
+export type LinkItem = { label: string; value: string };
+export type ResponsibleItem = { label: string; value: string };
 
 const PAGE_SIZE = 60;
 
@@ -87,30 +93,48 @@ export function useInboxVideos() {
     final_link?: string;
     script_responsible?: string;
     editing_responsible?: string;
-  } => ({
-    id: video.id,
-    title: video.caption || 'Без названия',
-    previewUrl: video.thumbnail_url || '',
-    url: video.video_url || `https://instagram.com/reel/${video.shortcode}`,
-    receivedAt: new Date(video.added_at),
-    view_count: video.view_count,
-    like_count: video.like_count,
-    comment_count: video.comment_count,
-    owner_username: video.owner_username,
-    folder_id: video.folder_id || undefined,
-    project_id: video.project_id,
-    transcript_id: video.transcript_id,
-    transcript_status: video.transcript_status,
-    transcript_text: video.transcript_text,
-    translation_text: video.translation_text,
-    script_text: video.script_text,
-    download_url: video.download_url,
-    taken_at: video.taken_at,
-    draft_link: video.draft_link,
-    final_link: video.final_link,
-    script_responsible: video.script_responsible,
-    editing_responsible: video.editing_responsible,
-  }), []);
+    links?: LinkItem[];
+    responsibles?: ResponsibleItem[];
+  } => {
+    const links: LinkItem[] = Array.isArray(video.links) && video.links.length > 0
+      ? video.links.map(({ label, value }) => ({ label: String(label ?? ''), value: String(value ?? '') }))
+      : [
+          { label: 'Заготовка', value: video.draft_link || '' },
+          { label: 'Готовое', value: video.final_link || '' },
+        ];
+    const responsibles: ResponsibleItem[] = Array.isArray(video.responsibles) && video.responsibles.length > 0
+      ? video.responsibles.map(({ label, value }) => ({ label: String(label ?? ''), value: String(value ?? '') }))
+      : [
+          { label: 'За сценарий', value: video.script_responsible || '' },
+          { label: 'За монтаж', value: video.editing_responsible || '' },
+        ];
+    return {
+      id: video.id,
+      title: video.caption || 'Без названия',
+      previewUrl: video.thumbnail_url || '',
+      url: video.video_url || `https://instagram.com/reel/${video.shortcode}`,
+      receivedAt: new Date(video.added_at),
+      view_count: video.view_count,
+      like_count: video.like_count,
+      comment_count: video.comment_count,
+      owner_username: video.owner_username,
+      folder_id: video.folder_id || undefined,
+      project_id: video.project_id,
+      transcript_id: video.transcript_id,
+      transcript_status: video.transcript_status,
+      transcript_text: video.transcript_text,
+      translation_text: video.translation_text,
+      script_text: video.script_text,
+      download_url: video.download_url,
+      taken_at: video.taken_at,
+      draft_link: video.draft_link,
+      final_link: video.final_link,
+      script_responsible: video.script_responsible,
+      editing_responsible: video.editing_responsible,
+      links,
+      responsibles,
+    };
+  }, []);
 
   // Загрузка видео пользователя
   const fetchVideos = useCallback(async () => {
@@ -736,23 +760,21 @@ export function useInboxVideos() {
   }, []);
 
   /**
-   * Обновляет ссылки (заготовка, готовое видео)
+   * Обновляет ссылки (массив с названиями и URL)
    */
   const updateVideoLinks = useCallback(async (
     videoId: string,
-    draftLink: string,
-    finalLink: string
+    links: LinkItem[]
   ) => {
     try {
       const userId = getUserId();
       await setUserContext(userId);
 
+      const payload = links.map(({ label, value }) => ({ label: label || '', value: value || '' }));
+
       const { data, error } = await supabase
         .from('saved_videos')
-        .update({
-          draft_link: draftLink || null,
-          final_link: finalLink || null,
-        })
+        .update({ links: payload })
         .eq('id', videoId)
         .select('id')
         .maybeSingle();
@@ -767,9 +789,7 @@ export function useInboxVideos() {
       }
 
       setVideos(prev => prev.map(v =>
-        v.id === videoId
-          ? { ...v, draft_link: draftLink || undefined, final_link: finalLink || undefined } as any
-          : v
+        v.id === videoId ? { ...v, links: payload } as any : v
       ));
       return true;
     } catch (err) {
@@ -779,29 +799,27 @@ export function useInboxVideos() {
   }, [getUserId]);
 
   /**
-   * Обновляет ответственных за сценарий и монтаж
+   * Обновляет ответственных (массив с названиями ролей и именами)
    */
   const updateVideoResponsible = useCallback(async (
     videoId: string,
-    scriptResponsible: string,
-    editingResponsible: string
+    responsibles: ResponsibleItem[]
   ) => {
     try {
       const userId = getUserId();
       await setUserContext(userId);
 
+      const payload = responsibles.map(({ label, value }) => ({ label: label || '', value: value || '' }));
+
       const { data, error } = await supabase
         .from('saved_videos')
-        .update({
-          script_responsible: scriptResponsible || null,
-          editing_responsible: editingResponsible || null,
-        })
+        .update({ responsibles: payload })
         .eq('id', videoId)
         .select('id')
         .maybeSingle();
 
       if (error) {
-        console.error('Error updating video responsible:', error);
+        console.error('Error updating video responsibles:', error);
         return false;
       }
       if (!data) {
@@ -810,13 +828,11 @@ export function useInboxVideos() {
       }
 
       setVideos(prev => prev.map(v =>
-        v.id === videoId
-          ? { ...v, script_responsible: scriptResponsible || undefined, editing_responsible: editingResponsible || undefined } as any
-          : v
+        v.id === videoId ? { ...v, responsibles: payload } as any : v
       ));
       return true;
     } catch (err) {
-      console.error('Error updating video responsible:', err);
+      console.error('Error updating video responsibles:', err);
       return false;
     }
   }, [getUserId]);
@@ -875,6 +891,40 @@ export function useInboxVideos() {
     }
   }, []);
 
+  /**
+   * Сохраняет перевод (после получения от Google/Gemini API)
+   */
+  const updateVideoTranslation = useCallback(async (videoId: string, translationText: string) => {
+    try {
+      const userId = getUserId();
+      await setUserContext(userId);
+
+      const { data, error } = await supabase
+        .from('saved_videos')
+        .update({ translation_text: translationText })
+        .eq('id', videoId)
+        .select('id')
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error updating video translation:', error);
+        return false;
+      }
+      if (!data) {
+        console.warn('updateVideoTranslation: no row updated, check RLS or video id');
+        return false;
+      }
+
+      setVideos(prev => prev.map(v =>
+        v.id === videoId ? { ...v, translation_text: translationText } as any : v
+      ));
+      return true;
+    } catch (err) {
+      console.error('Error updating video translation:', err);
+      return false;
+    }
+  }, [getUserId]);
+
   return {
     videos,
     loading,
@@ -887,6 +937,7 @@ export function useInboxVideos() {
     updateVideoFolder,
     updateVideoScript,
     updateVideoTranscript,
+    updateVideoTranslation,
     updateVideoResponsible,
     updateVideoLinks,
     restoreVideo,

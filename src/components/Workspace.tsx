@@ -270,6 +270,8 @@ export function Workspace(props?: WorkspaceProps) {
     editing_responsible: (v as any).editing_responsible,
     draft_link: (v as any).draft_link,
     final_link: (v as any).final_link,
+    links: (v as any).links,
+    responsibles: (v as any).responsibles,
     status: 'active',
   });
 
@@ -432,6 +434,8 @@ export function Workspace(props?: WorkspaceProps) {
       editing_responsible: (selectedVideo as any).editing_responsible,
       draft_link: (selectedVideo as any).draft_link,
       final_link: (selectedVideo as any).final_link,
+      links: (selectedVideo as any).links,
+      responsibles: (selectedVideo as any).responsibles,
     },
     onBack: () => setSelectedVideo(null),
     onRefreshData: async () => { await refetchInboxVideos(); },
