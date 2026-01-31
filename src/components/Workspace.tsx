@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useWorkspaceZones, ZoneVideo } from '../hooks/useWorkspaceZones';
 import { useInboxVideos } from '../hooks/useInboxVideos';
 import { useProjectContext, ProjectFolder } from '../contexts/ProjectContext';
@@ -12,6 +13,7 @@ import { cn } from '../utils/cn';
 import { VideoGradientCard } from './ui/VideoGradientCard';
 import { VideoDetailPage } from './VideoDetailPage';
 import { calculateViralMultiplier, applyViralMultiplierToCoefficient, getProfileStats } from '../services/profileStatsService';
+import { dialogScale, backdropFade, iosSpringSoft } from '../utils/motionPresets';
 
 
 // Проксирование Instagram изображений через наш API
@@ -106,7 +108,7 @@ interface WorkspaceProps {
 export function Workspace(props?: WorkspaceProps) {
   const { externalFolderPanelOpen, onExternalFolderPanelClose } = props ?? {};
   const { loading } = useWorkspaceZones();
-  const { videos: inboxVideos, removeVideo: removeInboxVideo, restoreVideo, updateVideoFolder, loadMore, hasMore, loadingMore } = useInboxVideos();
+  const { videos: inboxVideos, removeVideo: removeInboxVideo, restoreVideo, updateVideoFolder, loadMore, hasMore, loadingMore, refetch: refetchInboxVideos } = useInboxVideos();
   const { 
     currentProject, 
     currentProjectId, 
@@ -393,6 +395,13 @@ export function Workspace(props?: WorkspaceProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usernamesKey]);
 
+  // Синхронизация выбранного видео с лентой после обновления данных (только при смене ссылки на объект)
+  useEffect(() => {
+    if (!selectedVideo) return;
+    const updated = feedVideos.find(v => v.id === selectedVideo.id);
+    if (updated && updated !== selectedVideo) setSelectedVideo(updated);
+  }, [feedVideos, selectedVideo]);
+
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -401,37 +410,33 @@ export function Workspace(props?: WorkspaceProps) {
     );
   }
 
-  // Детальная страница видео
-  if (selectedVideo) {
-    return (
-      <VideoDetailPage
-        video={{
-          id: selectedVideo.id,
-          title: selectedVideo.title,
-          preview_url: selectedVideo.preview_url,
-          url: selectedVideo.url,
-          view_count: selectedVideo.view_count,
-          like_count: selectedVideo.like_count,
-          comment_count: selectedVideo.comment_count,
-          owner_username: selectedVideo.owner_username,
-          taken_at: selectedVideo.taken_at,
-          transcript_id: (selectedVideo as any).transcript_id,
-          transcript_status: (selectedVideo as any).transcript_status,
-          transcript_text: (selectedVideo as any).transcript_text,
-          translation_text: (selectedVideo as any).translation_text,
-          script_text: (selectedVideo as any).script_text,
-          download_url: (selectedVideo as any).download_url,
-          folder_id: selectedVideo.folder_id,
-          script_responsible: (selectedVideo as any).script_responsible,
-          editing_responsible: (selectedVideo as any).editing_responsible,
-          draft_link: (selectedVideo as any).draft_link,
-          final_link: (selectedVideo as any).final_link,
-        }}
-        onBack={() => setSelectedVideo(null)}
-      />
-    );
-  }
-  
+  const videoDetailProps = selectedVideo ? {
+    video: {
+      id: selectedVideo.id,
+      title: selectedVideo.title,
+      preview_url: selectedVideo.preview_url,
+      url: selectedVideo.url,
+      view_count: selectedVideo.view_count,
+      like_count: selectedVideo.like_count,
+      comment_count: selectedVideo.comment_count,
+      owner_username: selectedVideo.owner_username,
+      taken_at: selectedVideo.taken_at,
+      transcript_id: (selectedVideo as any).transcript_id,
+      transcript_status: (selectedVideo as any).transcript_status,
+      transcript_text: (selectedVideo as any).transcript_text,
+      translation_text: (selectedVideo as any).translation_text,
+      script_text: (selectedVideo as any).script_text,
+      download_url: (selectedVideo as any).download_url,
+      folder_id: selectedVideo.folder_id,
+      script_responsible: (selectedVideo as any).script_responsible,
+      editing_responsible: (selectedVideo as any).editing_responsible,
+      draft_link: (selectedVideo as any).draft_link,
+      final_link: (selectedVideo as any).final_link,
+    },
+    onBack: () => setSelectedVideo(null),
+    onRefreshData: async () => { await refetchInboxVideos(); },
+  } : null;
+
   // Обработчик создания папки
   const handleCreateFolder = async () => {
     if (!currentProjectId || !newFolderName.trim()) return;
@@ -543,7 +548,38 @@ export function Workspace(props?: WorkspaceProps) {
     : null;
 
   return (
-    <div className="h-full overflow-hidden relative flex flex-col">
+    <>
+      <AnimatePresence>
+        {selectedVideo && videoDetailProps && (
+          <motion.div
+            key="video-detail-overlay"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6"
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            variants={backdropFade}
+          >
+            <div
+              className="absolute inset-0 bg-black/25 backdrop-blur-glass-2xl"
+              onClick={() => setSelectedVideo(null)}
+              aria-hidden
+            />
+            <motion.div
+              className="relative w-full max-w-[95vw] md:max-w-6xl h-[90vh] max-h-[900px] rounded-card-2xl overflow-hidden shadow-float-lg bg-base-alt border border-white/[0.35]"
+              variants={dialogScale}
+              transition={iosSpringSoft}
+              onClick={e => e.stopPropagation()}
+            >
+              <VideoDetailPage
+                video={videoDetailProps.video}
+                onBack={() => setSelectedVideo(null)}
+                onRefreshData={videoDetailProps.onRefreshData}
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <div className="h-full overflow-hidden relative flex flex-col">
       {/* Floating Folder Widget - Desktop */}
       <div className={cn(
         "hidden md:block absolute top-4 right-4 z-40 bg-glass-white/80 backdrop-blur-glass-xl rounded-card-xl shadow-glass border border-white/[0.35] transition-all duration-300",
@@ -1113,5 +1149,6 @@ export function Workspace(props?: WorkspaceProps) {
       {/* Presence Indicator */}
       <PresenceIndicator presence={presence} getUsername={getUsername} />
     </div>
+    </>
   );
 }

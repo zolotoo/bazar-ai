@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   ChevronLeft, Play, Eye, Heart, MessageCircle, Calendar, 
   Sparkles, FileText, Copy, ExternalLink, Loader2, Check,
-  Languages, ChevronDown, Mic, Save
+  Languages, ChevronDown, Mic, Save, RefreshCw
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { checkTranscriptionStatus, downloadAndTranscribe } from '../services/transcriptionService';
@@ -38,6 +38,7 @@ interface VideoData {
 interface VideoDetailPageProps {
   video: VideoData;
   onBack: () => void;
+  onRefreshData?: () => Promise<void>;
 }
 
 function formatNumber(num?: number): string {
@@ -105,7 +106,7 @@ function calculateViralCoefficient(views?: number, takenAt?: string | number): n
   return Math.round((views / daysOld / 1000) * 10) / 10;
 }
 
-export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
+export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPageProps) {
   const [transcriptTab, setTranscriptTab] = useState<'original' | 'translation'>('original');
   const [transcript, setTranscript] = useState(video.transcript_text || '');
   const [translation, setTranslation] = useState(video.translation_text || ''); // Загружаем из БД
@@ -131,6 +132,7 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
   const [editingResponsible, setEditingResponsible] = useState(video.editing_responsible || '');
   const [isSavingLinks, setIsSavingLinks] = useState(false);
   const [isSavingResponsible, setIsSavingResponsible] = useState(false);
+  const [isRefreshingData, setIsRefreshingData] = useState(false);
   
   const { updateVideoFolder, updateVideoScript, updateVideoTranscript, updateVideoResponsible, updateVideoLinks } = useInboxVideos();
   
@@ -157,6 +159,21 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
       toast.error('Ошибка сохранения ответственных. Проверьте, что миграция add_video_fields.sql применена.');
     }
   };
+
+  // Обновить данные видео (перезагрузка из БД / API)
+  const handleRefreshData = async () => {
+    if (!onRefreshData) return;
+    setIsRefreshingData(true);
+    try {
+      await onRefreshData();
+      toast.success('Данные обновлены');
+    } catch {
+      toast.error('Не удалось обновить данные');
+    } finally {
+      setIsRefreshingData(false);
+    }
+  };
+
   const { currentProject } = useProjectContext();
   const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at);
   
@@ -517,7 +534,7 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
   const thumbnailUrl = proxyImageUrl(video.preview_url);
 
   return (
-    <div className="h-full overflow-hidden flex flex-col bg-[#f5f5f5]">
+    <div className="h-full overflow-hidden flex flex-col bg-base">
       <div className="w-full h-full p-4 md:p-6 flex flex-col overflow-hidden min-h-0">
         {/* Header — на мобильных компактнее */}
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-shrink-0">
@@ -540,8 +557,22 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
             </div>
           </div>
 
-          {/* Status badge */}
-          <div>
+          {/* Actions: Refresh data + Status badge */}
+          <div className="flex flex-wrap items-center gap-2">
+            {onRefreshData && (
+              <button
+                onClick={handleRefreshData}
+                disabled={isRefreshingData}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-700 text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                {isRefreshingData ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4" />
+                )}
+                Обновить данные
+              </button>
+            )}
             {transcriptStatus === 'processing' || transcriptStatus === 'downloading' ? (
               <div className="px-4 py-2 rounded-full bg-amber-100 text-amber-700 text-sm font-medium flex items-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -603,13 +634,13 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
             </div>
 
             {/* Current folder + move */}
-            <div className="bg-white rounded-xl p-3 shadow-sm relative">
+            <div className="rounded-card-xl p-3 shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] relative">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-slate-400 font-medium">Папка</span>
               </div>
-              <button
+                <button
                 onClick={() => setShowFolderMenu(!showFolderMenu)}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl border border-slate-200/80 bg-white/60 hover:bg-slate-50/80 transition-colors"
               >
                 <div className="flex items-center gap-2">
                   {currentFolder ? (
@@ -635,7 +666,7 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
               
               {/* Folder dropdown */}
               {showFolderMenu && folderConfigs.length > 0 && (
-                <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-slate-100 p-1.5 z-50">
+                <div className="absolute left-0 right-0 top-full mt-1 rounded-card-xl shadow-glass-lg bg-glass-white/90 backdrop-blur-glass-xl border border-white/[0.35] p-1.5 z-50">
                   {folderConfigs.map(folder => (
                     <button
                       key={folder.id}
@@ -660,7 +691,7 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
             </div>
 
             {/* Quick stats */}
-            <div className="bg-white rounded-xl p-3 shadow-sm">
+            <div className="rounded-card-xl p-3 shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35]">
               <div className="grid grid-cols-2 gap-2">
                 <div className="flex items-center gap-2 text-slate-600">
                   <Eye className="w-4 h-4 text-slate-400" />
@@ -710,25 +741,25 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
                     )}
                   </div>
                 </div>
-                {(!viralMultiplier && video.owner_username) && (
+                {video.owner_username && (
                   <button
                     onClick={handleCalculateViral}
                     disabled={isCalculatingViral}
                     className={cn(
                       "w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
-                      "bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200",
+                      "bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60",
                       "disabled:opacity-50 disabled:cursor-not-allowed"
                     )}
                   >
                     {isCalculatingViral ? (
                       <>
                         <Loader2 className="w-3 h-3 animate-spin" />
-                        Расчет...
+                        Расчёт...
                       </>
                     ) : (
                       <>
                         <Sparkles className="w-3 h-3" />
-                        Расчет точной виральности
+                        Полный расчёт виральности
                       </>
                     )}
                   </button>
@@ -741,14 +772,14 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
               href={video.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium transition-colors shadow-sm"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-card-xl bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] shadow-glass hover:shadow-glass-hover text-slate-700 text-sm font-medium transition-all"
             >
               <ExternalLink className="w-4 h-4" />
               Открыть в Instagram
             </a>
             
             {/* Links section */}
-            <div className="bg-white rounded-xl p-3 shadow-sm space-y-3">
+            <div className="rounded-card-xl p-3 shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] space-y-3">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-slate-400 font-medium">Ссылки</span>
                 <button
@@ -767,29 +798,29 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
               <div className="space-y-2">
                 <div>
                   <label className="text-xs text-slate-500 mb-1 block">Заготовка</label>
-                  <input
-                    type="text"
+                  <textarea
                     value={draftLink}
                     onChange={(e) => setDraftLink(e.target.value)}
-                    placeholder="Ссылка на заготовку"
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-300"
+                    placeholder="Ссылка на заготовку (можно несколько строк)"
+                    rows={2}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200/80 bg-white/80 text-sm focus:outline-none focus:ring-2 focus:ring-slate-200/50 focus:border-slate-400/50 resize-y min-h-[60px]"
                   />
                 </div>
                 <div>
                   <label className="text-xs text-slate-500 mb-1 block">Готовое</label>
-                  <input
-                    type="text"
+                  <textarea
                     value={finalLink}
                     onChange={(e) => setFinalLink(e.target.value)}
-                    placeholder="Ссылка на готовое"
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-300"
+                    placeholder="Ссылка на готовое (можно несколько строк)"
+                    rows={2}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200/80 bg-white/80 text-sm focus:outline-none focus:ring-2 focus:ring-slate-200/50 focus:border-slate-400/50 resize-y min-h-[60px]"
                   />
                 </div>
               </div>
             </div>
             
             {/* Responsible section */}
-            <div className="bg-white rounded-xl p-3 shadow-sm space-y-3">
+            <div className="rounded-card-xl p-3 shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] space-y-3">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-slate-400 font-medium">Ответственные</span>
                 <button
@@ -808,22 +839,22 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
               <div className="space-y-2">
                 <div>
                   <label className="text-xs text-slate-500 mb-1 block">За сценарий</label>
-                  <input
-                    type="text"
+                  <textarea
                     value={scriptResponsible}
                     onChange={(e) => setScriptResponsible(e.target.value)}
-                    placeholder="Кто отвечает за сценарий"
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-300"
+                    placeholder="Кто отвечает за сценарий (можно несколько строк)"
+                    rows={2}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200/80 bg-white/80 text-sm focus:outline-none focus:ring-2 focus:ring-slate-200/50 focus:border-slate-400/50 resize-y min-h-[60px]"
                   />
                 </div>
                 <div>
                   <label className="text-xs text-slate-500 mb-1 block">За монтаж</label>
-                  <input
-                    type="text"
+                  <textarea
                     value={editingResponsible}
                     onChange={(e) => setEditingResponsible(e.target.value)}
-                    placeholder="Кто отвечает за монтаж"
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-300"
+                    placeholder="Кто отвечает за монтаж (можно несколько строк)"
+                    rows={2}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200/80 bg-white/80 text-sm focus:outline-none focus:ring-2 focus:ring-slate-200/50 focus:border-slate-400/50 resize-y min-h-[60px]"
                   />
                 </div>
               </div>
@@ -831,7 +862,7 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
           </div>
 
           {/* Middle: Transcript — на мобильных с мин. высотой для скролла */}
-          <div className="flex-1 flex flex-col min-w-0 min-h-[320px] md:min-h-0 bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex-1 flex flex-col min-w-0 min-h-[320px] md:min-h-0 rounded-card-xl shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] overflow-hidden">
             {/* Transcript header — на мобильных кнопки переносятся */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
@@ -958,7 +989,7 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
                   <button
                     onClick={handleStartTranscription}
                     disabled={isStartingTranscription}
-                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-medium hover:from-amber-400 hover:to-orange-400 transition-all shadow-md flex items-center gap-2 disabled:opacity-50"
+                    className="px-4 py-2.5 rounded-card-xl bg-slate-600 hover:bg-slate-700 text-white font-medium transition-all shadow-glass flex items-center gap-2 disabled:opacity-50"
                   >
                     {isStartingTranscription ? (
                       <>
@@ -978,7 +1009,7 @@ export function VideoDetailPage({ video, onBack }: VideoDetailPageProps) {
           </div>
 
           {/* Right: Script — на мобильных с мин. высотой */}
-          <div className="flex-1 flex flex-col min-w-0 min-h-[280px] md:min-h-0 bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex-1 flex flex-col min-w-0 min-h-[280px] md:min-h-0 rounded-card-xl shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] overflow-hidden">
             {/* Script header — на мобильных кнопки переносятся */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
