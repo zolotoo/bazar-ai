@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { 
   ChevronLeft, Play, Eye, Heart, MessageCircle, Calendar, 
   Sparkles, FileText, Copy, ExternalLink, Loader2, Check,
-  Languages, ChevronDown, Mic, Save, RefreshCw, Plus, Trash2
+  Languages, ChevronDown, Mic, Save, RefreshCw, Plus, Trash2,
+  LayoutDashboard, Scissors
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { checkTranscriptionStatus, downloadAndTranscribe } from '../services/transcriptionService';
@@ -198,6 +199,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   const [isSavingLinks, setIsSavingLinks] = useState(false);
   const [isSavingResponsible, setIsSavingResponsible] = useState(false);
   const [isRefreshingData, setIsRefreshingData] = useState(false);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'script' | 'edit'>('dashboard');
 
   useEffect(() => {
     setLinks(buildMergedLinks());
@@ -619,30 +621,25 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
 
   return (
     <div className="h-full overflow-hidden flex flex-col bg-base">
-      <div className="w-full h-full p-4 md:p-6 flex flex-col overflow-hidden min-h-0">
-        {/* Header — на мобильных компактнее */}
-        <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-shrink-0">
-          <div className="flex items-center gap-4">
+      <div className="w-full h-full flex flex-col overflow-hidden min-h-0">
+        {/* Safari-style header bar — стекло, как в iOS 26 */}
+        <div className="flex-shrink-0 px-4 py-3 flex items-center justify-between gap-3 bg-white/40 backdrop-blur-xl border-b border-white/30">
+          <div className="flex items-center gap-2 min-w-0">
             <button
               onClick={onBack}
-              className="flex items-center gap-2 min-h-[44px] min-w-[44px] pr-2 -ml-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100/80 transition-colors active:scale-95 touch-manipulation"
+              className="flex items-center justify-center min-h-[36px] min-w-[36px] rounded-full text-slate-600 hover:text-slate-800 hover:bg-white/60 transition-colors active:scale-95 touch-manipulation flex-shrink-0"
             >
-              <ChevronLeft className="w-5 h-5 flex-shrink-0" />
-              <span className="text-sm font-medium">Назад</span>
+              <ChevronLeft className="w-5 h-5" strokeWidth={2.5} />
             </button>
-            
-            <div>
-              <h1 className="text-xl font-semibold text-neutral-900">
-                Работа с видео
-              </h1>
-              <p className="text-neutral-500 text-sm">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-800 truncate">
                 @{video.owner_username || 'instagram'}
               </p>
+              <p className="text-xs text-slate-500 truncate">Работа с видео</p>
             </div>
           </div>
 
-          {/* Actions: Refresh data + Status badge */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {onRefreshData && (
               <button
                 onClick={handleRefreshData}
@@ -679,9 +676,57 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
           </div>
         </div>
 
-        {/* Main content — на мобильных колонка, на десктопе 3 колонки */}
+        {/* Safari-style tab bar — iOS 26: стекло, пилюля, сегменты */}
+        <div className="flex-shrink-0 px-4 py-3 flex justify-center">
+          <div
+            className="inline-flex p-1 rounded-[20px] bg-white/50 backdrop-blur-xl border border-white/40 shadow-lg shadow-black/5"
+            style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.8)' }}
+          >
+            <button
+              onClick={() => setActiveTab('dashboard')}
+              className={cn(
+                'flex items-center gap-2 px-5 py-2.5 rounded-[16px] text-sm font-medium transition-all duration-200',
+                activeTab === 'dashboard'
+                  ? 'bg-white text-slate-800 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+              )}
+            >
+              <LayoutDashboard className="w-4 h-4" strokeWidth={2} />
+              Дашборд
+            </button>
+            <button
+              onClick={() => setActiveTab('script')}
+              className={cn(
+                'flex items-center gap-2 px-5 py-2.5 rounded-[16px] text-sm font-medium transition-all duration-200',
+                activeTab === 'script'
+                  ? 'bg-white text-slate-800 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+              )}
+            >
+              <FileText className="w-4 h-4" strokeWidth={2} />
+              Сценарий
+            </button>
+            <button
+              onClick={() => setActiveTab('edit')}
+              className={cn(
+                'flex items-center gap-2 px-5 py-2.5 rounded-[16px] text-sm font-medium transition-all duration-200',
+                activeTab === 'edit'
+                  ? 'bg-white text-slate-800 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+              )}
+            >
+              <Scissors className="w-4 h-4" strokeWidth={2} />
+              Монтаж
+            </button>
+          </div>
+        </div>
+
+        {/* Tab content — прокручиваемая область */}
+        <div className="flex-1 min-h-0 overflow-hidden px-4 pb-4 md:px-6 md:pb-6">
+        {/* Tab content */}
+        {activeTab === 'dashboard' && (
         <div className="flex-1 flex flex-col md:flex-row gap-4 min-h-0 overflow-y-auto md:overflow-hidden">
-          {/* Left: превью 9:16 — по клику загружается и проигрывается тут же */}
+          {/* Дашборд: превью, папка, статистика, виральность, открыть в Instagram */}
           <div className="flex-shrink-0 flex flex-col gap-3 overflow-y-auto custom-scrollbar-light w-full md:w-auto md:min-w-[256px] md:max-w-[min(256px,28vw)]">
             <div className="relative rounded-2xl overflow-hidden shadow-xl bg-black w-full max-w-[240px] mx-auto md:max-w-none md:mx-0" style={{ aspectRatio: '9/16' }}>
               {showVideo && directVideoUrl ? (
@@ -861,115 +906,13 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
               <ExternalLink className="w-4 h-4" />
               Открыть в Instagram
             </a>
-            
-            {/* Links section — динамические пункты с переименованием и добавлением */}
-            <div className="rounded-card-xl p-3 shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] space-y-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-slate-400 font-medium">Ссылки</span>
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={addLinkRow}
-                    className="p-1.5 rounded-lg hover:bg-slate-200/80 text-slate-500 hover:text-slate-700 transition-colors"
-                    title="Добавить пункт"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={handleSaveLinks}
-                    disabled={isSavingLinks}
-                    className="px-2 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium transition-all flex items-center gap-1 disabled:opacity-50"
-                  >
-                    {isSavingLinks ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                {links.map((row) => (
-                  <div key={row.id} className="flex gap-2 items-start">
-                    <input
-                      type="text"
-                      value={row.label}
-                      onChange={(e) => updateLinkRow(row.id, 'label', e.target.value)}
-                      placeholder="Название"
-                      className="flex-shrink-0 w-24 px-2 py-1.5 rounded-lg border border-slate-200/80 bg-white/80 text-xs focus:outline-none focus:ring-2 focus:ring-slate-200/50 focus:border-slate-400/50"
-                    />
-                    <input
-                      type="text"
-                      value={row.value}
-                      onChange={(e) => updateLinkRow(row.id, 'value', e.target.value)}
-                      placeholder="URL"
-                      className="flex-1 min-w-0 px-2 py-1.5 rounded-lg border border-slate-200/80 bg-white/80 text-xs focus:outline-none focus:ring-2 focus:ring-slate-200/50 focus:border-slate-400/50"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeLinkRow(row.id)}
-                      disabled={links.length <= 1}
-                      className="p-1.5 rounded-lg hover:bg-red-100 text-slate-400 hover:text-red-600 transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                      title="Удалить пункт"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Ответственные — динамические пункты с переименованием и добавлением */}
-            <div className="rounded-card-xl p-3 shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] space-y-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-slate-400 font-medium">Ответственные</span>
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={addResponsibleRow}
-                    className="p-1.5 rounded-lg hover:bg-slate-200/80 text-slate-500 hover:text-slate-700 transition-colors"
-                    title="Добавить пункт"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={handleSaveResponsible}
-                    disabled={isSavingResponsible}
-                    className="px-2 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium transition-all flex items-center gap-1 disabled:opacity-50"
-                  >
-                    {isSavingResponsible ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                {responsibles.map((row) => (
-                  <div key={row.id} className="flex gap-2 items-center">
-                    <input
-                      type="text"
-                      value={row.label}
-                      onChange={(e) => updateResponsibleRow(row.id, 'label', e.target.value)}
-                      placeholder="Роль (название)"
-                      className="flex-shrink-0 w-28 px-2 py-1.5 rounded-lg border border-slate-200/80 bg-white/80 text-xs focus:outline-none focus:ring-2 focus:ring-slate-200/50 focus:border-slate-400/50"
-                    />
-                    <input
-                      type="text"
-                      value={row.value}
-                      onChange={(e) => updateResponsibleRow(row.id, 'value', e.target.value)}
-                      placeholder="Имя"
-                      className="flex-1 min-w-0 px-2 py-1.5 rounded-lg border border-slate-200/80 bg-white/80 text-xs focus:outline-none focus:ring-2 focus:ring-slate-200/50 focus:border-slate-400/50"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeResponsibleRow(row.id)}
-                      disabled={responsibles.length <= 1}
-                      className="p-1.5 rounded-lg hover:bg-red-100 text-slate-400 hover:text-red-600 transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                      title="Удалить пункт"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
+        </div>
+        )}
 
-          {/* Middle: Transcript — на мобильных с мин. высотой для скролла */}
+        {activeTab === 'script' && (
+        <div className="flex-1 flex flex-col md:flex-row gap-4 min-h-0 overflow-y-auto md:overflow-hidden">
+          {/* Сценарий: транскрибация + мой сценарий */}
           <div className="flex-1 flex flex-col min-w-0 min-h-[320px] md:min-h-0 rounded-card-xl shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] overflow-hidden">
             {/* Transcript header — на мобильных кнопки переносятся */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-b border-slate-100">
@@ -1176,6 +1119,119 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
               />
             </div>
           </div>
+        </div>
+        )}
+
+        {activeTab === 'edit' && (
+        <div className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-4">
+          {/* Монтаж: ссылки + ответственные */}
+          <div className="rounded-card-xl p-4 shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] space-y-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-semibold text-slate-700">Ссылки</span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={addLinkRow}
+                  className="p-1.5 rounded-lg hover:bg-slate-200/80 text-slate-500 hover:text-slate-700 transition-colors"
+                  title="Добавить пункт"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={handleSaveLinks}
+                  disabled={isSavingLinks}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium transition-all flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {isSavingLinks ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                  Сохранить
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {links.map((row) => (
+                <div key={row.id} className="flex gap-2 items-start">
+                  <input
+                    type="text"
+                    value={row.label}
+                    onChange={(e) => updateLinkRow(row.id, 'label', e.target.value)}
+                    placeholder="Название"
+                    className="flex-shrink-0 w-28 px-3 py-2 rounded-xl border border-slate-200/80 bg-white/80 text-sm focus:outline-none focus:ring-2 focus:ring-slate-200/50 focus:border-slate-400/50"
+                  />
+                  <input
+                    type="text"
+                    value={row.value}
+                    onChange={(e) => updateLinkRow(row.id, 'value', e.target.value)}
+                    placeholder="URL"
+                    className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-slate-200/80 bg-white/80 text-sm focus:outline-none focus:ring-2 focus:ring-slate-200/50 focus:border-slate-400/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeLinkRow(row.id)}
+                    disabled={links.length <= 1}
+                    className="p-2 rounded-xl hover:bg-red-100 text-slate-400 hover:text-red-600 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                    title="Удалить пункт"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-card-xl p-4 shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] space-y-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-semibold text-slate-700">Ответственные</span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={addResponsibleRow}
+                  className="p-1.5 rounded-lg hover:bg-slate-200/80 text-slate-500 hover:text-slate-700 transition-colors"
+                  title="Добавить пункт"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={handleSaveResponsible}
+                  disabled={isSavingResponsible}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium transition-all flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {isSavingResponsible ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                  Сохранить
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {responsibles.map((row) => (
+                <div key={row.id} className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    value={row.label}
+                    onChange={(e) => updateResponsibleRow(row.id, 'label', e.target.value)}
+                    placeholder="Роль (название)"
+                    className="flex-shrink-0 w-32 px-3 py-2 rounded-xl border border-slate-200/80 bg-white/80 text-sm focus:outline-none focus:ring-2 focus:ring-slate-200/50 focus:border-slate-400/50"
+                  />
+                  <input
+                    type="text"
+                    value={row.value}
+                    onChange={(e) => updateResponsibleRow(row.id, 'value', e.target.value)}
+                    placeholder="Имя"
+                    className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-slate-200/80 bg-white/80 text-sm focus:outline-none focus:ring-2 focus:ring-slate-200/50 focus:border-slate-400/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeResponsibleRow(row.id)}
+                    disabled={responsibles.length <= 1}
+                    className="p-2 rounded-xl hover:bg-red-100 text-slate-400 hover:text-red-600 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                    title="Удалить пункт"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        )}
         </div>
       </div>
     </div>
