@@ -194,6 +194,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   const [scriptAiForRefine, setScriptAiForRefine] = useState('');
   const [scriptHumanForRefine, setScriptHumanForRefine] = useState('');
   const [editScriptLeftTab, setEditScriptLeftTab] = useState<'original' | 'translation' | 'ai'>('ai');
+  const [isAutoTranslatingForModal, setIsAutoTranslatingForModal] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
   const [isRefiningPrompt, setIsRefiningPrompt] = useState(false);
   const [clarifyingQuestions, setClarifyingQuestions] = useState<string[]>([]);
@@ -1646,6 +1647,29 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                   setScriptHumanForRefine(script || '');
                   setEditScriptLeftTab('ai');
                   setShowEditScriptModal(true);
+                  if (transcript?.trim() && !translation?.trim()) {
+                    setIsAutoTranslatingForModal(true);
+                    (async () => {
+                      try {
+                        const res = await fetch('/api/translate', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ text: transcript, to: 'ru' }),
+                        });
+                        const data = await res.json();
+                        if (data.success && data.translated) {
+                          setTranslation(data.translated);
+                          await updateVideoTranslation(video.id, data.translated);
+                          toast.success('Перевод сохранён');
+                        }
+                      } catch (e) {
+                        console.error('Auto translate for modal:', e);
+                        toast.error('Не удалось перевести');
+                      } finally {
+                        setIsAutoTranslatingForModal(false);
+                      }
+                    })();
+                  }
                 }}
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 text-left text-sm text-slate-700 hover:bg-slate-50 transition-colors"
               >
@@ -1723,7 +1747,12 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                   {editScriptLeftTab === 'original'
                     ? (transcript || '—')
                     : editScriptLeftTab === 'translation'
-                    ? (translation || '—')
+                    ? (isAutoTranslatingForModal ? (
+                        <span className="flex items-center gap-2 text-slate-500">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Перевод выполняется...
+                        </span>
+                      ) : (translation || '—'))
                     : (scriptAiForRefine || '—')}
                 </pre>
               </div>
