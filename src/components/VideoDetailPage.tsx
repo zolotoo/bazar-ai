@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   ChevronLeft, Play, Eye, Heart, MessageCircle, Calendar, 
   Sparkles, FileText, Copy, ExternalLink, Loader2, Check,
-  Languages, ChevronDown, Mic, Save, RefreshCw, Plus, Trash2
+  Languages, ChevronDown, Mic, Save, RefreshCw, Plus, Trash2, Wand2, BookOpen
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { checkTranscriptionStatus, downloadAndTranscribe } from '../services/transcriptionService';
@@ -177,6 +177,16 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   const [viralMultiplier, setViralMultiplier] = useState<number | null>(null);
   const [isCalculatingViral, setIsCalculatingViral] = useState(false);
   const { currentProject, updateProject } = useProjectContext();
+
+  // Стиль сценария проекта: обучение по примерам + генерация по стилю + просмотр/редактирование промта
+  const [showStyleTrainModal, setShowStyleTrainModal] = useState(false);
+  const [showPromptModal, setShowPromptModal] = useState(false);
+  const [isEditingPrompt, setIsEditingPrompt] = useState(false);
+  const [editedPromptText, setEditedPromptText] = useState('');
+  const [selectedVideoIdsForStyle, setSelectedVideoIdsForStyle] = useState<string[]>([]);
+  const [isAnalyzingStyle, setIsAnalyzingStyle] = useState(false);
+  const [isGeneratingScript, setIsGeneratingScript] = useState(false);
+  const [isSavingPrompt, setIsSavingPrompt] = useState(false);
   const linksTemplate = currentProject?.linksTemplate ?? DEFAULT_LINKS_TEMPLATE;
   const responsiblesTemplate = currentProject?.responsiblesTemplate ?? DEFAULT_RESPONSIBLES_TEMPLATE;
 
@@ -204,7 +214,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
     setResponsibles(buildMergedResponsibles());
   }, [video.id, video.links, video.responsibles, video.draft_link, video.final_link, video.script_responsible, video.editing_responsible, linksTemplate, responsiblesTemplate]);
 
-  const { updateVideoFolder, updateVideoScript, updateVideoTranscript, updateVideoTranslation, updateVideoResponsible, updateVideoLinks } = useInboxVideos();
+  const { videos: projectVideos, updateVideoFolder, updateVideoScript, updateVideoTranscript, updateVideoTranslation, updateVideoResponsible, updateVideoLinks } = useInboxVideos();
 
   const addLinkRow = () => setLinks(prev => [...prev, { id: `link-${Date.now()}`, label: '', value: '' }]);
   const removeLinkRow = (id: string) => setLinks(prev => prev.length > 1 ? prev.filter(r => r.id !== id) : prev);
@@ -600,6 +610,109 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
       toast.success('Сценарий сохранён');
     } else {
       toast.error('Ошибка сохранения');
+    }
+  };
+
+  // Генерация сценария по стилю проекта (Gemini)
+  const handleGenerateByStyle = async () => {
+    if (!currentProject?.stylePrompt?.trim() || !transcript?.trim()) {
+      toast.error('Нужен обученный промт проекта и транскрипция');
+      return;
+    }
+    setIsGeneratingScript(true);
+    try {
+      const res = await fetch('/api/script-generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: currentProject.stylePrompt,
+          transcript_text: transcript,
+          translation_text: translation || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.script) {
+        setScript(data.script);
+        toast.success('Сценарий сгенерирован по стилю проекта');
+      } else {
+        toast.error(data.error || 'Ошибка генерации');
+      }
+    } catch (err) {
+      console.error('Generate by style error:', err);
+      toast.error('Ошибка генерации сценария');
+    } finally {
+      setIsGeneratingScript(false);
+    }
+  };
+
+  // Обучение стиля по примерам (1–5 видео с оригиналом + переводом + моей адаптацией)
+  const styleTrainCandidates = (projectVideos || []).filter(
+    (v: { transcript_text?: string; script_text?: string }) => v.transcript_text?.trim() && v.script_text?.trim()
+  );
+  const toggleVideoForStyle = (id: string) => {
+    setSelectedVideoIdsForStyle((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : prev.length >= 5 ? prev : [...prev, id]
+    );
+  };
+  const handleTrainStyle = async () => {
+    if (!currentProject?.id || selectedVideoIdsForStyle.length === 0) return;
+    const examples = selectedVideoIdsForStyle
+      .map((id) => styleTrainCandidates.find((v: { id: string }) => v.id === id))
+      .filter(Boolean)
+      .map((v: any) => ({
+        transcript_text: v.transcript_text,
+        translation_text: v.translation_text || '',
+        script_text: v.script_text,
+      }));
+    if (examples.length === 0) return;
+    setIsAnalyzingStyle(true);
+    try {
+      const res = await fetch('/api/script-style-analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ examples }),
+      });
+      const data = await res.json();
+      if (data.success && data.prompt) {
+        await updateProject(currentProject.id, {
+          stylePrompt: data.prompt,
+          styleMeta: data.meta,
+          styleExamplesCount: examples.length,
+        });
+        toast.success(`Стиль обучен по ${examples.length} пример${examples.length === 1 ? 'у' : examples.length < 5 ? 'ам' : 'ам'}`);
+        setShowStyleTrainModal(false);
+        setSelectedVideoIdsForStyle([]);
+        setEditedPromptText(data.prompt || '');
+      } else {
+        toast.error(data.error || 'Ошибка анализа стиля');
+      }
+    } catch (err) {
+      console.error('Train style error:', err);
+      toast.error('Ошибка обучения стиля');
+    } finally {
+      setIsAnalyzingStyle(false);
+    }
+  };
+
+  const openPromptModal = () => {
+    setEditedPromptText(currentProject?.stylePrompt || '');
+    setIsEditingPrompt(false);
+    setShowPromptModal(true);
+  };
+  const handleSaveEditedPrompt = async () => {
+    if (!currentProject?.id || editedPromptText.trim() === currentProject?.stylePrompt) {
+      setIsEditingPrompt(false);
+      return;
+    }
+    setIsSavingPrompt(true);
+    try {
+      await updateProject(currentProject.id, { stylePrompt: editedPromptText.trim() });
+      toast.success('Промт сохранён');
+      setIsEditingPrompt(false);
+    } catch (e) {
+      toast.error('Не удалось сохранить промт');
+    } finally {
+      setIsSavingPrompt(false);
     }
   };
 
@@ -1120,9 +1233,21 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
           <div className="flex-1 flex flex-col min-w-0 min-h-[280px] md:min-h-0 rounded-card-xl shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] overflow-hidden">
             {/* Script header — на мобильных кнопки переносятся */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-b border-slate-100">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <FileText className="w-5 h-5 text-violet-500 flex-shrink-0" />
                 <h3 className="font-semibold text-slate-800">Мой сценарий</h3>
+                {currentProject?.stylePrompt && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={openPromptModal}
+                      className="px-2 py-0.5 rounded-full bg-violet-100 text-violet-600 text-[10px] font-medium hover:bg-violet-200 transition-colors"
+                      title="Показать и редактировать промт"
+                    >
+                      стиль {currentProject.styleExamplesCount ? `(${currentProject.styleExamplesCount} пример.)` : ''} · Промт
+                    </button>
+                  </>
+                )}
                 {video.script_text && (
                   <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 text-[10px] font-medium">
                     сохранён
@@ -1130,7 +1255,31 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                 )}
               </div>
               
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {currentProject?.stylePrompt && transcript?.trim() && (
+                  <button
+                    onClick={handleGenerateByStyle}
+                    disabled={isGeneratingScript}
+                    className="px-3 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-600 text-white text-xs font-medium transition-all flex items-center gap-1.5 disabled:opacity-50"
+                    title="Сгенерировать сценарий по стилю проекта (Gemini)"
+                  >
+                    {isGeneratingScript ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Wand2 className="w-3.5 h-3.5" />
+                    )}
+                    По стилю
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowStyleTrainModal(true)}
+                  className="px-3 py-1.5 rounded-lg border border-violet-200 bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-medium transition-all flex items-center gap-1.5"
+                  title={currentProject?.stylePrompt ? 'Переобучить стиль по примерам' : 'Обучить стиль по 1–5 примерам (оригинал + перевод + моя адаптация)'}
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  {currentProject?.stylePrompt ? 'Переобучить стиль' : 'Обучить стиль'}
+                </button>
                 {script && (
                   <>
                     <button
@@ -1178,6 +1327,147 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
           </div>
         </div>
       </div>
+
+      {/* Модальное окно: обучить стиль по примерам */}
+      {showStyleTrainModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !isAnalyzingStyle && setShowStyleTrainModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-slate-100">
+              <h3 className="font-semibold text-slate-800">Обучить стиль по примерам</h3>
+              <p className="text-slate-500 text-sm mt-1">
+                {currentProject?.stylePrompt
+                  ? 'Выберите примеры заново (можно добавить новые). Текущий промт будет заменён на новый, построенный по выбранным примерам. Вы всегда можете просмотреть и отредактировать промт по кнопке «Промт».'
+                  : 'Выберите 1–5 видео, у которых есть оригинал, перевод и ваш сценарий. Нейросеть выявит закономерности и создаст промт для генерации новых сценариев в вашем стиле.'}
+              </p>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {styleTrainCandidates.length === 0 ? (
+                <p className="text-slate-500 text-sm">Нет подходящих видео: нужны транскрипция и ваш сценарий.</p>
+              ) : (
+                styleTrainCandidates.map((v: { id: string; title?: string }) => (
+                  <label key={v.id} className={cn(
+                    "flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors",
+                    selectedVideoIdsForStyle.includes(v.id) ? "border-violet-300 bg-violet-50" : "border-slate-200 hover:bg-slate-50"
+                  )}>
+                    <input
+                      type="checkbox"
+                      checked={selectedVideoIdsForStyle.includes(v.id)}
+                      onChange={() => toggleVideoForStyle(v.id)}
+                      className="rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                    />
+                    <span className="text-sm text-slate-700 truncate">{v.title || v.id}</span>
+                  </label>
+                ))
+              )}
+            </div>
+            <div className="p-4 border-t border-slate-100 flex justify-between items-center">
+              <span className="text-xs text-slate-400">
+                Выбрано: {selectedVideoIdsForStyle.length} из 5
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowStyleTrainModal(false)}
+                  disabled={isAnalyzingStyle}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="button"
+                  onClick={handleTrainStyle}
+                  disabled={isAnalyzingStyle || selectedVideoIdsForStyle.length === 0}
+                  className="px-4 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isAnalyzingStyle ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Анализ...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      Анализировать и сохранить
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно: просмотр и редактирование промта стиля */}
+      {showPromptModal && currentProject?.stylePrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !isSavingPrompt && setShowPromptModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-2xl w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="font-semibold text-slate-800">Промт стиля проекта</h3>
+              <button type="button" onClick={() => setShowPromptModal(false)} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500">×</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Текст промта (используется при генерации «По стилю»)</label>
+                {isEditingPrompt ? (
+                  <textarea
+                    value={editedPromptText}
+                    onChange={(e) => setEditedPromptText(e.target.value)}
+                    className="w-full min-h-[200px] p-3 rounded-xl border border-slate-200 text-sm text-slate-700 focus:ring-2 focus:ring-violet-200 focus:border-violet-400 resize-y"
+                    placeholder="Промт..."
+                  />
+                ) : (
+                  <pre className="w-full p-3 rounded-xl border border-slate-100 bg-slate-50 text-sm text-slate-700 whitespace-pre-wrap font-sans max-h-[300px] overflow-y-auto">{currentProject.stylePrompt}</pre>
+                )}
+              </div>
+              {currentProject.styleMeta && (currentProject.styleMeta.rules?.length || currentProject.styleMeta.doNot?.length || currentProject.styleMeta.summary) && (
+                <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 space-y-2">
+                  {currentProject.styleMeta.summary && (
+                    <p className="text-sm text-slate-600"><span className="font-medium text-slate-700">Кратко:</span> {currentProject.styleMeta.summary}</p>
+                  )}
+                  {currentProject.styleMeta.rules?.length ? (
+                    <div>
+                      <span className="text-xs font-medium text-slate-500">Правила:</span>
+                      <ul className="list-disc list-inside text-sm text-slate-600 mt-1">{currentProject.styleMeta.rules.map((r, i) => <li key={i}>{r}</li>)}</ul>
+                    </div>
+                  ) : null}
+                  {currentProject.styleMeta.doNot?.length ? (
+                    <div>
+                      <span className="text-xs font-medium text-slate-500">Избегать:</span>
+                      <ul className="list-disc list-inside text-sm text-slate-600 mt-1">{currentProject.styleMeta.doNot.map((d, i) => <li key={i}>{d}</li>)}</ul>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t border-slate-100 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => navigator.clipboard.writeText(isEditingPrompt ? editedPromptText : (currentProject?.stylePrompt || ''))}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 flex items-center gap-1.5"
+              >
+                <Copy className="w-4 h-4" /> Копировать промт
+              </button>
+              {isEditingPrompt ? (
+                <>
+                  <button type="button" onClick={handleSaveEditedPrompt} disabled={isSavingPrompt} className="px-3 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium disabled:opacity-50 flex items-center gap-1.5">
+                    {isSavingPrompt ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Сохранить
+                  </button>
+                  <button type="button" onClick={() => { setIsEditingPrompt(false); setEditedPromptText(currentProject.stylePrompt || ''); }} className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+                    Отмена
+                  </button>
+                </>
+              ) : (
+                <button type="button" onClick={() => { setIsEditingPrompt(true); setEditedPromptText(currentProject.stylePrompt || ''); }} className="px-3 py-1.5 rounded-lg border border-violet-200 text-violet-600 text-sm font-medium hover:bg-violet-50">
+                  Редактировать промт
+                </button>
+              )}
+              <button type="button" onClick={() => setShowPromptModal(false)} className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 ml-auto">
+                Закрыть
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

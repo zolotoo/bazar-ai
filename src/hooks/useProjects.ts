@@ -16,6 +16,13 @@ export interface ProjectTemplateItem {
   label: string;
 }
 
+/** Мета стиля сценария проекта (результат анализа примеров) */
+export interface ProjectStyleMeta {
+  rules?: string[];
+  doNot?: string[];
+  summary?: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -26,6 +33,10 @@ export interface Project {
   linksTemplate?: ProjectTemplateItem[];
   /** Шаблон пунктов ответственных — общий для всех видео проекта */
   responsiblesTemplate?: ProjectTemplateItem[];
+  /** Промт стиля сценария проекта (один на проект; при нескольких людях — общий стиль) */
+  stylePrompt?: string;
+  styleMeta?: ProjectStyleMeta;
+  styleExamplesCount?: number;
   createdAt: Date;
   isShared?: boolean;
   membershipStatus?: 'active' | 'pending';
@@ -156,6 +167,9 @@ export function useProjects() {
           folders: p.folders || DEFAULT_FOLDERS.map((f, i) => ({ ...f, id: `folder-${i}` })),
           linksTemplate: Array.isArray(p.links_template) && p.links_template.length > 0 ? p.links_template : DEFAULT_LINKS_TEMPLATE,
           responsiblesTemplate: Array.isArray(p.responsibles_template) && p.responsibles_template.length > 0 ? p.responsibles_template : DEFAULT_RESPONSIBLES_TEMPLATE,
+          stylePrompt: p.style_prompt ?? undefined,
+          styleMeta: p.style_meta ?? undefined,
+          styleExamplesCount: p.style_examples_count ?? 0,
           createdAt: new Date(p.created_at),
           isShared: p.isShared || false,
           membershipStatus: p.membershipStatus,
@@ -276,14 +290,20 @@ export function useProjects() {
     return project;
   }, [getUserId, projects.length]);
 
-  // Обновление проекта (в т.ч. шаблоны ссылок и ответственных)
-  const updateProject = useCallback(async (projectId: string, updates: Partial<Pick<Project, 'name' | 'color' | 'icon' | 'folders' | 'linksTemplate' | 'responsiblesTemplate'>>) => {
+  // Обновление проекта (в т.ч. шаблоны ссылок, ответственных, стиль сценария)
+  const updateProject = useCallback(async (projectId: string, updates: Partial<Pick<Project, 'name' | 'color' | 'icon' | 'folders' | 'linksTemplate' | 'responsiblesTemplate' | 'stylePrompt' | 'styleMeta' | 'styleExamplesCount'>>) => {
     try {
       const dbUpdates: Record<string, unknown> = { ...updates };
       if ('linksTemplate' in updates) dbUpdates.links_template = updates.linksTemplate;
       if ('responsiblesTemplate' in updates) dbUpdates.responsibles_template = updates.responsiblesTemplate;
+      if ('stylePrompt' in updates) dbUpdates.style_prompt = updates.stylePrompt;
+      if ('styleMeta' in updates) dbUpdates.style_meta = updates.styleMeta;
+      if ('styleExamplesCount' in updates) dbUpdates.style_examples_count = updates.styleExamplesCount;
       delete dbUpdates.linksTemplate;
       delete dbUpdates.responsiblesTemplate;
+      delete dbUpdates.stylePrompt;
+      delete dbUpdates.styleMeta;
+      delete dbUpdates.styleExamplesCount;
 
       const { error } = await supabase
         .from('projects')

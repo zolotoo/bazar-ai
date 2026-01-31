@@ -1,5 +1,5 @@
 import { createContext, useContext, ReactNode } from 'react';
-import { useProjects, Project, ProjectFolder } from '../hooks/useProjects';
+import { useProjects, Project, ProjectFolder, ProjectStyleMeta } from '../hooks/useProjects';
 
 interface ProjectContextType {
   projects: Project[];
@@ -7,7 +7,7 @@ interface ProjectContextType {
   currentProjectId: string | null;
   loading: boolean;
   createProject: (name: string, color?: string) => Promise<Project | null>;
-  updateProject: (projectId: string, updates: Partial<Pick<Project, 'name' | 'color' | 'icon' | 'folders' | 'linksTemplate' | 'responsiblesTemplate'>>) => Promise<void>;
+  updateProject: (projectId: string, updates: Partial<Pick<Project, 'name' | 'color' | 'icon' | 'folders' | 'linksTemplate' | 'responsiblesTemplate' | 'stylePrompt' | 'styleMeta' | 'styleExamplesCount'>>) => Promise<void>;
   deleteProject: (projectId: string) => Promise<void>;
   selectProject: (projectId: string) => void;
   addFolder: (projectId: string, folderName: string) => Promise<void>;
@@ -38,4 +38,4 @@ export function useProjectContext() {
   return context;
 }
 
-export type { Project, ProjectFolder };
+export type { Project, ProjectFolder, ProjectStyleMeta };
