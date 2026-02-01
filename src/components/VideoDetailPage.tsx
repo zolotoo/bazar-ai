@@ -1124,8 +1124,11 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
               )}
             </div>
 
-            {/* Current folder + move */}
-            <div className="rounded-card-xl p-3 shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] relative">
+            {/* Current folder + move — z-[60] чтобы дропдаун был поверх раздела параметров */}
+            <div className={cn(
+              "rounded-card-xl p-3 shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] relative",
+              showFolderMenu && "z-[60]"
+            )}>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-slate-400 font-medium">Папка</span>
               </div>
@@ -1155,9 +1158,9 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                 )} />
               </button>
               
-              {/* Folder dropdown */}
+              {/* Folder dropdown — рисуется поверх Quick stats благодаря z-[60] у родителя */}
               {showFolderMenu && folderConfigs.length > 0 && (
-                <div className="absolute left-0 right-0 top-full mt-1 rounded-card-xl shadow-glass-lg bg-glass-white/90 backdrop-blur-glass-xl border border-white/[0.35] p-1.5 z-50">
+                <div className="absolute left-0 right-0 top-full mt-1 rounded-card-xl shadow-glass-lg bg-glass-white/95 backdrop-blur-glass-xl border border-white/[0.35] p-1.5 z-[70] shadow-xl">
                   {folderConfigs.map(folder => (
                     <button
                       key={folder.id}
