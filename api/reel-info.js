@@ -68,11 +68,27 @@ export default async function handler(req, res) {
         const likeCount = metrics.like_count || media.like_count || 0;
         const commentCount = metrics.comment_count || media.comment_count || 0;
         
+        // Карусель: несколько фото/видео в одном посте
+        const carouselMedia = media.carousel_media || media.carousel_media_count && media.children?.items || media.edge_sidecar_to_children?.edges;
+        let carousel_slides = [];
+        if (Array.isArray(carouselMedia) && carouselMedia.length > 0) {
+          carousel_slides = carouselMedia.map((item, i) => {
+            const img = item.image_versions?.candidates?.[0]?.url || item.image_versions?.items?.[0]?.url || item.display_url || item.images?.standard_resolution?.url || item.url;
+            return { url: img || '', index: i };
+          }).filter(s => s.url);
+        } else if (Array.isArray(media.children?.items)) {
+          carousel_slides = media.children.items.map((item, i) => ({
+            url: item.image_versions?.candidates?.[0]?.url || item.image_versions?.items?.[0]?.url || item.display_url || item.thumbnail_url || '',
+            index: i,
+          })).filter(s => s.url);
+        }
+        const is_carousel = carousel_slides.length > 1;
+
         const result = {
           success: true,
           shortcode: code,
-          url: url || `https://www.instagram.com/reel/${code}/`,
-          thumbnail_url: media.thumbnail_url || media.image_versions?.items?.[0]?.url || '',
+          url: url || (is_carousel ? `https://www.instagram.com/p/${code}/` : `https://www.instagram.com/reel/${code}/`),
+          thumbnail_url: media.thumbnail_url || media.image_versions?.items?.[0]?.url || carousel_slides[0]?.url || '',
           video_url: media.video_url || media.video_versions?.[0]?.url || '',
           caption: media.caption?.text || (typeof media.caption === 'string' ? media.caption : '') || '',
           view_count: viewCount,
@@ -84,19 +100,23 @@ export default async function handler(req, res) {
             full_name: media.user?.full_name || '',
           },
           is_video: media.is_video || media.media_type === 2 || !!media.video_url,
+          is_carousel: is_carousel,
+          carousel_slides: is_carousel ? carousel_slides.map(s => s.url) : undefined,
+          slide_count: is_carousel ? carousel_slides.length : undefined,
           api_used: 'instagram-scraper-20251',
         };
         
-        console.log('Extracted reel info:', {
+        console.log('Extracted post info:', {
           shortcode: result.shortcode,
+          is_carousel: result.is_carousel,
+          slide_count: result.slide_count,
           view_count: result.view_count,
           like_count: result.like_count,
-          comment_count: result.comment_count,
           owner: result.owner.username,
         });
         
         // Если получили данные - возвращаем
-        if (result.view_count || result.like_count || result.thumbnail_url || result.owner.username) {
+        if (result.view_count || result.like_count || result.thumbnail_url || result.owner.username || result.is_carousel) {
           return res.status(200).json(result);
         }
       }

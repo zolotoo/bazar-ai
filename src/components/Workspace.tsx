@@ -7,14 +7,23 @@ import { useActionHistory } from '../hooks/useActionHistory';
 import { useProjectSync } from '../hooks/useProjectSync';
 import { useProjectPresence } from '../hooks/useProjectPresence';
 import { PresenceIndicator } from './ui/PresenceIndicator';
-import { Sparkles, Star, FileText, Trash2, ExternalLink, Plus, Inbox, Lightbulb, Camera, Scissors, Check, FolderOpen, Settings, GripVertical, X, Palette, Eye, Heart, ChevronDown, ChevronRight, Undo2 } from 'lucide-react';
+import { Sparkles, Star, FileText, Trash2, ExternalLink, Plus, Inbox, Lightbulb, Camera, Scissors, Check, FolderOpen, Settings, GripVertical, X, Palette, Eye, Heart, ChevronDown, ChevronRight, Undo2, Images, Link2, Loader2, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../utils/cn';
 import { VideoGradientCard } from './ui/VideoGradientCard';
 import { VideoDetailPage } from './VideoDetailPage';
+import { CarouselDetailPage } from './CarouselDetailPage';
+import { useCarousels, type SavedCarousel } from '../hooks/useCarousels';
 import { calculateViralMultiplier, applyViralMultiplierToCoefficient, getProfileStats } from '../services/profileStatsService';
 import { dialogScale, backdropFade, iosSpringSoft } from '../utils/motionPresets';
 
+
+function formatNumber(num?: number): string {
+  if (num === undefined || num === null) return '0';
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+  return String(num);
+}
 
 // Проксирование Instagram изображений через наш API
 function proxyImageUrl(url?: string): string {
@@ -133,6 +142,12 @@ export function Workspace(props?: WorkspaceProps) {
   const [draggedFolderIndex, setDraggedFolderIndex] = useState<number | null>(null);
   const [isFolderWidgetOpen, setIsFolderWidgetOpen] = useState(true);
   const [profileStatsCache, setProfileStatsCache] = useState<Map<string, any>>(new Map());
+  // Раздел контента в проекте: рилсы или карусели
+  const [contentSection, setContentSection] = useState<'reels' | 'carousels'>('reels');
+  const [selectedCarousel, setSelectedCarousel] = useState<SavedCarousel | null>(null);
+  const [carouselLinkUrl, setCarouselLinkUrl] = useState('');
+  const [isAddingCarouselByLink, setIsAddingCarouselByLink] = useState(false);
+  const { carousels, loading: carouselsLoading, addCarousel, refetch: refetchCarousels } = useCarousels();
 
   // Открытие панели папок с нижнего бара (мобильные)
   useEffect(() => {
@@ -554,6 +569,30 @@ export function Workspace(props?: WorkspaceProps) {
   return (
     <>
       <AnimatePresence>
+        {selectedCarousel && (
+          <motion.div
+            key="carousel-detail-overlay"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6"
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            variants={backdropFade}
+          >
+            <div className="absolute inset-0 bg-black/25 backdrop-blur-glass-2xl" onClick={() => setSelectedCarousel(null)} aria-hidden />
+            <motion.div
+              className="relative w-full max-w-[95vw] md:max-w-6xl h-[90vh] max-h-[900px] rounded-card-2xl overflow-hidden shadow-float-lg bg-base-alt border border-white/[0.35]"
+              variants={dialogScale}
+              transition={iosSpringSoft}
+              onClick={e => e.stopPropagation()}
+            >
+              <CarouselDetailPage
+                carousel={selectedCarousel}
+                onBack={() => setSelectedCarousel(null)}
+                onRefreshData={refetchCarousels}
+              />
+            </motion.div>
+          </motion.div>
+        )}
         {selectedVideo && videoDetailProps && (
           <motion.div
             key="video-detail-overlay"
@@ -786,9 +825,42 @@ export function Workspace(props?: WorkspaceProps) {
 
       {/* Кнопка «Папки» на мобильных убрана — открытие только через нижний таб-бар */}
 
-      {/* Main Content - Video Feed */}
+      {/* Main Content - Video Feed or Carousels */}
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 md:px-6 safe-left safe-right custom-scrollbar-light" style={{ maxHeight: '100%' }}>
         <div className="max-w-6xl mx-auto py-5 md:py-8 safe-top safe-bottom">
+          {/* Tabs: Рилсы | Карусели (в каждом проекте два раздела) */}
+          <div className="flex gap-1.5 p-1.5 mb-4 md:mb-6 rounded-card-xl bg-glass-white/60 backdrop-blur-glass border border-white/[0.35] w-fit">
+            <button
+              onClick={() => setContentSection('reels')}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all touch-manipulation',
+                contentSection === 'reels'
+                  ? 'bg-slate-200/50 text-slate-800 shadow-glass-sm'
+                  : 'text-slate-600 hover:bg-white/50 hover:text-slate-800'
+              )}
+            >
+              <Sparkles className="w-4 h-4" strokeWidth={2.5} />
+              Рилсы
+              <span className="tabular-nums text-slate-500">{totalVideos}</span>
+            </button>
+            <button
+              onClick={() => setContentSection('carousels')}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all touch-manipulation',
+                contentSection === 'carousels'
+                  ? 'bg-slate-200/50 text-slate-800 shadow-glass-sm'
+                  : 'text-slate-600 hover:bg-white/50 hover:text-slate-800'
+              )}
+            >
+              <Images className="w-4 h-4" strokeWidth={2.5} />
+              Карусели
+              <span className="tabular-nums text-slate-500">{carousels.length}</span>
+            </button>
+          </div>
+
+          {/* Рилсы: текущая лента */}
+          {contentSection === 'reels' && (
+          <>
           {/* Header — glass bar */}
           <div className="mb-6 md:mb-8 rounded-card-xl bg-glass-white/80 backdrop-blur-glass-xl shadow-glass border border-white/[0.35] px-5 py-4 md:px-6 md:py-5">
             <div className="flex items-start md:items-center justify-between flex-wrap gap-4 md:gap-5">
@@ -1008,6 +1080,142 @@ export function Workspace(props?: WorkspaceProps) {
                 )}
               </button>
             </div>
+          )}
+          </>
+          )}
+
+          {/* Карусели: список + добавление по ссылке */}
+          {contentSection === 'carousels' && (
+            <>
+              <div className="mb-6 md:mb-8 rounded-card-xl bg-glass-white/80 backdrop-blur-glass-xl shadow-glass border border-white/[0.35] px-5 py-4 md:px-6 md:py-5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-200/40 flex items-center justify-center">
+                      <Images className="w-6 h-6 text-slate-600" strokeWidth={2.5} />
+                    </div>
+                    <div>
+                      <h1 className="text-xl md:text-2xl font-bold text-slate-800">Карусели</h1>
+                      <p className="text-slate-500 text-xs md:text-sm">Посты с несколькими фото — транскрипт по слайдам (Gemini)</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <div className="flex gap-2 flex-1 sm:min-w-[280px]">
+                      <input
+                        type="url"
+                        value={carouselLinkUrl}
+                        onChange={e => setCarouselLinkUrl(e.target.value)}
+                        placeholder="Ссылка на пост с каруселью (instagram.com/p/...)"
+                        className="flex-1 min-w-0 px-4 py-2.5 rounded-xl border border-slate-200/80 bg-white/80 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-300"
+                      />
+                      <button
+                        onClick={async () => {
+                          const url = carouselLinkUrl.trim();
+                          if (!url || !url.includes('instagram.com')) {
+                            toast.error('Вставьте ссылку на пост Instagram');
+                            return;
+                          }
+                          setIsAddingCarouselByLink(true);
+                          try {
+                            const res = await fetch('/api/reel-info', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ url }),
+                            });
+                            const data = await res.json();
+                            if (data.success && data.is_carousel && Array.isArray(data.carousel_slides) && data.carousel_slides.length > 0) {
+                              const added = await addCarousel({
+                                shortcode: data.shortcode,
+                                url: data.url,
+                                caption: data.caption,
+                                owner_username: data.owner?.username,
+                                like_count: data.like_count,
+                                comment_count: data.comment_count,
+                                taken_at: data.taken_at,
+                                slide_count: data.slide_count ?? data.carousel_slides.length,
+                                thumbnail_url: data.thumbnail_url ?? data.carousel_slides[0],
+                                slide_urls: data.carousel_slides,
+                              });
+                              if (added) {
+                                setCarouselLinkUrl('');
+                                toast.success('Карусель добавлена');
+                              }
+                            } else if (data.success && !data.is_carousel) {
+                              toast.error('Это не карусель — один пост. Добавляйте посты с несколькими фото.');
+                            } else {
+                              toast.error(data.error || 'Не удалось загрузить пост. Проверьте ссылку.');
+                            }
+                          } catch (e) {
+                            toast.error('Ошибка при добавлении карусели');
+                          } finally {
+                            setIsAddingCarouselByLink(false);
+                          }
+                        }}
+                        disabled={isAddingCarouselByLink || !carouselLinkUrl.trim()}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-500 hover:bg-violet-600 disabled:bg-slate-200 disabled:text-slate-400 text-white text-sm font-medium transition-colors shrink-0"
+                      >
+                        {isAddingCarouselByLink ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
+                        Добавить
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                {carouselsLoading ? (
+                  <div className="flex items-center justify-center py-20">
+                    <Loader2 className="w-10 h-10 text-slate-300 animate-spin" />
+                  </div>
+                ) : carousels.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <div className="w-20 h-20 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+                      <Images className="w-10 h-10 text-slate-300" />
+                    </div>
+                    <h3 className="text-lg font-medium text-slate-800 mb-1">Пока каруселей нет</h3>
+                    <p className="text-slate-500 text-sm max-w-sm mb-4">
+                      Вставьте ссылку на пост с каруселью (несколько фото) выше и нажмите «Добавить». Транскрипт по слайдам — через Gemini.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5 pb-20 md:pb-6">
+                    {carousels.map(c => (
+                      <button
+                        key={c.id}
+                        onClick={() => setSelectedCarousel(c)}
+                        className="group rounded-2xl overflow-hidden bg-white/80 border border-slate-200/80 shadow-sm hover:shadow-lg hover:border-violet-200/80 transition-all text-left"
+                      >
+                        <div className="aspect-square relative bg-slate-100">
+                          <img
+                            src={proxyImageUrl(c.thumbnail_url || undefined)}
+                            alt=""
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-lg bg-black/60 text-white text-xs font-medium flex items-center gap-1">
+                            <Images className="w-3 h-3" />
+                            {c.slide_count || 0}
+                          </div>
+                          {c.transcript_status === 'completed' && (
+                            <div className="absolute top-2 left-2 px-2 py-0.5 rounded-lg bg-emerald-500/90 text-white text-[10px] font-medium">
+                              Транскрипт
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-3">
+                          <p className="text-sm font-medium text-slate-800 truncate">{c.caption?.slice(0, 60) || 'Без подписи'}</p>
+                          <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
+                            <span className="flex items-center gap-0.5">
+                              <Heart className="w-3 h-3" />
+                              {formatNumber(c.like_count)}
+                            </span>
+                            <span className="flex items-center gap-0.5">
+                              <MessageCircle className="w-3 h-3" />
+                              {formatNumber(c.comment_count)}
+                            </span>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
       </div>
