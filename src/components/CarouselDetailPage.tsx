@@ -44,9 +44,15 @@ function formatNumber(num?: number): string {
 }
 
 function proxyImageUrl(url?: string): string {
-  if (!url) return 'https://via.placeholder.com/400x400';
-  if (url.includes('/api/proxy-image') || url.includes('placeholder.com')) return url;
-  if (url.includes('cdninstagram.com') || url.includes('instagram.com') || url.includes('workers.dev')) {
+  if (!url) return '';
+  if (url.startsWith('/api/') || url.includes('placeholder.com')) return url;
+  if (
+    url.includes('instagram.com') ||
+    url.includes('cdninstagram.com') ||
+    url.includes('fbcdn.net') ||
+    url.includes('scontent.') ||
+    url.includes('workers.dev')
+  ) {
     return `/api/proxy-image?url=${encodeURIComponent(url)}`;
   }
   return url;
@@ -76,6 +82,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
   const [showStylePickerPopover, setShowStylePickerPopover] = useState(false);
   const [slideIndex, setSlideIndex] = useState(0);
+  const [mainImageError, setMainImageError] = useState(false);
 
   const { currentProject, updateProject } = useProjectContext();
   const {
@@ -258,7 +265,8 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
     }
   };
 
-  const thumbnailUrl = proxyImageUrl(displayUrl);
+  const thumbnailUrl = displayUrl ? proxyImageUrl(displayUrl) : '';
+  const hasMainImage = Boolean(thumbnailUrl);
 
   return (
     <div className="flex flex-col h-full bg-slate-50/80 overflow-hidden">
@@ -307,8 +315,19 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
       <div className="flex-1 flex flex-col md:flex-row gap-4 min-h-0 overflow-y-auto p-4">
         {/* Left: slides + folder + stats + links + responsibles */}
         <div className="flex-shrink-0 flex flex-col gap-3 w-full md:w-72 lg:w-80">
-          <div className="relative rounded-2xl overflow-hidden shadow-lg bg-black aspect-square max-w-[280px] mx-auto md:mx-0 w-full">
-            <img src={thumbnailUrl} alt="" className="w-full h-full object-cover" />
+          <div className="relative rounded-2xl overflow-hidden shadow-lg bg-slate-200 aspect-square max-w-[280px] mx-auto md:mx-0 w-full">
+            {hasMainImage && !mainImageError ? (
+              <img
+                src={thumbnailUrl}
+                alt=""
+                className="w-full h-full object-cover"
+                onError={() => setMainImageError(true)}
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center bg-slate-200 text-slate-400">
+                <Images className="w-12 h-12" />
+              </div>
+            )}
             {slideUrls.length > 1 && (
               <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
                 {slideUrls.map((_, i) => (
@@ -326,18 +345,27 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
           </div>
           {slideUrls.length > 1 && (
             <div className="flex gap-1 overflow-x-auto pb-1">
-              {slideUrls.slice(0, 10).map((url, i) => (
-                <button
-                  key={i}
-                  onClick={() => setSlideIndex(i)}
-                  className={cn(
-                    'flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden border-2',
-                    i === slideIndex ? 'border-violet-500' : 'border-transparent'
-                  )}
-                >
-                  <img src={proxyImageUrl(url)} alt="" className="w-full h-full object-cover" />
-                </button>
-              ))}
+              {slideUrls.slice(0, 10).map((url, i) => {
+                const thumbSrc = proxyImageUrl(url);
+                return (
+                  <button
+                    key={i}
+                    onClick={() => { setSlideIndex(i); setMainImageError(false); }}
+                    className={cn(
+                      'flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden border-2 bg-slate-100',
+                      i === slideIndex ? 'border-violet-500' : 'border-transparent'
+                    )}
+                  >
+                    {thumbSrc ? (
+                      <img src={thumbSrc} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-400">
+                        <Images className="w-5 h-5" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
 
@@ -419,8 +447,8 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
         </div>
 
         {/* Middle: Transcript */}
-        <div className="flex-1 flex flex-col min-w-0 rounded-xl bg-white/80 border border-slate-200/80 overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-slate-100">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-xl bg-white/80 border border-slate-200/80 overflow-hidden">
+          <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-3 p-4 border-b border-slate-100 min-h-[56px]">
             <div className="flex items-center gap-2">
               <FileText className="w-5 h-5 text-slate-400" />
               <h3 className="font-semibold text-slate-800">Транскрипт по слайдам</h3>
@@ -451,7 +479,12 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
               <button
                 onClick={handleTranscribe}
                 disabled={slideUrls.length === 0 || isTranscribing}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-600 text-white text-xs font-medium disabled:opacity-50"
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium transition-colors',
+                  slideUrls.length === 0 || isTranscribing
+                    ? 'bg-violet-400 cursor-not-allowed'
+                    : 'bg-violet-500 hover:bg-violet-600'
+                )}
               >
                 {isTranscribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Images className="w-3.5 h-3.5" />}
                 Транскрибировать
@@ -470,7 +503,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
               )}
             </div>
           </div>
-          <div className="flex-1 overflow-auto p-4">
+          <div className="flex-1 min-h-0 overflow-auto p-4">
             {transcriptStatus === 'processing' && !transcript && (
               <div className="flex items-center gap-2 text-slate-500">
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -497,8 +530,8 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
         </div>
 
         {/* Right: Script */}
-        <div className="flex-1 flex flex-col min-w-0 rounded-xl bg-white/80 border border-slate-200/80 overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-slate-100">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-xl bg-white/80 border border-slate-200/80 overflow-hidden">
+          <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-3 p-4 border-b border-slate-100 min-h-[56px]">
             <div className="flex items-center gap-2">
               <FileText className="w-5 h-5 text-violet-500" />
               <h3 className="font-semibold text-slate-800">Сценарий</h3>
@@ -563,7 +596,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
               </>
             )}
           </div>
-          <div className="flex-1 overflow-auto p-4">
+          <div className="flex-1 min-h-0 overflow-auto p-4">
             <textarea
               value={script}
               onChange={e => setScript(e.target.value)}

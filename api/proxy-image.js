@@ -22,10 +22,12 @@ export default async function handler(req, res) {
   try {
     const decodedUrl = decodeURIComponent(url);
     
-    // Разрешённые источники: Instagram CDN и социальные API (workers.dev и т.п.)
+    // Разрешённые источники: Instagram CDN (в т.ч. fbcdn, scontent) и социальные API
     const isAllowed =
       decodedUrl.includes('cdninstagram.com') ||
       decodedUrl.includes('instagram.com') ||
+      decodedUrl.includes('fbcdn.net') ||
+      decodedUrl.includes('scontent.') ||
       decodedUrl.includes('workers.dev') ||
       decodedUrl.includes('socialapi');
     if (!isAllowed) {
@@ -36,7 +38,7 @@ export default async function handler(req, res) {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
     };
-    if (decodedUrl.includes('cdninstagram.com') || decodedUrl.includes('instagram.com')) {
+    if (decodedUrl.includes('cdninstagram.com') || decodedUrl.includes('instagram.com') || decodedUrl.includes('fbcdn.net') || decodedUrl.includes('scontent.')) {
       headers['Referer'] = 'https://www.instagram.com/';
     }
 
