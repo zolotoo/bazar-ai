@@ -21,7 +21,7 @@ export async function transcribeCarouselByUrls(
   imageUrls: string[]
 ): Promise<CarouselTranscriptionResult | null> {
   try {
-    const response = await fetch('/api/transcribe-carousel', {
+    const response = await fetch('/api/transcribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ imageUrls }),
@@ -58,7 +58,7 @@ export async function transcribeCarouselByImages(
   images: { mimeType: string; data: string }[]
 ): Promise<CarouselTranscriptionResult | null> {
   try {
-    const response = await fetch('/api/transcribe-carousel', {
+    const response = await fetch('/api/transcribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ images }),
