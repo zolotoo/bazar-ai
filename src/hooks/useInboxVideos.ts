@@ -606,29 +606,37 @@ export function useInboxVideos() {
 
   /**
    * Обновляет папку видео
+   * В общих проектах любой участник может перемещать любое видео — фильтруем по project_id, а не user_id
    */
-  const updateVideoFolder = useCallback(async (videoId: string, newFolderId: string) => {
+  const updateVideoFolder = useCallback(async (videoId: string, newFolderId: string | null) => {
     const userId = getUserId();
-    
+    const folderValue = newFolderId === 'inbox' ? null : newFolderId;
+
     // Оптимистичное обновление
-    setVideos(prev => prev.map(v => 
-      v.id === videoId ? { ...v, folder_id: newFolderId } as any : v
+    setVideos(prev => prev.map(v =>
+      v.id === videoId ? { ...v, folder_id: folderValue } as any : v
     ));
 
     try {
-      const { error } = await supabase
+      let query = supabase
         .from('saved_videos')
-        .update({ folder_id: newFolderId })
-        .eq('user_id', userId)
+        .update({ folder_id: folderValue })
         .eq('id', videoId);
-      
+
+      if (currentProjectId) {
+        query = query.eq('project_id', currentProjectId);
+      } else {
+        query = query.eq('user_id', userId);
+      }
+
+      const { error } = await query;
+
       if (error) {
         console.error('Error updating video folder:', error);
-        // Откатываем изменения
         fetchVideos();
         return false;
       }
-      
+
       return true;
     } catch (err) {
       console.error('Error updating video folder:', err);

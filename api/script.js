@@ -12,13 +12,15 @@ export default async function handler(req, res) {
   const hasGenerate = body.prompt && typeof body.transcript_text === 'string' && !body.feedback;
   const hasRefine = body.feedback && typeof body.prompt === 'string' && typeof body.transcript_text === 'string' && typeof body.script_text === 'string';
   const hasRefineByDiff = body.script_ai != null && body.script_human != null && typeof body.prompt === 'string' && typeof body.transcript_text === 'string';
+  const hasChat = body.action === 'chat' && Array.isArray(body.messages) && body.messages.length > 0 && typeof body.prompt === 'string';
 
   if (hasExamples) return handleAnalyze(req, res);
   if (hasRefineByDiff) return handleRefineByDiff(req, res);
   if (hasRefine) return handleRefine(req, res);
   if (hasGenerate) return handleGenerate(req, res);
+  if (hasChat) return handleChat(req, res);
   return res.status(400).json({
-    error: 'Use examples[] (analyze), prompt+transcript_text (generate), feedback+script_text (refine), or script_ai+script_human (refine by diff)',
+    error: 'Use examples[] (analyze), prompt+transcript_text (generate), feedback+script_text (refine), script_ai+script_human (refine by diff), or action:chat+messages[] (chat)',
   });
 }
 
@@ -356,5 +358,93 @@ ${String(script_human).trim()}
   } catch (err) {
     console.error('script refineByDiff error:', err);
     return res.status(500).json({ error: 'Failed to refine prompt', details: err.message });
+  }
+}
+
+/** Чат с нейронкой для доработки промта: многораундовый диалог */
+async function handleChat(req, res) {
+  const { messages, prompt, transcript_text, translation_text, script_text } = req.body;
+  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
+  if (!geminiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
+
+  const systemParts = [
+    'Ты помощник по доработке промта для генерации сценариев видео. Пользователь хочет улучшить промт, чтобы нейросеть генерировала сценарии в нужном стиле.',
+    '',
+    'Текущий промт:',
+    '---',
+    prompt.trim(),
+    '---',
+    '',
+  ];
+  if (transcript_text && transcript_text.trim()) {
+    systemParts.push('Контекст — исходник видео (оригинал):');
+    systemParts.push(transcript_text.trim().slice(0, 1500) + (transcript_text.length > 1500 ? '...' : ''));
+    systemParts.push('');
+  }
+  if (translation_text && translation_text.trim()) {
+    systemParts.push('Перевод на русский (фрагмент):');
+    systemParts.push(translation_text.trim().slice(0, 800) + (translation_text.length > 800 ? '...' : ''));
+    systemParts.push('');
+  }
+  if (script_text && script_text.trim()) {
+    systemParts.push('Текущий сценарий (сгенерированный или редактируемый):');
+    systemParts.push(script_text.trim().slice(0, 1000) + (script_text.length > 1000 ? '...' : ''));
+    systemParts.push('');
+  }
+  systemParts.push('Отвечай на русском. Можешь предлагать конкретные правки промта — тогда в конце ответа добавь блок в формате:');
+  systemParts.push('___ОБНОВЛЁННЫЙ_ПРОМТ___');
+  systemParts.push('(полный текст нового промта)');
+  systemParts.push('___КОНЕЦ_ПРОМТ___');
+  systemParts.push('Если правки не нужны — не добавляй этот блок.');
+
+  const contents = [
+    { role: 'user', parts: [{ text: systemParts.join('\n') }] },
+    { role: 'model', parts: [{ text: 'Понял. Жду твои пожелания по промту — что изменить, добавить, убрать. Отвечу и при необходимости предложу обновлённый вариант.' }] },
+  ];
+
+  for (const m of messages) {
+    if (m.role === 'user' && m.content?.trim()) {
+      contents.push({ role: 'user', parts: [{ text: String(m.content).trim() }] });
+    } else if (m.role === 'assistant' && m.content?.trim()) {
+      contents.push({ role: 'model', parts: [{ text: String(m.content).trim() }] });
+    }
+  }
+
+  try {
+    const geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents,
+          generationConfig: { temperature: 0.5 },
+        }),
+      }
+    );
+    if (!geminiRes.ok) {
+      const errBody = await geminiRes.text();
+      console.error('Gemini API error:', geminiRes.status, errBody);
+      return res.status(502).json({ error: 'Gemini API error', details: errBody });
+    }
+    const data = await geminiRes.json();
+    let reply = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    if (!reply) return res.status(502).json({ error: 'Gemini returned empty response' });
+
+    let suggestedPrompt = null;
+    const match = reply.match(/___ОБНОВЛЁННЫЙ_ПРОМТ___\s*([\s\S]*?)\s*___КОНЕЦ_ПРОМТ___/);
+    if (match) {
+      suggestedPrompt = match[1].trim();
+      reply = reply.replace(/___ОБНОВЛЁННЫЙ_ПРОМТ___\s*[\s\S]*?\s*___КОНЕЦ_ПРОМТ___/g, '').trim();
+    }
+
+    return res.status(200).json({
+      success: true,
+      reply,
+      suggested_prompt: suggestedPrompt || undefined,
+    });
+  } catch (err) {
+    console.error('script chat error:', err);
+    return res.status(500).json({ error: 'Failed to chat', details: err.message });
   }
 }

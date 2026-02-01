@@ -23,6 +23,15 @@ export interface ProjectStyleMeta {
   summary?: string;
 }
 
+/** Один стиль сценария в проекте (может быть несколько) */
+export interface ProjectStyle {
+  id: string;
+  name: string;
+  prompt: string;
+  meta?: ProjectStyleMeta;
+  examplesCount?: number;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -33,10 +42,12 @@ export interface Project {
   linksTemplate?: ProjectTemplateItem[];
   /** Шаблон пунктов ответственных — общий для всех видео проекта */
   responsiblesTemplate?: ProjectTemplateItem[];
-  /** Промт стиля сценария проекта (один на проект; при нескольких людях — общий стиль) */
+  /** Промт стиля (legacy, один на проект) — при наличии project_styles не используется */
   stylePrompt?: string;
   styleMeta?: ProjectStyleMeta;
   styleExamplesCount?: number;
+  /** Несколько стилей в проекте — приоритет над stylePrompt */
+  projectStyles?: ProjectStyle[];
   createdAt: Date;
   isShared?: boolean;
   membershipStatus?: 'active' | 'pending';
@@ -159,21 +170,42 @@ export function useProjects() {
       ];
 
       if (allProjects.length > 0) {
-        const loadedProjects: Project[] = allProjects.map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          color: p.color || '#f97316',
-          icon: p.icon || 'folder',
-          folders: p.folders || DEFAULT_FOLDERS.map((f, i) => ({ ...f, id: `folder-${i}` })),
-          linksTemplate: Array.isArray(p.links_template) && p.links_template.length > 0 ? p.links_template : DEFAULT_LINKS_TEMPLATE,
-          responsiblesTemplate: Array.isArray(p.responsibles_template) && p.responsibles_template.length > 0 ? p.responsibles_template : DEFAULT_RESPONSIBLES_TEMPLATE,
-          stylePrompt: p.style_prompt ?? undefined,
-          styleMeta: p.style_meta ?? undefined,
-          styleExamplesCount: p.style_examples_count ?? 0,
-          createdAt: new Date(p.created_at),
-          isShared: p.isShared || false,
-          membershipStatus: p.membershipStatus,
-        }));
+        const loadedProjects: Project[] = allProjects.map((p: any) => {
+          const rawStyles = Array.isArray(p.project_styles) ? p.project_styles : [];
+          const hasLegacy = p.style_prompt && p.style_prompt.trim();
+          let projectStyles: ProjectStyle[] = rawStyles.map((s: any) => ({
+            id: s.id || `style-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            name: s.name || 'Стиль',
+            prompt: s.prompt || '',
+            meta: s.meta || undefined,
+            examplesCount: s.examplesCount ?? s.examples_count ?? 0,
+          }));
+          if (projectStyles.length === 0 && hasLegacy) {
+            projectStyles = [{
+              id: 'legacy',
+              name: 'Стиль по умолчанию',
+              prompt: p.style_prompt,
+              meta: p.style_meta || undefined,
+              examplesCount: p.style_examples_count ?? 0,
+            }];
+          }
+          return {
+            id: p.id,
+            name: p.name,
+            color: p.color || '#f97316',
+            icon: p.icon || 'folder',
+            folders: p.folders || DEFAULT_FOLDERS.map((f, i) => ({ ...f, id: `folder-${i}` })),
+            linksTemplate: Array.isArray(p.links_template) && p.links_template.length > 0 ? p.links_template : DEFAULT_LINKS_TEMPLATE,
+            responsiblesTemplate: Array.isArray(p.responsibles_template) && p.responsibles_template.length > 0 ? p.responsibles_template : DEFAULT_RESPONSIBLES_TEMPLATE,
+            stylePrompt: p.style_prompt ?? undefined,
+            styleMeta: p.style_meta ?? undefined,
+            styleExamplesCount: p.style_examples_count ?? 0,
+            projectStyles,
+            createdAt: new Date(p.created_at),
+            isShared: p.isShared || false,
+            membershipStatus: p.membershipStatus,
+          };
+        });
         
         // Проверяем наличие pending приглашений для уведомлений
         const pendingInvitations = loadedProjects.filter(p => p.membershipStatus === 'pending');
@@ -290,8 +322,8 @@ export function useProjects() {
     return project;
   }, [getUserId, projects.length]);
 
-  // Обновление проекта (в т.ч. шаблоны ссылок, ответственных, стиль сценария)
-  const updateProject = useCallback(async (projectId: string, updates: Partial<Pick<Project, 'name' | 'color' | 'icon' | 'folders' | 'linksTemplate' | 'responsiblesTemplate' | 'stylePrompt' | 'styleMeta' | 'styleExamplesCount'>>) => {
+  // Обновление проекта (в т.ч. шаблоны ссылок, ответственных, стили сценария)
+  const updateProject = useCallback(async (projectId: string, updates: Partial<Pick<Project, 'name' | 'color' | 'icon' | 'folders' | 'linksTemplate' | 'responsiblesTemplate' | 'stylePrompt' | 'styleMeta' | 'styleExamplesCount' | 'projectStyles'>>) => {
     try {
       const dbUpdates: Record<string, unknown> = { ...updates };
       if ('linksTemplate' in updates) dbUpdates.links_template = updates.linksTemplate;
@@ -299,11 +331,21 @@ export function useProjects() {
       if ('stylePrompt' in updates) dbUpdates.style_prompt = updates.stylePrompt;
       if ('styleMeta' in updates) dbUpdates.style_meta = updates.styleMeta;
       if ('styleExamplesCount' in updates) dbUpdates.style_examples_count = updates.styleExamplesCount;
+      if ('projectStyles' in updates) {
+        dbUpdates.project_styles = (updates.projectStyles || []).map(s => ({
+          id: s.id,
+          name: s.name,
+          prompt: s.prompt,
+          meta: s.meta,
+          examplesCount: s.examplesCount,
+        }));
+      }
       delete dbUpdates.linksTemplate;
       delete dbUpdates.responsiblesTemplate;
       delete dbUpdates.stylePrompt;
       delete dbUpdates.styleMeta;
       delete dbUpdates.styleExamplesCount;
+      delete dbUpdates.projectStyles;
 
       const { error } = await supabase
         .from('projects')
@@ -440,6 +482,34 @@ export function useProjects() {
     await updateProject(projectId, { folders: reorderedFolders });
   }, [projects, updateProject]);
 
+  // Стили проекта: добавить, обновить, удалить
+  const addProjectStyle = useCallback(async (projectId: string, style: Omit<ProjectStyle, 'id'>) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    const styles = project.projectStyles || [];
+    const newStyle: ProjectStyle = {
+      ...style,
+      id: `style-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    };
+    await updateProject(projectId, { projectStyles: [...styles, newStyle] });
+  }, [projects, updateProject]);
+
+  const updateProjectStyle = useCallback(async (projectId: string, styleId: string, updates: Partial<Omit<ProjectStyle, 'id'>>) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    const styles = (project.projectStyles || []).map(s =>
+      s.id === styleId ? { ...s, ...updates } : s
+    );
+    await updateProject(projectId, { projectStyles: styles });
+  }, [projects, updateProject]);
+
+  const removeProjectStyle = useCallback(async (projectId: string, styleId: string) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    const styles = (project.projectStyles || []).filter(s => s.id !== styleId);
+    await updateProject(projectId, { projectStyles: styles });
+  }, [projects, updateProject]);
+
   // Текущий проект
   const currentProject = projects.find(p => p.id === currentProjectId) || null;
 
@@ -463,6 +533,9 @@ export function useProjects() {
     restoreFolder,
     updateFolder,
     reorderFolders,
+    addProjectStyle,
+    updateProjectStyle,
+    removeProjectStyle,
     refetch: fetchProjects,
   };
 }
