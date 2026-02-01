@@ -44,8 +44,8 @@ function proxyImageUrl(url?: string): string {
   if (!url) return 'https://via.placeholder.com/270x360';
   // Если уже проксировано или это placeholder - возвращаем как есть
   if (url.includes('/api/proxy-image') || url.includes('placeholder.com')) return url;
-  // Если это Instagram CDN - проксируем
-  if (url.includes('cdninstagram.com') || url.includes('instagram.com')) {
+  // Проксируем Instagram CDN и workers.dev (social API)
+  if (url.includes('cdninstagram.com') || url.includes('instagram.com') || url.includes('workers.dev') || url.includes('socialapi')) {
     return `/api/proxy-image?url=${encodeURIComponent(url)}`;
   }
   return url;

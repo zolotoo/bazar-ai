@@ -20,7 +20,7 @@ import { dialogScale, backdropFade, iosSpringSoft } from '../utils/motionPresets
 function proxyImageUrl(url?: string): string {
   if (!url) return 'https://via.placeholder.com/270x360';
   if (url.includes('/api/proxy-image') || url.includes('placeholder.com')) return url;
-  if (url.includes('cdninstagram.com') || url.includes('instagram.com')) {
+  if (url.includes('cdninstagram.com') || url.includes('instagram.com') || url.includes('workers.dev') || url.includes('socialapi')) {
     return `/api/proxy-image?url=${encodeURIComponent(url)}`;
   }
   return url;

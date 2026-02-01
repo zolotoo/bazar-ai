@@ -8,7 +8,7 @@ import { Sparkles, MoreVertical, ArrowRight, Eye, Heart, Loader2, FileText, Aler
 function proxyImageUrl(url?: string): string {
   if (!url) return 'https://via.placeholder.com/270x360';
   if (url.includes('/api/proxy-image') || url.includes('placeholder.com')) return url;
-  if (url.includes('cdninstagram.com') || url.includes('instagram.com')) {
+  if (url.includes('cdninstagram.com') || url.includes('instagram.com') || url.includes('workers.dev') || url.includes('socialapi')) {
     return `/api/proxy-image?url=${encodeURIComponent(url)}`;
   }
   return url;
@@ -65,12 +65,18 @@ export const VideoGradientCard = ({
   const cardRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [imgError, setImgError] = useState(false);
   useEffect(() => {
     const m = () => setIsMobile(window.matchMedia('(max-width: 768px)').matches);
     m();
     window.addEventListener('resize', m);
     return () => window.removeEventListener('resize', m);
   }, []);
+
+  // Сброс ошибки при смене превью
+  useEffect(() => {
+    setImgError(false);
+  }, [thumbnailUrl]);
 
   return (
     <div
@@ -121,12 +127,13 @@ export const VideoGradientCard = ({
           transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
         >
           <img
-            src={proxyImageUrl(thumbnailUrl)}
+            src={imgError ? 'https://via.placeholder.com/270x360' : proxyImageUrl(thumbnailUrl)}
             alt=""
             className="absolute inset-0 w-full h-full object-cover"
             loading="eager"
             decoding="async"
             fetchPriority="high"
+            onError={() => setImgError(true)}
           />
         </motion.div>
 

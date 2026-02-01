@@ -22,18 +22,25 @@ export default async function handler(req, res) {
   try {
     const decodedUrl = decodeURIComponent(url);
     
-    // Проверяем что это Instagram CDN
-    if (!decodedUrl.includes('cdninstagram.com') && !decodedUrl.includes('instagram.com')) {
-      return res.status(400).json({ error: 'Only Instagram URLs are allowed' });
+    // Разрешённые источники: Instagram CDN и социальные API (workers.dev и т.п.)
+    const isAllowed =
+      decodedUrl.includes('cdninstagram.com') ||
+      decodedUrl.includes('instagram.com') ||
+      decodedUrl.includes('workers.dev') ||
+      decodedUrl.includes('socialapi');
+    if (!isAllowed) {
+      return res.status(400).json({ error: 'URL not allowed' });
     }
 
-    const response = await fetch(decodedUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': 'https://www.instagram.com/',
-        'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
-      },
-    });
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+    };
+    if (decodedUrl.includes('cdninstagram.com') || decodedUrl.includes('instagram.com')) {
+      headers['Referer'] = 'https://www.instagram.com/';
+    }
+
+    const response = await fetch(decodedUrl, { headers });
 
     if (!response.ok) {
       console.error('Failed to fetch image:', response.status);

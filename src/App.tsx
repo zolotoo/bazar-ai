@@ -588,7 +588,7 @@ function AppContent() {
                               name={project.name}
                               color={project.color}
                               isActive={currentProjectId === project.id}
-                              onClick={() => { selectProject(project.id); setSidebarExpanded(false); }}
+                              onClick={() => { selectProject(project.id); if (window.innerWidth < 768) setSidebarExpanded(false); }}
                               onEdit={() => setEditingProject({ id: project.id, name: project.name, color: project.color })}
                               icon={<FolderOpen className="w-4 h-4" style={{ color: project.color || '#64748b' }} strokeWidth={2.5} />}
                             />
@@ -621,7 +621,7 @@ function AppContent() {
                                   name={project.name}
                                   color={project.color}
                                   isActive={currentProjectId === project.id}
-                                  onClick={async () => { await handleProjectClick(project); setSidebarExpanded(false); }}
+                                  onClick={async () => { await handleProjectClick(project); if (window.innerWidth < 768) setSidebarExpanded(false); }}
                                   onEdit={() => setEditingProject({ id: project.id, name: project.name, color: project.color })}
                                   icon={<FolderOpen className="w-4 h-4" style={{ color: project.color || '#64748b' }} strokeWidth={2.5} />}
                                   badge={isPending ? 'Новое' : undefined}
