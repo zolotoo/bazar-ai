@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ChevronLeft, FileText, Copy, ExternalLink, Loader2, Check,
   Languages, ChevronDown, Save, Plus, Trash2, Wand2, Images, Heart, MessageCircle, RefreshCw
@@ -85,6 +86,8 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
   const [mainImageError, setMainImageError] = useState(false);
   const [localSlideUrls, setLocalSlideUrls] = useState<string[]>(() => (carousel.slide_urls && carousel.slide_urls.length > 0 ? carousel.slide_urls : carousel.thumbnail_url ? [carousel.thumbnail_url] : []));
   const [isRefreshingSlides, setIsRefreshingSlides] = useState(false);
+  const stylePickerButtonRef = useRef<HTMLButtonElement>(null);
+  const [popoverRect, setPopoverRect] = useState<{ top: number; left: number } | null>(null);
 
   const { currentProject, updateProject } = useProjectContext();
   const {
@@ -116,6 +119,15 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
     const urls = carousel.slide_urls?.length ? carousel.slide_urls : carousel.thumbnail_url ? [carousel.thumbnail_url] : [];
     setLocalSlideUrls(urls);
   }, [carousel.id, carousel.slide_urls, carousel.thumbnail_url]);
+
+  useEffect(() => {
+    if (showStylePickerPopover && stylePickerButtonRef.current) {
+      const rect = stylePickerButtonRef.current.getBoundingClientRect();
+      setPopoverRect({ top: rect.bottom + 4, left: rect.left });
+    } else {
+      setPopoverRect(null);
+    }
+  }, [showStylePickerPopover]);
 
   const folderConfigs = currentProject?.folders?.slice().sort((a, b) => a.order - b.order).map(f => ({ id: f.id, title: f.name, color: f.color })) || [];
   const currentFolder = currentFolderId ? folderConfigs.find(f => f.id === currentFolderId) : null;
@@ -489,9 +501,9 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
 
         {/* Middle: Transcript — высота шапки как у Сценария для одного уровня текста */}
         <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-xl bg-white/80 border border-slate-200/80 overflow-hidden">
-          <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-3 p-4 border-b border-slate-100 h-[72px] box-border overflow-hidden">
+          <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-3 p-4 border-b border-slate-100 min-h-[72px]">
             <div className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-slate-400" />
+              <FileText className="w-5 h-5 text-slate-400 flex-shrink-0" />
               <h3 className="font-semibold text-slate-800">Транскрипт по слайдам</h3>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -570,15 +582,16 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
           </div>
         </div>
 
-        {/* Right: Script — высота шапки 72px как у Транскрипта */}
+        {/* Right: Script — высота шапки как у Транскрипта */}
         <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-xl bg-white/80 border border-slate-200/80 overflow-hidden">
-          <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-3 p-4 border-b border-slate-100 h-[72px] box-border overflow-hidden">
-            <div className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-violet-500" />
+          <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-3 p-4 border-b border-slate-100 min-h-[72px]">
+            <div className="flex items-center gap-2 flex-wrap">
+              <FileText className="w-5 h-5 text-violet-500 flex-shrink-0" />
               <h3 className="font-semibold text-slate-800">Сценарий</h3>
               {(projectStyles.length > 0 || currentProject?.stylePrompt) && (
-                <div className="relative">
+                <>
                   <button
+                    ref={stylePickerButtonRef}
                     onClick={() => setShowStylePickerPopover(!showStylePickerPopover)}
                     disabled={isGeneratingScript || !transcript.trim()}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-600 text-white text-xs font-medium disabled:opacity-50"
@@ -587,10 +600,13 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                     По стилю
                     <ChevronDown className="w-3 h-3" />
                   </button>
-                  {showStylePickerPopover && (
+                  {showStylePickerPopover && popoverRect && createPortal(
                     <>
-                      <div className="fixed inset-0 z-40" onClick={() => setShowStylePickerPopover(false)} aria-hidden />
-                      <div className="absolute top-full left-0 mt-1 z-50 min-w-[200px] rounded-xl border border-slate-200 bg-white shadow-xl py-1.5">
+                      <div className="fixed inset-0 z-[9998]" onClick={() => setShowStylePickerPopover(false)} aria-hidden />
+                      <div
+                        className="fixed z-[9999] min-w-[200px] rounded-xl border border-slate-200 bg-white shadow-xl py-1.5"
+                        style={{ top: popoverRect.top, left: popoverRect.left }}
+                      >
                         {projectStyles.map(s => (
                           <button
                             key={s.id}
@@ -617,9 +633,10 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                           </button>
                         )}
                       </div>
-                    </>
+                    </>,
+                    document.body
                   )}
-                </div>
+                </>
               )}
             </div>
             {script && (
