@@ -142,31 +142,33 @@ async function handleGenerate(req, res) {
     userParts.push('\nПеревод на русский:\n' + translation_text.trim());
   }
   userParts.push('\n\nСгенерируй мой сценарий (адаптацию) по этим данным. Выводи только текст сценария, без пояснений.');
-  const userText = userParts.join('');
+  let userText = userParts.join('');
+  // Truncate if very long (~100k chars) to avoid token limits
+  const MAX_CHARS = 100000;
+  if (userText.length > MAX_CHARS) {
+    userText = userText.slice(0, MAX_CHARS) + '\n\n[... текст обрезан из-за длины ...]';
+  }
 
-  const modelsToTry = ['gemini-2.0-flash', 'gemini-2.5-flash'];
+  const safetySettings = [
+    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+    { category: 'HARM_CATEGORY_CIVIC_INTEGRITY', threshold: 'BLOCK_NONE' },
+  ];
+
+  const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-1.5-flash'];
   for (const model of modelsToTry) {
     try {
+      const body = {
+        contents: [{ role: 'user', parts: [{ text: userText }] }],
+        systemInstruction: { parts: [{ text: prompt.trim() }] },
+        generationConfig: { temperature: 0.4 },
+        safetySettings,
+      };
       const geminiRes = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiKey)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: userText }] }],
-          systemInstruction: { parts: [{ text: prompt.trim() }] },
-          generationConfig: {
-            temperature: 0.4,
-            safetySettings: [
-              { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-              { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-              { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-              { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-              { category: 'HARM_CATEGORY_CIVIC_INTEGRITY', threshold: 'BLOCK_NONE' },
-            ],
-          },
-        }),
-        }
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
       );
       if (!geminiRes.ok) {
         const errBody = await geminiRes.text();
@@ -174,9 +176,15 @@ async function handleGenerate(req, res) {
         continue;
       }
       const data = await geminiRes.json();
-      let script = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-      if (!script && data?.candidates?.[0]?.content?.parts?.length) {
-        script = data.candidates[0].content.parts
+      const cand = data?.candidates?.[0];
+      const finishReason = cand?.finishReason;
+      if (finishReason === 'SAFETY') {
+        console.error(`Gemini safety block (${model})`);
+        continue;
+      }
+      let script = cand?.content?.parts?.[0]?.text?.trim() || '';
+      if (!script && cand?.content?.parts?.length) {
+        script = cand.content.parts
           .map((p) => (p.text || '').trim())
           .filter(Boolean)
           .join('\n');
