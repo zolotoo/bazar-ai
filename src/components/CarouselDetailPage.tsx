@@ -346,8 +346,8 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
 
       <div className="flex-1 flex flex-col md:flex-row gap-4 min-h-0 overflow-y-auto p-4">
         {/* Left: slides + folder + stats + links + responsibles */}
-        <div className="flex-shrink-0 flex flex-col gap-3 w-full md:w-72 lg:w-80">
-          <div className="relative rounded-2xl overflow-hidden shadow-lg bg-slate-200 aspect-square max-w-[280px] mx-auto md:mx-0 w-full">
+        <div className="flex-shrink-0 flex flex-col gap-3 w-full md:min-w-[300px] md:w-[320px] lg:w-[360px]">
+          <div className="relative flex-shrink-0 rounded-2xl overflow-hidden shadow-lg bg-slate-200 w-full min-h-[280px] aspect-square max-h-[360px] mx-auto md:mx-0 max-w-full">
             {hasMainImage && !mainImageError ? (
               <img
                 src={thumbnailUrl}
@@ -385,7 +385,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
             Обновить слайды
           </button>
           {slideUrls.length > 1 && (
-            <div className="flex gap-1 overflow-x-auto pb-1">
+            <div className="flex gap-1.5 overflow-x-auto pb-1 min-h-[52px]">
               {slideUrls.slice(0, 10).map((url, i) => {
                 const thumbSrc = proxyImageUrl(url);
                 return (
@@ -393,7 +393,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                     key={i}
                     onClick={() => { setSlideIndex(i); setMainImageError(false); }}
                     className={cn(
-                      'flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden border-2 bg-slate-100',
+                      'flex-shrink-0 w-12 h-12 min-w-12 min-h-12 rounded-lg overflow-hidden border-2 bg-slate-100',
                       i === slideIndex ? 'border-violet-500' : 'border-transparent'
                     )}
                   >
@@ -544,7 +544,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
               )}
             </div>
           </div>
-          <div className="flex-1 min-h-0 overflow-auto p-4">
+          <div className="flex-1 min-h-0 flex flex-col p-4">
             {transcriptStatus === 'processing' && !transcript && (
               <div className="flex items-center gap-2 text-slate-500">
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -555,7 +555,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
               <textarea
                 value={transcript}
                 onChange={e => setTranscript(e.target.value)}
-                className="w-full min-h-[200px] p-3 rounded-xl border border-slate-200 text-sm text-slate-700 resize-y focus:outline-none focus:ring-2 focus:ring-violet-200"
+                className="w-full flex-1 min-h-[120px] p-3 rounded-xl border border-slate-200 text-sm text-slate-700 resize-y focus:outline-none focus:ring-2 focus:ring-violet-200"
                 placeholder="Нажмите «Транскрибировать» — текст будет извлечён из слайдов через Gemini."
               />
             )}
@@ -563,7 +563,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
               <textarea
                 value={translation}
                 onChange={e => setTranslation(e.target.value)}
-                className="w-full min-h-[200px] p-3 rounded-xl border border-slate-200 text-sm text-slate-700 resize-y focus:outline-none focus:ring-2 focus:ring-violet-200"
+                className="w-full flex-1 min-h-[120px] p-3 rounded-xl border border-slate-200 text-sm text-slate-700 resize-y focus:outline-none focus:ring-2 focus:ring-violet-200"
                 placeholder="Нажмите «Перевести» для перевода на русский."
               />
             )}
@@ -637,11 +637,11 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
               </>
             )}
           </div>
-          <div className="flex-1 min-h-0 overflow-auto p-4">
+          <div className="flex-1 min-h-0 flex flex-col p-4">
             <textarea
               value={script}
               onChange={e => setScript(e.target.value)}
-              className="w-full h-full min-h-[200px] p-3 rounded-xl border border-slate-200 text-sm text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-violet-200"
+              className="w-full flex-1 min-h-[120px] p-3 rounded-xl border border-slate-200 text-sm text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-violet-200"
               placeholder="Сгенерируйте сценарий по стилю или напишите вручную."
             />
           </div>
