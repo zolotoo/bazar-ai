@@ -592,10 +592,10 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
 
         {/* Right: Script — высота шапки как у Транскрипта */}
         <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-xl bg-white/80 border border-slate-200/80 overflow-hidden">
-          <div className="flex-shrink-0 flex items-center justify-between gap-3 p-4 border-b border-slate-100 min-h-[72px] overflow-x-auto overflow-y-hidden">
-            <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
+          <div className="flex-shrink-0 flex flex-wrap items-center gap-2 p-4 border-b border-slate-100 min-h-[72px]">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <FileText className="w-5 h-5 text-violet-500 flex-shrink-0" />
-              <h3 className="font-semibold text-slate-800 truncate">Сценарий</h3>
+              <h3 className="font-semibold text-slate-800">Сценарий</h3>
               <button
                 type="button"
                 onClick={() => setShowStyleTrainModal(true)}
@@ -606,7 +606,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                 Обучить стиль
               </button>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
               <div className="relative">
                 <button
                   ref={stylePickerButtonRef}
