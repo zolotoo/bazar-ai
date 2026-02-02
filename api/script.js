@@ -1,4 +1,16 @@
 // Vercel Serverless — стиль сценария: анализ примеров ИЛИ генерация по промту (Gemini). Один файл = одна функция (лимит Hobby 12).
+
+/** Возвращает массив API-ключей: GEMINI_API_KEYS (через запятую) или GEMINI_API_KEY / GOOGLE_GEMINI_API_KEY */
+function getGeminiKeys() {
+  const multi = process.env.GEMINI_API_KEYS;
+  if (multi && typeof multi === 'string') {
+    const keys = multi.split(',').map((k) => k.trim()).filter(Boolean);
+    if (keys.length) return keys;
+  }
+  const single = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
+  return single ? [single] : [];
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -37,8 +49,8 @@ async function handleAnalyze(req, res) {
     }
   }
 
-  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
-  if (!geminiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
+  const geminiKeys = getGeminiKeys();
+  if (!geminiKeys.length) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
 
   const parts = [];
   parts.push(`Задача: по примерам адаптации сценариев выявить закономерности и сформулировать промт для нейросети.
@@ -73,68 +85,69 @@ async function handleAnalyze(req, res) {
     parts.push(`Моя адаптация:\n${ex.script_text}\n`);
   });
 
-  try {
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: parts.join('') }] }],
-          generationConfig: { temperature: 0.3, responseMimeType: 'application/json' },
-        }),
-      }
-    );
-    if (!geminiRes.ok) {
-      const errBody = await geminiRes.text();
-      console.error('Gemini API error:', geminiRes.status, errBody);
-      return res.status(502).json({ error: 'Gemini API error', details: errBody });
-    }
-    const data = await geminiRes.json();
-    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-    if (!rawText) return res.status(502).json({ error: 'Gemini returned empty response' });
-    let jsonStr = (rawText.match(/\{[\s\S]*\}/) || [null])[0] || rawText;
-    // Убираем типичные ошибки Gemini: trailing comma
-    jsonStr = jsonStr.replace(/,(\s*[}\]])/g, '$1');
-    let parsed;
+  for (const geminiKey of geminiKeys) {
     try {
-      parsed = JSON.parse(jsonStr);
-    } catch (parseErr) {
-      // Ещё попытка: обрезать до последнего полного объекта (часто модель дописывает текст после })
-      const lastBrace = jsonStr.lastIndexOf('}');
-      if (lastBrace > 0) {
-        try {
-          parsed = JSON.parse(jsonStr.slice(0, lastBrace + 1).replace(/,(\s*[}\]])/g, '$1'));
-        } catch (_) {
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: parts.join('') }] }],
+            generationConfig: { temperature: 0.3, responseMimeType: 'application/json' },
+          }),
+        }
+      );
+      if (geminiRes.status === 429) continue;
+      if (!geminiRes.ok) {
+        const errBody = await geminiRes.text();
+        console.error('Gemini API error:', geminiRes.status, errBody);
+        continue;
+      }
+      const data = await geminiRes.json();
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+      if (!rawText) continue;
+      let jsonStr = (rawText.match(/\{[\s\S]*\}/) || [null])[0] || rawText;
+      jsonStr = jsonStr.replace(/,(\s*[}\]])/g, '$1');
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch (parseErr) {
+        const lastBrace = jsonStr.lastIndexOf('}');
+        if (lastBrace > 0) {
+          try {
+            parsed = JSON.parse(jsonStr.slice(0, lastBrace + 1).replace(/,(\s*[}\]])/g, '$1'));
+          } catch (_) {
+            throw parseErr;
+          }
+        } else {
           throw parseErr;
         }
-      } else {
-        throw parseErr;
       }
+      const promptText = typeof parsed.prompt === 'string' ? parsed.prompt : '';
+      const meta = parsed.meta && typeof parsed.meta === 'object' ? parsed.meta : {};
+      if (!promptText) continue;
+      return res.status(200).json({
+        success: true,
+        prompt: promptText,
+        meta: {
+          rules: Array.isArray(meta.rules) ? meta.rules : [],
+          doNot: Array.isArray(meta.doNot) ? meta.doNot : [],
+          summary: typeof meta.summary === 'string' ? meta.summary : '',
+        },
+      });
+    } catch (err) {
+      console.error('script analyze error:', err);
     }
-    const prompt = typeof parsed.prompt === 'string' ? parsed.prompt : '';
-    const meta = parsed.meta && typeof parsed.meta === 'object' ? parsed.meta : {};
-    if (!prompt) return res.status(502).json({ error: 'Gemini did not return a valid prompt' });
-    return res.status(200).json({
-      success: true,
-      prompt,
-      meta: {
-        rules: Array.isArray(meta.rules) ? meta.rules : [],
-        doNot: Array.isArray(meta.doNot) ? meta.doNot : [],
-        summary: typeof meta.summary === 'string' ? meta.summary : '',
-      },
-    });
-  } catch (err) {
-    console.error('script analyze error:', err);
-    return res.status(500).json({ error: 'Failed to analyze style', details: err.message });
   }
+  return res.status(502).json({ error: 'Gemini API error or quota exceeded' });
 }
 
 async function handleGenerate(req, res) {
   const { prompt, transcript_text, translation_text } = req.body;
   if (!prompt.trim()) return res.status(400).json({ error: 'prompt is required' });
-  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
-  if (!geminiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
+  const geminiKeys = getGeminiKeys();
+  if (!geminiKeys.length) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
 
   const userParts = [];
   userParts.push('Исходный сценарий (оригинал):\n' + transcript_text.trim());
@@ -143,7 +156,6 @@ async function handleGenerate(req, res) {
   }
   userParts.push('\n\nСгенерируй мой сценарий (адаптацию) по этим данным. Выводи только текст сценария, без пояснений.');
   let userText = userParts.join('');
-  // Truncate if very long (~100k chars) to avoid token limits
   const MAX_CHARS = 100000;
   if (userText.length > MAX_CHARS) {
     userText = userText.slice(0, MAX_CHARS) + '\n\n[... текст обрезан из-за длины ...]';
@@ -158,53 +170,49 @@ async function handleGenerate(req, res) {
   ];
 
   const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'];
-  let last429Model = null;
-  for (const model of modelsToTry) {
-    const doRequest = async () => {
-      const body = {
-        contents: [{ role: 'user', parts: [{ text: userText }] }],
-        systemInstruction: { parts: [{ text: prompt.trim() }] },
-        generationConfig: { temperature: 0.4 },
-        safetySettings,
-      };
-      return fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiKey)}`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
-      );
-    };
-    try {
-      let geminiRes = await doRequest();
-      if (geminiRes.status === 429) {
-        last429Model = model;
-        const retryDelay = 8000;
-        await new Promise((r) => setTimeout(r, retryDelay));
-        geminiRes = await doRequest();
+  let got429 = false;
+  for (const geminiKey of geminiKeys) {
+    for (const model of modelsToTry) {
+      try {
+        const body = {
+          contents: [{ role: 'user', parts: [{ text: userText }] }],
+          systemInstruction: { parts: [{ text: prompt.trim() }] },
+          generationConfig: { temperature: 0.4 },
+          safetySettings,
+        };
+        const geminiRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiKey)}`,
+          { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+        );
+        if (geminiRes.status === 429) {
+          got429 = true;
+          break;
+        }
+        if (!geminiRes.ok) {
+          const errBody = await geminiRes.text();
+          console.error(`Gemini API error (${model}):`, geminiRes.status, errBody);
+          continue;
+        }
+        const data = await geminiRes.json();
+        const cand = data?.candidates?.[0];
+        if (cand?.finishReason === 'SAFETY') {
+          console.error(`Gemini safety block (${model})`);
+          continue;
+        }
+        let script = cand?.content?.parts?.[0]?.text?.trim() || '';
+        if (!script && cand?.content?.parts?.length) {
+          script = cand.content.parts
+            .map((p) => (p.text || '').trim())
+            .filter(Boolean)
+            .join('\n');
+        }
+        if (script) return res.status(200).json({ success: true, script });
+      } catch (err) {
+        console.error(`script generate error (${model}):`, err);
       }
-      if (!geminiRes.ok) {
-        const errBody = await geminiRes.text();
-        console.error(`Gemini API error (${model}):`, geminiRes.status, errBody);
-        continue;
-      }
-      const data = await geminiRes.json();
-      const cand = data?.candidates?.[0];
-      const finishReason = cand?.finishReason;
-      if (finishReason === 'SAFETY') {
-        console.error(`Gemini safety block (${model})`);
-        continue;
-      }
-      let script = cand?.content?.parts?.[0]?.text?.trim() || '';
-      if (!script && cand?.content?.parts?.length) {
-        script = cand.content.parts
-          .map((p) => (p.text || '').trim())
-          .filter(Boolean)
-          .join('\n');
-      }
-      if (script) return res.status(200).json({ success: true, script });
-    } catch (err) {
-      console.error(`script generate error (${model}):`, err);
     }
   }
-  const errMsg = last429Model
+  const errMsg = got429
     ? 'Лимит Gemini API исчерпан. Подождите несколько минут или проверьте квоты на ai.google.dev.'
     : 'Gemini returned empty script. Try again or shorten the transcript.';
   return res.status(502).json({ error: errMsg });
@@ -215,8 +223,8 @@ async function handleRefine(req, res) {
   if (!feedback || typeof feedback !== 'string' || !feedback.trim()) {
     return res.status(400).json({ error: 'feedback is required' });
   }
-  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
-  if (!geminiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
+  const geminiKeys = getGeminiKeys();
+  if (!geminiKeys.length) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
 
   const userText = `Текущий промт для генерации сценария:
 ---
@@ -247,67 +255,70 @@ ${feedback.trim()}
 }
 Если уточнения не нужны — clarifying_questions не включай или пустой массив.`;
 
-  try {
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: userText }] }],
-          generationConfig: { temperature: 0.2, responseMimeType: 'application/json' },
-        }),
-      }
-    );
-    if (!geminiRes.ok) {
-      const errBody = await geminiRes.text();
-      console.error('Gemini API error:', geminiRes.status, errBody);
-      return res.status(502).json({ error: 'Gemini API error', details: errBody });
-    }
-    const data = await geminiRes.json();
-    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-    if (!rawText) return res.status(502).json({ error: 'Gemini returned empty response' });
-    let jsonStr = (rawText.match(/\{[\s\S]*\}/) || [null])[0] || rawText;
-    jsonStr = jsonStr.replace(/,(\s*[}\]])/g, '$1');
-    let parsed;
+  for (const geminiKey of geminiKeys) {
     try {
-      parsed = JSON.parse(jsonStr);
-    } catch (parseErr) {
-      const lastBrace = jsonStr.lastIndexOf('}');
-      if (lastBrace > 0) {
-        try {
-          parsed = JSON.parse(jsonStr.slice(0, lastBrace + 1).replace(/,(\s*[}\]])/g, '$1'));
-        } catch (_) {
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: userText }] }],
+            generationConfig: { temperature: 0.2, responseMimeType: 'application/json' },
+          }),
+        }
+      );
+      if (geminiRes.status === 429) continue;
+      if (!geminiRes.ok) {
+        const errBody = await geminiRes.text();
+        console.error('Gemini API error:', geminiRes.status, errBody);
+        continue;
+      }
+      const data = await geminiRes.json();
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+      if (!rawText) continue;
+      let jsonStr = (rawText.match(/\{[\s\S]*\}/) || [null])[0] || rawText;
+      jsonStr = jsonStr.replace(/,(\s*[}\]])/g, '$1');
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch (parseErr) {
+        const lastBrace = jsonStr.lastIndexOf('}');
+        if (lastBrace > 0) {
+          try {
+            parsed = JSON.parse(jsonStr.slice(0, lastBrace + 1).replace(/,(\s*[}\]])/g, '$1'));
+          } catch (_) {
+            throw parseErr;
+          }
+        } else {
           throw parseErr;
         }
-      } else {
-        throw parseErr;
       }
+      const newPrompt = typeof parsed.prompt === 'string' ? parsed.prompt : '';
+      const meta = parsed.meta && typeof parsed.meta === 'object' ? parsed.meta : {};
+      const clarifying_questions = Array.isArray(parsed.clarifying_questions) ? parsed.clarifying_questions.filter((q) => typeof q === 'string' && q.trim()) : [];
+      if (!newPrompt) continue;
+      return res.status(200).json({
+        success: true,
+        prompt: newPrompt,
+        meta: {
+          rules: Array.isArray(meta.rules) ? meta.rules : [],
+          doNot: Array.isArray(meta.doNot) ? meta.doNot : [],
+          summary: typeof meta.summary === 'string' ? meta.summary : '',
+        },
+        clarifying_questions: clarifying_questions.slice(0, 3),
+      });
+    } catch (err) {
+      console.error('script refine error:', err);
     }
-    const newPrompt = typeof parsed.prompt === 'string' ? parsed.prompt : '';
-    const meta = parsed.meta && typeof parsed.meta === 'object' ? parsed.meta : {};
-    const clarifying_questions = Array.isArray(parsed.clarifying_questions) ? parsed.clarifying_questions.filter((q) => typeof q === 'string' && q.trim()) : [];
-    if (!newPrompt) return res.status(502).json({ error: 'Gemini did not return a valid prompt' });
-    return res.status(200).json({
-      success: true,
-      prompt: newPrompt,
-      meta: {
-        rules: Array.isArray(meta.rules) ? meta.rules : [],
-        doNot: Array.isArray(meta.doNot) ? meta.doNot : [],
-        summary: typeof meta.summary === 'string' ? meta.summary : '',
-      },
-      clarifying_questions: clarifying_questions.slice(0, 3),
-    });
-  } catch (err) {
-    console.error('script refine error:', err);
-    return res.status(500).json({ error: 'Failed to refine prompt', details: err.message });
   }
+  return res.status(502).json({ error: 'Gemini API error or quota exceeded' });
 }
 
 async function handleRefineByDiff(req, res) {
   const { prompt, transcript_text, translation_text, script_ai, script_human } = req.body;
-  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
-  if (!geminiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
+  const geminiKeys = getGeminiKeys();
+  if (!geminiKeys.length) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
 
   const userText = `Текущий промт для генерации сценария:
 ---
@@ -342,68 +353,71 @@ ${String(script_human).trim()}
 }
 Если нужны 1–2 уточняющих вопроса (почему изменил X, зачем добавил Y) — верни в clarifying_questions. Иначе не включай или пустой массив.`;
 
-  try {
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: userText }] }],
-          generationConfig: { temperature: 0.2, responseMimeType: 'application/json' },
-        }),
-      }
-    );
-    if (!geminiRes.ok) {
-      const errBody = await geminiRes.text();
-      console.error('Gemini API error:', geminiRes.status, errBody);
-      return res.status(502).json({ error: 'Gemini API error', details: errBody });
-    }
-    const data = await geminiRes.json();
-    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-    if (!rawText) return res.status(502).json({ error: 'Gemini returned empty response' });
-    let jsonStr = (rawText.match(/\{[\s\S]*\}/) || [null])[0] || rawText;
-    jsonStr = jsonStr.replace(/,(\s*[}\]])/g, '$1');
-    let parsed;
+  for (const geminiKey of geminiKeys) {
     try {
-      parsed = JSON.parse(jsonStr);
-    } catch (parseErr) {
-      const lastBrace = jsonStr.lastIndexOf('}');
-      if (lastBrace > 0) {
-        try {
-          parsed = JSON.parse(jsonStr.slice(0, lastBrace + 1).replace(/,(\s*[}\]])/g, '$1'));
-        } catch (_) {
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: userText }] }],
+            generationConfig: { temperature: 0.2, responseMimeType: 'application/json' },
+          }),
+        }
+      );
+      if (geminiRes.status === 429) continue;
+      if (!geminiRes.ok) {
+        const errBody = await geminiRes.text();
+        console.error('Gemini API error:', geminiRes.status, errBody);
+        continue;
+      }
+      const data = await geminiRes.json();
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+      if (!rawText) continue;
+      let jsonStr = (rawText.match(/\{[\s\S]*\}/) || [null])[0] || rawText;
+      jsonStr = jsonStr.replace(/,(\s*[}\]])/g, '$1');
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch (parseErr) {
+        const lastBrace = jsonStr.lastIndexOf('}');
+        if (lastBrace > 0) {
+          try {
+            parsed = JSON.parse(jsonStr.slice(0, lastBrace + 1).replace(/,(\s*[}\]])/g, '$1'));
+          } catch (_) {
+            throw parseErr;
+          }
+        } else {
           throw parseErr;
         }
-      } else {
-        throw parseErr;
       }
+      const newPrompt = typeof parsed.prompt === 'string' ? parsed.prompt : '';
+      const meta = parsed.meta && typeof parsed.meta === 'object' ? parsed.meta : {};
+      const clarifying_questions = Array.isArray(parsed.clarifying_questions) ? parsed.clarifying_questions.filter((q) => typeof q === 'string' && q.trim()) : [];
+      if (!newPrompt) continue;
+      return res.status(200).json({
+        success: true,
+        prompt: newPrompt,
+        meta: {
+          rules: Array.isArray(meta.rules) ? meta.rules : [],
+          doNot: Array.isArray(meta.doNot) ? meta.doNot : [],
+          summary: typeof meta.summary === 'string' ? meta.summary : '',
+        },
+        clarifying_questions: clarifying_questions.slice(0, 3),
+      });
+    } catch (err) {
+      console.error('script refineByDiff error:', err);
     }
-    const newPrompt = typeof parsed.prompt === 'string' ? parsed.prompt : '';
-    const meta = parsed.meta && typeof parsed.meta === 'object' ? parsed.meta : {};
-    const clarifying_questions = Array.isArray(parsed.clarifying_questions) ? parsed.clarifying_questions.filter((q) => typeof q === 'string' && q.trim()) : [];
-    if (!newPrompt) return res.status(502).json({ error: 'Gemini did not return a valid prompt' });
-    return res.status(200).json({
-      success: true,
-      prompt: newPrompt,
-      meta: {
-        rules: Array.isArray(meta.rules) ? meta.rules : [],
-        doNot: Array.isArray(meta.doNot) ? meta.doNot : [],
-        summary: typeof meta.summary === 'string' ? meta.summary : '',
-      },
-      clarifying_questions: clarifying_questions.slice(0, 3),
-    });
-  } catch (err) {
-    console.error('script refineByDiff error:', err);
-    return res.status(500).json({ error: 'Failed to refine prompt', details: err.message });
   }
+  return res.status(502).json({ error: 'Gemini API error or quota exceeded' });
 }
 
 /** Чат с нейронкой для доработки промта: многораундовый диалог */
 async function handleChat(req, res) {
   const { messages, prompt, transcript_text, translation_text, script_text } = req.body;
-  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
-  if (!geminiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
+  const geminiKeys = getGeminiKeys();
+  if (!geminiKeys.length) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
 
   const systemParts = [
     'Ты помощник по доработке промта для генерации сценариев видео. Пользователь хочет улучшить промт, чтобы нейросеть генерировала сценарии в нужном стиле.',
@@ -448,41 +462,44 @@ async function handleChat(req, res) {
     }
   }
 
-  try {
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents,
-          generationConfig: { temperature: 0.5 },
-        }),
+  for (const geminiKey of geminiKeys) {
+    try {
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents,
+            generationConfig: { temperature: 0.5 },
+          }),
+        }
+      );
+      if (geminiRes.status === 429) continue;
+      if (!geminiRes.ok) {
+        const errBody = await geminiRes.text();
+        console.error('Gemini API error:', geminiRes.status, errBody);
+        continue;
       }
-    );
-    if (!geminiRes.ok) {
-      const errBody = await geminiRes.text();
-      console.error('Gemini API error:', geminiRes.status, errBody);
-      return res.status(502).json({ error: 'Gemini API error', details: errBody });
-    }
-    const data = await geminiRes.json();
-    let reply = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-    if (!reply) return res.status(502).json({ error: 'Gemini returned empty response' });
+      const data = await geminiRes.json();
+      let reply = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+      if (!reply) continue;
 
-    let suggestedPrompt = null;
-    const match = reply.match(/___ОБНОВЛЁННЫЙ_ПРОМТ___\s*([\s\S]*?)\s*___КОНЕЦ_ПРОМТ___/);
-    if (match) {
-      suggestedPrompt = match[1].trim();
-      reply = reply.replace(/___ОБНОВЛЁННЫЙ_ПРОМТ___\s*[\s\S]*?\s*___КОНЕЦ_ПРОМТ___/g, '').trim();
-    }
+      let suggestedPrompt = null;
+      const match = reply.match(/___ОБНОВЛЁННЫЙ_ПРОМТ___\s*([\s\S]*?)\s*___КОНЕЦ_ПРОМТ___/);
+      if (match) {
+        suggestedPrompt = match[1].trim();
+        reply = reply.replace(/___ОБНОВЛЁННЫЙ_ПРОМТ___\s*[\s\S]*?\s*___КОНЕЦ_ПРОМТ___/g, '').trim();
+      }
 
-    return res.status(200).json({
-      success: true,
-      reply,
-      suggested_prompt: suggestedPrompt || undefined,
-    });
-  } catch (err) {
-    console.error('script chat error:', err);
-    return res.status(500).json({ error: 'Failed to chat', details: err.message });
+      return res.status(200).json({
+        success: true,
+        reply,
+        suggested_prompt: suggestedPrompt || undefined,
+      });
+    } catch (err) {
+      console.error('script chat error:', err);
+    }
   }
+  return res.status(502).json({ error: 'Gemini API error or quota exceeded' });
 }
