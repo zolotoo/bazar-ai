@@ -157,19 +157,29 @@ async function handleGenerate(req, res) {
     { category: 'HARM_CATEGORY_CIVIC_INTEGRITY', threshold: 'BLOCK_NONE' },
   ];
 
-  const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+  const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'];
+  let last429Model = null;
   for (const model of modelsToTry) {
-    try {
+    const doRequest = async () => {
       const body = {
         contents: [{ role: 'user', parts: [{ text: userText }] }],
         systemInstruction: { parts: [{ text: prompt.trim() }] },
         generationConfig: { temperature: 0.4 },
         safetySettings,
       };
-      const geminiRes = await fetch(
+      return fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiKey)}`,
         { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
       );
+    };
+    try {
+      let geminiRes = await doRequest();
+      if (geminiRes.status === 429) {
+        last429Model = model;
+        const retryDelay = 8000;
+        await new Promise((r) => setTimeout(r, retryDelay));
+        geminiRes = await doRequest();
+      }
       if (!geminiRes.ok) {
         const errBody = await geminiRes.text();
         console.error(`Gemini API error (${model}):`, geminiRes.status, errBody);
@@ -194,7 +204,10 @@ async function handleGenerate(req, res) {
       console.error(`script generate error (${model}):`, err);
     }
   }
-  return res.status(502).json({ error: 'Gemini returned empty script. Try again or shorten the transcript.' });
+  const errMsg = last429Model
+    ? 'Лимит Gemini API исчерпан. Подождите несколько минут или проверьте квоты на ai.google.dev.'
+    : 'Gemini returned empty script. Try again or shorten the transcript.';
+  return res.status(502).json({ error: errMsg });
 }
 
 async function handleRefine(req, res) {
