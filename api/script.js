@@ -1,14 +1,20 @@
 // Vercel Serverless — стиль сценария: анализ примеров ИЛИ генерация по промту (Gemini). Один файл = одна функция (лимит Hobby 12).
 
-/** Возвращает массив API-ключей: GEMINI_API_KEYS (через запятую) или GEMINI_API_KEY / GOOGLE_GEMINI_API_KEY */
+/** Возвращает массив API-ключей: GEMINI_API_KEYS (через запятую) или GEMINI_API_KEY, GEMINI_API_KEY_2, ... */
 function getGeminiKeys() {
   const multi = process.env.GEMINI_API_KEYS;
   if (multi && typeof multi === 'string') {
     const keys = multi.split(',').map((k) => k.trim()).filter(Boolean);
     if (keys.length) return keys;
   }
-  const single = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
-  return single ? [single] : [];
+  const keys = [];
+  const k1 = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
+  if (k1) keys.push(k1);
+  for (let i = 2; i <= 5; i++) {
+    const k = process.env[`GEMINI_API_KEY_${i}`];
+    if (k && typeof k === 'string' && k.trim()) keys.push(k.trim());
+  }
+  return keys;
 }
 
 export default async function handler(req, res) {
@@ -186,6 +192,7 @@ async function handleGenerate(req, res) {
         );
         if (geminiRes.status === 429) {
           got429 = true;
+          await new Promise((r) => setTimeout(r, 3000));
           break;
         }
         if (!geminiRes.ok) {
@@ -213,7 +220,7 @@ async function handleGenerate(req, res) {
     }
   }
   const errMsg = got429
-    ? 'Лимит Gemini API исчерпан. Подождите несколько минут или проверьте квоты на ai.google.dev.'
+    ? 'Лимит Gemini API исчерпан. Важно: ключи из одного аккаунта Google делят одну квоту. Нужны ключи из разных Google-аккаунтов (aistudio.google.com). Либо включите биллинг в Google Cloud.'
     : 'Gemini returned empty script. Try again or shorten the transcript.';
   return res.status(502).json({ error: errMsg });
 }
