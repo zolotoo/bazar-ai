@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   ChevronLeft, FileText, Copy, ExternalLink, Loader2, Check,
-  Languages, ChevronDown, Save, Plus, Trash2, Wand2, Images, Heart, MessageCircle, RefreshCw, BookOpen
+  Languages, ChevronDown, Save, Plus, Trash2, Wand2, Images, Heart, MessageCircle, RefreshCw, BookOpen, Pencil
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { toast } from 'sonner';
@@ -91,8 +91,35 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
   const stylePickerButtonRef = useRef<HTMLButtonElement>(null);
   const [popoverRect, setPopoverRect] = useState<{ top: number; left: number } | null>(null);
   const [showStyleTrainModal, setShowStyleTrainModal] = useState(false);
+  const [creatingNewStyle, setCreatingNewStyle] = useState(false);
+  const [newStyleName, setNewStyleName] = useState('');
+  const [showPromptModal, setShowPromptModal] = useState(false);
+  const [isEditingPrompt, setIsEditingPrompt] = useState(false);
+  const [editedPromptText, setEditedPromptText] = useState('');
+  const [isSavingPrompt, setIsSavingPrompt] = useState(false);
+  const [editingStyle, setEditingStyle] = useState<ProjectStyle | null>(null);
+  const [showPromptChat, setShowPromptChat] = useState(false);
+  const [promptChatMessages, setPromptChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
+  const [promptChatInput, setPromptChatInput] = useState('');
+  const [isPromptChatLoading, setIsPromptChatLoading] = useState(false);
+  const [pendingSuggestedPrompt, setPendingSuggestedPrompt] = useState<string | null>(null);
+  const [scriptGeneratedByStyle, setScriptGeneratedByStyle] = useState(false);
+  const [lastGeneratedStyleId, setLastGeneratedStyleId] = useState<string | null>(null);
+  const [showChoiceModal, setShowChoiceModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showEditScriptModal, setShowEditScriptModal] = useState(false);
+  const [scriptAiForRefine, setScriptAiForRefine] = useState('');
+  const [scriptHumanForRefine, setScriptHumanForRefine] = useState('');
+  const [editScriptLeftTab, setEditScriptLeftTab] = useState<'original' | 'translation' | 'ai'>('ai');
+  const [feedbackText, setFeedbackText] = useState('');
+  const [isRefiningPrompt, setIsRefiningPrompt] = useState(false);
+  const [clarifyingQuestions, setClarifyingQuestions] = useState<string[]>([]);
+  const [clarifyingIndex, setClarifyingIndex] = useState(0);
+  const [clarifyAnswer, setClarifyAnswer] = useState('');
+  const [showClarifyModal, setShowClarifyModal] = useState(false);
+  const [lastRefinedPrompt, setLastRefinedPrompt] = useState('');
 
-  const { currentProject, updateProject } = useProjectContext();
+  const { currentProject, updateProject, updateProjectStyle } = useProjectContext();
   const {
     updateCarouselTranscript,
     updateCarouselTranslation,
@@ -117,6 +144,10 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
     setLinks(buildLinks());
     setResponsibles(buildResponsibles());
   }, [carousel.id, carousel.links, carousel.responsibles, carousel.draft_link, carousel.final_link, carousel.script_responsible, carousel.editing_responsible]);
+
+  useEffect(() => {
+    setScriptGeneratedByStyle(false);
+  }, [carousel.id]);
 
   useEffect(() => {
     const urls = carousel.slide_urls?.length ? carousel.slide_urls : carousel.thumbnail_url ? [carousel.thumbnail_url] : [];
@@ -256,6 +287,8 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
       const data = await res.json();
       if (data.success && data.script) {
         setScript(data.script);
+        setScriptGeneratedByStyle(true);
+        setLastGeneratedStyleId(style.id);
         toast.success(`Сценарий по стилю «${style.name}»`);
       } else {
         toast.error(data.error || 'Ошибка генерации');
@@ -265,6 +298,241 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
     } finally {
       setIsGeneratingScript(false);
     }
+  };
+
+  const currentPromptStyle = editingStyle || (projectStyles.length === 1 ? projectStyles[0] : null);
+
+  const styleForRefine = lastGeneratedStyleId
+    ? projectStyles.find((s) => s.id === lastGeneratedStyleId)
+    : projectStyles[0];
+  const promptForRefine = styleForRefine?.prompt || currentProject?.stylePrompt || '';
+
+  const handleRefinePrompt = async () => {
+    if (!currentProject?.id || !feedbackText.trim() || !script?.trim() || !promptForRefine) return;
+    setIsRefiningPrompt(true);
+    try {
+      const res = await fetch('/api/script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          feedback: feedbackText.trim(),
+          prompt: promptForRefine,
+          transcript_text: transcript,
+          translation_text: translation || undefined,
+          script_text: script,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.prompt) {
+        if (styleForRefine) {
+          await updateProjectStyle(currentProject.id, styleForRefine.id, { prompt: data.prompt, meta: data.meta });
+        } else {
+          await updateProject(currentProject.id, { stylePrompt: data.prompt, styleMeta: data.meta });
+        }
+        setLastRefinedPrompt(data.prompt);
+        setShowFeedbackModal(false);
+        setFeedbackText('');
+        setScriptGeneratedByStyle(false);
+        toast.success('Промт обновлён');
+        if (data.clarifying_questions?.length) {
+          setClarifyingQuestions(data.clarifying_questions);
+          setClarifyingIndex(0);
+          setClarifyAnswer('');
+          setShowClarifyModal(true);
+        }
+      } else {
+        toast.error(data.error || 'Ошибка дообучения');
+      }
+    } catch (err) {
+      console.error('Refine prompt error:', err);
+      toast.error('Ошибка дообучения промта');
+    } finally {
+      setIsRefiningPrompt(false);
+    }
+  };
+
+  const handleRefineByDiff = async () => {
+    if (!currentProject?.id || scriptAiForRefine.trim() === '' || scriptHumanForRefine.trim() === '') return;
+    setIsRefiningPrompt(true);
+    try {
+      const res = await fetch('/api/script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: promptForRefine,
+          transcript_text: transcript,
+          translation_text: translation || undefined,
+          script_ai: scriptAiForRefine.trim(),
+          script_human: scriptHumanForRefine.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.prompt) {
+        if (styleForRefine) {
+          await updateProjectStyle(currentProject.id, styleForRefine.id, { prompt: data.prompt, meta: data.meta });
+        } else {
+          await updateProject(currentProject.id, { stylePrompt: data.prompt, styleMeta: data.meta });
+        }
+        setScript(scriptHumanForRefine.trim());
+        setLastRefinedPrompt(data.prompt);
+        setShowEditScriptModal(false);
+        setScriptAiForRefine('');
+        setScriptHumanForRefine('');
+        setScriptGeneratedByStyle(false);
+        toast.success('Промт дообучен на ваших правках');
+        if (data.clarifying_questions?.length) {
+          setClarifyingQuestions(data.clarifying_questions);
+          setClarifyingIndex(0);
+          setClarifyAnswer('');
+          setShowClarifyModal(true);
+        }
+      } else {
+        toast.error(data.error || 'Ошибка дообучения');
+      }
+    } catch (err) {
+      console.error('Refine by diff error:', err);
+      toast.error('Ошибка дообучения промта');
+    } finally {
+      setIsRefiningPrompt(false);
+    }
+  };
+
+  const handleClarifySubmit = async () => {
+    const question = clarifyingQuestions[clarifyingIndex];
+    if (!currentProject?.id || !question || !clarifyAnswer.trim() || !lastRefinedPrompt) return;
+    setIsRefiningPrompt(true);
+    try {
+      const res = await fetch('/api/script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          feedback: `Уточняющий вопрос: ${question}\nОтвет: ${clarifyAnswer.trim()}`,
+          prompt: lastRefinedPrompt,
+          transcript_text: transcript,
+          translation_text: translation || undefined,
+          script_text: script,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.prompt) {
+        if (styleForRefine) {
+          await updateProjectStyle(currentProject.id, styleForRefine.id, { prompt: data.prompt, meta: data.meta });
+        } else {
+          await updateProject(currentProject.id, { stylePrompt: data.prompt, styleMeta: data.meta });
+        }
+        setLastRefinedPrompt(data.prompt);
+        setClarifyAnswer('');
+        if (data.clarifying_questions?.length) {
+          setClarifyingQuestions(data.clarifying_questions);
+          setClarifyingIndex(0);
+        } else {
+          setShowClarifyModal(false);
+          setClarifyingQuestions([]);
+          toast.success('Промт уточнён по вашим ответам');
+        }
+      } else {
+        toast.error(data.error || 'Ошибка');
+      }
+    } catch (err) {
+      console.error('Clarify submit error:', err);
+      toast.error('Ошибка отправки');
+    } finally {
+      setIsRefiningPrompt(false);
+    }
+  };
+
+  const openPromptModal = (style?: ProjectStyle | null) => {
+    const s = style || (projectStyles.length === 1 ? projectStyles[0] : null);
+    setEditingStyle(s);
+    setEditedPromptText(s?.prompt || currentProject?.stylePrompt || '');
+    setIsEditingPrompt(false);
+    setShowPromptModal(true);
+  };
+
+  const handleSaveEditedPrompt = async () => {
+    const currentVal = editingStyle ? editingStyle.prompt : currentProject?.stylePrompt;
+    if (!currentProject?.id || editedPromptText.trim() === currentVal) {
+      setIsEditingPrompt(false);
+      return;
+    }
+    setIsSavingPrompt(true);
+    try {
+      if (editingStyle) {
+        await updateProjectStyle(currentProject.id, editingStyle.id, { prompt: editedPromptText.trim() });
+      } else {
+        await updateProject(currentProject.id, { stylePrompt: editedPromptText.trim() });
+      }
+      toast.success('Промт сохранён');
+      setIsEditingPrompt(false);
+    } catch (e) {
+      toast.error('Не удалось сохранить промт');
+    } finally {
+      setIsSavingPrompt(false);
+    }
+  };
+
+  const handlePromptChatSend = async () => {
+    const text = promptChatInput.trim();
+    const promptToUse = editingStyle?.prompt || currentProject?.stylePrompt;
+    if (!text || !promptToUse || isPromptChatLoading) return;
+    const userMsg = { role: 'user' as const, content: text };
+    const newMessages = [...promptChatMessages, userMsg];
+    setPromptChatMessages(newMessages);
+    setPromptChatInput('');
+    setIsPromptChatLoading(true);
+    setPendingSuggestedPrompt(null);
+    try {
+      const res = await fetch('/api/script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'chat',
+          messages: newMessages,
+          prompt: promptToUse,
+          transcript_text: transcript || undefined,
+          translation_text: translation || undefined,
+          script_text: script || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.reply) {
+        setPromptChatMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
+        if (data.suggested_prompt) setPendingSuggestedPrompt(data.suggested_prompt);
+      } else {
+        toast.error(data.error || 'Ошибка');
+      }
+    } catch (err) {
+      console.error('Prompt chat error:', err);
+      toast.error('Ошибка отправки');
+    } finally {
+      setIsPromptChatLoading(false);
+    }
+  };
+
+  const handleApplySuggestedPrompt = async () => {
+    if (!currentProject?.id || !pendingSuggestedPrompt) return;
+    setIsSavingPrompt(true);
+    try {
+      if (editingStyle) {
+        await updateProjectStyle(currentProject.id, editingStyle.id, { prompt: pendingSuggestedPrompt });
+      } else {
+        await updateProject(currentProject.id, { stylePrompt: pendingSuggestedPrompt });
+      }
+      setEditedPromptText(pendingSuggestedPrompt);
+      setPendingSuggestedPrompt(null);
+      toast.success('Промт применён');
+    } catch (e) {
+      toast.error('Не удалось применить промт');
+    } finally {
+      setIsSavingPrompt(false);
+    }
+  };
+
+  const openPromptChat = () => {
+    setShowPromptChat(true);
+    setPromptChatMessages([]);
+    setPromptChatInput('');
+    setPendingSuggestedPrompt(null);
   };
 
   const handleSaveScript = async () => {
@@ -592,21 +860,41 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
 
         {/* Right: Script — высота шапки как у Транскрипта */}
         <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-xl bg-white/80 border border-slate-200/80 overflow-hidden">
-          <div className="flex-shrink-0 flex flex-wrap items-center gap-2 p-4 border-b border-slate-100 min-h-[72px]">
-            <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-b border-slate-100 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-wrap">
               <FileText className="w-5 h-5 text-violet-500 flex-shrink-0" />
               <h3 className="font-semibold text-slate-800">Сценарий</h3>
+              {(projectStyles.length > 0 || currentProject?.stylePrompt) && (
+                <button
+                  type="button"
+                  onClick={() => openPromptModal(projectStyles[0] || null)}
+                  className="px-2 py-0.5 rounded-full bg-violet-100 text-violet-600 text-[10px] font-medium hover:bg-violet-200 transition-colors"
+                  title="Промт стиля"
+                >
+                  {projectStyles.length || 1} стил{projectStyles.length === 1 || !projectStyles.length ? 'ь' : 'я'} · Промт
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => setShowStyleTrainModal(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-violet-200 bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-medium whitespace-nowrap flex-shrink-0"
+                onClick={() => { setCreatingNewStyle(true); setEditingStyle(null); setNewStyleName(''); setShowStyleTrainModal(true); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-violet-200 bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-medium whitespace-nowrap"
                 title="Обучить стиль по 1–5 примерам (рилсы или карусели)"
               >
                 <BookOpen className="w-3.5 h-3.5" />
                 Обучить стиль
               </button>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
+              {script?.trim() && (projectStyles.length > 0 || currentProject?.stylePrompt) && (
+                <button
+                  type="button"
+                  onClick={() => setShowChoiceModal(true)}
+                  className="px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-medium transition-all flex items-center gap-1.5 whitespace-nowrap"
+                  title="Дать обратную связь — промт дообучится"
+                >
+                  Что не так сделал?
+                </button>
+              )}
               <div className="relative">
                 <button
                   ref={stylePickerButtonRef}
@@ -638,14 +926,31 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                       style={{ top: popoverRect.top, left: popoverRect.left }}
                     >
                       {projectStyles.map(s => (
-                        <button
-                          key={s.id}
-                          type="button"
-                          onClick={() => handleGenerateByStyle(s)}
-                          className="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                        >
-                          {s.name}
-                        </button>
+                        <div key={s.id} className="flex items-center gap-1 group">
+                          <button
+                            type="button"
+                            onClick={() => handleGenerateByStyle(s)}
+                            className="flex-1 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 truncate"
+                          >
+                            {s.name}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setShowStylePickerPopover(false); setEditingStyle(s); setCreatingNewStyle(false); setShowStyleTrainModal(true); }}
+                            className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-slate-100 text-slate-400"
+                            title="Переобучить по примерам"
+                          >
+                            <BookOpen className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setShowStylePickerPopover(false); openPromptModal(s); }}
+                            className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-slate-100 text-slate-400"
+                            title="Редактировать промт"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       ))}
                       {currentProject?.stylePrompt && projectStyles.length === 0 && (
                         <button
@@ -662,6 +967,15 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                           Стиль по умолчанию
                         </button>
                       )}
+                      <div className="h-px bg-slate-100 my-1" />
+                      <button
+                        type="button"
+                        onClick={() => { setShowStylePickerPopover(false); setCreatingNewStyle(true); setEditingStyle(null); setNewStyleName(''); setShowStyleTrainModal(true); }}
+                        className="w-full px-3 py-2 text-left text-sm text-violet-600 hover:bg-violet-50 flex items-center gap-2"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Создать новый стиль
+                      </button>
                     </div>
                   </>,
                   document.body
@@ -686,7 +1000,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
           <div className="flex-1 min-h-0 flex flex-col p-4">
             <textarea
               value={script}
-              onChange={e => setScript(e.target.value)}
+              onChange={e => { setScript(e.target.value); setScriptGeneratedByStyle(false); }}
               className="w-full flex-1 min-h-[120px] p-3 rounded-xl border border-slate-200 text-sm text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-violet-200"
               placeholder="Сгенерируйте сценарий по стилю или напишите вручную."
             />
@@ -694,7 +1008,353 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
         </div>
       </div>
 
-      <StyleTrainModal open={showStyleTrainModal} onClose={() => setShowStyleTrainModal(false)} />
+      <StyleTrainModal
+        open={showStyleTrainModal}
+        onClose={() => { setShowStyleTrainModal(false); setCreatingNewStyle(false); setEditingStyle(null); setNewStyleName(''); }}
+        creatingNewStyle={creatingNewStyle}
+        newStyleName={newStyleName}
+        setNewStyleName={setNewStyleName}
+        editingStyle={editingStyle}
+        onSuccess={(prompt) => setEditedPromptText(prompt)}
+      />
+
+      {/* Модальное окно: просмотр и редактирование промта стиля */}
+      {showPromptModal && (currentPromptStyle || currentProject?.stylePrompt) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => { if (!isSavingPrompt && !isPromptChatLoading) { setShowPromptModal(false); setShowPromptChat(false); } }}>
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-2xl w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {projectStyles.length > 1 ? (
+                  <select
+                    value={editingStyle?.id || projectStyles[0]?.id}
+                    onChange={(e) => {
+                      const s = projectStyles.find((x) => x.id === e.target.value);
+                      if (s) { setEditingStyle(s); setEditedPromptText(s.prompt); }
+                    }}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-800 bg-white"
+                  >
+                    {projectStyles.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <h3 className="font-semibold text-slate-800">
+                    {currentPromptStyle ? `Промт: ${currentPromptStyle.name}` : 'Промт стиля проекта'}
+                  </h3>
+                )}
+                {showPromptChat && (
+                  <button type="button" onClick={() => setShowPromptChat(false)} className="p-1.5 -ml-1 rounded-lg hover:bg-slate-100 text-slate-500 flex items-center gap-1">
+                    <ChevronLeft className="w-4 h-4" />
+                    <span className="text-sm">К промту</span>
+                  </button>
+                )}
+              </div>
+              <button type="button" onClick={() => { setShowPromptModal(false); setShowPromptChat(false); }} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500">×</button>
+            </div>
+            {showPromptChat ? (
+              <div className="flex-1 flex flex-col min-h-0">
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  {promptChatMessages.length === 0 && (
+                    <p className="text-slate-500 text-sm">Напишите, что хотите изменить в промте. Например: «сделай короче», «добавь больше хуков в начале», «убери воду».</p>
+                  )}
+                  {promptChatMessages.map((m, i) => (
+                    <div key={i} className={cn('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
+                      <div className={cn(
+                        'max-w-[85%] rounded-2xl px-4 py-2.5 text-sm',
+                        m.role === 'user' ? 'bg-violet-500 text-white' : 'bg-slate-100 text-slate-800'
+                      )}>
+                        <p className="whitespace-pre-wrap">{m.content}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {isPromptChatLoading && (
+                    <div className="flex justify-start">
+                      <div className="bg-slate-100 rounded-2xl px-4 py-2.5 flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
+                        <span className="text-sm text-slate-600">Думаю...</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {pendingSuggestedPrompt && (
+                  <div className="px-4 pb-2">
+                    <button
+                      type="button"
+                      onClick={handleApplySuggestedPrompt}
+                      disabled={isSavingPrompt}
+                      className="w-full py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium flex items-center justify-center gap-2"
+                    >
+                      {isSavingPrompt ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                      Применить предложенный промт
+                    </button>
+                  </div>
+                )}
+                <div className="p-4 border-t border-slate-100">
+                  <div className="flex gap-2">
+                    <textarea
+                      value={promptChatInput}
+                      onChange={(e) => setPromptChatInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handlePromptChatSend(); } }}
+                      placeholder="Что изменить в промте?"
+                      rows={2}
+                      disabled={isPromptChatLoading}
+                      className="flex-1 p-3 rounded-xl border border-slate-200 text-sm resize-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400 disabled:opacity-50"
+                    />
+                    <button
+                      type="button"
+                      onClick={handlePromptChatSend}
+                      disabled={isPromptChatLoading || !promptChatInput.trim()}
+                      className="self-end px-4 py-2 rounded-xl bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {isPromptChatLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
+                      Отправить
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Текст промта (используется при генерации «По стилю»)</label>
+                {isEditingPrompt ? (
+                  <textarea
+                    value={editedPromptText}
+                    onChange={(e) => setEditedPromptText(e.target.value)}
+                    className="w-full min-h-[200px] p-3 rounded-xl border border-slate-200 text-sm text-slate-700 focus:ring-2 focus:ring-violet-200 focus:border-violet-400 resize-y"
+                    placeholder="Промт..."
+                  />
+                ) : (
+                  <pre className="w-full p-3 rounded-xl border border-slate-100 bg-slate-50 text-sm text-slate-700 whitespace-pre-wrap font-sans max-h-[300px] overflow-y-auto">{currentPromptStyle?.prompt || currentProject?.stylePrompt}</pre>
+                )}
+              </div>
+              {((currentPromptStyle?.meta || currentProject?.styleMeta) && ((currentPromptStyle?.meta || currentProject?.styleMeta)?.rules?.length || (currentPromptStyle?.meta || currentProject?.styleMeta)?.doNot?.length || (currentPromptStyle?.meta || currentProject?.styleMeta)?.summary)) && (
+                <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 space-y-2">
+                  {(currentPromptStyle?.meta || currentProject?.styleMeta)?.summary && (
+                    <p className="text-sm text-slate-600"><span className="font-medium text-slate-700">Кратко:</span> {(currentPromptStyle?.meta || currentProject?.styleMeta)?.summary}</p>
+                  )}
+                  {((currentPromptStyle?.meta || currentProject?.styleMeta)?.rules?.length) ? (
+                    <div>
+                      <span className="text-xs font-medium text-slate-500">Правила:</span>
+                      <ul className="list-disc list-inside text-sm text-slate-600 mt-1">{(currentPromptStyle?.meta || currentProject?.styleMeta)?.rules?.map((r, i) => <li key={i}>{r}</li>)}</ul>
+                    </div>
+                  ) : null}
+                  {((currentPromptStyle?.meta || currentProject?.styleMeta)?.doNot?.length) ? (
+                    <div>
+                      <span className="text-xs font-medium text-slate-500">Избегать:</span>
+                      <ul className="list-disc list-inside text-sm text-slate-600 mt-1">{(currentPromptStyle?.meta || currentProject?.styleMeta)?.doNot?.map((d, i) => <li key={i}>{d}</li>)}</ul>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </div>
+            )}
+            <div className="p-4 border-t border-slate-100 flex flex-wrap items-center gap-2">
+              {!showPromptChat ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={openPromptChat}
+                    className="px-3 py-1.5 rounded-lg border border-violet-200 text-violet-600 text-sm font-medium hover:bg-violet-50 flex items-center gap-1.5"
+                  >
+                    <MessageCircle className="w-4 h-4" /> Пообщаться с нейронкой
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigator.clipboard.writeText(isEditingPrompt ? editedPromptText : (currentPromptStyle?.prompt || currentProject?.stylePrompt || ''))}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 flex items-center gap-1.5"
+                  >
+                    <Copy className="w-4 h-4" /> Копировать промт
+                  </button>
+              {isEditingPrompt ? (
+                <>
+                  <button type="button" onClick={handleSaveEditedPrompt} disabled={isSavingPrompt} className="px-3 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium disabled:opacity-50 flex items-center gap-1.5">
+                    {isSavingPrompt ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Сохранить
+                  </button>
+                  <button type="button" onClick={() => { setIsEditingPrompt(false); setEditedPromptText(currentPromptStyle?.prompt || currentProject?.stylePrompt || ''); }} className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+                    Отмена
+                  </button>
+                </>
+              ) : (
+                <button type="button" onClick={() => { setIsEditingPrompt(true); setEditedPromptText(currentPromptStyle?.prompt || currentProject?.stylePrompt || ''); }} className="px-3 py-1.5 rounded-lg border border-violet-200 text-violet-600 text-sm font-medium hover:bg-violet-50">
+                  Редактировать промт
+                </button>
+              )}
+                </>
+              ) : null}
+              <button type="button" onClick={() => { setShowPromptModal(false); setShowPromptChat(false); }} className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 ml-auto">
+                Закрыть
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно: выбор способа обратной связи */}
+      {showChoiceModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowChoiceModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-semibold text-slate-800 mb-1">Как хотите дать обратную связь?</h3>
+            <p className="text-slate-500 text-sm mb-4">Нейросеть дообучится на ваших правках или пояснениях.</p>
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={() => { setShowChoiceModal(false); setShowFeedbackModal(true); }}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-left text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                <span className="font-medium">Написать текстом</span> — что не так и что отлично
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowChoiceModal(false);
+                  setScriptAiForRefine(script || '');
+                  setScriptHumanForRefine(script || '');
+                  setEditScriptLeftTab('ai');
+                  setShowEditScriptModal(true);
+                }}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-left text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                <span className="font-medium">Сам допилю сценарий</span> — отредактировать сценарий ИИ, нейросеть дообучится на ваших правках
+              </button>
+            </div>
+            <button type="button" onClick={() => setShowChoiceModal(false)} className="mt-4 w-full py-2 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+              Отмена
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно: обратная связь по сгенерированному сценарию — дообучение промта */}
+      {showFeedbackModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !isRefiningPrompt && setShowFeedbackModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-slate-100">
+              <h3 className="font-semibold text-slate-800">Что не так сделал сценарий?</h3>
+              <p className="text-slate-500 text-sm mt-1">
+                Опишите, что не так и что хорошо. Промт проекта обновится, и в следующий раз генерация учтёт вашу обратную связь.
+              </p>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <textarea
+                value={feedbackText}
+                onChange={(e) => setFeedbackText(e.target.value)}
+                placeholder="Например: слишком длинные предложения, не хватало хука в начале, хорошо что сохранил структуру по пунктам..."
+                className="w-full min-h-[120px] p-3 rounded-xl border border-slate-200 text-sm text-slate-700 focus:ring-2 focus:ring-violet-200 focus:border-violet-400 resize-y"
+                disabled={isRefiningPrompt}
+              />
+            </div>
+            <div className="p-4 border-t border-slate-100 flex justify-end gap-2">
+              <button type="button" onClick={() => setShowFeedbackModal(false)} disabled={isRefiningPrompt} className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 disabled:opacity-50">
+                Отмена
+              </button>
+              <button type="button" onClick={handleRefinePrompt} disabled={isRefiningPrompt || !feedbackText.trim()} className="px-4 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50">
+                {isRefiningPrompt ? <><Loader2 className="w-4 h-4 animate-spin" /> Дообучение...</> : <>Отправить и дообучить промт</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно: сценарий ИИ → ваш идеальный — дообучение на правках */}
+      {showEditScriptModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !isRefiningPrompt && setShowEditScriptModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-4xl w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-slate-100">
+              <h3 className="font-semibold text-slate-800">Сценарий ИИ-помощник → ваш идеальный</h3>
+              <p className="text-slate-500 text-sm mt-1">
+                Слева — переключайте вкладки (исходник, перевод, сценарий ИИ). Справа — ваш идеальный сценарий. Промт дообучится на ваших правках.
+              </p>
+            </div>
+            <div className="flex-1 overflow-hidden flex flex-col md:flex-row gap-4 p-4 min-h-0">
+              <div className="flex-1 flex flex-col min-h-0">
+                <div className="flex rounded-lg p-0.5 bg-slate-100 mb-2">
+                  {(['original', 'translation', 'ai'] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setEditScriptLeftTab(tab)}
+                      className={cn(
+                        'flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
+                        editScriptLeftTab === tab
+                          ? 'bg-white text-slate-800 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-700'
+                      )}
+                    >
+                      {tab === 'original' ? 'Изначальный' : tab === 'translation' ? 'Перевод' : 'Сценарий ИИ'}
+                    </button>
+                  ))}
+                </div>
+                <pre className="flex-1 min-h-[200px] p-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-700 overflow-auto whitespace-pre-wrap font-sans">
+                  {editScriptLeftTab === 'original'
+                    ? (transcript || '—')
+                    : editScriptLeftTab === 'translation'
+                    ? (translation || '—')
+                    : (scriptAiForRefine || '—')}
+                </pre>
+              </div>
+              <div className="flex-1 flex flex-col min-h-0">
+                <label className="text-xs font-medium text-slate-500 mb-1">Ваш идеальный сценарий</label>
+                <textarea
+                  value={scriptHumanForRefine}
+                  onChange={(e) => setScriptHumanForRefine(e.target.value)}
+                  className="flex-1 min-h-[200px] p-3 rounded-xl border border-slate-200 text-sm text-slate-700 focus:ring-2 focus:ring-violet-200 focus:border-violet-400 resize-none"
+                  placeholder="Отредактируйте сценарий..."
+                  disabled={isRefiningPrompt}
+                />
+              </div>
+            </div>
+            <div className="p-4 border-t border-slate-100 flex justify-end gap-2">
+              <button type="button" onClick={() => setShowEditScriptModal(false)} disabled={isRefiningPrompt} className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 disabled:opacity-50">
+                Отмена
+              </button>
+              <button
+                type="button"
+                onClick={handleRefineByDiff}
+                disabled={isRefiningPrompt || scriptHumanForRefine.trim() === scriptAiForRefine.trim()}
+                className="px-4 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+              >
+                {isRefiningPrompt ? <><Loader2 className="w-4 h-4 animate-spin" /> Дообучение...</> : <>Дообучить промт на этом примере</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно: уточняющий вопрос нейросети */}
+      {showClarifyModal && clarifyingQuestions[clarifyingIndex] && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !isRefiningPrompt && setShowClarifyModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-semibold text-slate-800 mb-1">Нейросеть уточняет</h3>
+            <p className="text-slate-600 text-sm mb-4">{clarifyingQuestions[clarifyingIndex]}</p>
+            <textarea
+              value={clarifyAnswer}
+              onChange={(e) => setClarifyAnswer(e.target.value)}
+              placeholder="Ваш ответ..."
+              className="w-full min-h-[80px] p-3 rounded-xl border border-slate-200 text-sm text-slate-700 focus:ring-2 focus:ring-violet-200 focus:border-violet-400 resize-y mb-4"
+              disabled={isRefiningPrompt}
+            />
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-slate-400">
+                {clarifyingIndex + 1} из {clarifyingQuestions.length}
+              </span>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setShowClarifyModal(false)} disabled={isRefiningPrompt} className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 disabled:opacity-50">
+                  Пропустить
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClarifySubmit}
+                  disabled={isRefiningPrompt || !clarifyAnswer.trim()}
+                  className="px-4 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isRefiningPrompt ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  Отправить
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
