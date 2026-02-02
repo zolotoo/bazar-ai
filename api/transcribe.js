@@ -56,7 +56,7 @@ export default async function handler(req, res) {
     if (!geminiKey) {
       return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
     }
-    const BATCH_SIZE = 10;
+    const BATCH_SIZE = 9;
     const MAX_TOTAL = 50;
     let allParts = [];
     if (imageUrls.length > 0) {
@@ -67,22 +67,33 @@ export default async function handler(req, res) {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
       };
-      for (const url of imageUrls) {
-        if (url.includes('cdninstagram.com') || url.includes('instagram.com')) {
-          headers['Referer'] = 'https://www.instagram.com/';
+      const fetchOne = async (url, idx) => {
+        const h = { ...headers };
+        if (url.includes('cdninstagram.com') || url.includes('instagram.com') || url.includes('fbcdn.net') || url.includes('scontent.')) {
+          h['Referer'] = 'https://www.instagram.com/';
         }
         try {
-          const resp = await fetch(url, { headers });
+          const resp = await fetch(url, { headers: h });
           if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
           const buf = await resp.arrayBuffer();
           const base64 = Buffer.from(buf).toString('base64');
           const contentType = resp.headers.get('content-type') || 'image/jpeg';
           const mimeType = contentType.split(';')[0].trim() || 'image/jpeg';
-          allParts.push({ inlineData: { mimeType, data: base64 } });
+          return { ok: true, idx, data: { inlineData: { mimeType, data: base64 } } };
         } catch (e) {
-          console.error('Failed to fetch image:', url, e.message);
-          return res.status(400).json({ error: `Failed to fetch image: ${e.message}` });
+          console.error('Failed to fetch image', idx, url?.slice(0, 80), e.message);
+          return { ok: false, idx };
         }
+      };
+      const results = await Promise.all(imageUrls.map((url, idx) => fetchOne(url, idx)));
+      const succeeded = results.filter((r) => r.ok).sort((a, b) => a.idx - b.idx);
+      allParts = succeeded.map((r) => r.data);
+      const failedCount = results.length - succeeded.length;
+      if (allParts.length === 0) {
+        return res.status(400).json({ error: 'Failed to fetch any images. Check URLs or try again.' });
+      }
+      if (failedCount > 0) {
+        console.warn('Skipped failed images:', failedCount);
       }
     } else {
       if (imagesBase64.length > MAX_TOTAL) {
