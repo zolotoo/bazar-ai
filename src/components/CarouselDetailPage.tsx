@@ -344,10 +344,10 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col md:flex-row gap-4 min-h-0 overflow-y-auto p-4">
-        {/* Left: slides + folder + stats + links + responsibles */}
-        <div className="flex-shrink-0 flex flex-col gap-3 w-full md:min-w-[300px] md:w-[320px] lg:w-[360px]">
-          <div className="relative flex-shrink-0 rounded-2xl overflow-hidden shadow-lg bg-slate-200 w-full min-h-[280px] aspect-square max-h-[360px] mx-auto md:mx-0 max-w-full">
+      <div className="flex-1 flex flex-col md:flex-row gap-4 min-h-0 overflow-hidden p-4">
+        {/* Left: slides + folder + stats + links + responsibles — узкая колонка с собственным скроллом */}
+        <div className="flex-shrink-0 flex flex-col gap-3 w-full md:w-[240px] lg:w-[260px] min-h-0 overflow-y-auto rounded-xl">
+          <div className="relative flex-shrink-0 rounded-2xl overflow-hidden shadow-lg bg-slate-200 w-full aspect-[3/4] max-w-full mx-auto md:mx-0">
             {hasMainImage && !mainImageError ? (
               <img
                 src={thumbnailUrl}
