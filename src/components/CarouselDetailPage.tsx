@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   ChevronLeft, FileText, Copy, ExternalLink, Loader2, Check,
-  Languages, ChevronDown, Save, Plus, Trash2, Wand2, Images, Heart, MessageCircle
+  Languages, ChevronDown, Save, Plus, Trash2, Wand2, Images, Heart, MessageCircle, RefreshCw
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { toast } from 'sonner';
@@ -83,6 +83,8 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
   const [showStylePickerPopover, setShowStylePickerPopover] = useState(false);
   const [slideIndex, setSlideIndex] = useState(0);
   const [mainImageError, setMainImageError] = useState(false);
+  const [localSlideUrls, setLocalSlideUrls] = useState<string[]>(() => (carousel.slide_urls && carousel.slide_urls.length > 0 ? carousel.slide_urls : carousel.thumbnail_url ? [carousel.thumbnail_url] : []));
+  const [isRefreshingSlides, setIsRefreshingSlides] = useState(false);
 
   const { currentProject, updateProject } = useProjectContext();
   const {
@@ -90,6 +92,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
     updateCarouselTranslation,
     updateCarouselScript,
     updateCarouselFolder,
+    updateCarouselSlideUrls,
     updateCarouselLinks,
     updateCarouselResponsibles,
   } = useCarousels();
@@ -109,13 +112,42 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
     setResponsibles(buildResponsibles());
   }, [carousel.id, carousel.links, carousel.responsibles, carousel.draft_link, carousel.final_link, carousel.script_responsible, carousel.editing_responsible]);
 
+  useEffect(() => {
+    const urls = carousel.slide_urls?.length ? carousel.slide_urls : carousel.thumbnail_url ? [carousel.thumbnail_url] : [];
+    setLocalSlideUrls(urls);
+  }, [carousel.id, carousel.slide_urls, carousel.thumbnail_url]);
+
   const folderConfigs = currentProject?.folders?.slice().sort((a, b) => a.order - b.order).map(f => ({ id: f.id, title: f.name, color: f.color })) || [];
   const currentFolder = currentFolderId ? folderConfigs.find(f => f.id === currentFolderId) : null;
 
-  const slideUrls = carousel.slide_urls && carousel.slide_urls.length > 0
-    ? carousel.slide_urls
-    : carousel.thumbnail_url ? [carousel.thumbnail_url] : [];
+  const slideUrls = localSlideUrls.length > 0 ? localSlideUrls : (carousel.thumbnail_url ? [carousel.thumbnail_url] : []);
   const displayUrl = slideUrls[slideIndex] || carousel.thumbnail_url || '';
+
+  const handleRefreshSlides = async () => {
+    const url = carousel.url || `https://www.instagram.com/p/${carousel.shortcode}/`;
+    setIsRefreshingSlides(true);
+    setMainImageError(false);
+    try {
+      const res = await fetch('/api/reel-info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (data.success && data.is_carousel && Array.isArray(data.carousel_slides) && data.carousel_slides.length > 0) {
+        await updateCarouselSlideUrls(carousel.id, data.carousel_slides, data.thumbnail_url || data.carousel_slides[0]);
+        setLocalSlideUrls(data.carousel_slides);
+        setSlideIndex(0);
+        toast.success(`Загружено ${data.carousel_slides.length} слайдов`);
+      } else {
+        toast.error('Не удалось загрузить слайды. Проверьте ссылку.');
+      }
+    } catch (e) {
+      toast.error('Ошибка при загрузке слайдов');
+    } finally {
+      setIsRefreshingSlides(false);
+    }
+  };
 
   const handleTranscribe = async () => {
     if (slideUrls.length === 0) {
@@ -343,6 +375,15 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
               </div>
             )}
           </div>
+          <button
+            type="button"
+            onClick={handleRefreshSlides}
+            disabled={isRefreshingSlides}
+            className="flex items-center justify-center gap-2 w-full py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium disabled:opacity-60 transition-colors"
+          >
+            {isRefreshingSlides ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            Обновить слайды
+          </button>
           {slideUrls.length > 1 && (
             <div className="flex gap-1 overflow-x-auto pb-1">
               {slideUrls.slice(0, 10).map((url, i) => {
@@ -446,9 +487,9 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
           </div>
         </div>
 
-        {/* Middle: Transcript */}
+        {/* Middle: Transcript — высота шапки как у Сценария для одного уровня текста */}
         <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-xl bg-white/80 border border-slate-200/80 overflow-hidden">
-          <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-3 p-4 border-b border-slate-100 min-h-[56px]">
+          <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-3 p-4 border-b border-slate-100 h-[72px] box-border overflow-hidden">
             <div className="flex items-center gap-2">
               <FileText className="w-5 h-5 text-slate-400" />
               <h3 className="font-semibold text-slate-800">Транскрипт по слайдам</h3>
@@ -529,9 +570,9 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
           </div>
         </div>
 
-        {/* Right: Script */}
+        {/* Right: Script — высота шапки 72px как у Транскрипта */}
         <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-xl bg-white/80 border border-slate-200/80 overflow-hidden">
-          <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-3 p-4 border-b border-slate-100 min-h-[56px]">
+          <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-3 p-4 border-b border-slate-100 h-[72px] box-border overflow-hidden">
             <div className="flex items-center gap-2">
               <FileText className="w-5 h-5 text-violet-500" />
               <h3 className="font-semibold text-slate-800">Сценарий</h3>

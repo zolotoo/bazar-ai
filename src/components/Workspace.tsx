@@ -1174,38 +1174,38 @@ export function Workspace(props?: WorkspaceProps) {
                     </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5 pb-20 md:pb-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 pb-20 md:pb-6">
                     {carousels.map(c => (
                       <button
                         key={c.id}
                         onClick={() => setSelectedCarousel(c)}
                         className="group rounded-2xl overflow-hidden bg-white/80 border border-slate-200/80 shadow-sm hover:shadow-lg hover:border-violet-200/80 transition-all text-left"
                       >
-                        <div className="aspect-square relative bg-slate-100">
+                        <div className="aspect-[4/3] min-h-[120px] relative bg-slate-100">
                           <img
                             src={proxyImageUrl(c.thumbnail_url || undefined)}
                             alt=""
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
-                          <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-lg bg-black/60 text-white text-xs font-medium flex items-center gap-1">
-                            <Images className="w-3 h-3" />
+                          <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded-md bg-black/60 text-white text-[10px] font-medium flex items-center gap-0.5">
+                            <Images className="w-2.5 h-2.5" />
                             {c.slide_count || 0}
                           </div>
                           {c.transcript_status === 'completed' && (
-                            <div className="absolute top-2 left-2 px-2 py-0.5 rounded-lg bg-emerald-500/90 text-white text-[10px] font-medium">
+                            <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-emerald-500/90 text-white text-[10px] font-medium">
                               Транскрипт
                             </div>
                           )}
                         </div>
-                        <div className="p-3">
-                          <p className="text-sm font-medium text-slate-800 truncate">{c.caption?.slice(0, 60) || 'Без подписи'}</p>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
+                        <div className="px-2 py-1.5">
+                          <p className="text-xs font-medium text-slate-800 truncate">{c.caption?.slice(0, 50) || 'Без подписи'}</p>
+                          <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-500">
                             <span className="flex items-center gap-0.5">
-                              <Heart className="w-3 h-3" />
+                              <Heart className="w-2.5 h-2.5" />
                               {formatNumber(c.like_count)}
                             </span>
                             <span className="flex items-center gap-0.5">
-                              <MessageCircle className="w-3 h-3" />
+                              <MessageCircle className="w-2.5 h-2.5" />
                               {formatNumber(c.comment_count)}
                             </span>
                           </div>

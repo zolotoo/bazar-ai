@@ -69,16 +69,31 @@ export default async function handler(req, res) {
         const commentCount = metrics.comment_count || media.comment_count || 0;
         
         // Карусель: несколько фото/видео в одном посте
-        const carouselMedia = media.carousel_media || media.carousel_media_count && media.children?.items || media.edge_sidecar_to_children?.edges;
+        const carouselMedia = media.carousel_media || (media.carousel_media_count && media.children?.items) || media.edge_sidecar_to_children?.edges;
         let carousel_slides = [];
+        const getImageUrl = (item) => {
+          return item.image_versions2?.candidates?.[0]?.url
+            || item.image_versions?.candidates?.[0]?.url
+            || item.image_versions?.items?.[0]?.url
+            || item.image_versions2?.items?.[0]?.url
+            || item.display_url
+            || item.images?.standard_resolution?.url
+            || item.images?.low_resolution?.url
+            || item.thumbnail_src
+            || item.url
+            || (item.video_versions?.[0]?.url ? item.video_versions[0].url : null);
+        };
         if (Array.isArray(carouselMedia) && carouselMedia.length > 0) {
           carousel_slides = carouselMedia.map((item, i) => {
-            const img = item.image_versions?.candidates?.[0]?.url || item.image_versions?.items?.[0]?.url || item.display_url || item.images?.standard_resolution?.url || item.url;
-            return { url: img || '', index: i };
+            const url = getImageUrl(item);
+            return { url: url || '', index: i };
           }).filter(s => s.url);
+          if (carousel_slides.length > 0) {
+            console.log('Carousel first slide URL:', carousel_slides[0].url?.slice(0, 80));
+          }
         } else if (Array.isArray(media.children?.items)) {
           carousel_slides = media.children.items.map((item, i) => ({
-            url: item.image_versions?.candidates?.[0]?.url || item.image_versions?.items?.[0]?.url || item.display_url || item.thumbnail_url || '',
+            url: getImageUrl(item) || '',
             index: i,
           })).filter(s => s.url);
         }
@@ -88,7 +103,7 @@ export default async function handler(req, res) {
           success: true,
           shortcode: code,
           url: url || (is_carousel ? `https://www.instagram.com/p/${code}/` : `https://www.instagram.com/reel/${code}/`),
-          thumbnail_url: media.thumbnail_url || media.image_versions?.items?.[0]?.url || carousel_slides[0]?.url || '',
+          thumbnail_url: media.thumbnail_url || media.image_versions2?.candidates?.[0]?.url || media.image_versions?.items?.[0]?.url || carousel_slides[0]?.url || '',
           video_url: media.video_url || media.video_versions?.[0]?.url || '',
           caption: media.caption?.text || (typeof media.caption === 'string' ? media.caption : '') || '',
           view_count: viewCount,

@@ -287,6 +287,20 @@ export function useCarousels() {
     }
   }, []);
 
+  const updateCarouselSlideUrls = useCallback(async (id: string, slideUrls: string[], thumbnailUrl?: string) => {
+    try {
+      const payload: Record<string, unknown> = { slide_urls: slideUrls, slide_count: slideUrls.length };
+      if (thumbnailUrl !== undefined) payload.thumbnail_url = thumbnailUrl;
+      const { error } = await supabase.from('saved_carousels').update(payload).eq('id', id).select('id').maybeSingle();
+      if (error) return false;
+      setCarousels(prev => prev.map(c => c.id === id ? { ...c, slide_urls: slideUrls, slide_count: slideUrls.length, thumbnail_url: thumbnailUrl ?? c.thumbnail_url } : c));
+      return true;
+    } catch (err) {
+      console.error('updateCarouselSlideUrls:', err);
+      return false;
+    }
+  }, []);
+
   const removeCarousel = useCallback(async (id: string) => {
     const item = carousels.find(c => c.id === id);
     try {
@@ -313,6 +327,7 @@ export function useCarousels() {
     updateCarouselTranslation,
     updateCarouselScript,
     updateCarouselFolder,
+    updateCarouselSlideUrls,
     updateCarouselLinks,
     updateCarouselResponsibles,
     removeCarousel,
