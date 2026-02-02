@@ -12,6 +12,7 @@ import { useInboxVideos } from '../hooks/useInboxVideos';
 import { useProjectContext } from '../contexts/ProjectContext';
 import type { ProjectTemplateItem, ProjectStyle } from '../hooks/useProjects';
 import { calculateViralMultiplier, getOrUpdateProfileStats, applyViralMultiplierToCoefficient } from '../services/profileStatsService';
+import { isRussian } from '../utils/language';
 
 /** Сырые данные ссылок/ответственных из БД (по templateId или legacy label) */
 type VideoLinkRow = { templateId?: string; label?: string; value: string };
@@ -645,7 +646,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
     }
   };
 
-  // Генерация сценария по выбранному стилю (Gemini). При отсутствии перевода — сначала авто-перевод и сохранение.
+  // Генерация сценария по выбранному стилю (Gemini). При отсутствии перевода — авто-перевод (если транскрипт не на русском).
   const handleGenerateByStyle = async (style: ProjectStyle) => {
     if (!style?.prompt?.trim() || !transcript?.trim()) {
       toast.error('Нужен стиль с промтом и транскрипция');
@@ -654,24 +655,29 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
     setShowStylePickerPopover(false);
     setIsGeneratingScript(true);
     try {
-      let translationToUse = translation;
-      if (transcript?.trim() && !translation?.trim()) {
-        try {
-          const trRes = await fetch('/api/translate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: transcript, to: 'ru' }),
-          });
-          const trData = await trRes.json();
-          if (trData.success && trData.translated) {
-            setTranslation(trData.translated);
-            await updateVideoTranslation(video.id, trData.translated);
-            translationToUse = trData.translated;
-            toast.success('Перевод сохранён');
+      let translationToUse: string | undefined;
+      if (isRussian(transcript)) {
+        translationToUse = undefined;
+      } else {
+        translationToUse = translation?.trim() || undefined;
+        if (!translationToUse) {
+          try {
+            const trRes = await fetch('/api/translate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: transcript, to: 'ru' }),
+            });
+            const trData = await trRes.json();
+            if (trData.success && trData.translated) {
+              setTranslation(trData.translated);
+              await updateVideoTranslation(video.id, trData.translated);
+              translationToUse = trData.translated;
+              toast.success('Перевод сохранён');
+            }
+          } catch (e) {
+            console.error('Auto translate on По стилю:', e);
+            toast.error('Не удалось перевести');
           }
-        } catch (e) {
-          console.error('Auto translate on По стилю:', e);
-          toast.error('Не удалось перевести');
         }
       }
       const res = await fetch('/api/script', {
@@ -680,7 +686,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
         body: JSON.stringify({
           prompt: style.prompt,
           transcript_text: transcript,
-          translation_text: translationToUse || undefined,
+          translation_text: translationToUse,
         }),
       });
       const data = await res.json();
@@ -722,7 +728,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
       .filter((v): v is VideoWithScriptFields => Boolean(v))
       .map((v) => ({
         transcript_text: v.transcript_text,
-        translation_text: v.translation_text || '',
+        translation_text: isRussian(v.transcript_text || '') ? '' : (v.translation_text || ''),
         script_text: v.script_text,
       }));
     if (examples.length === 0) return;

@@ -10,6 +10,7 @@ import { useCarousels, type SavedCarousel } from '../hooks/useCarousels';
 import { useProjectContext } from '../contexts/ProjectContext';
 import type { ProjectTemplateItem, ProjectStyle } from '../hooks/useProjects';
 import { transcribeCarouselByUrls } from '../services/carouselTranscriptionService';
+import { isRussian } from '../utils/language';
 
 const DEFAULT_LINKS: ProjectTemplateItem[] = [
   { id: 'link-0', label: 'Заготовка' },
@@ -224,17 +225,22 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
     setShowStylePickerPopover(false);
     setIsGeneratingScript(true);
     try {
-      let translationToUse = translation;
-      if (transcript.trim() && !translation.trim()) {
-        try {
-          const trRes = await fetch('/api/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: transcript, to: 'ru' }) });
-          const trData = await trRes.json();
-          if (trData.success && trData.translated) {
-            setTranslation(trData.translated);
-            await updateCarouselTranslation(carousel.id, trData.translated);
-            translationToUse = trData.translated;
-          }
-        } catch (_) {}
+      let translationToUse: string | undefined;
+      if (isRussian(transcript)) {
+        translationToUse = undefined;
+      } else {
+        translationToUse = translation.trim() || undefined;
+        if (!translationToUse) {
+          try {
+            const trRes = await fetch('/api/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: transcript, to: 'ru' }) });
+            const trData = await trRes.json();
+            if (trData.success && trData.translated) {
+              setTranslation(trData.translated);
+              await updateCarouselTranslation(carousel.id, trData.translated);
+              translationToUse = trData.translated;
+            }
+          } catch (_) {}
+        }
       }
       const res = await fetch('/api/script', {
         method: 'POST',
@@ -242,7 +248,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
         body: JSON.stringify({
           prompt: style.prompt,
           transcript_text: transcript,
-          translation_text: translationToUse || undefined,
+          translation_text: translationToUse,
         }),
       });
       const data = await res.json();
@@ -588,56 +594,66 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
             <div className="flex items-center gap-2 flex-wrap">
               <FileText className="w-5 h-5 text-violet-500 flex-shrink-0" />
               <h3 className="font-semibold text-slate-800">Сценарий</h3>
-              {(projectStyles.length > 0 || currentProject?.stylePrompt) && (
-                <>
-                  <button
-                    ref={stylePickerButtonRef}
-                    onClick={() => setShowStylePickerPopover(!showStylePickerPopover)}
-                    disabled={isGeneratingScript || !transcript.trim()}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-600 text-white text-xs font-medium disabled:opacity-50"
-                  >
-                    {isGeneratingScript ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
-                    По стилю
-                    <ChevronDown className="w-3 h-3" />
-                  </button>
-                  {showStylePickerPopover && popoverRect && createPortal(
-                    <>
-                      <div className="fixed inset-0 z-[9998]" onClick={() => setShowStylePickerPopover(false)} aria-hidden />
-                      <div
-                        className="fixed z-[9999] min-w-[200px] rounded-xl border border-slate-200 bg-white shadow-xl py-1.5"
-                        style={{ top: popoverRect.top, left: popoverRect.left }}
-                      >
-                        {projectStyles.map(s => (
-                          <button
-                            key={s.id}
-                            type="button"
-                            onClick={() => handleGenerateByStyle(s)}
-                            className="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                          >
-                            {s.name}
-                          </button>
-                        ))}
-                        {currentProject?.stylePrompt && projectStyles.length === 0 && (
-                          <button
-                            type="button"
-                            onClick={() => handleGenerateByStyle({
-                              id: 'legacy',
-                              name: 'Стиль по умолчанию',
-                              prompt: currentProject.stylePrompt!,
-                              meta: currentProject.styleMeta,
-                              examplesCount: currentProject.styleExamplesCount,
-                            })}
-                            className="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                          >
-                            Стиль по умолчанию
-                          </button>
-                        )}
-                      </div>
-                    </>,
-                    document.body
+              <div className="relative">
+                <button
+                  ref={stylePickerButtonRef}
+                  onClick={() => {
+                    if (!(projectStyles.length > 0 || currentProject?.stylePrompt)) {
+                      toast.error('Создайте стиль в рилсах (Обучить стиль) или задайте промт в настройках проекта');
+                      return;
+                    }
+                    setShowStylePickerPopover(!showStylePickerPopover);
+                  }}
+                  disabled={isGeneratingScript || !transcript.trim()}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium transition-colors',
+                    projectStyles.length > 0 || currentProject?.stylePrompt
+                      ? 'bg-violet-500 hover:bg-violet-600 disabled:opacity-50'
+                      : 'bg-violet-400/70 cursor-not-allowed'
                   )}
-                </>
-              )}
+                  title={!(projectStyles.length > 0 || currentProject?.stylePrompt) ? 'Создайте стиль в рилсах' : undefined}
+                >
+                  {isGeneratingScript ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+                  По стилю
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+                {showStylePickerPopover && popoverRect && (projectStyles.length > 0 || currentProject?.stylePrompt) && createPortal(
+                  <>
+                    <div className="fixed inset-0 z-[9998]" onClick={() => setShowStylePickerPopover(false)} aria-hidden />
+                    <div
+                      className="fixed z-[9999] min-w-[200px] rounded-xl border border-slate-200 bg-white shadow-xl py-1.5"
+                      style={{ top: popoverRect.top, left: popoverRect.left }}
+                    >
+                      {projectStyles.map(s => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => handleGenerateByStyle(s)}
+                          className="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                        >
+                          {s.name}
+                        </button>
+                      ))}
+                      {currentProject?.stylePrompt && projectStyles.length === 0 && (
+                        <button
+                          type="button"
+                          onClick={() => handleGenerateByStyle({
+                            id: 'legacy',
+                            name: 'Стиль по умолчанию',
+                            prompt: currentProject.stylePrompt!,
+                            meta: currentProject.styleMeta,
+                            examplesCount: currentProject.styleExamplesCount,
+                          })}
+                          className="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                        >
+                          Стиль по умолчанию
+                        </button>
+                      )}
+                    </div>
+                  </>,
+                  document.body
+                )}
+              </div>
             </div>
             {script && (
               <>
