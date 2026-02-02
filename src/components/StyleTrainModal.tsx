@@ -51,9 +51,9 @@ export function StyleTrainModal({
       id: `c-${c.id}`,
       title: c.caption?.slice(0, 50) || `Карусель ${c.slide_count || 0} слайдов`,
       type: 'carousel' as const,
-      transcript_text: c.transcript_text,
+      transcript_text: c.transcript_text ?? undefined,
       translation_text: c.translation_text ?? undefined,
-      script_text: c.script_text,
+      script_text: c.script_text ?? undefined,
     }));
   const candidates = [...videoCandidates, ...carouselCandidates];
 

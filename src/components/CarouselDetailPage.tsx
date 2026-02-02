@@ -617,7 +617,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                     }
                     setShowStylePickerPopover(!showStylePickerPopover);
                   }}
-                  disabled={isGeneratingScript || ((projectStyles.length > 0 || currentProject?.stylePrompt) && !transcript.trim())}
+                  disabled={Boolean(isGeneratingScript || ((projectStyles.length > 0 || currentProject?.stylePrompt) && !transcript.trim()))}
                   className={cn(
                     'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium transition-colors whitespace-nowrap',
                     projectStyles.length > 0 || currentProject?.stylePrompt

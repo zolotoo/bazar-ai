@@ -178,14 +178,13 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   const [isSavingTranscript, setIsSavingTranscript] = useState(false);
   const [viralMultiplier, setViralMultiplier] = useState<number | null>(null);
   const [isCalculatingViral, setIsCalculatingViral] = useState(false);
-  const { currentProject, updateProject, addProjectStyle, updateProjectStyle } = useProjectContext();
+  const { currentProject, updateProject, updateProjectStyle } = useProjectContext();
 
   // Стиль сценария проекта: обучение по примерам + генерация по стилю + просмотр/редактирование промта
   const [showStyleTrainModal, setShowStyleTrainModal] = useState(false);
   const [showPromptModal, setShowPromptModal] = useState(false);
   const [isEditingPrompt, setIsEditingPrompt] = useState(false);
   const [editedPromptText, setEditedPromptText] = useState('');
-  const [isAnalyzingStyle, setIsAnalyzingStyle] = useState(false);
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
   const [isSavingPrompt, setIsSavingPrompt] = useState(false);
   const [scriptGeneratedByStyle, setScriptGeneratedByStyle] = useState(false);
@@ -247,7 +246,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
     setScriptGeneratedByStyle(false);
   }, [video.id]);
 
-  const { videos: projectVideos, updateVideoFolder, updateVideoScript, updateVideoTranscript, updateVideoTranslation, updateVideoResponsible, updateVideoLinks } = useInboxVideos();
+  const { updateVideoFolder, updateVideoScript, updateVideoTranscript, updateVideoTranslation, updateVideoResponsible, updateVideoLinks } = useInboxVideos();
 
   const addLinkRow = () => setLinks(prev => [...prev, { id: `link-${Date.now()}`, label: '', value: '' }]);
   const removeLinkRow = (id: string) => setLinks(prev => prev.length > 1 ? prev.filter(r => r.id !== id) : prev);
