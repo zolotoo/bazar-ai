@@ -590,10 +590,12 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
 
         {/* Right: Script — высота шапки как у Транскрипта */}
         <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-xl bg-white/80 border border-slate-200/80 overflow-hidden">
-          <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-3 p-4 border-b border-slate-100 min-h-[72px]">
-            <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex-shrink-0 flex items-center justify-between gap-3 p-4 border-b border-slate-100 min-h-[72px] overflow-x-auto overflow-y-hidden">
+            <div className="flex items-center gap-2 min-w-0">
               <FileText className="w-5 h-5 text-violet-500 flex-shrink-0" />
-              <h3 className="font-semibold text-slate-800">Сценарий</h3>
+              <h3 className="font-semibold text-slate-800 truncate">Сценарий</h3>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
               <div className="relative">
                 <button
                   ref={stylePickerButtonRef}
@@ -606,7 +608,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                   }}
                   disabled={isGeneratingScript || !transcript.trim()}
                   className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium transition-colors',
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium transition-colors whitespace-nowrap',
                     projectStyles.length > 0 || currentProject?.stylePrompt
                       ? 'bg-violet-500 hover:bg-violet-600 disabled:opacity-50'
                       : 'bg-violet-400/70 cursor-not-allowed'
@@ -654,21 +656,21 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                   document.body
                 )}
               </div>
+              {script && (
+                <>
+                  <button onClick={handleSaveScript} disabled={isSavingScript} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500 text-white text-xs font-medium disabled:opacity-50">
+                    {isSavingScript ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    Сохранить
+                  </button>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(script); setCopiedScript(true); setTimeout(() => setCopiedScript(false), 2000); }}
+                    className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"
+                  >
+                    {copiedScript ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </>
+              )}
             </div>
-            {script && (
-              <>
-                <button onClick={handleSaveScript} disabled={isSavingScript} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500 text-white text-xs font-medium disabled:opacity-50">
-                  {isSavingScript ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                  Сохранить
-                </button>
-                <button
-                  onClick={() => { navigator.clipboard.writeText(script); setCopiedScript(true); setTimeout(() => setCopiedScript(false), 2000); }}
-                  className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"
-                >
-                  {copiedScript ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                </button>
-              </>
-            )}
           </div>
           <div className="flex-1 min-h-0 flex flex-col p-4">
             <textarea
