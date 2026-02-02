@@ -103,7 +103,6 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
   const [promptChatInput, setPromptChatInput] = useState('');
   const [isPromptChatLoading, setIsPromptChatLoading] = useState(false);
   const [pendingSuggestedPrompt, setPendingSuggestedPrompt] = useState<string | null>(null);
-  const [scriptGeneratedByStyle, setScriptGeneratedByStyle] = useState(false);
   const [lastGeneratedStyleId, setLastGeneratedStyleId] = useState<string | null>(null);
   const [showChoiceModal, setShowChoiceModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -145,9 +144,6 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
     setResponsibles(buildResponsibles());
   }, [carousel.id, carousel.links, carousel.responsibles, carousel.draft_link, carousel.final_link, carousel.script_responsible, carousel.editing_responsible]);
 
-  useEffect(() => {
-    setScriptGeneratedByStyle(false);
-  }, [carousel.id]);
 
   useEffect(() => {
     const urls = carousel.slide_urls?.length ? carousel.slide_urls : carousel.thumbnail_url ? [carousel.thumbnail_url] : [];
@@ -287,7 +283,6 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
       const data = await res.json();
       if (data.success && data.script) {
         setScript(data.script);
-        setScriptGeneratedByStyle(true);
         setLastGeneratedStyleId(style.id);
         toast.success(`Сценарий по стилю «${style.name}»`);
       } else {
@@ -332,7 +327,6 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
         setLastRefinedPrompt(data.prompt);
         setShowFeedbackModal(false);
         setFeedbackText('');
-        setScriptGeneratedByStyle(false);
         toast.success('Промт обновлён');
         if (data.clarifying_questions?.length) {
           setClarifyingQuestions(data.clarifying_questions);
@@ -378,7 +372,6 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
         setShowEditScriptModal(false);
         setScriptAiForRefine('');
         setScriptHumanForRefine('');
-        setScriptGeneratedByStyle(false);
         toast.success('Промт дообучен на ваших правках');
         if (data.clarifying_questions?.length) {
           setClarifyingQuestions(data.clarifying_questions);
@@ -1000,7 +993,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
           <div className="flex-1 min-h-0 flex flex-col p-4">
             <textarea
               value={script}
-              onChange={e => { setScript(e.target.value); setScriptGeneratedByStyle(false); }}
+              onChange={e => setScript(e.target.value)}
               className="w-full flex-1 min-h-[120px] p-3 rounded-xl border border-slate-200 text-sm text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-violet-200"
               placeholder="Сгенерируйте сценарий по стилю или напишите вручную."
             />

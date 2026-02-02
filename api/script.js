@@ -144,32 +144,49 @@ async function handleGenerate(req, res) {
   userParts.push('\n\nСгенерируй мой сценарий (адаптацию) по этим данным. Выводи только текст сценария, без пояснений.');
   const userText = userParts.join('');
 
-  try {
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+  const modelsToTry = ['gemini-2.0-flash', 'gemini-2.5-flash'];
+  for (const model of modelsToTry) {
+    try {
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiKey)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: userText }] }],
           systemInstruction: { parts: [{ text: prompt.trim() }] },
-          generationConfig: { temperature: 0.4 },
+          generationConfig: {
+            temperature: 0.4,
+            safetySettings: [
+              { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+              { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+              { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+              { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+              { category: 'HARM_CATEGORY_CIVIC_INTEGRITY', threshold: 'BLOCK_NONE' },
+            ],
+          },
         }),
+        }
+      );
+      if (!geminiRes.ok) {
+        const errBody = await geminiRes.text();
+        console.error(`Gemini API error (${model}):`, geminiRes.status, errBody);
+        continue;
       }
-    );
-    if (!geminiRes.ok) {
-      const errBody = await geminiRes.text();
-      console.error('Gemini API error:', geminiRes.status, errBody);
-      return res.status(502).json({ error: 'Gemini API error', details: errBody });
+      const data = await geminiRes.json();
+      let script = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+      if (!script && data?.candidates?.[0]?.content?.parts?.length) {
+        script = data.candidates[0].content.parts
+          .map((p) => (p.text || '').trim())
+          .filter(Boolean)
+          .join('\n');
+      }
+      if (script) return res.status(200).json({ success: true, script });
+    } catch (err) {
+      console.error(`script generate error (${model}):`, err);
     }
-    const data = await geminiRes.json();
-    const script = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-    if (!script) return res.status(502).json({ error: 'Gemini returned empty script' });
-    return res.status(200).json({ success: true, script });
-  } catch (err) {
-    console.error('script generate error:', err);
-    return res.status(500).json({ error: 'Failed to generate script', details: err.message });
   }
+  return res.status(502).json({ error: 'Gemini returned empty script. Try again or shorten the transcript.' });
 }
 
 async function handleRefine(req, res) {
