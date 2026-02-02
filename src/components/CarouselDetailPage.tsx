@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   ChevronLeft, FileText, Copy, ExternalLink, Loader2, Check,
-  Languages, ChevronDown, Save, Plus, Trash2, Wand2, Images, Heart, MessageCircle, RefreshCw
+  Languages, ChevronDown, Save, Plus, Trash2, Wand2, Images, Heart, MessageCircle, RefreshCw, BookOpen
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { toast } from 'sonner';
@@ -11,6 +11,7 @@ import { useProjectContext } from '../contexts/ProjectContext';
 import type { ProjectTemplateItem, ProjectStyle } from '../hooks/useProjects';
 import { transcribeCarouselByUrls } from '../services/carouselTranscriptionService';
 import { isRussian } from '../utils/language';
+import { StyleTrainModal } from './StyleTrainModal';
 
 const DEFAULT_LINKS: ProjectTemplateItem[] = [
   { id: 'link-0', label: 'Заготовка' },
@@ -89,6 +90,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
   const [isRefreshingSlides, setIsRefreshingSlides] = useState(false);
   const stylePickerButtonRef = useRef<HTMLButtonElement>(null);
   const [popoverRect, setPopoverRect] = useState<{ top: number; left: number } | null>(null);
+  const [showStyleTrainModal, setShowStyleTrainModal] = useState(false);
 
   const { currentProject, updateProject } = useProjectContext();
   const {
@@ -591,9 +593,18 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
         {/* Right: Script — высота шапки как у Транскрипта */}
         <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-xl bg-white/80 border border-slate-200/80 overflow-hidden">
           <div className="flex-shrink-0 flex items-center justify-between gap-3 p-4 border-b border-slate-100 min-h-[72px] overflow-x-auto overflow-y-hidden">
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
               <FileText className="w-5 h-5 text-violet-500 flex-shrink-0" />
               <h3 className="font-semibold text-slate-800 truncate">Сценарий</h3>
+              <button
+                type="button"
+                onClick={() => setShowStyleTrainModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-violet-200 bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-medium whitespace-nowrap flex-shrink-0"
+                title="Обучить стиль по 1–5 примерам (рилсы или карусели)"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                Обучить стиль
+              </button>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <div className="relative">
@@ -601,19 +612,19 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                   ref={stylePickerButtonRef}
                   onClick={() => {
                     if (!(projectStyles.length > 0 || currentProject?.stylePrompt)) {
-                      toast.error('Создайте стиль в рилсах (Обучить стиль) или задайте промт в настройках проекта');
+                      toast.error('Нажмите «Обучить стиль» слева или задайте промт в настройках проекта');
                       return;
                     }
                     setShowStylePickerPopover(!showStylePickerPopover);
                   }}
-                  disabled={isGeneratingScript || !transcript.trim()}
+                  disabled={isGeneratingScript || ((projectStyles.length > 0 || currentProject?.stylePrompt) && !transcript.trim())}
                   className={cn(
                     'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium transition-colors whitespace-nowrap',
                     projectStyles.length > 0 || currentProject?.stylePrompt
                       ? 'bg-violet-500 hover:bg-violet-600 disabled:opacity-50'
                       : 'bg-violet-400/70 cursor-not-allowed'
                   )}
-                  title={!(projectStyles.length > 0 || currentProject?.stylePrompt) ? 'Создайте стиль в рилсах' : undefined}
+                  title={!(projectStyles.length > 0 || currentProject?.stylePrompt) ? 'Нажмите «Обучить стиль» рядом или задайте промт в настройках проекта' : undefined}
                 >
                   {isGeneratingScript ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
                   По стилю
@@ -682,6 +693,8 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
           </div>
         </div>
       </div>
+
+      <StyleTrainModal open={showStyleTrainModal} onClose={() => setShowStyleTrainModal(false)} />
     </div>
   );
 }

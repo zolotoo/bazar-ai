@@ -9,6 +9,7 @@ import { checkTranscriptionStatus, downloadAndTranscribe } from '../services/tra
 import { supabase } from '../utils/supabase';
 import { toast } from 'sonner';
 import { useInboxVideos } from '../hooks/useInboxVideos';
+import { StyleTrainModal } from './StyleTrainModal';
 import { useProjectContext } from '../contexts/ProjectContext';
 import type { ProjectTemplateItem, ProjectStyle } from '../hooks/useProjects';
 import { calculateViralMultiplier, getOrUpdateProfileStats, applyViralMultiplierToCoefficient } from '../services/profileStatsService';
@@ -184,7 +185,6 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   const [showPromptModal, setShowPromptModal] = useState(false);
   const [isEditingPrompt, setIsEditingPrompt] = useState(false);
   const [editedPromptText, setEditedPromptText] = useState('');
-  const [selectedVideoIdsForStyle, setSelectedVideoIdsForStyle] = useState<string[]>([]);
   const [isAnalyzingStyle, setIsAnalyzingStyle] = useState(false);
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
   const [isSavingPrompt, setIsSavingPrompt] = useState(false);
@@ -703,81 +703,6 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
       toast.error('Ошибка генерации сценария');
     } finally {
       setIsGeneratingScript(false);
-    }
-  };
-
-  // Обучение стиля по примерам (1–5 видео с оригиналом + переводом + моей адаптацией)
-  type VideoWithScriptFields = { id: string; title?: string; transcript_text?: string; translation_text?: string; script_text?: string };
-  const styleTrainCandidates = ((projectVideos || []) as VideoWithScriptFields[]).filter(
-    (v) => v.transcript_text?.trim() && v.script_text?.trim()
-  );
-  const toggleVideoForStyle = (id: string) => {
-    setSelectedVideoIdsForStyle((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : prev.length >= 5 ? prev : [...prev, id]
-    );
-  };
-  const handleTrainStyle = async () => {
-    if (!currentProject?.id || selectedVideoIdsForStyle.length === 0) return;
-    const name = creatingNewStyle ? newStyleName.trim() : editingStyle?.name || 'Стиль';
-    if (creatingNewStyle && !name) {
-      toast.error('Введите название стиля');
-      return;
-    }
-    const examples = selectedVideoIdsForStyle
-      .map((id) => styleTrainCandidates.find((v) => v.id === id))
-      .filter((v): v is VideoWithScriptFields => Boolean(v))
-      .map((v) => ({
-        transcript_text: v.transcript_text,
-        translation_text: isRussian(v.transcript_text || '') ? '' : (v.translation_text || ''),
-        script_text: v.script_text,
-      }));
-    if (examples.length === 0) return;
-    setIsAnalyzingStyle(true);
-    try {
-      const res = await fetch('/api/script', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ examples }),
-      });
-      const data = await res.json();
-      if (data.success && data.prompt) {
-        if (creatingNewStyle) {
-          await addProjectStyle(currentProject.id, {
-            name: name || 'Новый стиль',
-            prompt: data.prompt,
-            meta: data.meta,
-            examplesCount: examples.length,
-          });
-          toast.success(`Стиль «${name}» создан по ${examples.length} пример${examples.length === 1 ? 'у' : examples.length < 5 ? 'ам' : 'ам'}`);
-        } else if (editingStyle) {
-          await updateProjectStyle(currentProject.id, editingStyle.id, {
-            prompt: data.prompt,
-            meta: data.meta,
-            examplesCount: examples.length,
-          });
-          toast.success(`Стиль «${editingStyle.name}» обновлён`);
-        } else {
-          await updateProject(currentProject.id, {
-            stylePrompt: data.prompt,
-            styleMeta: data.meta,
-            styleExamplesCount: examples.length,
-          });
-          toast.success(`Стиль обучен по ${examples.length} пример${examples.length === 1 ? 'у' : examples.length < 5 ? 'ам' : 'ам'}`);
-        }
-        setShowStyleTrainModal(false);
-        setSelectedVideoIdsForStyle([]);
-        setNewStyleName('');
-        setCreatingNewStyle(false);
-        setEditingStyle(null);
-        setEditedPromptText(data.prompt || '');
-      } else {
-        toast.error(data.error || 'Ошибка анализа стиля');
-      }
-    } catch (err) {
-      console.error('Train style error:', err);
-      toast.error('Ошибка обучения стиля');
-    } finally {
-      setIsAnalyzingStyle(false);
     }
   };
 
@@ -1626,7 +1551,6 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                               setShowStylePickerPopover(false);
                               setCreatingNewStyle(true);
                               setNewStyleName('');
-                              setSelectedVideoIdsForStyle([]);
                               setShowStyleTrainModal(true);
                             }}
                             className="w-full px-3 py-2 text-left text-sm text-violet-600 hover:bg-violet-50 flex items-center gap-2"
@@ -1706,90 +1630,20 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
         </div>
       </div>
 
-      {/* Модальное окно: обучить стиль по примерам */}
-      {showStyleTrainModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !isAnalyzingStyle && setShowStyleTrainModal(false)}>
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="p-4 border-b border-slate-100">
-              <h3 className="font-semibold text-slate-800">{creatingNewStyle ? 'Создать новый стиль' : editingStyle ? `Переобучить «${editingStyle.name}»` : 'Обучить стиль по примерам'}</h3>
-              <p className="text-slate-500 text-sm mt-1">
-                {creatingNewStyle
-                  ? 'Выберите 1–5 видео с оригиналом, переводом и вашим сценарием. Нейросеть создаст промт и вы назовёте этот стиль.'
-                  : editingStyle
-                  ? 'Выберите примеры заново. Промт стиля будет заменён.'
-                  : currentProject?.stylePrompt
-                  ? 'Выберите примеры заново (можно добавить новые). Текущий промт будет заменён.'
-                  : 'Выберите 1–5 видео, у которых есть оригинал, перевод и ваш сценарий. Нейросеть выявит закономерности.'}
-              </p>
-              {creatingNewStyle && (
-                <div className="mt-3">
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Название стиля</label>
-                  <input
-                    type="text"
-                    value={newStyleName}
-                    onChange={(e) => setNewStyleName(e.target.value)}
-                    placeholder="Например: Короткие, С хуками, Без воды"
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-violet-200 focus:border-violet-400"
-                  />
-                </div>
-              )}
-            </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {styleTrainCandidates.length === 0 ? (
-                <p className="text-slate-500 text-sm">Нет подходящих видео: нужны транскрипция и ваш сценарий.</p>
-              ) : (
-                styleTrainCandidates.map((v) => (
-                  <label key={v.id} className={cn(
-                    "flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors",
-                    selectedVideoIdsForStyle.includes(v.id) ? "border-violet-300 bg-violet-50" : "border-slate-200 hover:bg-slate-50"
-                  )}>
-                    <input
-                      type="checkbox"
-                      checked={selectedVideoIdsForStyle.includes(v.id)}
-                      onChange={() => toggleVideoForStyle(v.id)}
-                      className="rounded border-slate-300 text-violet-600 focus:ring-violet-500"
-                    />
-                    <span className="text-sm text-slate-700 truncate">{v.title || v.id}</span>
-                  </label>
-                ))
-              )}
-            </div>
-            <div className="p-4 border-t border-slate-100 flex justify-between items-center">
-              <span className="text-xs text-slate-400">
-                Выбрано: {selectedVideoIdsForStyle.length} из 5
-              </span>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowStyleTrainModal(false)}
-                  disabled={isAnalyzingStyle}
-                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 disabled:opacity-50"
-                >
-                  Отмена
-                </button>
-                <button
-                  type="button"
-                  onClick={handleTrainStyle}
-                  disabled={isAnalyzingStyle || selectedVideoIdsForStyle.length === 0}
-                  className="px-4 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50"
-                >
-                  {isAnalyzingStyle ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Анализ...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      Анализировать и сохранить
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <StyleTrainModal
+        open={showStyleTrainModal}
+        onClose={() => {
+          setShowStyleTrainModal(false);
+          setCreatingNewStyle(false);
+          setEditingStyle(null);
+          setNewStyleName('');
+        }}
+        creatingNewStyle={creatingNewStyle}
+        newStyleName={newStyleName}
+        setNewStyleName={setNewStyleName}
+        editingStyle={editingStyle}
+        onSuccess={(prompt) => setEditedPromptText(prompt)}
+      />
 
       {/* Модальное окно: просмотр и редактирование промта стиля */}
       {showPromptModal && (currentPromptStyle || currentProject?.stylePrompt) && (
