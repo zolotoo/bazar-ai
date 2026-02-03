@@ -1055,13 +1055,14 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
 
         {/* Main content — на мобильных колонка, на десктопе 3 колонки */}
         <div className="flex-1 flex flex-col md:flex-row gap-4 min-h-0 overflow-y-auto md:overflow-hidden">
-          {/* Left: видео 9:16 + папка + статистика — компактная колонка со скроллом */}
-          <div className="flex-shrink-0 flex flex-col gap-3 overflow-y-auto custom-scrollbar-light w-full md:w-auto md:min-w-[200px] md:max-w-[200px]">
-            {/* Видео 9:16 — компактно, первым в колонке. Заглушка: клик → загрузка через API (стоит кредитов) */}
-            <div 
-              className="relative rounded-xl overflow-hidden shadow-md border border-slate-200/80 bg-black flex-shrink-0"
-              style={{ aspectRatio: '9/16' }}
-            >
+          {/* Left: видео 9:16 + папка + статистика — колонка со скроллом (как было раньше по ширине) */}
+          <div className="flex-shrink-0 flex flex-col gap-3 overflow-y-auto custom-scrollbar-light w-full md:w-auto md:min-w-[256px] md:max-w-[min(256px,28vw)]">
+            {/* Видео 9:16 — выше по центру колонки. Заглушка: клик → загрузка через API (стоит кредитов) */}
+            <div className="flex justify-center flex-shrink-0">
+              <div 
+                className="relative rounded-xl overflow-hidden shadow-md border border-slate-200/80 bg-black"
+                style={{ aspectRatio: '9/16', width: 'min(100%, 220px)' }}
+              >
               {showVideo && directVideoUrl ? (
                 <video
                   src={directVideoUrl}
@@ -1095,8 +1096,9 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                       )}
                     </div>
                   </div>
-                </button>
-              )}
+</button>
+            )}
+              </div>
             </div>
 
             {/* Current folder + move — z-[60] чтобы дропдаун был поверх раздела параметров */}
@@ -1359,18 +1361,18 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
           <div className="flex-1 flex flex-col min-w-0 min-h-[320px] md:min-h-0 rounded-card-xl shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] overflow-hidden">
             {/* Transcript header — на мобильных кнопки переносятся */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-b border-slate-100">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <FileText className="w-5 h-5 text-slate-400 flex-shrink-0" />
                 <h3 className="font-semibold text-slate-800">Транскрибация</h3>
               </div>
               
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 {/* Tabs: Original / Translation */}
-                <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
+                <div className="flex items-center bg-slate-100 rounded-lg p-0.5 h-9">
                   <button
                     onClick={() => setTranscriptTab('original')}
                     className={cn(
-                      "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                      "h-full px-3 rounded-md text-xs font-medium transition-all flex items-center",
                       transcriptTab === 'original'
                         ? "bg-white text-slate-800 shadow-sm"
                         : "text-slate-600 hover:text-slate-800"
@@ -1381,7 +1383,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                   <button
                     onClick={() => setTranscriptTab('translation')}
                     className={cn(
-                      "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                      "h-full px-3 rounded-md text-xs font-medium transition-all flex items-center",
                       transcriptTab === 'translation'
                         ? "bg-white text-slate-800 shadow-sm"
                         : "text-slate-600 hover:text-slate-800"
@@ -1396,7 +1398,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                     <button
                       onClick={handleSaveTranscript}
                       disabled={isSavingTranscript}
-                      className="px-3 py-1.5 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-xs font-medium transition-all flex items-center gap-1.5 disabled:opacity-50 shrink-0"
+                      className="h-9 px-3 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-xs font-medium transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 shrink-0"
                       title="Сохранить транскрипцию"
                     >
                       {isSavingTranscript ? (
@@ -1409,7 +1411,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                     <button
                       onClick={handleTranslate}
                       disabled={isTranslating}
-                      className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-700 transition-colors disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+                      className="h-9 px-2.5 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 shrink-0"
                       title="Перевести"
                     >
                       {isTranslating ? (
@@ -1421,7 +1423,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                     </button>
                     <button
                       onClick={handleCopyTranscript}
-                      className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-700 transition-colors shrink-0"
+                      className="h-9 w-9 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-700 transition-colors shrink-0 flex items-center justify-center"
                       title="Копировать"
                     >
                       {copiedTranscript ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
@@ -1529,13 +1531,13 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                 )}
               </div>
               
-              <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
                 {(projectStyles.length > 0 || currentProject?.stylePrompt) && transcript?.trim() && (
                   <div className="relative" ref={stylePickerRef}>
                     <button
                       onClick={() => setShowStylePickerPopover(!showStylePickerPopover)}
                       disabled={isGeneratingScript}
-                      className="px-3 py-1.5 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-xs font-medium transition-all flex items-center gap-2 disabled:opacity-50 shrink-0"
+                      className="h-9 px-3 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-xs font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 shrink-0"
                       title="Выбрать стиль и сгенерировать"
                     >
                       {isGeneratingScript ? (
@@ -1616,7 +1618,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                   <button
                     type="button"
                     onClick={() => setShowChoiceModal(true)}
-                    className="px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-medium transition-all flex items-center gap-1.5"
+                    className="h-9 px-3 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-medium transition-all flex items-center justify-center gap-1.5 shrink-0"
                     title="Дать обратную связь — промт дообучится"
                   >
                     Что не так сделал?
@@ -1625,7 +1627,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                 <button
                   type="button"
                   onClick={() => { setCreatingNewStyle(true); setEditingStyle(null); setNewStyleName(''); setShowStyleTrainModal(true); }}
-                  className="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium transition-all flex items-center gap-1.5"
+                  className="h-9 px-3 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium transition-all flex items-center justify-center gap-1.5 shrink-0"
                   title="Создать новый стиль по 1–5 примерам"
                 >
                   <BookOpen className="w-3.5 h-3.5" />
@@ -1636,7 +1638,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                     <button
                       onClick={handleSaveScript}
                       disabled={isSavingScript}
-                      className="px-3 py-1.5 rounded-lg bg-slate-600 text-white text-xs font-medium hover:bg-slate-700 transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50 shrink-0"
+                      className="h-9 px-3 rounded-lg bg-slate-600 text-white text-xs font-medium hover:bg-slate-700 transition-all shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50 shrink-0"
                     >
                       {isSavingScript ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1647,7 +1649,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                     </button>
                     <button
                       onClick={handleCopyScript}
-                      className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-700 transition-colors shrink-0"
+                      className="h-9 w-9 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-700 transition-colors shrink-0 flex items-center justify-center"
                       title="Копировать"
                     >
                       {copiedScript ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
