@@ -90,8 +90,8 @@ export function ProfilePage() {
             <p className="text-xs text-slate-500">Поисковых запросов</p>
           </div>
           <div className="bg-white rounded-2xl p-4 text-center active:scale-95 transition-transform">
-            <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center mx-auto mb-2">
-              <Video className="w-5 h-5 text-indigo-500" />
+            <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-2">
+              <Video className="w-5 h-5 text-slate-600" />
             </div>
             <p className="text-2xl font-bold text-slate-800">{incomingVideos.length}</p>
             <p className="text-xs text-slate-500">Сохранённых видео</p>
@@ -195,7 +195,7 @@ export function ProfilePage() {
                   key={account.id}
                   className="bg-white rounded-2xl p-4 flex items-center gap-3"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                  <div className="w-12 h-12 rounded-xl bg-slate-600 flex items-center justify-center flex-shrink-0">
                     <span className="text-white font-bold text-lg">
                       {account.instagram_username[0].toUpperCase()}
                     </span>

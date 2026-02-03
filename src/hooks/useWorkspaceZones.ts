@@ -46,10 +46,10 @@ export interface ZoneVideo {
 // Дефолтные зоны
 const DEFAULT_ZONES: WorkspaceZone[] = [
   { id: 'incoming', name: 'Входящие', color: '#f97316', position_x: 0, position_y: 0, width: 300, height: 500, sort_order: 0 },
-  { id: 'favorites', name: 'Избранное', color: '#6366f1', position_x: 350, position_y: 0, width: 300, height: 500, sort_order: 1 },
+  { id: 'favorites', name: 'Избранное', color: '#475569', position_x: 350, position_y: 0, width: 300, height: 500, sort_order: 1 },
   { id: 'in-progress', name: 'В работе', color: '#f59e0b', position_x: 700, position_y: 0, width: 300, height: 500, sort_order: 2 },
   { id: 'scripts', name: 'Сценарии', color: '#10b981', position_x: 1050, position_y: 0, width: 300, height: 500, sort_order: 3 },
-  { id: 'done', name: 'Готово', color: '#8b5cf6', position_x: 1400, position_y: 0, width: 300, height: 500, sort_order: 4 },
+  { id: 'done', name: 'Готово', color: '#334155', position_x: 1400, position_y: 0, width: 300, height: 500, sort_order: 4 },
 ];
 
 export function useWorkspaceZones() {

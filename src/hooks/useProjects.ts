@@ -66,19 +66,19 @@ const DEFAULT_RESPONSIBLES_TEMPLATE: ProjectTemplateItem[] = [
 const DEFAULT_FOLDERS: Omit<ProjectFolder, 'id'>[] = [
   { name: 'Все видео', color: '#64748b', icon: 'all', order: 0 },
   { name: 'Идеи', color: '#f97316', icon: 'lightbulb', order: 1 },
-  { name: 'Ожидает сценария', color: '#6366f1', icon: 'file', order: 2 },
+  { name: 'Ожидает сценария', color: '#475569', icon: 'file', order: 2 },
   { name: 'Ожидает съёмок', color: '#f59e0b', icon: 'camera', order: 3 },
   { name: 'Ожидает монтажа', color: '#10b981', icon: 'scissors', order: 4 },
-  { name: 'Готовое', color: '#8b5cf6', icon: 'check', order: 5 },
+  { name: 'Готовое', color: '#334155', icon: 'check', order: 5 },
   { name: 'Не подходит', color: '#ef4444', icon: 'rejected', order: 6 },
 ];
 
 const PROJECT_COLORS = [
   '#f97316', // orange
-  '#6366f1', // indigo
+  '#475569', // slate-600
   '#10b981', // emerald
   '#f59e0b', // amber
-  '#8b5cf6', // violet
+  '#334155', // slate-700
   '#ec4899', // pink
   '#14b8a6', // teal
   '#ef4444', // red

@@ -84,17 +84,17 @@ interface FolderConfig {
 
 // Цвета для папок
 const FOLDER_COLORS = [
-  '#64748b', '#94a3b8', '#6366f1', '#10b981', '#94a3b8', 
-  '#8b5cf6', '#ef4444', '#ec4899', '#14b8a6', '#84cc16'
+  '#64748b', '#94a3b8', '#475569', '#10b981', '#94a3b8', 
+  '#334155', '#ef4444', '#ec4899', '#14b8a6', '#84cc16'
 ];
 
 // Дефолтные папки
 const defaultFolderConfigs: FolderConfig[] = [
   { id: 'ideas', title: 'Идеи', color: '#94a3b8', iconType: 'lightbulb' },
-  { id: '1', title: 'Ожидает сценария', color: '#6366f1', iconType: 'file' },
+  { id: '1', title: 'Ожидает сценария', color: '#475569', iconType: 'file' },
   { id: '2', title: 'Ожидает съёмок', color: '#f59e0b', iconType: 'camera' },
   { id: '3', title: 'Ожидает монтажа', color: '#10b981', iconType: 'scissors' },
-  { id: '4', title: 'Готовое', color: '#8b5cf6', iconType: 'check' },
+  { id: '4', title: 'Готовое', color: '#334155', iconType: 'check' },
   { id: 'rejected', title: 'Не подходит', color: '#ef4444', iconType: 'rejected' },
 ];
 
@@ -1023,9 +1023,9 @@ export function Workspace(props?: WorkspaceProps) {
                               e.stopPropagation(); 
                               setMoveMenuVideoId(moveMenuVideoId === video.id ? null : video.id);
                             }}
-                            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-indigo-50 transition-colors text-left"
+                            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-slate-100 transition-colors text-left"
                           >
-                            <FolderOpen className="w-4 h-4 text-indigo-500" />
+                            <FolderOpen className="w-4 h-4 text-slate-600" />
                             <span className="text-sm text-slate-700">Переместить</span>
                           </button>
                           
@@ -1129,7 +1129,7 @@ export function Workspace(props?: WorkspaceProps) {
                         value={carouselLinkUrl}
                         onChange={e => setCarouselLinkUrl(e.target.value)}
                         placeholder="Ссылка на пост с каруселью (instagram.com/p/...)"
-                        className="flex-1 min-w-0 px-4 py-2.5 rounded-xl border border-slate-200/80 bg-white/80 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-300"
+                        className="flex-1 min-w-0 px-4 py-2.5 rounded-xl border border-slate-200/80 bg-white/80 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300"
                       />
                       <button
                         onClick={async () => {
@@ -1175,7 +1175,7 @@ export function Workspace(props?: WorkspaceProps) {
                           }
                         }}
                         disabled={isAddingCarouselByLink || !carouselLinkUrl.trim()}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-500 hover:bg-violet-600 disabled:bg-slate-200 disabled:text-slate-400 text-white text-sm font-medium transition-colors shrink-0"
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-600 hover:bg-slate-700 disabled:bg-slate-200 disabled:text-slate-400 text-white text-sm font-medium transition-colors shrink-0"
                       >
                         {isAddingCarouselByLink ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
                         Добавить
@@ -1203,7 +1203,7 @@ export function Workspace(props?: WorkspaceProps) {
                     {carousels.map(c => (
                       <div
                         key={c.id}
-                        className="group rounded-2xl overflow-hidden bg-white/80 border border-slate-200/80 shadow-sm hover:shadow-lg hover:border-violet-200/80 transition-all relative"
+                        className="group rounded-2xl overflow-hidden bg-white/80 border border-slate-200/80 shadow-sm hover:shadow-lg hover:border-slate-300/80 transition-all relative"
                       >
                         <button
                           onClick={() => setSelectedCarousel(c)}

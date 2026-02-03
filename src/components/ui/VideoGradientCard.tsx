@@ -335,7 +335,7 @@ export const VideoGradientCard = ({
                     "inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-semibold backdrop-blur-sm",
                     transcriptStatus === 'error' || transcriptStatus === 'timeout'
                       ? "bg-red-500/20 text-red-200 border border-red-500/30"
-                      : "bg-violet-500/20 text-violet-200 border border-violet-500/30"
+                      : "bg-slate-500/20 text-slate-200 border border-slate-500/30"
                   )}
                 >
                   {transcriptStatus === 'downloading' && (

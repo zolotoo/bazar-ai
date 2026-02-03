@@ -1149,7 +1149,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                     transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                   >
                     <div className="flex items-center gap-3 p-4 rounded-card-xl bg-glass-white/60 backdrop-blur-glass border border-white/[0.35]">
-                      <div className="w-10 h-10 rounded-full bg-accent-violet/80 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                         {(linkPreview.owner?.username || 'U')[0].toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -1381,7 +1381,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                               "w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold",
                               isSelected 
                                 ? "bg-slate-600" 
-                                : "bg-accent-violet/80"
+                                : "bg-slate-600"
                             )}>
                               {profile.username[0].toUpperCase()}
                             </div>
@@ -1477,7 +1477,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
-                    <div className="w-10 h-10 rounded-full bg-accent-violet/80 flex items-center justify-center text-white font-bold">
+                    <div className="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center text-white font-bold">
                       {selectedRadarProfile[0].toUpperCase()}
                     </div>
                     <div>
@@ -2263,7 +2263,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                   {/* Username and date */}
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center">
                         <span className="text-white font-bold text-sm">
                           {selectedVideo.owner?.username?.[0]?.toUpperCase() || 'V'}
                         </span>
@@ -2363,7 +2363,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                       className={cn(
                         "px-4 py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all active:scale-95",
                         showFolderSelect 
-                          ? "bg-indigo-500 text-white" 
+                          ? "bg-slate-600 text-white" 
                           : "bg-slate-100 hover:bg-slate-200 text-slate-700"
                       )}
                     >

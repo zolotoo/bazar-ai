@@ -450,7 +450,7 @@ body {
 
 .react-flow__controls-button:hover {
   background: #f1f5f9 !important;
-  color: #7c3aed !important;
+  color: #475569 !important;
 }
 
 .react-flow__minimap {
@@ -556,7 +556,7 @@ body {
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  background: linear-gradient(135deg, #475569, #64748b);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -569,7 +569,7 @@ body {
 
 .card-hover:hover {
   transform: translateY(-4px);
-  box-shadow: 0 20px 25px -5px rgb(124 58 237 / 0.1), 0 8px 10px -6px rgb(124 58 237 / 0.1);
+  box-shadow: 0 20px 25px -5px rgb(71 85 105 / 0.15), 0 8px 10px -6px rgb(71 85 105 / 0.1);
 }
 
 /* 3D Perspective for carousel */

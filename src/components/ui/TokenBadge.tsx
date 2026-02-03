@@ -4,7 +4,7 @@ interface TokenBadgeProps {
   tokens: number;
   className?: string;
   size?: 'sm' | 'md';
-  /** На тёмном фоне (violet/slate кнопки) */
+  /** На тёмном фоне (slate кнопки) */
   variant?: 'default' | 'dark';
 }
 

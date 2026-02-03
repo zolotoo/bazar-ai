@@ -7,7 +7,7 @@ interface CoinBadgeProps {
   coins: number;
   className?: string;
   size?: 'sm' | 'md';
-  /** На тёмном фоне (violet/slate кнопки) */
+  /** На тёмном фоне (slate кнопки) */
   variant?: 'default' | 'dark';
 }
 
@@ -60,7 +60,7 @@ export function CoinBadge({ coins, className, size = 'sm', variant = 'default' }
           <img
             src="/riri-coin.png"
             alt="Riri"
-            className={cn('w-full h-full object-contain p-0.5', iconSizes[size])}
+            className={cn('w-full h-full object-cover rounded-full', iconSizes[size])}
             onError={() => setImgError(true)}
           />
         ) : (

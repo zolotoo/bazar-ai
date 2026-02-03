@@ -56,7 +56,7 @@ export default {
         'glass-border': 'rgba(255, 255, 255, 0.4)',
         /* Muted system-style accents */
         'accent-blue': '#5E9FED',
-        'accent-violet': '#9B7DD9',
+        'accent-slate': '#475569',
         'accent-mint': '#5EC9B0',
         /* Positive / negative (muted) */
         'accent-positive': '#5EC9B0',
