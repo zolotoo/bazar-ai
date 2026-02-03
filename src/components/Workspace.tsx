@@ -10,6 +10,7 @@ import { PresenceIndicator } from './ui/PresenceIndicator';
 import { Sparkles, Star, FileText, Trash2, ExternalLink, Plus, Inbox, Lightbulb, Camera, Scissors, Check, FolderOpen, Settings, GripVertical, X, Palette, Eye, Heart, ChevronDown, ChevronRight, Undo2, Images, Link2, Loader2, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../utils/cn';
+import { proxyImageUrl } from '../utils/imagePlaceholder';
 import { VideoGradientCard } from './ui/VideoGradientCard';
 import { VideoDetailPage } from './VideoDetailPage';
 import { CarouselDetailPage } from './CarouselDetailPage';
@@ -25,16 +26,6 @@ function formatNumber(num?: number): string {
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
   if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
   return String(num);
-}
-
-// Проксирование Instagram изображений через наш API
-function proxyImageUrl(url?: string): string {
-  if (!url) return 'https://via.placeholder.com/270x360';
-  if (url.includes('/api/proxy-image') || url.includes('placeholder.com')) return url;
-  if (url.includes('cdninstagram.com') || url.includes('instagram.com') || url.includes('workers.dev') || url.includes('socialapi')) {
-    return `/api/proxy-image?url=${encodeURIComponent(url)}`;
-  }
-  return url;
 }
 
 // Расчёт коэффициента виральности (K просмотров в день)

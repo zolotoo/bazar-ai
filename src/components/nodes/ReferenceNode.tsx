@@ -4,6 +4,7 @@ import { ExternalLink, TrendingUp, Heart, MessageCircle, Sparkles, ChevronDown, 
 import { ReferenceNodeData } from '../../types';
 import { analyzeVideoMeaning } from '../../services/videoService';
 import { cn } from '../../utils/cn';
+import { proxyImageUrl, PLACEHOLDER_320x420 } from '../../utils/imagePlaceholder';
 import { useFlowStore } from '../../stores/flowStore';
 
 export function ReferenceNode({ id, data, selected }: NodeProps<ReferenceNodeData>) {
@@ -56,10 +57,10 @@ export function ReferenceNode({ id, data, selected }: NodeProps<ReferenceNodeDat
       {/* Image */}
       <div className="relative aspect-[9/12] overflow-hidden">
         <img
-          src={data.previewUrl || 'https://via.placeholder.com/320x420'}
+          src={proxyImageUrl(data.previewUrl, PLACEHOLDER_320x420)}
           alt={data.title}
           className="w-full h-full object-cover"
-          onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/320x420'; }}
+          onError={(e) => { e.currentTarget.src = PLACEHOLDER_320x420; }}
         />
         
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />

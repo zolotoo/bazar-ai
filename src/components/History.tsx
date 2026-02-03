@@ -169,7 +169,7 @@ export function History() {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
                 {selectedEntry.results.map((reel, idx) => {
                   const captionText = typeof reel.caption === 'string' ? reel.caption : 'Видео из Instagram';
-                  const thumbnailUrl = reel.thumbnail_url || reel.display_url || 'https://via.placeholder.com/270x360';
+                  const thumbnailUrl = reel.thumbnail_url || reel.display_url;
                   const viralCoef = calculateViralCoefficient(reel.view_count, reel.taken_at);
                   const dateText = formatVideoDate(reel.taken_at);
                   
@@ -348,7 +348,7 @@ export function History() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
                   {incomingVideos.map((video, idx) => {
                     const videoData = video as any;
-                    const thumbnailUrl = video.previewUrl || 'https://via.placeholder.com/270x360';
+                    const thumbnailUrl = video.previewUrl;
                     const viralCoef = calculateViralCoefficient(videoData.view_count, videoData.taken_at || videoData.receivedAt?.toISOString());
                     const dateText = formatVideoDate(videoData.taken_at || video.receivedAt);
                     

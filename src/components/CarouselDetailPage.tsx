@@ -5,6 +5,7 @@ import {
   Languages, ChevronDown, Save, Plus, Trash2, Wand2, Images, Heart, MessageCircle, RefreshCw, BookOpen, Pencil, Sparkles
 } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { proxyImageUrl } from '../utils/imagePlaceholder';
 import { toast } from 'sonner';
 import { useCarousels, type SavedCarousel } from '../hooks/useCarousels';
 import { useProjectContext } from '../contexts/ProjectContext';
@@ -61,21 +62,6 @@ function calculateCarouselViralCoefficient(likes?: number, takenAt?: number | st
   const diffDays = Math.floor((Date.now() - postDate.getTime()) / (1000 * 60 * 60 * 24));
   if (diffDays <= 0) return 0;
   return Math.round((likes / (diffDays * 1000)) * 100) / 100;
-}
-
-function proxyImageUrl(url?: string): string {
-  if (!url) return '';
-  if (url.startsWith('/api/') || url.includes('placeholder.com')) return url;
-  if (
-    url.includes('instagram.com') ||
-    url.includes('cdninstagram.com') ||
-    url.includes('fbcdn.net') ||
-    url.includes('scontent.') ||
-    url.includes('workers.dev')
-  ) {
-    return `/api/proxy-image?url=${encodeURIComponent(url)}`;
-  }
-  return url;
 }
 
 interface CarouselDetailPageProps {

@@ -5,6 +5,7 @@ import { IncomingVideo } from '../../types';
 import { useFlowStore } from '../../stores/flowStore';
 import { useInboxVideos } from '../../hooks/useInboxVideos';
 import { cn } from '../../utils/cn';
+import { proxyImageUrl, PLACEHOLDER_320x400 } from '../../utils/imagePlaceholder';
 
 const ROW_HEIGHT_ESTIMATE = 320;
 const ROW_GAP = 16;
@@ -60,7 +61,7 @@ function VideoCard({
   onDragStart: (e: React.DragEvent, v: IncomingVideo) => void;
 }) {
   const videoData = video as any;
-  const thumbnailUrl = video.previewUrl || 'https://via.placeholder.com/320x400';
+  const thumbnailUrl = proxyImageUrl(video.previewUrl, PLACEHOLDER_320x400);
   const viralCoef = calculateViralCoefficient(videoData.view_count, videoData.taken_at || videoData.receivedAt);
   return (
     <div
@@ -87,7 +88,7 @@ function VideoCard({
             src={thumbnailUrl}
             alt={video.title}
             className="w-full h-full object-cover rounded-[1.25rem]"
-            onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/320x400?text=Video'; }}
+            onError={(e) => { e.currentTarget.src = PLACEHOLDER_320x400; }}
           />
           <div className="absolute top-2 left-2 z-10">
             <div

@@ -2,20 +2,11 @@
 import React, { useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { cn } from "../../utils/cn";
+import { proxyImageUrl, PLACEHOLDER_270x360 } from "../../utils/imagePlaceholder";
 import { Sparkles, MoreVertical, ArrowRight, Eye, Heart, Loader2, FileText, AlertCircle, MessageCircle, TrendingUp, Calendar } from "lucide-react";
 
-// Проксирование Instagram изображений через наш API
-function proxyImageUrl(url?: string): string {
-  if (!url) return 'https://via.placeholder.com/270x360';
-  if (url.includes('/api/proxy-image') || url.includes('placeholder.com')) return url;
-  if (url.includes('cdninstagram.com') || url.includes('instagram.com') || url.includes('workers.dev') || url.includes('socialapi')) {
-    return `/api/proxy-image?url=${encodeURIComponent(url)}`;
-  }
-  return url;
-}
-
 export interface VideoGradientCardProps {
-  thumbnailUrl: string;
+  thumbnailUrl?: string;
   username?: string;
   caption?: string;
   viewCount?: number;
@@ -127,7 +118,7 @@ export const VideoGradientCard = ({
           transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
         >
           <img
-            src={imgError ? 'https://via.placeholder.com/270x360' : proxyImageUrl(thumbnailUrl)}
+            src={imgError ? PLACEHOLDER_270x360 : proxyImageUrl(thumbnailUrl)}
             alt=""
             className="absolute inset-0 w-full h-full object-cover"
             loading="eager"

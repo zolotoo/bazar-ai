@@ -5,6 +5,7 @@ import {
   Languages, ChevronDown, Mic, Save, RefreshCw, Plus, Trash2, Wand2, BookOpen, Pencil
 } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { proxyImageUrl, PLACEHOLDER_400x600 } from '../utils/imagePlaceholder';
 import { checkTranscriptionStatus, downloadAndTranscribe } from '../services/transcriptionService';
 import { supabase } from '../utils/supabase';
 import { toast } from 'sonner';
@@ -100,16 +101,6 @@ function formatNumber(num?: number): string {
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
   if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
   return num.toString();
-}
-
-// Проксирование Instagram изображений через наш API
-function proxyImageUrl(url?: string): string {
-  if (!url) return 'https://via.placeholder.com/400x600';
-  if (url.includes('/api/proxy-image') || url.includes('placeholder.com')) return url;
-  if (url.includes('cdninstagram.com') || url.includes('instagram.com') || url.includes('workers.dev') || url.includes('socialapi')) {
-    return `/api/proxy-image?url=${encodeURIComponent(url)}`;
-  }
-  return url;
 }
 
 function parseDate(dateValue?: string | number): Date | null {
@@ -956,7 +947,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
     }
   };
 
-  const thumbnailUrl = proxyImageUrl(video.preview_url);
+  const thumbnailUrl = proxyImageUrl(video.preview_url, PLACEHOLDER_400x600);
 
   return (
     <div className="h-full overflow-hidden flex flex-col bg-base">

@@ -19,6 +19,7 @@ import { useRadar } from '../../hooks/useRadar';
 import { useAuth } from '../../hooks/useAuth';
 import { IncomingVideo } from '../../types';
 import { cn } from '../../utils/cn';
+import { proxyImageUrl, PLACEHOLDER_200x356, PLACEHOLDER_200x267 } from '../../utils/imagePlaceholder';
 import { supabase } from '../../utils/supabase';
 import { calculateViralMultiplier, applyViralMultiplierToCoefficient } from '../../services/profileStatsService';
 import { FolderPlus, Star, Sparkles as SparklesIcon, FileText, CheckCircle } from 'lucide-react';
@@ -42,18 +43,6 @@ function formatNumber(num?: number): string {
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
   if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
   return num.toString();
-}
-
-// Проксирование Instagram изображений через наш API
-function proxyImageUrl(url?: string): string {
-  if (!url) return 'https://via.placeholder.com/270x360';
-  // Если уже проксировано или это placeholder - возвращаем как есть
-  if (url.includes('/api/proxy-image') || url.includes('placeholder.com')) return url;
-  // Проксируем Instagram CDN и workers.dev (social API)
-  if (url.includes('cdninstagram.com') || url.includes('instagram.com') || url.includes('workers.dev') || url.includes('socialapi')) {
-    return `/api/proxy-image?url=${encodeURIComponent(url)}`;
-  }
-  return url;
 }
 
 // Расчёт коэффициента виральности: views / (days * 1000)
@@ -1461,7 +1450,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                               alt=""
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                               onError={(e) => {
-                                e.currentTarget.src = 'https://via.placeholder.com/200x356?text=Video';
+                                e.currentTarget.src = PLACEHOLDER_200x356;
                               }}
                             />
                             {reel.isNew && (
@@ -1729,7 +1718,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                               alt=""
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                e.currentTarget.src = 'https://via.placeholder.com/200x356?text=Video';
+                                e.currentTarget.src = PLACEHOLDER_200x356;
                               }}
                             />
                             {/* Gradient overlay */}
@@ -1914,7 +1903,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                               alt=""
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                e.currentTarget.src = 'https://via.placeholder.com/200x267?text=Video';
+                                e.currentTarget.src = PLACEHOLDER_200x267;
                               }}
                             />
                             

@@ -1,5 +1,6 @@
 import React, { useState, useRef, forwardRef } from 'react';
 import { cn } from '../../utils/cn';
+import { proxyImageUrl, PLACEHOLDER_64x96 } from '../../utils/imagePlaceholder';
 
 // --- Interfaces ---
 
@@ -59,11 +60,11 @@ const VideoCard = forwardRef<HTMLDivElement, VideoCardProps>(
           "group-hover/card:-translate-y-4 group-hover/card:shadow-2xl group-hover/card:ring-2 group-hover/card:ring-orange-400 group-hover/card:scale-110"
         )}>
           <img 
-            src={image || 'https://via.placeholder.com/64x96'} 
+            src={proxyImageUrl(image, PLACEHOLDER_64x96)} 
             alt={title} 
             className="w-full h-full object-cover"
             onError={(e) => {
-              (e.target as HTMLImageElement).src = 'https://via.placeholder.com/64x96?text=Video';
+              (e.target as HTMLImageElement).src = PLACEHOLDER_64x96;
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
