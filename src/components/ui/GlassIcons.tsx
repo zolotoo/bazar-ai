@@ -2,10 +2,10 @@
 
 import { cn } from '../../utils/cn';
 
-/** Цвета glassmorphism — accent-blue для соответствия референсу */
-const GLASS_BG = 'rgba(94, 159, 237, 0.35)';
-const GLASS_SOLID = '#5E9FED';
-const GLASS_WHITE = 'rgba(255, 255, 255, 0.9)';
+/** Цвета glassmorphism — серый и тёмно-серый (slate), наш стиль */
+const GLASS_BG = 'rgba(71, 85, 105, 0.35)';   /* slate-600 translucent */
+const GLASS_SOLID = '#475569';                /* slate-600 */
+const GLASS_WHITE = 'rgba(255, 255, 255, 0.95)';
 
 interface GlassIconProps {
   className?: string;
