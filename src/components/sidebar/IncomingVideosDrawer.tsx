@@ -56,9 +56,11 @@ function calculateViralCoefficient(views?: number, takenAt?: string | number | D
 function VideoCard({
   video,
   onDragStart,
+  onThumbnailError,
 }: {
   video: IncomingVideo;
   onDragStart: (e: React.DragEvent, v: IncomingVideo) => void;
+  onThumbnailError?: (videoId: string, shortcode: string) => void | Promise<void>;
 }) {
   const videoData = video as any;
   const thumbnailUrl = proxyImageUrl(video.previewUrl, PLACEHOLDER_320x400);
@@ -88,7 +90,14 @@ function VideoCard({
             src={thumbnailUrl}
             alt={video.title}
             className="w-full h-full object-cover rounded-[1.25rem]"
-            onError={(e) => { e.currentTarget.src = PLACEHOLDER_320x400; }}
+            onError={(e) => {
+              e.currentTarget.src = PLACEHOLDER_320x400;
+              const videoId = (video as any).id;
+              const shortcode = (video as any).url?.match(/(?:reel|p)\/([A-Za-z0-9_-]+)/)?.[1];
+              if (onThumbnailError && videoId && shortcode && !String(videoId).startsWith('local-')) {
+                onThumbnailError(videoId, shortcode);
+              }
+            }}
           />
           <div className="absolute top-2 left-2 z-10">
             <div
@@ -140,7 +149,7 @@ function VideoCard({
 export function IncomingVideosDrawer({ isOpen, onClose }: IncomingVideosDrawerProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { incomingVideos } = useFlowStore();
-  const { loading, loadingMore, hasMore, loadMore } = useInboxVideos();
+  const { loading, loadingMore, hasMore, loadMore, refreshThumbnail } = useInboxVideos();
 
   const virtualizer = useVirtualizer({
     count: incomingVideos.length,
@@ -223,7 +232,7 @@ export function IncomingVideosDrawer({ isOpen, onClose }: IncomingVideosDrawerPr
                       paddingBottom: 16,
                     }}
                   >
-                    <VideoCard video={video} onDragStart={handleDragStart} />
+                    <VideoCard video={video} onDragStart={handleDragStart} onThumbnailError={refreshThumbnail} />
                   </div>
                 );
               })}

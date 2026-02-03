@@ -23,23 +23,34 @@ export const PLACEHOLDER_64x96 = getPlaceholderDataUri(64, 96);
 export const PLACEHOLDER_400x600 = getPlaceholderDataUri(400, 600);
 
 /**
- * Проксирование Instagram изображений.
- * Использует images.weserv.nl вместо нашего /api/proxy-image — Instagram блокирует
- * запросы с IP облачных провайдеров (Vercel), weserv.nl обычно не блокируется.
- * @param emptyPlaceholder — плейсхолдер при отсутствии url (по умолчанию 270x360)
+ * Распаковывает wsrv.nl обёртки (в т.ч. двойные) — достаёт оригинальный URL.
+ * В БД могли сохраниться wsrv.nl ссылки, которые дают 404.
+ */
+function unwrapWsrvUrl(url: string): string {
+  if (!url?.includes('wsrv.nl')) return url;
+  try {
+    const match = url.match(/[?&]url=([^&]+)/);
+    if (match) {
+      const decoded = decodeURIComponent(match[1]);
+      if (decoded.includes('wsrv.nl')) return unwrapWsrvUrl(decoded);
+      return decoded;
+    }
+  } catch {
+    /* ignore */
+  }
+  return url;
+}
+
+/**
+ * URL для отображения изображений.
+ * - Распаковывает wsrv.nl (в БД могли остаться битые ссылки)
+ * - Прямые URL (Instagram, workers.dev) — запрос с IP пользователя
+ * - При ошибке onError → refresh → сохранение в Storage
  */
 export function proxyImageUrl(url?: string, emptyPlaceholder = PLACEHOLDER_270x360): string {
   if (!url) return emptyPlaceholder;
   if (url.startsWith('data:')) return url;
-  const isInstagram =
-    url.includes('cdninstagram.com') ||
-    url.includes('instagram.com') ||
-    url.includes('fbcdn.net') ||
-    url.includes('scontent.') ||
-    url.includes('workers.dev') ||
-    url.includes('socialapi');
-  if (isInstagram) {
-    return `https://wsrv.nl/?url=${encodeURIComponent(url)}&n=-1`;
-  }
-  return url;
+  const unwrapped = unwrapWsrvUrl(url);
+  if (unwrapped.includes('wsrv.nl')) return emptyPlaceholder;
+  return unwrapped;
 }

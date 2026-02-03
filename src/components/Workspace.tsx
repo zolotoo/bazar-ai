@@ -125,7 +125,7 @@ interface WorkspaceProps {
 export function Workspace(props?: WorkspaceProps) {
   const { externalFolderPanelOpen, onExternalFolderPanelClose } = props ?? {};
   const { loading } = useWorkspaceZones();
-  const { videos: inboxVideos, removeVideo: removeInboxVideo, restoreVideo, updateVideoFolder, loadMore, hasMore, loadingMore, refetch: refetchInboxVideos } = useInboxVideos();
+  const { videos: inboxVideos, removeVideo: removeInboxVideo, restoreVideo, updateVideoFolder, loadMore, hasMore, loadingMore, refetch: refetchInboxVideos, refreshThumbnail, saveThumbnailFromUrl } = useInboxVideos();
   const { 
     currentProject, 
     currentProjectId, 
@@ -986,6 +986,10 @@ export function Workspace(props?: WorkspaceProps) {
                     transcriptStatus={video.transcript_status}
                     onClick={() => setSelectedVideo(video)}
                     showFolderMenu={cardMenuVideoId === video.id}
+                    videoId={!String(video.id).startsWith('local-') ? video.id : undefined}
+                    shortcode={video.url?.match(/(?:reel|p)\/([A-Za-z0-9_-]+)/)?.[1]}
+                    onThumbnailError={refreshThumbnail}
+                    onThumbnailLoad={saveThumbnailFromUrl}
                     onFolderMenuToggle={() => {
                       setCardMenuVideoId(cardMenuVideoId === video.id ? null : video.id);
                       setMoveMenuVideoId(null);

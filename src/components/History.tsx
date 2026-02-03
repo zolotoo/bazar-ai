@@ -98,7 +98,7 @@ export function History() {
   const [selectedEntry, setSelectedEntry] = useState<SearchHistoryEntry | null>(null);
   const { historyEntries, removeFromHistory, clearHistory } = useSearchHistory();
   const { incomingVideos } = useFlowStore();
-  const { addVideoToInbox, removeVideo } = useInboxVideos();
+  const { addVideoToInbox, removeVideo, refreshThumbnail, saveThumbnailFromUrl } = useInboxVideos();
 
   const handleAddToInbox = async (reel: InstagramSearchResult) => {
     let captionText = typeof reel.caption === 'string' ? reel.caption : '';
@@ -362,6 +362,10 @@ export function History() {
                         likeCount={videoData.like_count}
                         date={dateText || '—'}
                         viralCoef={viralCoef}
+                        videoId={!String(video.id).startsWith('local-') ? video.id : undefined}
+                        shortcode={video.url?.match(/(?:reel|p)\/([A-Za-z0-9_-]+)/)?.[1]}
+                        onThumbnailError={refreshThumbnail}
+                        onThumbnailLoad={saveThumbnailFromUrl}
                         onAdd={() => {
                           window.open(video.url, '_blank');
                         }}

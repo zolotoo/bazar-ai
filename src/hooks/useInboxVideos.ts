@@ -354,6 +354,24 @@ export function useInboxVideos() {
       }
     }
     
+    // Пытаемся сохранить превью в Supabase Storage (постоянный URL вместо истекающего Instagram)
+    let thumbnailToSave = video.previewUrl;
+    if (shortcode && video.previewUrl && !video.previewUrl.includes('supabase')) {
+      try {
+        const res = await fetch('/api/save-thumbnail', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: video.previewUrl, shortcode }),
+        });
+        const data = await res.json();
+        if (data.success && data.storageUrl) {
+          thumbnailToSave = data.storageUrl;
+        }
+      } catch {
+        // Используем оригинальный URL при ошибке
+      }
+    }
+
     // Создаём локальное видео сразу для быстрого UI
     const localVideo: IncomingVideo & { 
       view_count?: number; 
@@ -364,7 +382,7 @@ export function useInboxVideos() {
     } = {
       id: `local-${Date.now()}`,
       title: video.title,
-      previewUrl: video.previewUrl,
+      previewUrl: thumbnailToSave,
       url: video.url,
       receivedAt: new Date(),
       view_count: video.viewCount,
@@ -392,7 +410,7 @@ export function useInboxVideos() {
         globalVideo = await getOrCreateGlobalVideo({
           shortcode,
           url: video.url,
-          thumbnailUrl: video.previewUrl,
+          thumbnailUrl: thumbnailToSave,
           caption: video.title,
           ownerUsername: video.ownerUsername,
           viewCount: video.viewCount,
@@ -429,7 +447,7 @@ export function useInboxVideos() {
         
         // Если у пользователя нет транскрибации, но есть в глобальной - копируем
         const updateData: Record<string, unknown> = {
-          thumbnail_url: video.previewUrl,
+          thumbnail_url: thumbnailToSave,
           video_url: video.url,
           caption: video.title,
           owner_username: video.ownerUsername,
@@ -478,7 +496,7 @@ export function useInboxVideos() {
           user_id: userId,
           video_id: videoId,
           shortcode: shortcode,
-          thumbnail_url: video.previewUrl,
+          thumbnail_url: thumbnailToSave,
           video_url: video.url,
           caption: video.title,
           owner_username: video.ownerUsername,
@@ -601,6 +619,70 @@ export function useInboxVideos() {
     } else {
       console.error('[InboxVideos] No shortcode found for:', instagramUrl);
       toast.error('Не удалось определить видео');
+    }
+  }, [fetchVideos]);
+
+  /**
+   * Сохраняет превью по URL в Storage (если картинка загрузилась — workers.dev, Instagram и т.д.)
+   */
+  const saveThumbnailFromUrl = useCallback(async (videoId: string, shortcode: string, url: string) => {
+    if (!url || url.includes('supabase.co')) return;
+    try {
+      const saveRes = await fetch('/api/save-thumbnail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, shortcode }),
+      });
+      const data = await saveRes.json();
+      if (data.success && data.storageUrl) {
+        await supabase.from('saved_videos').update({ thumbnail_url: data.storageUrl }).eq('id', videoId);
+        await supabase.from('videos').update({ thumbnail_url: data.storageUrl }).eq('shortcode', shortcode);
+        fetchVideos();
+      }
+    } catch {
+      /* silent */
+    }
+  }, [fetchVideos]);
+
+  /**
+   * Обновляет превью: reel-info → save-thumbnail → update DB.
+   * Вызывать при onError загрузки картинки (истёкший Instagram URL).
+   */
+  const refreshThumbnail = useCallback(async (videoId: string, shortcode: string) => {
+    try {
+      const res = await fetch('/api/reel-info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shortcode }),
+      });
+      const data = await res.json();
+      const thumbUrl = data?.thumbnail_url || data?.carousel_slides?.[0];
+      if (!thumbUrl) {
+        toast.error('Не удалось получить превью');
+        return;
+      }
+      const saveRes = await fetch('/api/save-thumbnail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: thumbUrl, shortcode }),
+      });
+      const saveData = await saveRes.json();
+      if (!saveData.success || !saveData.storageUrl) {
+        toast.error('Не удалось сохранить превью');
+        return;
+      }
+      await supabase
+        .from('saved_videos')
+        .update({ thumbnail_url: saveData.storageUrl })
+        .eq('id', videoId);
+      await supabase
+        .from('videos')
+        .update({ thumbnail_url: saveData.storageUrl })
+        .eq('shortcode', shortcode);
+      toast.success('Превью обновлено');
+      fetchVideos();
+    } catch {
+      toast.error('Ошибка обновления превью');
     }
   }, [fetchVideos]);
 
@@ -963,6 +1045,8 @@ export function useInboxVideos() {
     updateVideoLinks,
     restoreVideo,
     startVideoProcessing, // Ручной запуск транскрибации
+    refreshThumbnail,
+    saveThumbnailFromUrl,
     markVideoAsOnCanvas,
     refetch: fetchVideos,
     isConfigured: true,

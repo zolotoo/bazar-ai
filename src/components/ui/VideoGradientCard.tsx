@@ -23,6 +23,12 @@ export interface VideoGradientCardProps {
   showFolderMenu?: boolean;
   onFolderMenuToggle?: () => void;
   folderMenu?: React.ReactNode;
+  /** При ошибке загрузки превью — обновить через reel-info + Storage (для сохранённых видео) */
+  onThumbnailError?: (videoId: string, shortcode: string) => void | Promise<void>;
+  /** При успешной загрузке — сохранить в Storage (если URL не из Storage) */
+  onThumbnailLoad?: (videoId: string, shortcode: string, url: string) => void | Promise<void>;
+  videoId?: string;
+  shortcode?: string;
   className?: string;
 }
 
@@ -51,12 +57,17 @@ export const VideoGradientCard = ({
   showFolderMenu,
   onFolderMenuToggle,
   folderMenu,
+  onThumbnailError,
+  onThumbnailLoad,
+  videoId,
+  shortcode,
   className,
 }: VideoGradientCardProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [isRefreshingThumb, setIsRefreshingThumb] = useState(false);
   useEffect(() => {
     const m = () => setIsMobile(window.matchMedia('(max-width: 768px)').matches);
     m();
@@ -68,6 +79,15 @@ export const VideoGradientCard = ({
   useEffect(() => {
     setImgError(false);
   }, [thumbnailUrl]);
+
+  // Если в БД сохранился битый wsrv.nl URL — сразу триггерим refresh
+  const hasWsrv = thumbnailUrl?.includes('wsrv.nl');
+  useEffect(() => {
+    if (hasWsrv && onThumbnailError && videoId && shortcode) {
+      setIsRefreshingThumb(true);
+      Promise.resolve(onThumbnailError(videoId, shortcode)).finally(() => setIsRefreshingThumb(false));
+    }
+  }, [hasWsrv, onThumbnailError, videoId, shortcode]);
 
   return (
     <div
@@ -124,7 +144,19 @@ export const VideoGradientCard = ({
             loading="eager"
             decoding="async"
             fetchPriority="high"
-            onError={() => setImgError(true)}
+            onLoad={(e) => {
+              const loadedUrl = (e.target as HTMLImageElement).currentSrc || (e.target as HTMLImageElement).src;
+              if (onThumbnailLoad && videoId && shortcode && loadedUrl && !loadedUrl.startsWith('data:') && !loadedUrl.includes('supabase.co')) {
+                onThumbnailLoad(videoId, shortcode, loadedUrl);
+              }
+            }}
+            onError={() => {
+              setImgError(true);
+              if (onThumbnailError && videoId && shortcode && !isRefreshingThumb) {
+                setIsRefreshingThumb(true);
+                Promise.resolve(onThumbnailError(videoId, shortcode)).finally(() => setIsRefreshingThumb(false));
+              }
+            }}
           />
         </motion.div>
 
