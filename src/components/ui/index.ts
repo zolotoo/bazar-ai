@@ -7,5 +7,6 @@ export { MarketingBadges, searchBadges } from './MarketingBadges';
 export { default as ScrollMorphHero } from './ScrollMorphHero';
 export { GlassTabButton, GlassTabGroup } from './GlassTabButton';
 export { GlassCard, GlassCardStatic, type GlassCardProps } from './GlassCard';
+export { TokenBadge } from './TokenBadge';
 export { MemberSelector } from './member-selector';
 export type { Member, MemberSelectorProps } from './member-selector';

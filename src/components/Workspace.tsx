@@ -16,6 +16,8 @@ import { CarouselDetailPage } from './CarouselDetailPage';
 import { useCarousels, type SavedCarousel } from '../hooks/useCarousels';
 import { calculateViralMultiplier, applyViralMultiplierToCoefficient, getProfileStats } from '../services/profileStatsService';
 import { dialogScale, backdropFade, iosSpringSoft } from '../utils/motionPresets';
+import { TokenBadge } from './ui/TokenBadge';
+import { getTokenCost } from '../constants/tokenCosts';
 
 
 function formatNumber(num?: number): string {
@@ -1155,6 +1157,7 @@ export function Workspace(props?: WorkspaceProps) {
                       >
                         {isAddingCarouselByLink ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
                         Добавить
+                        <TokenBadge tokens={getTokenCost('add_carousel')} />
                       </button>
                     </div>
                   </div>

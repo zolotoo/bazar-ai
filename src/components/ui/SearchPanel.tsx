@@ -23,6 +23,8 @@ import { supabase } from '../../utils/supabase';
 import { calculateViralMultiplier, applyViralMultiplierToCoefficient } from '../../services/profileStatsService';
 import { FolderPlus, Star, Sparkles as SparklesIcon, FileText, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { TokenBadge } from './TokenBadge';
+import { getTokenCost } from '../../constants/tokenCosts';
 
 interface SearchPanelProps {
   isOpen: boolean;
@@ -976,13 +978,14 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                       onClick={() => handleSearch()}
                       disabled={!query.trim() || loading}
                       className={cn(
-                        "px-4 py-2 rounded-xl font-medium text-sm transition-all active:scale-95",
+                        "px-4 py-2 rounded-xl font-medium text-sm transition-all active:scale-95 flex items-center gap-2",
                         "bg-slate-600 hover:bg-slate-700 text-white",
                         "disabled:opacity-40 disabled:cursor-not-allowed",
                         "shadow-glass hover:shadow-glass-hover"
                       )}
                     >
                       Найти
+                      <TokenBadge tokens={getTokenCost('search')} />
                     </button>
                   </div>
                 </GlassCardStatic>
@@ -1042,6 +1045,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                         <Search className="w-4 h-4" />
                       )}
                       Найти
+                      <TokenBadge tokens={getTokenCost('link_add')} />
                     </button>
                   </div>
                 </GlassCardStatic>
@@ -1210,7 +1214,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                         }}
                         disabled={radarLoading}
                         className={cn(
-                          "px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+                          "px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5",
                           "bg-slate-100 text-slate-600 hover:bg-slate-200",
                           radarLoading && "opacity-50 cursor-not-allowed"
                         )}
@@ -1220,6 +1224,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                         ) : (
                           'Обновить все'
                         )}
+                        <TokenBadge tokens={getTokenCost('radar_refresh_all', radarProfiles.length)} />
                       </button>
                     )}
                   </div>
@@ -1269,6 +1274,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                     >
                       <UserPlus className="w-4 h-4" />
                       Добавить
+                      <TokenBadge tokens={getTokenCost('radar_add_profile')} />
                     </button>
                   </div>
                   <p className="text-xs text-slate-400 px-1">

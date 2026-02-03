@@ -14,6 +14,8 @@ import { useProjectContext } from '../contexts/ProjectContext';
 import type { ProjectTemplateItem, ProjectStyle } from '../hooks/useProjects';
 import { calculateViralMultiplier, getOrUpdateProfileStats, applyViralMultiplierToCoefficient } from '../services/profileStatsService';
 import { isRussian } from '../utils/language';
+import { TokenBadge } from './ui/TokenBadge';
+import { getTokenCost } from '../constants/tokenCosts';
 
 /** Сырые данные ссылок/ответственных из БД (по templateId или legacy label) */
 type VideoLinkRow = { templateId?: string; label?: string; value: string };
@@ -1041,6 +1043,9 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                     alt=""
                     className="w-full h-full object-cover absolute inset-0"
                   />
+                  <div className="absolute bottom-2 right-2">
+                    <TokenBadge tokens={getTokenCost('load_video')} size="sm" />
+                  </div>
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="w-14 h-14 rounded-full bg-white/95 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
                       {isLoadingVideo ? (
@@ -1184,6 +1189,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                       <>
                         <Sparkles className="w-3 h-3" />
                         Полный расчёт виральности
+                        <TokenBadge tokens={getTokenCost('calculate_viral')} />
                       </>
                     )}
                   </button>
@@ -1363,7 +1369,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                     <button
                       onClick={handleTranslate}
                       disabled={isTranslating}
-                      className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-50"
+                      className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-50 flex items-center gap-1"
                       title="Перевести"
                     >
                       {isTranslating ? (
@@ -1371,6 +1377,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                       ) : (
                         <Languages className="w-4 h-4" />
                       )}
+                      <TokenBadge tokens={getTokenCost('translate')} />
                     </button>
                     <button
                       onClick={handleCopyTranscript}
@@ -1417,6 +1424,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                   >
                     {isTranslating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Languages className="w-4 h-4" />}
                     Перевести текст
+                    <TokenBadge tokens={getTokenCost('translate')} />
                   </button>
                 </div>
               ) : (
@@ -1448,6 +1456,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                       <>
                         <Mic className="w-4 h-4" />
                         Запустить транскрибацию
+                        <TokenBadge tokens={getTokenCost('transcribe_video')} />
                       </>
                     )}
                   </button>
@@ -1495,6 +1504,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                         <Wand2 className="w-3.5 h-3.5" />
                       )}
                       По стилю
+                      <TokenBadge tokens={getTokenCost('generate_script')} variant="dark" />
                       <ChevronDown className="w-3 h-3" />
                     </button>
                     {showStylePickerPopover && (
@@ -1734,6 +1744,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                     >
                       {isPromptChatLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
                       Отправить
+                      <TokenBadge tokens={getTokenCost('chat_with_prompt')} variant="dark" />
                     </button>
                   </div>
                 </div>
@@ -1874,7 +1885,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                 Отмена
               </button>
               <button type="button" onClick={handleRefinePrompt} disabled={isRefiningPrompt || !feedbackText.trim()} className="px-4 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50">
-                {isRefiningPrompt ? <><Loader2 className="w-4 h-4 animate-spin" /> Дообучение...</> : <>Отправить и дообучить промт</>}
+                {isRefiningPrompt ? <><Loader2 className="w-4 h-4 animate-spin" /> Дообучение...</> : <>Отправить и дообучить промт <TokenBadge tokens={getTokenCost('refine_prompt')} variant="dark" /></>}
               </button>
             </div>
           </div>
@@ -1939,7 +1950,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                 disabled={isRefiningPrompt || scriptHumanForRefine.trim() === scriptAiForRefine.trim()}
                 className="px-4 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50"
               >
-                {isRefiningPrompt ? <><Loader2 className="w-4 h-4 animate-spin" /> Дообучение...</> : <>Дообучить промт на этом примере</>}
+                {isRefiningPrompt ? <><Loader2 className="w-4 h-4 animate-spin" /> Дообучение...</> : <>Дообучить промт на этом примере <TokenBadge tokens={getTokenCost('refine_prompt')} variant="dark" /></>}
               </button>
             </div>
           </div>

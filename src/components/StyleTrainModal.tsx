@@ -6,6 +6,8 @@ import { useInboxVideos } from '../hooks/useInboxVideos';
 import { useCarousels } from '../hooks/useCarousels';
 import { useProjectContext } from '../contexts/ProjectContext';
 import { isRussian } from '../utils/language';
+import { TokenBadge } from './ui/TokenBadge';
+import { getTokenCost } from '../constants/tokenCosts';
 
 type ExampleWithScript = {
   id: string;
@@ -208,6 +210,7 @@ export function StyleTrainModal({
                 <>
                   <Sparkles className="w-4 h-4" />
                   Анализировать и сохранить
+                  <TokenBadge tokens={getTokenCost('train_style')} variant="dark" />
                 </>
               )}
             </button>

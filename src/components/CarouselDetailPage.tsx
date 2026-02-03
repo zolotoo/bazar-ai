@@ -12,6 +12,8 @@ import type { ProjectTemplateItem, ProjectStyle } from '../hooks/useProjects';
 import { transcribeCarouselByUrls } from '../services/carouselTranscriptionService';
 import { isRussian } from '../utils/language';
 import { StyleTrainModal } from './StyleTrainModal';
+import { TokenBadge } from './ui/TokenBadge';
+import { getTokenCost } from '../constants/tokenCosts';
 
 const DEFAULT_LINKS: ProjectTemplateItem[] = [
   { id: 'link-0', label: 'Заготовка' },
@@ -664,6 +666,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
           >
             {isRefreshingSlides ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
             Обновить слайды
+            <TokenBadge tokens={getTokenCost('add_carousel')} />
           </button>
           {slideUrls.length > 1 && (
             <div className="flex gap-1.5 overflow-x-auto pb-1 min-h-[52px]">
@@ -797,6 +800,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
               >
                 {isTranslating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Languages className="w-3.5 h-3.5" />}
                 Перевести
+                <TokenBadge tokens={getTokenCost('translate')} />
               </button>
               <button
                 onClick={handleTranscribe}
@@ -810,6 +814,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
               >
                 {isTranscribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Images className="w-3.5 h-3.5" />}
                 Транскрибировать
+                <TokenBadge tokens={getTokenCost('transcribe_carousel')} variant="dark" />
               </button>
               {(transcriptTab === 'original' ? transcript : translation) && (
                 <button
@@ -909,6 +914,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                 >
                   {isGeneratingScript ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
                   По стилю
+                  <TokenBadge tokens={getTokenCost('generate_script')} variant="dark" />
                   <ChevronDown className="w-3 h-3" />
                 </button>
                 {showStylePickerPopover && popoverRect && (projectStyles.length > 0 || currentProject?.stylePrompt) && createPortal(
@@ -1241,7 +1247,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                 Отмена
               </button>
               <button type="button" onClick={handleRefinePrompt} disabled={isRefiningPrompt || !feedbackText.trim()} className="px-4 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50">
-                {isRefiningPrompt ? <><Loader2 className="w-4 h-4 animate-spin" /> Дообучение...</> : <>Отправить и дообучить промт</>}
+                {isRefiningPrompt ? <><Loader2 className="w-4 h-4 animate-spin" /> Дообучение...</> : <>Отправить и дообучить промт <TokenBadge tokens={getTokenCost('refine_prompt')} variant="dark" /></>}
               </button>
             </div>
           </div>
@@ -1306,7 +1312,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                 disabled={isRefiningPrompt || scriptHumanForRefine.trim() === scriptAiForRefine.trim()}
                 className="px-4 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50"
               >
-                {isRefiningPrompt ? <><Loader2 className="w-4 h-4 animate-spin" /> Дообучение...</> : <>Дообучить промт на этом примере</>}
+                {isRefiningPrompt ? <><Loader2 className="w-4 h-4 animate-spin" /> Дообучение...</> : <>Дообучить промт на этом примере <TokenBadge tokens={getTokenCost('refine_prompt')} variant="dark" /></>}
               </button>
             </div>
           </div>
