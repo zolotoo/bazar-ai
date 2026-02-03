@@ -169,6 +169,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   const [localTranscriptId, setLocalTranscriptId] = useState(video.transcript_id);
   const [directVideoUrl, setDirectVideoUrl] = useState<string | null>(video.download_url || null);
   const [isLoadingVideo, setIsLoadingVideo] = useState(false);
+  const [videoLoadError, setVideoLoadError] = useState(false);
   const [isSavingScript, setIsSavingScript] = useState(false);
   const [isSavingTranscript, setIsSavingTranscript] = useState(false);
   const [viralMultiplier, setViralMultiplier] = useState<number | null>(null);
@@ -248,6 +249,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
 
   // Синхронизация видео при обновлении данных (refresh)
   useEffect(() => {
+    setVideoLoadError(false);
     if (video.download_url) {
       setDirectVideoUrl(video.download_url);
       setShowVideo(true);
@@ -391,6 +393,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   
   // Загрузка прямой ссылки на видео
   const handleLoadVideo = async () => {
+    setVideoLoadError(false);
     if (directVideoUrl) {
       setShowVideo(true);
       return;
@@ -1063,26 +1066,32 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                 className="relative rounded-xl overflow-hidden shadow-md border border-slate-200/80 bg-black"
                 style={{ aspectRatio: '9/16', width: 'min(100%, 220px)' }}
               >
-              {showVideo && directVideoUrl ? (
+              {showVideo && directVideoUrl && !videoLoadError ? (
                 <video
                   src={directVideoUrl}
                   className="w-full h-full object-cover"
                   controls
                   autoPlay
                   playsInline
+                  onError={() => {
+                    setVideoLoadError(true);
+                    setDirectVideoUrl(null);
+                    setShowVideo(false);
+                    toast.error('Видео не загружается. Нажмите для повторной загрузки.');
+                  }}
                 />
               ) : (
                 <button
                   type="button"
-                  onClick={handleLoadVideo}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleLoadVideo(); }}
                   disabled={isLoadingVideo}
-                  title={`Загрузить и смотреть (${getTokenCost('load_video')} коинов)`}
-                  className="absolute inset-0 w-full h-full flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors group"
+                  title={videoLoadError ? 'Повторить загрузку' : `Загрузить и смотреть (${getTokenCost('load_video')} коинов)`}
+                  className="absolute inset-0 w-full h-full flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors group cursor-pointer z-10 touch-manipulation"
                 >
                   <img
                     src={thumbnailUrl}
                     alt=""
-                    className="w-full h-full object-cover absolute inset-0"
+                    className="w-full h-full object-cover absolute inset-0 pointer-events-none"
                   />
                   <div className="absolute bottom-1 right-1">
                     <TokenBadge tokens={getTokenCost('load_video')} size="sm" />
