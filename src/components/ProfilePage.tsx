@@ -275,7 +275,7 @@ export function ProfilePage() {
 
         {/* Version */}
         <p className="text-center text-xs text-slate-400 mt-8">
-          Bazar AI v1.0
+          Riri AI v1.0
         </p>
       </div>
     </div>

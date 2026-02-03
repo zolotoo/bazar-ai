@@ -37,7 +37,7 @@ export function FlowCanvas() {
 
   const { markVideoAsOnCanvas } = useInboxVideos();
 
-  useYjsSync('bazar-ai-room');
+  useYjsSync('riri-ai-room');
 
   const onDrop = useCallback(
     async (event: React.DragEvent) => {

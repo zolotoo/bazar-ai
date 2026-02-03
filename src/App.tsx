@@ -17,7 +17,7 @@ import { useInboxVideos } from './hooks/useInboxVideos';
 import { ProjectProvider, useProjectContext } from './contexts/ProjectContext';
 import type { Project } from './hooks/useProjects';
 import { 
-  Video, Settings, Search, LayoutGrid, Clock, User, LogOut, 
+  Settings, Search, LayoutGrid, Clock, User, LogOut, 
   Link, Radar, Plus, FolderOpen, X, Palette, Sparkles, Trash2, Users, Menu
 } from 'lucide-react';
 import { MobileBottomBar, type MobileTabId } from './components/ui/MobileBottomBar';
@@ -503,8 +503,8 @@ function AppContent() {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-base">
         <div className="flex flex-col items-center gap-5">
-          <div className="w-16 h-16 rounded-2xl bg-slate-500 flex items-center justify-center shadow-glass animate-pulse">
-            <Video className="w-8 h-8 text-white" strokeWidth={2.5} />
+          <div className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center shadow-glass animate-pulse bg-slate-100 p-2">
+            <img src="/riri-logo.png" alt="Riri AI" className="w-full h-full object-contain" />
           </div>
           <p className="text-slate-500 text-sm font-medium">Загрузка проектов...</p>
         </div>
@@ -763,8 +763,8 @@ function App() {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-base">
         <div className="flex flex-col items-center gap-5">
-          <div className="w-16 h-16 rounded-2xl bg-slate-500 flex items-center justify-center shadow-glass animate-pulse">
-            <Video className="w-8 h-8 text-white" strokeWidth={2.5} />
+          <div className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center shadow-glass animate-pulse bg-slate-100 p-2">
+            <img src="/riri-logo.png" alt="Riri AI" className="w-full h-full object-contain" />
           </div>
           <p className="text-slate-500 text-sm font-medium">Загрузка...</p>
         </div>

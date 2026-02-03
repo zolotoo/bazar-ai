@@ -36,7 +36,7 @@ export function LandingPage() {
         <ScrollMorphHero 
           title="Найдите вирусный контент"
           subtitle="ПРОКРУТИТЕ ВНИЗ"
-          activeTitle="Bazar AI"
+          activeTitle="Riri AI"
           activeSubtitle="Платформа для поиска трендового контента из Instagram. Анализируйте, сохраняйте и создавайте свой контент."
         />
         {/* Skip button */}
@@ -86,7 +86,7 @@ export function LandingPage() {
 
             {/* Subtitle */}
             <p className="text-center text-slate-600 text-base md:text-lg max-w-lg mb-2">
-              <span className="text-slate-800 font-semibold">Bazar AI</span> — персональный ассистент для поиска вирусного контента
+              <span className="text-slate-800 font-semibold">Riri AI</span> — персональный ассистент для поиска вирусного контента
             </p>
             <p className="text-center text-slate-500 text-sm max-w-md mb-12">
               Ищи трендовые видео, сохраняй идеи, создавай сценарии
@@ -132,11 +132,11 @@ export function LandingPage() {
 
             <GlassCardStatic className="p-8 md:p-10">
               <div className="text-center mb-8">
-                <div className="w-16 h-16 rounded-card-xl bg-slate-500 flex items-center justify-center mx-auto mb-5 shadow-glass">
-                  <Video className="w-8 h-8 text-white" />
+                <div className="w-16 h-16 rounded-card-xl overflow-hidden flex items-center justify-center mx-auto mb-5 shadow-glass bg-slate-100 p-1">
+                  <img src="/riri-logo.png" alt="Riri AI" className="w-full h-full object-contain" />
                 </div>
                 <h2 className="text-xl font-bold text-slate-800 mb-1">
-                  Вход в Bazar AI
+                  Вход в Riri AI
                 </h2>
                 <p className="text-sm text-slate-500">
                   Авторизуйся через Telegram
@@ -201,12 +201,12 @@ export function LandingPage() {
                         <p className="text-xs text-slate-600 mt-0.5">
                           Сначала напишите /start боту{' '}
                           <a 
-                            href="https://t.me/bazarai_bot" 
+                            href="https://t.me/riri_ai_bot" 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="font-medium underline"
                           >
-                            @bazarai_bot
+                            @riri_ai_bot
                           </a>
                         </p>
                       </div>

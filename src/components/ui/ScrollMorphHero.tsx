@@ -126,7 +126,7 @@ export default function ScrollMorphHero({
     title = "Найдите вирусный контент",
     subtitle = "ПРОКРУТИТЕ ДЛЯ ИССЛЕДОВАНИЯ",
     scrollHint,
-    activeTitle = "Bazar AI",
+    activeTitle = "Riri AI",
     activeSubtitle = "Платформа для поиска трендового контента из Instagram. Анализируйте, сохраняйте и создавайте свой контент.",
     images = IMAGES,
 }: ScrollMorphHeroProps) {

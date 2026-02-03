@@ -25,7 +25,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const SESSION_KEY = 'bazar-session';
+const SESSION_KEY = 'riri-session';
 const BOT_TOKEN = '8367186792:AAHLr687MVkXV_DBwAYUaR0U74U-h0qbi6g';
 
 // Гибридное хранение: cookie + localStorage для надёжности
@@ -218,13 +218,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (!chatId) {
-        setError(`Сначала напишите /start боту @bazarai_bot`);
+        setError(`Сначала напишите /start боту @riri_ai_bot`);
         setSendingCode(false);
         return false;
       }
 
       // Отправляем код
-      const message = `🔐 Ваш код для входа в Bazar AI:\n\n<b>${code}</b>\n\nКод действителен 10 минут.`;
+      const message = `🔐 Ваш код для входа в Riri AI:\n\n<b>${code}</b>\n\nКод действителен 10 минут.`;
       const sendResponse = await fetch(
         `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
         {
@@ -241,7 +241,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const sendData = await sendResponse.json();
       
       if (!sendData.ok) {
-        setError('Не удалось отправить код. Напишите /start боту @bazarai_bot');
+        setError('Не удалось отправить код. Напишите /start боту @riri_ai_bot');
         setSendingCode(false);
         return false;
       }
