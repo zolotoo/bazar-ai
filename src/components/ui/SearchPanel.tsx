@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, ExternalLink, Plus, Eye, Heart, MessageCircle, ChevronLeft, ChevronRight, Sparkles, Play, Link, Loader2, Radar, UserPlus, Check, Calendar } from 'lucide-react';
 import { TextShimmer } from './TextShimmer';
 import { VideoGradientCard } from './VideoGradientCard';
@@ -26,6 +27,7 @@ import { FolderPlus, Star, Sparkles as SparklesIcon, FileText, CheckCircle } fro
 import { toast } from 'sonner';
 import { TokenBadge } from './TokenBadge';
 import { getTokenCost } from '../../constants/tokenCosts';
+import { panelEnter } from '../../utils/motionPresets';
 
 /** Скрыть вкладку "Поиск по слову" (функционал остаётся в коде, можно вернуть) */
 export const HIDE_SEARCH_BY_WORD = true;
@@ -968,28 +970,32 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
         {/* Header with Tabs and Search */}
         <div className="flex-shrink-0 p-6 pb-4">
           <div className="max-w-2xl mx-auto">
-            {/* Close button */}
-            <button
+            {/* Close button — iOS 26 glass */}
+            <motion.button
               onClick={handleClose}
-              className="absolute top-4 right-4 p-2.5 rounded-2xl glass text-slate-500 hover:text-slate-700 transition-all z-20"
+              className="absolute top-4 right-4 p-2.5 rounded-card-xl bg-glass-white/80 backdrop-blur-glass border border-white/[0.35] text-slate-500 hover:text-slate-700 hover:bg-slate-100/80 transition-all z-20 shadow-glass-sm"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
               <X className="w-5 h-5" />
-            </button>
+            </motion.button>
 
             {/* Back button when in results */}
             {viewMode === 'results' && (
-              <button
+              <motion.button
                 onClick={backToCarousel}
-                className="absolute top-4 left-4 px-4 py-2 rounded-2xl glass text-slate-600 hover:text-slate-800 transition-all z-20 flex items-center gap-2 text-sm font-medium"
+                className="absolute top-4 left-4 px-4 py-2 rounded-card-xl bg-glass-white/80 backdrop-blur-glass border border-white/[0.35] text-slate-600 hover:text-slate-800 hover:bg-slate-100/80 transition-all z-20 flex items-center gap-2 text-sm font-medium shadow-glass-sm"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
                 <ChevronLeft className="w-4 h-4" />
                 Назад
-              </button>
+              </motion.button>
             )}
 
-            {/* Project indicator */}
+            {/* Project indicator — iOS 26 glass */}
             <div className="flex items-center justify-center gap-2 mb-3">
-              <div className="px-3 py-1.5 rounded-full bg-slate-200/50 text-slate-700 text-xs font-medium flex items-center gap-1.5">
+              <div className="px-4 py-2 rounded-pill bg-glass-white/70 backdrop-blur-glass border border-white/[0.35] text-slate-700 text-xs font-medium flex items-center gap-1.5 shadow-glass-sm">
                 <FolderPlus className="w-3.5 h-3.5" />
                 Проект: {currentProjectName}
               </div>
@@ -1072,193 +1078,160 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
               </>
             )}
 
-            {/* Link Tab Content */}
-            {activeTab === 'link' && (
-              <div className="space-y-5">
-                <GlassCardStatic className="p-5 shadow-glass">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-slate-500 flex items-center justify-center">
-                      <Link className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-semibold text-slate-800">Добавить по ссылке</h3>
-                      <p className="text-xs text-slate-500">Вставьте ссылку на рилс Instagram</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={linkUrl}
-                      onChange={(e) => setLinkUrl(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleParseLink()}
-                      placeholder="https://instagram.com/reel/ABC123..."
-                      className="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-white/80 outline-none focus:ring-2 focus:ring-slate-200/50 focus:border-slate-400/50 text-sm"
-                    />
-                    <button
-                      onClick={handleParseLink}
-                      disabled={!linkUrl.trim() || linkLoading}
-                      className={cn(
-                        "px-5 py-3 rounded-xl font-medium text-sm transition-all active:scale-95 flex items-center gap-2",
-                        "bg-slate-600 hover:bg-slate-700 text-white",
-                        "disabled:opacity-40 disabled:cursor-not-allowed",
-                        "shadow-glass hover:shadow-glass-hover"
-                      )}
-                    >
-                      {linkLoading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Search className="w-4 h-4" />
-                      )}
-                      Найти
-                      <TokenBadge tokens={getTokenCost('link_add')} />
-                    </button>
-                  </div>
-                </GlassCardStatic>
+            {/* Link и Radar — контент в Main Content Area (цельная страница) */}
+          </div>
+        </div>
 
-                {/* Link Preview Card */}
+        {/* Main Content Area */}
+        <div className={cn(
+          "flex-1 overflow-hidden",
+          (activeTab === 'radar' && !selectedRadarProfile) || activeTab === 'link' ? "flex flex-col items-center justify-center min-h-0" : ""
+        )}>
+          
+          {/* LINK PANEL - цельная страница iOS 26 / glass */}
+          <AnimatePresence mode="wait">
+          {activeTab === 'link' && (
+            <motion.div
+              key="link-panel"
+              className="w-full max-w-xl mx-auto px-6 py-6 overflow-y-auto custom-scrollbar-light"
+              variants={panelEnter}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+            >
+              <GlassCardStatic className="p-6 shadow-glass">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-12 h-12 rounded-card-xl bg-glass-white/80 backdrop-blur-glass-xl flex items-center justify-center border border-white/[0.35] shadow-glass-sm">
+                    <Link className="w-6 h-6 text-slate-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-800">Добавить по ссылке</h3>
+                    <p className="text-xs text-slate-500">Вставьте ссылку на рилс или карусель Instagram</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 mb-4">
+                  <input
+                    type="text"
+                    value={linkUrl}
+                    onChange={(e) => setLinkUrl(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleParseLink()}
+                    placeholder="https://instagram.com/reel/ABC123..."
+                    className="flex-1 px-4 py-3 rounded-card-xl border border-white/[0.5] bg-glass-white/60 backdrop-blur-glass outline-none focus:ring-2 focus:ring-slate-300/50 focus:border-slate-400/50 text-sm"
+                  />
+                  <button
+                    onClick={handleParseLink}
+                    disabled={!linkUrl.trim() || linkLoading}
+                    className={cn(
+                      "px-5 py-3 rounded-card-xl font-medium text-sm transition-all active:scale-95 flex items-center gap-2",
+                      "bg-slate-600 hover:bg-slate-700 text-white shadow-glass hover:shadow-glass-hover",
+                      "disabled:opacity-40 disabled:cursor-not-allowed"
+                    )}
+                  >
+                    {linkLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Search className="w-4 h-4" />
+                    )}
+                    Найти
+                    <TokenBadge tokens={getTokenCost('link_add')} />
+                  </button>
+                </div>
+
+                {/* Link Preview — компактная карточка без большого превью видео */}
                 {linkPreview && (
-                  <GlassCardStatic className="p-5 shadow-glass animate-in fade-in slide-in-from-bottom-4 duration-300">
-                    <div className="flex gap-5">
-                      {/* Video Thumbnail */}
-                      <div className="relative w-48 flex-shrink-0">
-                        <div className="aspect-[9/16] rounded-xl overflow-hidden shadow-lg">
-                          <img
-                            src={proxyImageUrl(linkPreview.thumbnail_url || linkPreview.display_url)}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
-                          {/* Play overlay */}
-                          <a
-                            href={linkPreview.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 hover:opacity-100 transition-opacity"
-                          >
-                            <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shadow-xl">
-                              <Play className="w-5 h-5 text-slate-800 ml-0.5" fill="currentColor" />
-                            </div>
-                          </a>
+                  <motion.div
+                    className="mt-5 pt-5 border-t border-slate-200/50 space-y-4"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  >
+                    <div className="flex items-center gap-3 p-4 rounded-card-xl bg-glass-white/60 backdrop-blur-glass border border-white/[0.35]">
+                      <div className="w-10 h-10 rounded-full bg-accent-violet/80 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                        {(linkPreview.owner?.username || 'U')[0].toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-800 truncate">@{linkPreview.owner?.username || 'instagram'}</p>
+                        <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
+                          <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" />{formatNumber(linkPreview.view_count)}</span>
+                          <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5" />{formatNumber(linkPreview.like_count)}</span>
+                          <span className="flex items-center gap-1"><SparklesIcon className="w-3.5 h-3.5" />{linkPreview.is_carousel ? calculateCarouselViralCoefficient(linkPreview.like_count, linkPreview.taken_at).toFixed(1) : calculateViralCoefficient(linkPreview.view_count, linkPreview.taken_at).toFixed(1)}</span>
                         </div>
                       </div>
-
-                      {/* Video Info */}
-                      <div className="flex-1 flex flex-col">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
-                            {(linkPreview.owner?.username || 'U')[0].toUpperCase()}
-                          </div>
-                          <span className="text-sm font-medium text-slate-800">@{linkPreview.owner?.username || 'instagram'}</span>
-                        </div>
-
-                        <p className="text-sm text-slate-600 line-clamp-3 mb-4">
-                          {typeof linkPreview.caption === 'string' ? linkPreview.caption.slice(0, 200) : 'Видео из Instagram'}
-                        </p>
-
-                        {/* Stats */}
-                        <div className="flex items-center gap-4 text-sm text-slate-500 mb-4">
-                          <div className="flex items-center gap-1.5">
-                            <Eye className="w-4 h-4" />
-                            <span>{formatNumber(linkPreview.view_count)}</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <Heart className="w-4 h-4" />
-                            <span>{formatNumber(linkPreview.like_count)}</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <MessageCircle className="w-4 h-4" />
-                            <span>{formatNumber(linkPreview.comment_count)}</span>
-                          </div>
-                          {linkPreview.taken_at && (
-                            <div className="flex items-center gap-1.5">
-                              <Calendar className="w-4 h-4" />
-                              <span>{formatVideoDate(linkPreview.taken_at)}</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Viral coefficient: для карусели — лайки, для рилса — просмотры */}
-                        <div className="flex items-center gap-2 mb-4">
-                          <SparklesIcon className="w-4 h-4 text-slate-600" />
-                          <span className="text-sm text-slate-600">
-                            Виральность: <span className="font-semibold text-slate-700">
-                              {linkPreview.is_carousel
-                                ? calculateCarouselViralCoefficient(linkPreview.like_count, linkPreview.taken_at).toFixed(1)
-                                : calculateViralCoefficient(linkPreview.view_count, linkPreview.taken_at).toFixed(1)}
-                            </span>
-                          </span>
-                        </div>
-
-                        {/* Статус сохранения */}
-                        <div className="mb-4 p-3 bg-emerald-50 rounded-xl border border-emerald-200">
-                          <div className="flex items-center gap-2">
-                            <Check className="w-4 h-4 text-emerald-600" />
-                            <span className="text-sm text-emerald-700">
-                              Сохранено в <span className="font-semibold">{currentProjectName}</span>
-                              {linkPreview.is_carousel ? ' → Карусели' : ' → Все видео'}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Выбор папки для перемещения (только для рилсов) */}
-                        {!linkPreview.is_carousel && (
-                        <div className="mb-4">
-                          <label className="text-xs text-slate-500 mb-1.5 block">Переместить в папку:</label>
-                          <div className="grid grid-cols-2 gap-2">
-                            {folderConfigs.map((folder) => {
-                              const FolderIcon = folder.icon;
-                              return (
-                                <button
-                                  key={folder.id}
-                                  onClick={() => handleAddLinkPreviewToAllVideos(folder.id)}
-                                  className={cn(
-                                    "flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all text-left",
-                                    "border-slate-200 hover:border-slate-300 hover:bg-slate-100/60"
-                                  )}
-                                >
-                                  <FolderIcon className="w-4 h-4" style={{ color: folder.color }} />
-                                  <span className="text-sm text-slate-700 truncate">{folder.title}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                        )}
-
-                        <div className="mt-auto flex items-center gap-2">
-                          <button
-                            onClick={() => {
-                              setLinkUrl('');
-                              setLinkPreview(null);
-                            }}
-                            className="flex-1 px-4 py-3 rounded-xl font-medium text-sm bg-orange-500 text-white hover:bg-orange-600 transition-colors"
-                          >
-                            Готово
-                          </button>
-                        </div>
+                      <a href={linkPreview.url} target="_blank" rel="noopener noreferrer" className="p-2 rounded-xl bg-glass-white/80 hover:bg-slate-100/80 text-slate-500 transition-all">
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </div>
+                    <div className="p-3 rounded-card-xl bg-accent-positive/10 border border-accent-positive/20">
+                      <div className="flex items-center gap-2">
+                        <Check className="w-4 h-4 text-accent-positive" />
+                        <span className="text-sm text-slate-700">
+                          Сохранено в <span className="font-semibold">{currentProjectName}</span>
+                          {linkPreview.is_carousel ? ' → Карусели' : ' → Все видео'}
+                        </span>
                       </div>
                     </div>
-                  </GlassCardStatic>
+                    {!linkPreview.is_carousel && (
+                      <div>
+                        <label className="text-xs text-slate-500 mb-2 block">Переместить в папку:</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {folderConfigs.map((folder) => {
+                            const FolderIcon = folder.icon;
+                            return (
+                              <button
+                                key={folder.id}
+                                onClick={() => handleAddLinkPreviewToAllVideos(folder.id)}
+                                className={cn(
+                                  "flex items-center gap-2 px-3 py-2.5 rounded-card-xl border transition-all text-left",
+                                  "bg-glass-white/50 border-white/[0.4] hover:bg-glass-white/80 hover:border-slate-200"
+                                )}
+                              >
+                                <FolderIcon className="w-4 h-4 flex-shrink-0" style={{ color: folder.color }} />
+                                <span className="text-sm text-slate-700 truncate">{folder.title}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    <motion.button
+                      onClick={() => { setLinkUrl(''); setLinkPreview(null); }}
+                      className="w-full px-4 py-3 rounded-card-xl font-medium text-sm bg-slate-600 hover:bg-slate-700 text-white shadow-glass hover:shadow-glass-hover transition-all"
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                    >
+                      Готово
+                    </motion.button>
+                  </motion.div>
                 )}
-              </div>
-            )}
+              </GlassCardStatic>
+            </motion.div>
+          )}
 
-            {/* Radar Tab Content - скрываем когда выбран профиль */}
-            {activeTab === 'radar' && !selectedRadarProfile && (
-              <GlassCardStatic className="p-5 shadow-glass">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center relative">
-                      <Radar className="w-5 h-5 text-white" />
+          {/* RADAR PANEL - цельная страница в стиле iOS 26 / glass (без видео снизу) */}
+          {activeTab === 'radar' && !selectedRadarProfile && (
+            <motion.div
+              key="radar-panel"
+              className="w-full max-w-xl mx-auto px-6 py-6 overflow-y-auto custom-scrollbar-light"
+              variants={panelEnter}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+            >
+              <GlassCardStatic className="p-6 shadow-glass">
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-card-xl bg-glass-white/80 backdrop-blur-glass-xl flex items-center justify-center relative border border-white/[0.35] shadow-glass-sm">
+                      <Radar className="w-6 h-6 text-slate-600" />
                       {radarProfiles.length > 0 && (
-                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center text-[10px] text-white font-bold">
+                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent-positive rounded-full border-2 border-white flex items-center justify-center text-[10px] text-white font-bold">
                           {radarProfiles.length}
                         </span>
                       )}
                     </div>
                     <div>
-                      <h3 className="text-sm font-semibold text-slate-800">Радар профилей</h3>
+                      <h3 className="text-base font-semibold text-slate-800">Радар профилей</h3>
                       <p className="text-xs text-slate-500">
-                        Проект: <span className="font-medium text-orange-600">{currentProjectName}</span>
+                        Проект: <span className="font-medium text-slate-600">{currentProjectName}</span>
                       </p>
                     </div>
                   </div>
@@ -1266,7 +1239,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                     {(radarStats.newVideos > 0 || radarStats.updatedVideos > 0) && (
                       <div className="text-xs text-slate-500">
                         {radarStats.newVideos > 0 && (
-                          <span className="text-emerald-600 font-medium">+{radarStats.newVideos} новых</span>
+                          <span className="text-accent-positive font-medium">+{radarStats.newVideos} новых</span>
                         )}
                         {radarStats.newVideos > 0 && radarStats.updatedVideos > 0 && ', '}
                         {radarStats.updatedVideos > 0 && (
@@ -1284,8 +1257,8 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                         }}
                         disabled={radarLoading}
                         className={cn(
-                          "px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5",
-                          "bg-slate-100 text-slate-600 hover:bg-slate-200",
+                          "px-3 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5",
+                          "bg-glass-white/80 backdrop-blur-glass border border-white/[0.35] text-slate-600 hover:bg-slate-100/80 shadow-glass-sm",
                           radarLoading && "opacity-50 cursor-not-allowed"
                         )}
                       >
@@ -1300,17 +1273,17 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                   </div>
                 </div>
 
-                {/* Info banner */}
+                {/* Info banner — glass style */}
                 {currentProjectId && (
-                  <div className="mb-4 p-3 rounded-xl bg-blue-50 border border-blue-100">
-                    <p className="text-xs text-blue-700">
-                      <span className="font-semibold">💡 Как это работает:</span> Все видео добавленных профилей автоматически попадут в папку "Все видео" проекта "{currentProjectName}". При обновлении - новые видео добавятся, а статистика старых обновится.
+                  <div className="mb-5 p-4 rounded-card-xl bg-glass-white/60 backdrop-blur-glass border border-white/[0.35] shadow-glass-sm">
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      <span className="font-semibold text-slate-700">Как это работает:</span> Все видео добавленных профилей автоматически попадут в папку «Все видео» проекта «{currentProjectName}». При обновлении — новые видео добавятся, а статистика старых обновится.
                     </p>
                   </div>
                 )}
                 
                 {/* Add new profile */}
-                <div className="space-y-2 mb-4">
+                <div className="space-y-2 mb-5">
                   <div className="flex items-center gap-2">
                     <div className="relative flex-1">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">@</span>
@@ -1325,7 +1298,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                         }}
                         placeholder="username или ссылка на профиль"
                         disabled={!currentProjectId}
-                        className="w-full pl-9 pr-4 py-3 rounded-xl border border-slate-200 bg-white/80 outline-none focus:ring-2 focus:ring-orange-500/30 text-sm disabled:opacity-50"
+                        className="w-full pl-9 pr-4 py-3 rounded-card-xl border border-white/[0.5] bg-glass-white/60 backdrop-blur-glass outline-none focus:ring-2 focus:ring-slate-300/50 focus:border-slate-400/50 text-sm disabled:opacity-50"
                       />
                     </div>
                     <button
@@ -1336,7 +1309,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                       }}
                       disabled={!radarUsername.trim() || !currentProjectId}
                       className={cn(
-                        "px-5 py-3 rounded-xl font-medium text-sm transition-all active:scale-95 flex items-center gap-2",
+                        "px-5 py-3 rounded-card-xl font-medium text-sm transition-all active:scale-95 flex items-center gap-2",
                         "bg-slate-600 hover:bg-slate-700 text-white",
                         "disabled:opacity-40 disabled:cursor-not-allowed",
                         "shadow-glass hover:shadow-glass-hover"
@@ -1354,18 +1327,8 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
 
                 {/* Tracked profiles */}
                 {radarProfiles.length > 0 && (
-                  <div className="border-t border-slate-200/50 pt-4 mb-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-xs text-slate-500">Отслеживаемые профили ({radarProfiles.length})</p>
-                      {selectedRadarProfile && (
-                        <button
-                          onClick={() => setSelectedRadarProfile(null)}
-                          className="text-xs text-orange-600 hover:text-orange-700 font-medium"
-                        >
-                          Показать все видео
-                        </button>
-                      )}
-                    </div>
+                  <div className="border-t border-slate-200/50 pt-5 mb-4">
+                    <p className="text-xs text-slate-500 mb-3">Отслеживаемые профили ({radarProfiles.length})</p>
                     <div className="flex flex-wrap gap-2">
                       {radarProfiles.map(profile => {
                         const isSelected = selectedRadarProfile === profile.username;
@@ -1380,31 +1343,31 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                               }
                             }}
                             className={cn(
-                              "flex items-center gap-2 px-3 py-2 rounded-xl border transition-all cursor-pointer",
+                              "flex items-center gap-2 px-3 py-2 rounded-card-xl border transition-all cursor-pointer",
                               isSelected 
-                                ? "bg-orange-100 border-orange-300 ring-2 ring-orange-500/30" 
-                                : "bg-white/60 border-slate-200/50 hover:bg-orange-50 hover:border-orange-200",
+                                ? "bg-glass-white/90 backdrop-blur-glass border-slate-300/60 ring-2 ring-slate-400/20 shadow-glass-sm" 
+                                : "bg-glass-white/50 backdrop-blur-glass border-white/[0.4] hover:bg-glass-white/70 hover:border-slate-200",
                               radarLoadingUsername === profile.username && "animate-pulse cursor-wait"
                             )}
                           >
                             <div className={cn(
                               "w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold",
                               isSelected 
-                                ? "bg-gradient-to-br from-orange-500 to-amber-500" 
-                                : "bg-gradient-to-br from-pink-500 to-purple-600"
+                                ? "bg-slate-600" 
+                                : "bg-accent-violet/80"
                             )}>
                               {profile.username[0].toUpperCase()}
                             </div>
                             <span className={cn(
                               "text-sm",
-                              isSelected ? "text-orange-700 font-medium" : "text-slate-700"
+                              isSelected ? "text-slate-800 font-medium" : "text-slate-700"
                             )}>
                               @{profile.username}
                             </span>
                             {profileReelsCount > 0 && (
                               <span className={cn(
                                 "text-xs px-1.5 py-0.5 rounded-full",
-                                isSelected ? "bg-orange-200 text-orange-700" : "bg-slate-100 text-slate-500"
+                                isSelected ? "bg-slate-200 text-slate-700" : "bg-slate-100/80 text-slate-500"
                               )}>
                                 {profileReelsCount}
                               </span>
@@ -1421,7 +1384,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                                   }
                                   toast.success(`@${profile.username} удалён из радара`);
                                 }}
-                                className="text-slate-400 hover:text-red-500 transition-colors ml-1"
+                                className="text-slate-400 hover:text-accent-negative transition-colors ml-1"
                               >
                                 <X className="w-3.5 h-3.5" />
                               </button>
@@ -1430,50 +1393,16 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                         );
                       })}
                     </div>
-                  </div>
-                )}
-
-                {/* Radar reels mini preview - только если профиль НЕ выбран */}
-                {radarReels.length > 0 && !selectedRadarProfile && (
-                  <div className="border-t border-slate-200/50 pt-4">
-                    <p className="text-xs text-slate-500 mb-3">Последние видео ({radarReels.length})</p>
-                    <div className="grid grid-cols-4 gap-2">
-                      {radarReels.slice(0, 8).map((reel, idx) => (
-                        <div 
-                          key={`radar-mini-${reel.shortcode}-${idx}`}
-                          className="relative group cursor-pointer"
-                          onClick={() => setSelectedVideo(reel)}
-                        >
-                          <div className="aspect-[9/16] rounded-lg overflow-hidden bg-slate-100">
-                            <img
-                              src={proxyImageUrl(reel.thumbnail_url)}
-                              alt=""
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                              onError={(e) => {
-                                e.currentTarget.src = PLACEHOLDER_200x356;
-                              }}
-                            />
-                            {reel.isNew && (
-                              <div className="absolute top-1 right-1">
-                                <span className="px-1 py-0.5 rounded bg-emerald-500 text-white text-[8px] font-bold">
-                                  NEW
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <p className="text-xs text-slate-400 mt-3 text-center">
-                      Кликните на профиль выше, чтобы увидеть все его видео
+                    <p className="text-xs text-slate-400 mt-3">
+                      Кликните на профиль, чтобы увидеть все его видео
                     </p>
                   </div>
                 )}
 
                 {/* Empty state - no project */}
                 {!currentProjectId && (
-                  <div className="text-center py-8">
-                    <Radar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                  <div className="text-center py-12">
+                    <Radar className="w-14 h-14 text-slate-300 mx-auto mb-4" />
                     <p className="text-slate-500 text-sm mb-1">Выберите проект</p>
                     <p className="text-slate-400 text-xs">Сначала выберите проект в боковом меню</p>
                   </div>
@@ -1481,20 +1410,18 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
 
                 {/* Empty state - no profiles */}
                 {currentProjectId && radarProfiles.length === 0 && (
-                  <div className="text-center py-8">
-                    <Radar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                    <p className="text-slate-500 text-sm mb-1">Радар для "{currentProjectName}" пуст</p>
+                  <div className="text-center py-12">
+                    <Radar className="w-14 h-14 text-slate-300 mx-auto mb-4" />
+                    <p className="text-slate-500 text-sm mb-1">Радар для «{currentProjectName}» пуст</p>
                     <p className="text-slate-400 text-xs">Добавьте Instagram профили для автоматического сбора видео</p>
                   </div>
                 )}
               </GlassCardStatic>
-            )}
-          </div>
-        </div>
+            </motion.div>
+          )}
 
-        {/* Main Content Area */}
-        <div className="flex-1 overflow-hidden">
-          
+          </AnimatePresence>
+
           {/* RADAR PROFILE VIDEOS VIEW - Показываем когда выбран профиль в радаре, полноэкранный режим */}
           {activeTab === 'radar' && selectedRadarProfile && (
             <div className="h-full overflow-y-auto px-6 pb-6 custom-scrollbar-light pt-6">
@@ -1504,11 +1431,11 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => setSelectedRadarProfile(null)}
-                      className="p-2 rounded-xl bg-white hover:bg-slate-100 text-slate-500 transition-all"
+                      className="p-2 rounded-card-xl bg-glass-white/80 backdrop-blur-glass border border-white/[0.35] hover:bg-slate-100/80 text-slate-500 transition-all shadow-glass-sm"
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                    <div className="w-10 h-10 rounded-full bg-accent-violet/80 flex items-center justify-center text-white font-bold">
                       {selectedRadarProfile[0].toUpperCase()}
                     </div>
                     <div>
@@ -1519,8 +1446,8 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                     </div>
                   </div>
                   
-                  {/* Sort */}
-                  <div className="flex items-center gap-1.5 bg-white/80 backdrop-blur-sm rounded-2xl p-1.5 shadow-lg border border-white/50">
+                  {/* Sort — glass style */}
+                  <div className="flex items-center gap-1.5 bg-glass-white/80 backdrop-blur-glass rounded-card-xl p-1.5 shadow-glass-sm border border-white/[0.35]">
                     {[
                       { value: 'date', label: 'Недавние', icon: Calendar },
                       { value: 'viral', label: 'Вирал', icon: Sparkles },
@@ -1533,8 +1460,8 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                         className={cn(
                           "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all",
                           sortBy === value 
-                            ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md" 
-                            : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                            ? "bg-slate-600 text-white shadow-glass-sm" 
+                            : "text-slate-500 hover:text-slate-700 hover:bg-slate-100/80"
                         )}
                       >
                         <Icon className="w-3.5 h-3.5" />
@@ -1659,7 +1586,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
             </div>
           )}
 
-          {/* CAROUSEL VIEW - Saved Videos */}
+          {/* CAROUSEL VIEW - Saved Videos (скрыт когда радар активен) */}
           {viewMode === 'carousel' && incomingVideos.length > 0 && activeTab !== 'radar' && (
             <div className="h-full flex flex-col items-center justify-center">
               {/* 3D Carousel */}
@@ -1794,8 +1721,8 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
             </div>
           )}
 
-          {/* EMPTY STATE - No videos in database */}
-          {(viewMode === 'carousel' || viewMode === 'trending') && incomingVideos.length === 0 && reels.length === 0 && !loading && !(activeTab === 'radar' && selectedRadarProfile) && (
+          {/* EMPTY STATE - No videos in database (скрыт когда Link или Radar активен) */}
+          {(viewMode === 'carousel' || viewMode === 'trending') && incomingVideos.length === 0 && reels.length === 0 && !loading && activeTab !== 'link' && !(activeTab === 'radar' && selectedRadarProfile) && !(activeTab === 'radar' && !selectedRadarProfile) && (
             <div className="h-full flex flex-col items-center justify-center px-6">
               <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-orange-500/20 to-amber-600/20 flex items-center justify-center mb-6">
                 <Search className="w-10 h-10 text-orange-500" />
@@ -1820,8 +1747,8 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
             </div>
           )}
 
-          {/* TRENDING VIEW - Carousel with Instagram trending videos */}
-          {viewMode === 'trending' && reels.length > 0 && !(activeTab === 'radar' && selectedRadarProfile) && (
+          {/* TRENDING VIEW - Carousel with Instagram trending videos (скрыт когда Link или Radar активен) */}
+          {viewMode === 'trending' && reels.length > 0 && activeTab !== 'link' && !(activeTab === 'radar' && selectedRadarProfile) && !(activeTab === 'radar' && !selectedRadarProfile) && (
             <div className="h-full flex flex-col items-center justify-center">
               {/* Spinning indicator */}
               {isSpinning && (

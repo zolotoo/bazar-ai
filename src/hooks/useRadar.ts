@@ -17,6 +17,8 @@ export interface TrackedProfile {
   projectId: string;
   addedAt: string;
   lastChecked?: string;
+  /** Частота автообновления в днях (1, 3, 7, 14) */
+  updateFrequencyDays?: number;
   avatarUrl?: string;
   fullName?: string;
   reelsCount?: number;
@@ -31,6 +33,33 @@ export interface RadarReel extends InstagramSearchResult {
 }
 
 const STORAGE_KEY = 'radar_profiles';
+const STORAGE_MIGRATED_KEY = 'radar_profiles_migrated';
+
+/** Преобразует строку из БД в TrackedProfile */
+function dbRowToProfile(row: {
+  id: string;
+  project_id: string;
+  user_id: string;
+  instagram_username: string;
+  update_frequency_days?: number;
+  last_checked_at?: string | null;
+  added_at: string;
+  avatar_url?: string | null;
+  full_name?: string | null;
+  reels_count?: number | null;
+}): TrackedProfile {
+  return {
+    id: row.id,
+    username: row.instagram_username,
+    projectId: row.project_id,
+    addedAt: row.added_at,
+    lastChecked: row.last_checked_at ?? undefined,
+    updateFrequencyDays: row.update_frequency_days ?? 7,
+    avatarUrl: row.avatar_url ?? undefined,
+    fullName: row.full_name ?? undefined,
+    reelsCount: row.reels_count ?? undefined,
+  };
+}
 
 // Функция для добавления видео в saved_videos пользователя (inbox)
 // Использует глобальный сервис для транскрибаций
