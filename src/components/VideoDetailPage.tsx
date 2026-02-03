@@ -1053,53 +1053,52 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
           </div>
         </div>
 
-        {/* Видео 9:16 — сверху, всегда видно, выше всего контента */}
-        <div className="flex-shrink-0 w-full flex justify-center mb-4">
-          <div 
-            className="relative rounded-card-xl overflow-hidden shadow-glass border border-white/[0.35] bg-black"
-            style={{ aspectRatio: '9/16', width: 'min(100%, 280px)' }}
-          >
-            {showVideo && directVideoUrl ? (
-              <video
-                src={directVideoUrl}
-                className="w-full h-full object-cover"
-                controls
-                autoPlay
-                playsInline
-              />
-            ) : (
-              <button
-                type="button"
-                onClick={handleLoadVideo}
-                disabled={isLoadingVideo}
-                className="absolute inset-0 w-full h-full flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors group"
-              >
-                <img
-                  src={thumbnailUrl}
-                  alt=""
-                  className="w-full h-full object-cover absolute inset-0"
-                />
-                <div className="absolute bottom-2 right-2">
-                  <TokenBadge tokens={getTokenCost('load_video')} size="sm" />
-                </div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-14 h-14 rounded-full bg-glass-white/95 backdrop-blur-glass flex items-center justify-center shadow-glass group-hover:scale-110 transition-transform border border-white/40">
-                    {isLoadingVideo ? (
-                      <Loader2 className="w-6 h-6 text-slate-800 animate-spin" />
-                    ) : (
-                      <Play className="w-6 h-6 text-slate-800 ml-1" fill="currentColor" />
-                    )}
-                  </div>
-                </div>
-              </button>
-            )}
-          </div>
-        </div>
-
         {/* Main content — на мобильных колонка, на десктопе 3 колонки */}
         <div className="flex-1 flex flex-col md:flex-row gap-4 min-h-0 overflow-y-auto md:overflow-hidden">
-          {/* Left: папка + статистика */}
-          <div className="flex-shrink-0 flex flex-col gap-3 overflow-y-auto custom-scrollbar-light w-full md:w-auto md:min-w-[256px] md:max-w-[min(256px,28vw)]">
+          {/* Left: видео 9:16 + папка + статистика — компактная колонка со скроллом */}
+          <div className="flex-shrink-0 flex flex-col gap-3 overflow-y-auto custom-scrollbar-light w-full md:w-auto md:min-w-[200px] md:max-w-[200px]">
+            {/* Видео 9:16 — компактно, первым в колонке. Заглушка: клик → загрузка через API (стоит кредитов) */}
+            <div 
+              className="relative rounded-xl overflow-hidden shadow-md border border-slate-200/80 bg-black flex-shrink-0"
+              style={{ aspectRatio: '9/16' }}
+            >
+              {showVideo && directVideoUrl ? (
+                <video
+                  src={directVideoUrl}
+                  className="w-full h-full object-cover"
+                  controls
+                  autoPlay
+                  playsInline
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleLoadVideo}
+                  disabled={isLoadingVideo}
+                  title={`Загрузить и смотреть (${getTokenCost('load_video')} коинов)`}
+                  className="absolute inset-0 w-full h-full flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors group"
+                >
+                  <img
+                    src={thumbnailUrl}
+                    alt=""
+                    className="w-full h-full object-cover absolute inset-0"
+                  />
+                  <div className="absolute bottom-1 right-1">
+                    <TokenBadge tokens={getTokenCost('load_video')} size="sm" />
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-white/95 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                      {isLoadingVideo ? (
+                        <Loader2 className="w-5 h-5 text-slate-800 animate-spin" />
+                      ) : (
+                        <Play className="w-5 h-5 text-slate-800 ml-0.5" fill="currentColor" />
+                      )}
+                    </div>
+                  </div>
+                </button>
+              )}
+            </div>
+
             {/* Current folder + move — z-[60] чтобы дропдаун был поверх раздела параметров */}
             <div className={cn(
               "rounded-card-xl p-3 shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] relative",

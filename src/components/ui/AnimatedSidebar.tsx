@@ -254,7 +254,7 @@ export const SidebarSection = ({ title, children, onAdd }: SidebarSectionProps) 
         transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
         className="flex items-center justify-between px-3 mb-2 overflow-hidden"
       >
-        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+        <span className="text-xs font-semibold text-slate-500 tracking-wider">
           {title}
         </span>
         {onAdd && (

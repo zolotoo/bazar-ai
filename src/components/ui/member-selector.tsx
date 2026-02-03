@@ -362,7 +362,7 @@ const MemberSelector = React.forwardRef<HTMLDivElement, MemberSelectorProps>(
     return (
       <div ref={ref} className={cn("relative", className)}>
         {label && (
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+          <div className="text-xs font-semibold text-slate-500 tracking-wide mb-3">
             {label}
           </div>
         )}

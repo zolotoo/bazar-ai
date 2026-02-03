@@ -124,7 +124,7 @@ interface ScrollMorphHeroProps {
 export default function ScrollMorphHero({
     className,
     title = "Найдите вирусный контент",
-    subtitle = "ПРОКРУТИТЕ ДЛЯ ИССЛЕДОВАНИЯ",
+    subtitle = "Прокрутите для исследования",
     scrollHint,
     activeTitle = "Riri AI",
     activeSubtitle = "Платформа для поиска трендового контента из Instagram. Анализируйте, сохраняйте и создавайте свой контент.",

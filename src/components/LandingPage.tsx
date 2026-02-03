@@ -35,7 +35,7 @@ export function LandingPage() {
       <div className="relative w-full h-screen">
         <ScrollMorphHero 
           title="Найдите вирусный контент"
-          subtitle="ПРОКРУТИТЕ ВНИЗ"
+          subtitle="Прокрутите вниз"
           activeTitle="Riri AI"
           activeSubtitle="Платформа для поиска трендового контента из Instagram. Анализируйте, сохраняйте и создавайте свой контент."
         />
@@ -70,7 +70,7 @@ export function LandingPage() {
             {/* Badge — floating pill */}
             <div className="mb-8 px-5 py-2 rounded-pill bg-glass-white/80 backdrop-blur-glass shadow-glass-sm border border-white/[0.4]">
               <span className="text-sm text-slate-600 font-semibold tracking-wide">
-                AI-ПОИСК КОНТЕНТА
+                AI-поиск контента
               </span>
             </div>
 
@@ -107,7 +107,7 @@ export function LandingPage() {
                 "touch-manipulation"
               )}
             >
-              НАЧАТЬ РАБОТУ
+              Начать работу
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
 

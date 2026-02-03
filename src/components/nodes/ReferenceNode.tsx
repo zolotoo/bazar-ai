@@ -114,7 +114,7 @@ export function ReferenceNode({ id, data, selected }: NodeProps<ReferenceNodeDat
             engagementScore > 5 ? 'bg-emerald-50' : engagementScore > 2 ? 'bg-amber-50' : 'bg-slate-50'
           )}>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Engagement</span>
+              <span className="text-[10px] font-semibold text-slate-400 tracking-wide">Engagement</span>
               <TrendingUp className={cn(
                 'w-4 h-4',
                 engagementScore > 5 ? 'text-emerald-500' : engagementScore > 2 ? 'text-amber-500' : 'text-slate-300'

@@ -612,7 +612,7 @@ function AppContent() {
                     {projects.filter((p: any) => p.isShared).length > 0 && (
                       <>
                         <div className="pt-2 mt-2 border-t border-slate-200/60">
-                          <p className="px-3 py-1 text-xs font-medium text-slate-500 uppercase tracking-wider">Общие проекты</p>
+                          <p className="px-3 py-1 text-xs font-medium text-slate-500 tracking-wider">Общие проекты</p>
                         </div>
                         <div className="space-y-1">
                           {projects.filter((p: Project) => p.isShared).map((project: Project) => {
