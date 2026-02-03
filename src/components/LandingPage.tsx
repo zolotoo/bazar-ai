@@ -136,7 +136,7 @@ export function LandingPage() {
                   <img src="/riri-logo.png" alt="Riri AI" className="w-full h-full object-contain" />
                 </div>
                 <h2 className="text-xl font-bold text-slate-800 mb-1">
-                  Рада тебя видеть! Давай авторизируемся
+                  Рада тебя видеть!<br />Давай авторизируемся
                 </h2>
                 <p className="text-sm text-slate-500">
                   Я помогу тебе войти через тг
@@ -199,7 +199,7 @@ export function LandingPage() {
                       <div>
                         <p className="text-sm font-medium text-slate-800">Не забудь!</p>
                         <p className="text-xs text-slate-600 mt-0.5">
-                          Напиши мне в тг /start{' '}
+                          Напиши мне{' '}
                           <a 
                             href="https://t.me/ririai_bot" 
                             target="_blank" 
@@ -208,7 +208,7 @@ export function LandingPage() {
                           >
                             @riri_ai_bot
                           </a>
-                          {' '}и нажми «Получить код» заново
+                          {' '}- /start и нажми «Получить код» заново
                         </p>
                       </div>
                     </div>

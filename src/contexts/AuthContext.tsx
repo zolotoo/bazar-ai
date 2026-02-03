@@ -218,7 +218,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (!chatId) {
-        setError('Я не могу отправить тебе сообщение :(\nНапиши мне в тг /start\nИ нажми кнопку «Получить код» заново');
+        setError('Я не могу отправить тебе сообщение :(\nНапиши мне @riri_ai_bot - /start\nИ нажми кнопку «Получить код» заново');
         setSendingCode(false);
         return false;
       }
@@ -241,7 +241,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const sendData = await sendResponse.json();
       
       if (!sendData.ok) {
-        setError('Я не могу отправить тебе сообщение :(\nНапиши мне в тг /start\nИ нажми кнопку «Получить код» заново');
+        setError('Я не могу отправить тебе сообщение :(\nНапиши мне @riri_ai_bot - /start\nИ нажми кнопку «Получить код» заново');
         setSendingCode(false);
         return false;
       }
