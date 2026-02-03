@@ -2004,8 +2004,8 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
             </div>
           )}
 
-          {/* LOADING VIEW - Orange Glowing Sun */}
-          {viewMode === 'loading' && !(activeTab === 'radar' && selectedRadarProfile) && (
+          {/* LOADING VIEW - Orange Glowing Sun (скрыт на Radar и Link — там свой контент) */}
+          {viewMode === 'loading' && activeTab !== 'radar' && activeTab !== 'link' && (
             <div className="h-full flex flex-col items-center justify-center">
               <div className="relative">
                 <div 
