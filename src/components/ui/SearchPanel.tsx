@@ -171,6 +171,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
   const [showFolderSelect, setShowFolderSelect] = useState(false);
   const [cardFolderSelect, setCardFolderSelect] = useState<string | null>(null);
   const [radarUsername, setRadarUsername] = useState('');
+  const [radarAddFrequencyDays, setRadarAddFrequencyDays] = useState(7); // 1, 3, 7, 14 дней
   const [isSpinning, setIsSpinning] = useState(false);
   const [selectedRadarProfile, setSelectedRadarProfile] = useState<string | null>(null); // Фильтр по профилю в радаре
   const [_spinOffset, setSpinOffset] = useState(0);
@@ -193,8 +194,10 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
     loading: radarLoading,
     loadingUsername: radarLoadingUsername,
     stats: radarStats,
+    profilesDueCount: radarProfilesDueCount,
     addProfile: addRadarProfile, 
     removeProfile: removeRadarProfile,
+    updateProfileFrequency: updateRadarProfileFrequency,
     refreshAll: refreshRadar,
     getProfileStats,
   } = useRadar(currentProjectId, radarUserId);
@@ -618,7 +621,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
   };
 
   // Обработка добавления профиля в радар (по username или ссылке)
-  const handleAddRadarProfile = useCallback((input: string) => {
+  const handleAddRadarProfile = useCallback(async (input: string) => {
     if (!input.trim() || !currentProjectId) return;
     
     let username = input.trim();
@@ -637,16 +640,16 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
       return;
     }
     
-    const added = addRadarProfile(username, currentProjectId);
+    const added = await addRadarProfile(username, currentProjectId, radarAddFrequencyDays);
     if (added) {
       toast.success(`@${username} добавлен в радар`, {
-        description: `Проект: ${currentProjectName}. Загружаем видео...`,
+        description: `Проект: ${currentProjectName}. Обновление каждые ${radarAddFrequencyDays} дн. Загружаем видео...`,
       });
       setRadarUsername('');
     } else {
       toast.error('Профиль уже отслеживается в этом проекте');
     }
-  }, [addRadarProfile, currentProjectId, currentProjectName]);
+  }, [addRadarProfile, currentProjectId, currentProjectName, radarAddFrequencyDays]);
 
   // Обработка ссылки на рилс/карусель - сохраняем в "Все видео" или "Карусели" в зависимости от типа
   const handleParseLink = async () => {
@@ -668,10 +671,10 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
       // Если это профиль (без /reel/ или /p/)
       if (profileMatch && !reelMatch) {
         const username = profileMatch[1].replace('@', '').toLowerCase();
-        const added = addRadarProfile(username, currentProjectId);
+        const added = await addRadarProfile(username, currentProjectId, radarAddFrequencyDays);
         if (added) {
           toast.success(`@${username} добавлен в радар`, {
-            description: `Проект: ${currentProjectName}. Загружаем видео...`,
+            description: `Проект: ${currentProjectName}. Обновление каждые ${radarAddFrequencyDays} дн. Загружаем видео...`,
           });
           setLinkUrl('');
           setLinkLoading(false);
@@ -1248,27 +1251,34 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                       </div>
                     )}
                     {radarProfiles.length > 0 && (
-                      <button
-                        onClick={() => {
-                          refreshRadar();
-                          toast.info('Обновляем все профили...', {
-                            description: 'Видео автоматически добавятся в "Все видео"',
-                          });
-                        }}
-                        disabled={radarLoading}
-                        className={cn(
-                          "px-3 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5",
-                          "bg-glass-white/80 backdrop-blur-glass border border-white/[0.35] text-slate-600 hover:bg-slate-100/80 shadow-glass-sm",
-                          radarLoading && "opacity-50 cursor-not-allowed"
+                      <div className="flex items-center gap-2">
+                        {radarProfilesDueCount > 0 && (
+                          <span className="text-xs text-amber-600 font-medium">
+                            Пора обновить ({radarProfilesDueCount})
+                          </span>
                         )}
-                      >
-                        {radarLoading ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          'Обновить все'
-                        )}
-                        <TokenBadge tokens={getTokenCost('radar_refresh_all', radarProfiles.length)} />
-                      </button>
+                        <button
+                          onClick={() => {
+                            refreshRadar();
+                            toast.info('Обновляем все профили...', {
+                              description: 'Видео автоматически добавятся в "Все видео"',
+                            });
+                          }}
+                          disabled={radarLoading}
+                          className={cn(
+                            "px-3 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5",
+                            "bg-glass-white/80 backdrop-blur-glass border border-white/[0.35] text-slate-600 hover:bg-slate-100/80 shadow-glass-sm",
+                            radarLoading && "opacity-50 cursor-not-allowed"
+                          )}
+                        >
+                          {radarLoading ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            'Обновить все'
+                          )}
+                          <TokenBadge tokens={getTokenCost('radar_refresh_all', radarProfiles.length)} />
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1319,6 +1329,23 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                       Добавить
                       <TokenBadge tokens={getTokenCost('radar_add_profile')} />
                     </button>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs text-slate-500">Обновлять каждые:</span>
+                    {[1, 3, 7, 14].map((days) => (
+                      <button
+                        key={days}
+                        onClick={() => setRadarAddFrequencyDays(days)}
+                        className={cn(
+                          "px-2.5 py-1 rounded-lg text-xs font-medium transition-all",
+                          radarAddFrequencyDays === days
+                            ? "bg-slate-600 text-white"
+                            : "bg-glass-white/60 text-slate-600 hover:bg-slate-100/80"
+                        )}
+                      >
+                        {days === 1 ? '1 день' : `${days} дней`}
+                      </button>
+                    ))}
                   </div>
                   <p className="text-xs text-slate-400 px-1">
                     Можно ввести username (например: username) или ссылку на профиль Instagram
@@ -1372,6 +1399,21 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                                 {profileReelsCount}
                               </span>
                             )}
+                            <select
+                              value={profile.updateFrequencyDays ?? 7}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                const days = Number(e.target.value);
+                                updateRadarProfileFrequency(profile.username, days, profile.projectId);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-[10px] text-slate-500 bg-transparent border-none cursor-pointer focus:ring-0 focus:outline-none py-0 pr-1"
+                              title="Частота обновления"
+                            >
+                              {[1, 3, 7, 14].map((d) => (
+                                <option key={d} value={d}>{d}д</option>
+                              ))}
+                            </select>
                             {radarLoadingUsername === profile.username ? (
                               <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />
                             ) : (

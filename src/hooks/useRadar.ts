@@ -178,36 +178,129 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
   const [stats, setStats] = useState({ newVideos: 0, updatedVideos: 0 });
   const [profileStatsCache, setProfileStatsCache] = useState<Map<string, InstagramProfileStats>>(new Map());
 
-  // Загрузка профилей из localStorage
+  // Загрузка профилей из Supabase (или миграция из localStorage)
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const allProfiles = JSON.parse(saved) as TrackedProfile[];
-        // Миграция старых профилей без projectId
-        const migrated = allProfiles.map(p => ({
-          ...p,
-          projectId: p.projectId || 'default',
-        }));
-        setProfiles(migrated);
-      } catch (e) {
-        console.error('Failed to parse radar profiles:', e);
+    if (!userId || userId === 'anonymous') {
+      // Анонимный пользователь — только localStorage
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          const allProfiles = JSON.parse(saved) as TrackedProfile[];
+          setProfiles(allProfiles.map(p => ({
+            ...p,
+            projectId: p.projectId || 'default',
+            updateFrequencyDays: p.updateFrequencyDays ?? 7,
+          })));
+        } catch (e) {
+          console.error('Failed to parse radar profiles:', e);
+        }
+      }
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadFromSupabase() {
+      const { data, error } = await supabase
+        .from('radar_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .order('added_at', { ascending: false });
+
+      if (cancelled) return;
+      if (error) {
+        console.error('[Radar] Error loading from Supabase:', error);
+        // Fallback на localStorage при ошибке БД
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          try {
+            const allProfiles = JSON.parse(saved) as TrackedProfile[];
+            setProfiles(allProfiles.map(p => ({
+              ...p,
+              projectId: p.projectId || 'default',
+              updateFrequencyDays: p.updateFrequencyDays ?? 7,
+            })));
+          } catch {}
+        }
+        return;
+      }
+
+      const dbProfiles = (data ?? []).map(dbRowToProfile);
+      const migrated = localStorage.getItem(STORAGE_MIGRATED_KEY);
+
+      if (!migrated) {
+        // Однократная миграция из localStorage в Supabase
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          try {
+            const localProfiles = JSON.parse(saved) as TrackedProfile[];
+            const toMigrate = localProfiles
+              .map(p => ({ ...p, projectId: p.projectId || 'default' }))
+              .filter(p => !dbProfiles.some(
+                db => db.username === p.username && db.projectId === p.projectId
+              ));
+
+            for (const p of toMigrate) {
+              await supabase.from('radar_profiles').upsert({
+                project_id: p.projectId,
+                user_id: userId,
+                instagram_username: p.username.toLowerCase(),
+                update_frequency_days: p.updateFrequencyDays ?? 7,
+                added_at: p.addedAt,
+                last_checked_at: p.lastChecked ?? null,
+              }, { onConflict: 'project_id,user_id,instagram_username' });
+            }
+            localStorage.setItem(STORAGE_MIGRATED_KEY, '1');
+          } catch (e) {
+            console.error('[Radar] Migration error:', e);
+          }
+        }
+        // Перезагружаем после миграции
+        const { data: afterData } = await supabase
+          .from('radar_profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .order('added_at', { ascending: false });
+        if (!cancelled && afterData) {
+          setProfiles(afterData.map(dbRowToProfile));
+        }
+      } else if (!cancelled) {
+        setProfiles(dbProfiles);
       }
     }
-  }, []);
 
-  // Сохранение профилей в localStorage
+    loadFromSupabase();
+    return () => { cancelled = true; };
+  }, [userId]);
+
+  // Синхронизация в localStorage для анонимных (бэкап) и откат при ошибках
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles));
-  }, [profiles]);
+    if (userId && userId !== 'anonymous') {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles));
+    }
+  }, [profiles, userId]);
 
   // Профили текущего проекта
   const projectProfiles = currentProjectId 
     ? profiles.filter(p => p.projectId === currentProjectId)
     : profiles;
 
+  // Профили, которым пора обновиться (lastChecked старше updateFrequencyDays)
+  const dueProfiles = projectProfiles.filter(p => {
+    const days = p.updateFrequencyDays ?? 7;
+    if (!p.lastChecked) return true;
+    const last = new Date(p.lastChecked).getTime();
+    const now = Date.now();
+    return (now - last) / (24 * 60 * 60 * 1000) >= days;
+  });
+  const profilesDueCount = dueProfiles.length;
+
   // Добавить профиль в радар для текущего проекта
-  const addProfile = useCallback((username: string, projectId?: string) => {
+  const addProfile = useCallback(async (
+    username: string, 
+    projectId?: string, 
+    updateFrequencyDays: number = 7
+  ): Promise<boolean> => {
     const cleanUsername = username.replace(/^@/, '').trim().toLowerCase();
     const targetProjectId = projectId || currentProjectId;
     
@@ -221,14 +314,44 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
       return false;
     }
 
+    const addedAt = new Date().toISOString();
     const newProfile: TrackedProfile = {
-      id: `${targetProjectId}-${cleanUsername}-${Date.now()}`,
+      id: `local-${targetProjectId}-${cleanUsername}-${Date.now()}`,
       username: cleanUsername,
       projectId: targetProjectId,
-      addedAt: new Date().toISOString(),
+      addedAt,
+      updateFrequencyDays,
     };
 
     setProfiles(prev => [...prev, newProfile]);
+
+    // Сохраняем в Supabase для авторизованных
+    if (userId && userId !== 'anonymous') {
+      const { data, error } = await supabase
+        .from('radar_profiles')
+        .upsert({
+          project_id: targetProjectId,
+          user_id: userId,
+          instagram_username: cleanUsername,
+          update_frequency_days: updateFrequencyDays,
+          added_at: addedAt,
+        }, { onConflict: 'project_id,user_id,instagram_username' })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('[Radar] Error saving profile to Supabase:', error);
+        setProfiles(prev => prev.filter(p => !(p.username === cleanUsername && p.projectId === targetProjectId)));
+        return false;
+      }
+      if (data) {
+        setProfiles(prev => prev.map(p => 
+          p.username === cleanUsername && p.projectId === targetProjectId
+            ? { ...dbRowToProfile(data), profileStats: p.profileStats }
+            : p
+        ));
+      }
+    }
     
     // Сразу загружаем рилсы для нового профиля
     if (userId) {
@@ -256,30 +379,64 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
   }, [profiles, currentProjectId, userId]);
 
   // Удалить профиль из радара
-  const removeProfile = useCallback((username: string, projectId?: string) => {
+  const removeProfile = useCallback(async (username: string, projectId?: string) => {
     const cleanUsername = username.replace(/^@/, '').trim().toLowerCase();
     const targetProjectId = projectId || currentProjectId;
     
-    console.log('[Radar] removeProfile called:', { cleanUsername, targetProjectId, currentProjectId });
+    const toRemove = profiles.find(p => 
+      p.username.toLowerCase() === cleanUsername && 
+      (targetProjectId ? p.projectId === targetProjectId : true)
+    );
+
+    setProfiles(prev => prev.filter(p => 
+      !(p.username.toLowerCase() === cleanUsername && 
+        (targetProjectId ? p.projectId === targetProjectId : true))
+    ));
     
-    setProfiles(prev => {
-      const filtered = prev.filter(p => {
-        const matchesUsername = p.username.toLowerCase() === cleanUsername;
-        const matchesProject = targetProjectId ? p.projectId === targetProjectId : true;
-        return !(matchesUsername && matchesProject);
-      });
-      console.log('[Radar] Profiles after removal:', filtered.length, 'from', prev.length);
-      return filtered;
-    });
-    
-    // Убираем из recent reels
-    setRecentReels(prev => prev.filter(r => {
-      const reelUsername = r.owner?.username?.toLowerCase();
-      const reelProjectId = r.projectId;
-      return !(reelUsername === cleanUsername && 
-               (targetProjectId ? reelProjectId === targetProjectId : true));
-    }));
-  }, [currentProjectId]);
+    setRecentReels(prev => prev.filter(r => 
+      !(r.owner?.username?.toLowerCase() === cleanUsername && 
+        (targetProjectId ? r.projectId === targetProjectId : true))
+    ));
+
+    // Удаляем из Supabase
+    if (userId && userId !== 'anonymous' && toRemove?.id && !toRemove.id.startsWith('local-')) {
+      await supabase
+        .from('radar_profiles')
+        .delete()
+        .eq('id', toRemove.id);
+    } else if (userId && userId !== 'anonymous') {
+      await supabase
+        .from('radar_profiles')
+        .delete()
+        .eq('project_id', targetProjectId)
+        .eq('user_id', userId)
+        .eq('instagram_username', cleanUsername);
+    }
+  }, [currentProjectId, profiles, userId]);
+
+  // Обновить частоту автообновления профиля
+  const updateProfileFrequency = useCallback(async (
+    username: string, 
+    updateFrequencyDays: number, 
+    projectId?: string
+  ) => {
+    const cleanUsername = username.replace(/^@/, '').trim().toLowerCase();
+    const targetProjectId = projectId || currentProjectId;
+    if (!targetProjectId || !userId || userId === 'anonymous') return;
+
+    setProfiles(prev => prev.map(p => 
+      p.username.toLowerCase() === cleanUsername && p.projectId === targetProjectId
+        ? { ...p, updateFrequencyDays }
+        : p
+    ));
+
+    await supabase
+      .from('radar_profiles')
+      .update({ update_frequency_days: updateFrequencyDays })
+      .eq('project_id', targetProjectId)
+      .eq('user_id', userId)
+      .eq('instagram_username', cleanUsername);
+  }, [currentProjectId, userId]);
 
   // Получить рилсы одного пользователя и сохранить в inbox проекта
   const fetchUserReels = useCallback(async (username: string, projectId?: string) => {
@@ -357,12 +514,22 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
           updatedVideos: prev.updatedVideos + updatedCount,
         }));
 
-        // Обновляем lastChecked для профиля
+        const nowIso = new Date().toISOString();
         setProfiles(prev => prev.map(p => 
           p.username.toLowerCase() === cleanUsername && p.projectId === targetProjectId
-            ? { ...p, lastChecked: new Date().toISOString(), reelsCount: data.reels.length }
+            ? { ...p, lastChecked: nowIso, reelsCount: data.reels.length }
             : p
         ));
+
+        // Сохраняем last_checked_at в Supabase
+        if (userId && userId !== 'anonymous') {
+          await supabase
+            .from('radar_profiles')
+            .update({ last_checked_at: nowIso, reels_count: data.reels.length })
+            .eq('project_id', targetProjectId)
+            .eq('user_id', userId)
+            .eq('instagram_username', cleanUsername);
+        }
 
         // Возвращаем ВСЕ видео профиля (не только последние 6)
         return data.reels.map((reel: any) => ({
@@ -452,19 +619,33 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
   }, [projectProfiles, loading, fetchUserReels, userId, currentProjectId, updateProfileStats]);
 
   // Очистить профили текущего проекта
-  const clearProject = useCallback(() => {
+  const clearProject = useCallback(async () => {
     if (!currentProjectId) return;
     
+    if (userId && userId !== 'anonymous') {
+      await supabase
+        .from('radar_profiles')
+        .delete()
+        .eq('project_id', currentProjectId)
+        .eq('user_id', userId);
+    }
     setProfiles(prev => prev.filter(p => p.projectId !== currentProjectId));
     setRecentReels(prev => prev.filter(r => r.projectId !== currentProjectId));
-  }, [currentProjectId]);
+  }, [currentProjectId, userId]);
 
   // Очистить все
-  const clearAll = useCallback(() => {
+  const clearAll = useCallback(async () => {
+    if (userId && userId !== 'anonymous') {
+      await supabase
+        .from('radar_profiles')
+        .delete()
+        .eq('user_id', userId);
+    }
     setProfiles([]);
     setRecentReels([]);
     localStorage.removeItem(STORAGE_KEY);
-  }, []);
+    localStorage.removeItem(STORAGE_MIGRATED_KEY);
+  }, [userId]);
 
   return {
     profiles: projectProfiles,
@@ -476,8 +657,11 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
     loadingUsername,
     stats,
     profileStatsCache,
+    profilesDueCount,
+    dueProfiles,
     addProfile,
     removeProfile,
+    updateProfileFrequency,
     fetchUserReels,
     refreshAll,
     updateProfileStats,
