@@ -902,7 +902,7 @@ export function Workspace(props?: WorkspaceProps) {
                     </div>
                     <div>
                       <h1 className="text-xl md:text-2xl font-bold text-slate-800">Все видео</h1>
-                      <p className="text-slate-500 text-xs md:text-sm tabular-nums">{feedVideos.length} видео • отсортировано по виральности</p>
+                      <p className="text-slate-500 text-xs md:text-sm tabular-nums">{feedVideos.length} видео • отсортировала по виральности</p>
                     </div>
                   </>
                 )}

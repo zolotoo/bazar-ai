@@ -554,7 +554,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
           const totalFound = allResults.length;
           const filtered = totalFound - filteredResults.length;
           
-          toast.success(`Найдено ${filteredResults.length} видео`, {
+          toast.success(`Нашла ${filteredResults.length} видео`, {
             description: filtered > 0 ? `${filtered} скрыто (<30K просмотров)` : undefined,
           });
         }
@@ -2126,7 +2126,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                 <div className="flex flex-col gap-4 mb-5">
                   <div className="flex items-center justify-between">
                     <p className="text-sm text-slate-500 font-medium">
-                      Найдено {reels.length} видео по запросу "{query}"
+                      Нашла {reels.length} видео по запросу "{query}"
                     </p>
                     
                     {/* Sort buttons */}

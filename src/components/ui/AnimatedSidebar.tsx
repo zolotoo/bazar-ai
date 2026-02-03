@@ -385,10 +385,10 @@ export const SidebarLogo = () => {
           display: animate ? (open ? "block" : "none") : "block",
           opacity: animate ? (open ? 1 : 0) : 1,
         }}
-        className="overflow-hidden"
+        className="overflow-hidden leading-none"
       >
         <h1 className="text-base font-semibold text-slate-800 whitespace-nowrap">Riri AI</h1>
-        <p className="text-[10px] text-slate-500 whitespace-nowrap font-medium">Content Manager</p>
+        <p className="text-[10px] text-slate-500 whitespace-nowrap font-medium mt-px">Твой ассистент</p>
       </motion.div>
     </div>
   );
