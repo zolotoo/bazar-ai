@@ -1,5 +1,4 @@
-import { cn } from '../../utils/cn';
-import { Coins } from 'lucide-react';
+import { CoinBadge } from './CoinBadge';
 
 interface TokenBadgeProps {
   tokens: number;
@@ -9,22 +8,10 @@ interface TokenBadgeProps {
   variant?: 'default' | 'dark';
 }
 
+/**
+ * Бейдж коинов — обёртка над CoinBadge.
+ * Проп tokens отображается как коины с иконкой R.
+ */
 export function TokenBadge({ tokens, className, size = 'sm', variant = 'default' }: TokenBadgeProps) {
-  if (tokens <= 0) return null;
-
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-0.5 rounded-md font-medium',
-        variant === 'default' && 'text-amber-700 bg-amber-50 border border-amber-200/80',
-        variant === 'dark' && 'text-amber-200 bg-white/20 border border-white/30',
-        size === 'sm' && 'px-1.5 py-0.5 text-[10px]',
-        size === 'md' && 'px-2 py-1 text-xs',
-        className
-      )}
-    >
-      <Coins className={size === 'sm' ? 'w-2.5 h-2.5' : 'w-3 h-3'} strokeWidth={2.5} />
-      {tokens}
-    </span>
-  );
+  return <CoinBadge coins={tokens} className={className} size={size} variant={variant} />;
 }

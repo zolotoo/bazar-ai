@@ -1,6 +1,7 @@
 /**
- * Стоимость действий в токенах.
- * 1 токен = 0,1 ₽ трат на API (RapidAPI, Gemini).
+ * Стоимость действий в коинах R.
+ * Отображается в UI как коины с иконкой R.
+ * 1 коин ≈ 0,1 ₽ трат на API (RapidAPI, Gemini).
  * AssemblyAI не учитывается (бесплатный тариф).
  */
 
@@ -21,7 +22,7 @@ export type TokenAction =
   | 'train_style' // Обучить стиль по примерам (Gemini)
   | 'add_to_folder'; // 0 — сохранение в БД без API
 
-/** Базовые стоимости в токенах */
+/** Базовые стоимости в коинах */
 const TOKEN_COSTS: Record<Exclude<TokenAction, 'radar_refresh_all'>, number> = {
   search: 10,           // 2–6 RapidAPI запросов, ~1 ₽
   link_add: 2,          // 1–2 RapidAPI
@@ -39,11 +40,11 @@ const TOKEN_COSTS: Record<Exclude<TokenAction, 'radar_refresh_all'>, number> = {
   add_to_folder: 0,
 };
 
-/** Токенов за один профиль при «Обновить все» в радаре */
+/** Коинов за один профиль при «Обновить все» в радаре */
 export const RADAR_REFRESH_TOKENS_PER_PROFILE = 5;
 
 /**
- * Получить стоимость действия в токенах.
+ * Получить стоимость действия в коинах.
  * @param action — тип действия
  * @param profilesCount — для radar_refresh_all: количество профилей
  */

@@ -8,5 +8,6 @@ export { default as ScrollMorphHero } from './ScrollMorphHero';
 export { GlassTabButton, GlassTabGroup } from './GlassTabButton';
 export { GlassCard, GlassCardStatic, type GlassCardProps } from './GlassCard';
 export { TokenBadge } from './TokenBadge';
+export { CoinBadge } from './CoinBadge';
 export { MemberSelector } from './member-selector';
 export type { Member, MemberSelectorProps } from './member-selector';
