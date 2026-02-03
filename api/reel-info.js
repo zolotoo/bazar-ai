@@ -99,11 +99,19 @@ export default async function handler(req, res) {
         }
         const is_carousel = carousel_slides.length > 1;
 
+        // Предпочитаем Instagram CDN (cdninstagram, fbcdn) — workers.dev часто даёт 403
+        const candidates = media.image_versions2?.candidates || media.image_versions?.candidates || [];
+        const cdnUrl = candidates.find((c) => {
+          const u = c?.url || '';
+          return u.includes('cdninstagram.com') || u.includes('fbcdn.net') || u.includes('scontent.');
+        })?.url;
+        const fallbackThumb = media.thumbnail_url || candidates[0]?.url || media.image_versions?.items?.[0]?.url || carousel_slides[0]?.url || '';
+
         const result = {
           success: true,
           shortcode: code,
           url: url || (is_carousel ? `https://www.instagram.com/p/${code}/` : `https://www.instagram.com/reel/${code}/`),
-          thumbnail_url: media.thumbnail_url || media.image_versions2?.candidates?.[0]?.url || media.image_versions?.items?.[0]?.url || carousel_slides[0]?.url || '',
+          thumbnail_url: cdnUrl || fallbackThumb,
           video_url: media.video_url || media.video_versions?.[0]?.url || '',
           caption: media.caption?.text || (typeof media.caption === 'string' ? media.caption : '') || '',
           view_count: viewCount,
