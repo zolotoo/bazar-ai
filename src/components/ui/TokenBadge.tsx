@@ -22,7 +22,6 @@ export function TokenBadge({ tokens, className, size = 'sm', variant = 'default'
         size === 'md' && 'px-2 py-1 text-xs',
         className
       )}
-      title={`${tokens} токенов (~${(tokens * 0.1).toFixed(1)} ₽)`}
     >
       <Coins className={size === 'sm' ? 'w-2.5 h-2.5' : 'w-3 h-3'} strokeWidth={2.5} />
       {tokens}
