@@ -137,7 +137,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
   const [showClarifyModal, setShowClarifyModal] = useState(false);
   const [lastRefinedPrompt, setLastRefinedPrompt] = useState('');
 
-  const { currentProject, updateProject, updateProjectStyle } = useProjectContext();
+  const { currentProject, updateProject, updateProjectStyle, addProjectStyle, refetch: refetchProjects } = useProjectContext();
   const {
     updateCarouselTranscript,
     updateCarouselTranslation,
@@ -1058,17 +1058,32 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                         <option key={s.id} value={s.id}>{s.name}</option>
                       ))}
                     </select>
-                    {currentPromptStyle && currentPromptStyle.id !== 'legacy' && (
+                    {currentPromptStyle && (
                       isRenamingStyle ? (
                         <input
                           value={renamingStyleName}
                           onChange={(e) => setRenamingStyleName(e.target.value)}
                           onBlur={async () => {
-                            if (currentProject?.id && currentPromptStyle && renamingStyleName.trim() && renamingStyleName.trim() !== currentPromptStyle.name) {
-                              await updateProjectStyle(currentProject.id, currentPromptStyle.id, { name: renamingStyleName.trim() });
-                              setEditingStyle({ ...currentPromptStyle, name: renamingStyleName.trim() });
-                              toast.success('Стиль переименован');
+                            if (!currentProject?.id || !currentPromptStyle || !renamingStyleName.trim() || renamingStyleName.trim() === currentPromptStyle.name) {
+                              setIsRenamingStyle(false);
+                              return;
                             }
+                            const newName = renamingStyleName.trim();
+                            if (currentPromptStyle.id === 'legacy') {
+                              await addProjectStyle(currentProject.id, {
+                                name: newName,
+                                prompt: currentPromptStyle.prompt,
+                                meta: currentPromptStyle.meta,
+                                examplesCount: currentPromptStyle.examplesCount ?? 0,
+                              });
+                              await updateProject(currentProject.id, { stylePrompt: undefined, styleMeta: undefined, styleExamplesCount: 0 });
+                              await refetchProjects();
+                              setEditingStyle(null);
+                            } else {
+                              await updateProjectStyle(currentProject.id, currentPromptStyle.id, { name: newName });
+                              setEditingStyle({ ...currentPromptStyle, name: newName });
+                            }
+                            toast.success('Стиль переименован');
                             setIsRenamingStyle(false);
                           }}
                           onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
@@ -1079,10 +1094,11 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                         <button
                           type="button"
                           onClick={() => { setIsRenamingStyle(true); setRenamingStyleName(currentPromptStyle.name); }}
-                          className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"
+                          className="px-2 py-1 rounded-lg hover:bg-slate-100 text-slate-500 text-xs font-medium flex items-center gap-1"
                           title="Переименовать стиль"
                         >
                           <Pencil className="w-3.5 h-3.5" />
+                          Переименовать
                         </button>
                       )
                     )}
@@ -1092,17 +1108,32 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                     <h3 className="font-semibold text-slate-800">
                       {currentPromptStyle ? `Промт: ${currentPromptStyle.name}` : 'Промт стиля проекта'}
                     </h3>
-                    {currentPromptStyle && currentPromptStyle.id !== 'legacy' && (
+                    {currentPromptStyle && (
                       isRenamingStyle ? (
                         <input
                           value={renamingStyleName}
                           onChange={(e) => setRenamingStyleName(e.target.value)}
                           onBlur={async () => {
-                            if (currentProject?.id && currentPromptStyle && renamingStyleName.trim() && renamingStyleName.trim() !== currentPromptStyle.name) {
-                              await updateProjectStyle(currentProject.id, currentPromptStyle.id, { name: renamingStyleName.trim() });
-                              setEditingStyle({ ...currentPromptStyle, name: renamingStyleName.trim() });
-                              toast.success('Стиль переименован');
+                            if (!currentProject?.id || !currentPromptStyle || !renamingStyleName.trim() || renamingStyleName.trim() === currentPromptStyle.name) {
+                              setIsRenamingStyle(false);
+                              return;
                             }
+                            const newName = renamingStyleName.trim();
+                            if (currentPromptStyle.id === 'legacy') {
+                              await addProjectStyle(currentProject.id, {
+                                name: newName,
+                                prompt: currentPromptStyle.prompt,
+                                meta: currentPromptStyle.meta,
+                                examplesCount: currentPromptStyle.examplesCount ?? 0,
+                              });
+                              await updateProject(currentProject.id, { stylePrompt: undefined, styleMeta: undefined, styleExamplesCount: 0 });
+                              await refetchProjects();
+                              setEditingStyle(null);
+                            } else {
+                              await updateProjectStyle(currentProject.id, currentPromptStyle.id, { name: newName });
+                              setEditingStyle({ ...currentPromptStyle, name: newName });
+                            }
+                            toast.success('Стиль переименован');
                             setIsRenamingStyle(false);
                           }}
                           onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
@@ -1113,10 +1144,11 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                         <button
                           type="button"
                           onClick={() => { setIsRenamingStyle(true); setRenamingStyleName(currentPromptStyle.name); }}
-                          className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"
+                          className="px-2 py-1 rounded-lg hover:bg-slate-100 text-slate-500 text-xs font-medium flex items-center gap-1"
                           title="Переименовать стиль"
                         >
                           <Pencil className="w-3.5 h-3.5" />
+                          Переименовать
                         </button>
                       )
                     )}

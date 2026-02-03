@@ -328,9 +328,9 @@ export function useProjects() {
       const dbUpdates: Record<string, unknown> = { ...updates };
       if ('linksTemplate' in updates) dbUpdates.links_template = updates.linksTemplate;
       if ('responsiblesTemplate' in updates) dbUpdates.responsibles_template = updates.responsiblesTemplate;
-      if ('stylePrompt' in updates) dbUpdates.style_prompt = updates.stylePrompt;
-      if ('styleMeta' in updates) dbUpdates.style_meta = updates.styleMeta;
-      if ('styleExamplesCount' in updates) dbUpdates.style_examples_count = updates.styleExamplesCount;
+      if ('stylePrompt' in updates) dbUpdates.style_prompt = updates.stylePrompt ?? null;
+      if ('styleMeta' in updates) dbUpdates.style_meta = updates.styleMeta ?? null;
+      if ('styleExamplesCount' in updates) dbUpdates.style_examples_count = updates.styleExamplesCount ?? null;
       if ('projectStyles' in updates) {
         dbUpdates.project_styles = (updates.projectStyles || []).map(s => ({
           id: s.id,
