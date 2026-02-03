@@ -26,7 +26,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 const SESSION_KEY = 'riri-session';
-const BOT_TOKEN = '8367186792:AAHLr687MVkXV_DBwAYUaR0U74U-h0qbi6g';
+const BOT_TOKEN = '8183756206:AAGo-jl6BMBfAzejVt1MNVUD5TQPegxQOhc';
 
 // Гибридное хранение: cookie + localStorage для надёжности
 const saveSession = (token: string) => {
@@ -176,7 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const cleanUsername = username.replace('@', '').trim().toLowerCase();
     
     if (!cleanUsername) {
-      setError('Введите username');
+      setError('Я не знаю, как тебя зовут! Напиши свой username в поле выше');
       setSendingCode(false);
       return false;
     }
@@ -194,7 +194,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (dbError) {
         console.error('DB error:', dbError);
-        setError('Ошибка сохранения кода');
+        setError('Упс, что-то пошло не так при сохранении. Попробуй ещё раз');
         setSendingCode(false);
         return false;
       }
@@ -218,13 +218,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (!chatId) {
-        setError(`Сначала напишите /start боту @riri_ai_bot`);
+        setError('Я не могу отправить тебе сообщение :(\nНапиши мне в телеграмм (тг)\nИ нажми кнопку «Получить код» заново');
         setSendingCode(false);
         return false;
       }
 
       // Отправляем код
-      const message = `🔐 Ваш код для входа в Riri AI:\n\n<b>${code}</b>\n\nКод действителен 10 минут.`;
+      const message = `🔐 Привет! Вот твой код для входа:\n\n<b>${code}</b>\n\nОн действует 10 минут.`;
       const sendResponse = await fetch(
         `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
         {
@@ -241,7 +241,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const sendData = await sendResponse.json();
       
       if (!sendData.ok) {
-        setError('Не удалось отправить код. Напишите /start боту @riri_ai_bot');
+        setError('Я не могу отправить тебе сообщение :(\nНапиши мне в телеграмм (тг)\nИ нажми кнопку «Получить код» заново');
         setSendingCode(false);
         return false;
       }
@@ -252,7 +252,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return true;
     } catch (err) {
       console.error('Send code error:', err);
-      setError('Ошибка отправки кода');
+      setError('Упс, не получилось отправить :( Попробуй ещё раз');
       setSendingCode(false);
       return false;
     }
@@ -261,7 +261,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Проверка кода
   const verifyCode = useCallback(async (code: string) => {
     if (!pendingUsername) {
-      setError('Сначала запросите код');
+      setError('Сначала нажми «Получить код» — я отправлю его тебе в тг');
       return false;
     }
 
@@ -281,7 +281,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .limit(1);
 
       if (dbError || !data || data.length === 0) {
-        setError('Неверный или истёкший код');
+        setError('Этот код не подходит или уже истёк. Запроси новый код и попробуй снова');
         setVerifying(false);
         return false;
       }
@@ -334,7 +334,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return true;
     } catch (err) {
       console.error('Verify error:', err);
-      setError('Ошибка проверки кода');
+      setError('Что-то пошло не так при проверке. Попробуй ещё раз');
       setVerifying(false);
       return false;
     }

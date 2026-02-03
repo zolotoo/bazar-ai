@@ -506,7 +506,7 @@ function AppContent() {
           <div className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center shadow-glass animate-pulse bg-slate-100 p-2">
             <img src="/riri-logo.png" alt="Riri AI" className="w-full h-full object-contain" />
           </div>
-          <p className="text-slate-500 text-sm font-medium">Загрузка проектов...</p>
+          <p className="text-slate-500 text-sm font-medium">Загружаю проекты...</p>
         </div>
       </div>
     );
@@ -766,7 +766,7 @@ function App() {
           <div className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center shadow-glass animate-pulse bg-slate-100 p-2">
             <img src="/riri-logo.png" alt="Riri AI" className="w-full h-full object-contain" />
           </div>
-          <p className="text-slate-500 text-sm font-medium">Загрузка...</p>
+          <p className="text-slate-500 text-sm font-medium">Секунду...</p>
         </div>
       </div>
     );

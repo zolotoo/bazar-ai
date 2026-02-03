@@ -86,10 +86,10 @@ export function LandingPage() {
 
             {/* Subtitle */}
             <p className="text-center text-slate-600 text-base md:text-lg max-w-lg mb-2">
-              <span className="text-slate-800 font-semibold">Riri AI</span> — персональный ассистент для поиска вирусного контента
+              Я <span className="text-slate-800 font-semibold">Riri AI</span> — твой персональный ассистент, который сделает твои ролики вирусными
             </p>
             <p className="text-center text-slate-500 text-sm max-w-md mb-12">
-              Ищи трендовые видео, сохраняй идеи, создавай сценарии
+              Нахожу трендовые видео, пишу вирусные сценарии, объединяю твою команду
             </p>
 
             {/* CTA Button */}
@@ -136,10 +136,10 @@ export function LandingPage() {
                   <img src="/riri-logo.png" alt="Riri AI" className="w-full h-full object-contain" />
                 </div>
                 <h2 className="text-xl font-bold text-slate-800 mb-1">
-                  Вход в Riri AI
+                  Привет! Давай войдём
                 </h2>
                 <p className="text-sm text-slate-500">
-                  Авторизуйся через Telegram
+                  Я помогу тебе войти через тг
                 </p>
               </div>
 
@@ -164,8 +164,8 @@ export function LandingPage() {
                   </div>
 
                   {error && (
-                    <div className="p-3 rounded-xl bg-red-50 border border-red-200">
-                      <p className="text-sm text-red-600">{error}</p>
+                    <div className="p-3 rounded-xl bg-orange-50 border border-orange-200">
+                      <p className="text-sm text-orange-600 whitespace-pre-line">{error}</p>
                     </div>
                   )}
 
@@ -182,7 +182,7 @@ export function LandingPage() {
                     {sendingCode ? (
                       <>
                         <Loader2 className="w-5 h-5 animate-spin" />
-                        Отправка...
+                        Отправляю...
                       </>
                     ) : (
                       <>
@@ -197,17 +197,18 @@ export function LandingPage() {
                     <div className="flex items-start gap-3">
                       <Sparkles className="w-5 h-5 text-slate-600 flex-shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-slate-800">Важно!</p>
+                        <p className="text-sm font-medium text-slate-800">Не забудь!</p>
                         <p className="text-xs text-slate-600 mt-0.5">
-                          Сначала напишите /start боту{' '}
+                          Напиши мне в тг{' '}
                           <a 
-                            href="https://t.me/riri_ai_bot" 
+                            href="https://t.me/ririai_bot" 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="font-medium underline"
                           >
                             @riri_ai_bot
                           </a>
+                          {' '}и нажми «Получить код» заново
                         </p>
                       </div>
                     </div>
@@ -218,13 +219,13 @@ export function LandingPage() {
                 <form onSubmit={handleVerifyCode} className="space-y-5">
                   <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 mb-4">
                     <p className="text-sm text-emerald-700">
-                      Код отправлен в Telegram на @{username.replace('@', '')}
+                      Я отправила тебе код в тг!
                     </p>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Код из Telegram
+                      Вставь код из тг
                     </label>
                     <input
                       type="text"
@@ -237,8 +238,8 @@ export function LandingPage() {
                   </div>
 
                   {error && (
-                    <div className="p-3 rounded-xl bg-red-50 border border-red-200">
-                      <p className="text-sm text-red-600">{error}</p>
+                    <div className="p-3 rounded-xl bg-orange-50 border border-orange-200">
+                      <p className="text-sm text-orange-600 whitespace-pre-line">{error}</p>
                     </div>
                   )}
 
@@ -255,7 +256,7 @@ export function LandingPage() {
                     {verifying ? (
                       <>
                         <Loader2 className="w-5 h-5 animate-spin" />
-                        Проверка...
+                        Проверяю...
                       </>
                     ) : (
                       'Войти'
@@ -267,7 +268,7 @@ export function LandingPage() {
                     onClick={() => resetAuth()}
                     className="w-full text-sm text-slate-500 hover:text-slate-700"
                   >
-                    Изменить username
+                    Другой username
                   </button>
                 </form>
               )}
