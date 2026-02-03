@@ -12,8 +12,8 @@ interface CoinBadgeProps {
 }
 
 /**
- * Бейдж коинов R — iOS 26 / glass стиль.
- * Отображает стоимость действия в коинах с 3D иконкой R.
+ * Бейдж коинов — iOS 26 / glass стиль.
+ * Монетка с логотипом Riri: 3D, мультяшная, милая.
  */
 export function CoinBadge({ coins, className, size = 'sm', variant = 'default' }: CoinBadgeProps) {
   const [imgError, setImgError] = useState(false);
@@ -46,7 +46,7 @@ export function CoinBadge({ coins, className, size = 'sm', variant = 'default' }
         className
       )}
     >
-      {/* 3D монетка R — изображение или буква R как fallback */}
+      {/* 3D мультяшная монетка с логотипом Riri */}
       <span
         className={cn(
           'flex items-center justify-center rounded-full overflow-hidden flex-shrink-0',
@@ -58,8 +58,8 @@ export function CoinBadge({ coins, className, size = 'sm', variant = 'default' }
       >
         {!imgError ? (
           <img
-            src="/r-coin.png"
-            alt="R"
+            src="/riri-coin.png"
+            alt="Riri"
             className={cn('w-full h-full object-contain p-0.5', iconSizes[size])}
             onError={() => setImgError(true)}
           />
