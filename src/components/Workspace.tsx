@@ -954,7 +954,7 @@ export function Workspace(props?: WorkspaceProps) {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5 pb-20 md:pb-6 safe-bottom">
               {feedVideos.map((video, idx) => {
-                const thumbnailUrl = proxyImageUrl(video.preview_url);
+                const thumbnailUrl = video.preview_url;
                 const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at || video.created_at);
                 
                 // Получаем статистику профиля для расчёта множителя
@@ -1196,7 +1196,7 @@ export function Workspace(props?: WorkspaceProps) {
                       >
                         <div className="aspect-[4/3] min-h-[120px] relative bg-slate-100">
                           <img
-                            src={proxyImageUrl(c.thumbnail_url || undefined)}
+                            src={proxyImageUrl(c.thumbnail_url || c.slide_urls?.[0] || undefined)}
                             alt=""
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
