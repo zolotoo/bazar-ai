@@ -7,7 +7,7 @@ import { useActionHistory } from '../hooks/useActionHistory';
 import { useProjectSync } from '../hooks/useProjectSync';
 import { useProjectPresence } from '../hooks/useProjectPresence';
 import { PresenceIndicator } from './ui/PresenceIndicator';
-import { Sparkles, Star, FileText, Trash2, ExternalLink, Plus, Inbox, Lightbulb, Camera, Scissors, Check, FolderOpen, Settings, GripVertical, X, Palette, Eye, Heart, ChevronDown, ChevronRight, Undo2, Images, Link2, Loader2, MessageCircle } from 'lucide-react';
+import { Sparkles, Star, FileText, Trash2, ExternalLink, Plus, Inbox, Lightbulb, Camera, Scissors, Check, FolderOpen, Settings, GripVertical, X, Palette, Eye, Heart, ChevronDown, ChevronRight, Undo2, Images, Link2, Loader2, MessageCircle, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../utils/cn';
 import { proxyImageUrl } from '../utils/imagePlaceholder';
@@ -155,6 +155,7 @@ export function Workspace(props?: WorkspaceProps) {
   const [selectedCarousel, setSelectedCarousel] = useState<SavedCarousel | null>(null);
   const [carouselLinkUrl, setCarouselLinkUrl] = useState('');
   const [isAddingCarouselByLink, setIsAddingCarouselByLink] = useState(false);
+  const [descriptionModalText, setDescriptionModalText] = useState<string | null>(null);
   const { carousels, loading: carouselsLoading, addCarousel, refetch: refetchCarousels } = useCarousels();
 
   // Открытие панели папок с нижнего бара (мобильные)
@@ -1003,6 +1004,17 @@ export function Workspace(props?: WorkspaceProps) {
                           <FileText className="w-4 h-4 text-slate-600" />
                           <span className="text-sm text-slate-700">Работать</span>
                         </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDescriptionModalText(video.title || 'Нет описания');
+                            setCardMenuVideoId(null);
+                          }}
+                          className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-slate-100/60 transition-colors text-left"
+                        >
+                          <BookOpen className="w-4 h-4 text-slate-600" />
+                          <span className="text-sm text-slate-700">Описание</span>
+                        </button>
                         
                         {/* Переместить в папку */}
                         <div className="relative">
@@ -1189,29 +1201,42 @@ export function Workspace(props?: WorkspaceProps) {
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 pb-20 md:pb-6">
                     {carousels.map(c => (
-                      <button
+                      <div
                         key={c.id}
-                        onClick={() => setSelectedCarousel(c)}
-                        className="group rounded-2xl overflow-hidden bg-white/80 border border-slate-200/80 shadow-sm hover:shadow-lg hover:border-violet-200/80 transition-all text-left"
+                        className="group rounded-2xl overflow-hidden bg-white/80 border border-slate-200/80 shadow-sm hover:shadow-lg hover:border-violet-200/80 transition-all relative"
                       >
-                        <div className="aspect-[4/3] min-h-[120px] relative bg-slate-100">
-                          <img
-                            src={proxyImageUrl(c.thumbnail_url || c.slide_urls?.[0] || undefined)}
-                            alt=""
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                          <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded-md bg-black/60 text-white text-[10px] font-medium flex items-center gap-0.5">
-                            <Images className="w-2.5 h-2.5" />
-                            {c.slide_count || 0}
-                          </div>
-                          {c.transcript_status === 'completed' && (
-                            <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-emerald-500/90 text-white text-[10px] font-medium">
-                              Транскрипт
+                        <button
+                          onClick={() => setSelectedCarousel(c)}
+                          className="w-full text-left"
+                        >
+                          <div className="aspect-[4/3] min-h-[120px] relative bg-slate-100">
+                            <img
+                              src={proxyImageUrl(c.thumbnail_url || c.slide_urls?.[0] || undefined)}
+                              alt=""
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded-md bg-black/60 text-white text-[10px] font-medium flex items-center gap-0.5">
+                              <Images className="w-2.5 h-2.5" />
+                              {c.slide_count || 0}
                             </div>
-                          )}
-                        </div>
-                        <div className="px-2 py-1.5">
-                          <p className="text-xs font-medium text-slate-800 truncate">{c.caption?.slice(0, 50) || 'Без подписи'}</p>
+                            {c.transcript_status === 'completed' && (
+                              <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-emerald-500/90 text-white text-[10px] font-medium">
+                                Транскрипт
+                              </div>
+                            )}
+                            <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setDescriptionModalText(c.caption || 'Нет описания');
+                                }}
+                                className="absolute top-1.5 right-1.5 p-1.5 rounded-md bg-black/50 hover:bg-black/70 text-white transition-colors"
+                                title="Описание"
+                              >
+                                <BookOpen className="w-3.5 h-3.5" strokeWidth={2} />
+                              </button>
+                          </div>
+                          <div className="px-2 py-1.5">
+                            <p className="text-xs font-medium text-slate-800 truncate">{c.caption?.slice(0, 50) || 'Без подписи'}</p>
                           <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-500">
                             <span className="flex items-center gap-0.5">
                               <Heart className="w-2.5 h-2.5" />
@@ -1229,7 +1254,8 @@ export function Workspace(props?: WorkspaceProps) {
                             )}
                           </div>
                         </div>
-                      </button>
+                        </button>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -1383,6 +1409,36 @@ export function Workspace(props?: WorkspaceProps) {
               >
                 Готово
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Description Modal */}
+      {descriptionModalText !== null && (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          onClick={() => setDescriptionModalText(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[80vh] overflow-hidden border border-slate-200"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-slate-600" />
+                Описание
+              </h3>
+              <button
+                onClick={() => setDescriptionModalText(null)}
+                className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            <div className="p-5 overflow-y-auto max-h-[60vh]">
+              <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap break-words">
+                {descriptionModalText}
+              </p>
             </div>
           </div>
         </div>

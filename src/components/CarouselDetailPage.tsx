@@ -2,13 +2,15 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   ChevronLeft, FileText, Copy, ExternalLink, Loader2, Check,
-  Languages, ChevronDown, Save, Plus, Trash2, Wand2, Images, Heart, MessageCircle, RefreshCw, BookOpen, Pencil, Sparkles
+  Languages, ChevronDown, Save, Plus, Trash2, Wand2, Images, Heart, MessageCircle, RefreshCw, BookOpen, Pencil, Sparkles, Radar
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { proxyImageUrl } from '../utils/imagePlaceholder';
 import { toast } from 'sonner';
 import { useCarousels, type SavedCarousel } from '../hooks/useCarousels';
 import { useProjectContext } from '../contexts/ProjectContext';
+import { useAuth } from '../hooks/useAuth';
+import { useRadar } from '../hooks/useRadar';
 import type { ProjectTemplateItem, ProjectStyle } from '../hooks/useProjects';
 import { transcribeCarouselByUrls } from '../services/carouselTranscriptionService';
 import { isRussian } from '../utils/language';
@@ -123,7 +125,10 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
   const [showClarifyModal, setShowClarifyModal] = useState(false);
   const [lastRefinedPrompt, setLastRefinedPrompt] = useState('');
 
-  const { currentProject, updateProject, updateProjectStyle, addProjectStyle, refetch: refetchProjects } = useProjectContext();
+  const { currentProject, currentProjectId, updateProject, updateProjectStyle, addProjectStyle, refetch: refetchProjects } = useProjectContext();
+  const { user } = useAuth();
+  const radarUserId = user?.telegram_username ? `tg-${user.telegram_username}` : 'anonymous';
+  const { profiles: radarProfiles, addProfile: addRadarProfile } = useRadar(currentProjectId, radarUserId);
   const {
     updateCarouselTranscript,
     updateCarouselTranslation,
@@ -606,9 +611,38 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
               <h1 className="font-semibold text-slate-800 truncate">
                 {carousel.caption?.slice(0, 50) || `Карусель · ${carousel.slide_count || 0} слайдов`}
               </h1>
-              <p className="text-xs text-slate-500">
-                @{carousel.owner_username || 'instagram'} · {formatNumber(carousel.like_count)} лайков
-              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-xs text-slate-500">
+                  @{carousel.owner_username || 'instagram'} · {formatNumber(carousel.like_count)} лайков
+                </p>
+                {carousel.owner_username && carousel.owner_username.toLowerCase() !== 'instagram' && currentProjectId && (() => {
+                  const isInRadar = radarProfiles.some(p => p.username.toLowerCase() === carousel.owner_username!.toLowerCase());
+                  return (
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (isInRadar) return;
+                        const added = await addRadarProfile(carousel.owner_username!, currentProjectId);
+                        if (added) {
+                          toast.success(`@${carousel.owner_username} добавлен в радар`);
+                        } else {
+                          toast.info(`@${carousel.owner_username} уже в радаре`);
+                        }
+                      }}
+                      disabled={isInRadar}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-medium transition-colors",
+                        isInRadar
+                          ? "bg-emerald-100 text-emerald-700 cursor-default"
+                          : "bg-violet-100 hover:bg-violet-200 text-violet-700"
+                      )}
+                    >
+                      <Radar className="w-3 h-3" strokeWidth={2} />
+                      {isInRadar ? 'В радаре' : 'Добавить в радар'}
+                    </button>
+                  );
+                })()}
+              </div>
             </div>
           </div>
         </div>

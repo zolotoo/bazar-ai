@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { 
   ChevronLeft, Play, Eye, Heart, MessageCircle, Calendar, 
   Sparkles, FileText, Copy, ExternalLink, Loader2, Check,
-  Languages, ChevronDown, Mic, Save, RefreshCw, Plus, Trash2, Wand2, BookOpen, Pencil
+  Languages, ChevronDown, Mic, Save, RefreshCw, Plus, Trash2, Wand2, BookOpen, Pencil, Radar
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { proxyImageUrl, PLACEHOLDER_400x600 } from '../utils/imagePlaceholder';
@@ -10,6 +10,8 @@ import { checkTranscriptionStatus, downloadAndTranscribe } from '../services/tra
 import { supabase } from '../utils/supabase';
 import { toast } from 'sonner';
 import { useInboxVideos } from '../hooks/useInboxVideos';
+import { useAuth } from '../hooks/useAuth';
+import { useRadar } from '../hooks/useRadar';
 import { StyleTrainModal } from './StyleTrainModal';
 import { useProjectContext } from '../contexts/ProjectContext';
 import type { ProjectTemplateItem, ProjectStyle } from '../hooks/useProjects';
@@ -171,7 +173,10 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   const [isSavingTranscript, setIsSavingTranscript] = useState(false);
   const [viralMultiplier, setViralMultiplier] = useState<number | null>(null);
   const [isCalculatingViral, setIsCalculatingViral] = useState(false);
-  const { currentProject, updateProject, updateProjectStyle, addProjectStyle, refetch: refetchProjects } = useProjectContext();
+  const { currentProject, currentProjectId, updateProject, updateProjectStyle, addProjectStyle, refetch: refetchProjects } = useProjectContext();
+  const { user } = useAuth();
+  const radarUserId = user?.telegram_username ? `tg-${user.telegram_username}` : 'anonymous';
+  const { profiles: radarProfiles, addProfile: addRadarProfile } = useRadar(currentProjectId, radarUserId);
 
   // Стиль сценария проекта: обучение по примерам + генерация по стилю + просмотр/редактирование промта
   const [showStyleTrainModal, setShowStyleTrainModal] = useState(false);
@@ -967,9 +972,38 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
               <h1 className="text-xl font-semibold text-neutral-900">
                 Работа с видео
               </h1>
-              <p className="text-neutral-500 text-sm">
-                @{video.owner_username || 'instagram'}
-              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-neutral-500 text-sm">
+                  @{video.owner_username || 'instagram'}
+                </p>
+                {video.owner_username && video.owner_username.toLowerCase() !== 'instagram' && currentProjectId && (() => {
+                  const isInRadar = radarProfiles.some(p => p.username.toLowerCase() === video.owner_username!.toLowerCase());
+                  return (
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (isInRadar) return;
+                        const added = await addRadarProfile(video.owner_username!, currentProjectId);
+                        if (added) {
+                          toast.success(`@${video.owner_username} добавлен в радар`);
+                        } else {
+                          toast.info(`@${video.owner_username} уже в радаре`);
+                        }
+                      }}
+                      disabled={isInRadar}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors",
+                        isInRadar
+                          ? "bg-emerald-100 text-emerald-700 cursor-default"
+                          : "bg-violet-100 hover:bg-violet-200 text-violet-700"
+                      )}
+                    >
+                      <Radar className="w-3.5 h-3.5" strokeWidth={2} />
+                      {isInRadar ? 'В радаре' : 'Добавить в радар'}
+                    </button>
+                  );
+                })()}
+              </div>
             </div>
           </div>
 
