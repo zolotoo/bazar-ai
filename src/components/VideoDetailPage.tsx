@@ -214,6 +214,8 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   const [creatingNewStyle, setCreatingNewStyle] = useState(false);
   const [newStyleName, setNewStyleName] = useState('');
   const [lastGeneratedStyleId, setLastGeneratedStyleId] = useState<string | null>(null);
+  const [isRenamingStyle, setIsRenamingStyle] = useState(false);
+  const [renamingStyleName, setRenamingStyleName] = useState('');
 
   const projectStyles = currentProject?.projectStyles || [];
   const currentPromptStyle = editingStyle || (projectStyles.length === 1 ? projectStyles[0] : null);
@@ -1661,22 +1663,82 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
             <div className="p-4 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {projectStyles.length > 1 ? (
-                  <select
-                    value={editingStyle?.id || projectStyles[0]?.id}
-                    onChange={(e) => {
-                      const s = projectStyles.find((x) => x.id === e.target.value);
-                      if (s) { setEditingStyle(s); setEditedPromptText(s.prompt); }
-                    }}
-                    className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-800 bg-white"
-                  >
-                    {projectStyles.map((s) => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                  </select>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={editingStyle?.id || projectStyles[0]?.id}
+                      onChange={(e) => {
+                        const s = projectStyles.find((x) => x.id === e.target.value);
+                        if (s) { setEditingStyle(s); setEditedPromptText(s.prompt); setIsRenamingStyle(false); }
+                      }}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-800 bg-white"
+                    >
+                      {projectStyles.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                    {currentPromptStyle && currentPromptStyle.id !== 'legacy' && (
+                      isRenamingStyle ? (
+                        <input
+                          value={renamingStyleName}
+                          onChange={(e) => setRenamingStyleName(e.target.value)}
+                          onBlur={async () => {
+                            if (currentProject?.id && currentPromptStyle && renamingStyleName.trim() && renamingStyleName.trim() !== currentPromptStyle.name) {
+                              await updateProjectStyle(currentProject.id, currentPromptStyle.id, { name: renamingStyleName.trim() });
+                              setEditingStyle({ ...currentPromptStyle, name: renamingStyleName.trim() });
+                              toast.success('Стиль переименован');
+                            }
+                            setIsRenamingStyle(false);
+                          }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                          autoFocus
+                          className="px-2 py-1 rounded-lg border border-violet-200 text-sm w-32 focus:ring-2 focus:ring-violet-200 focus:border-violet-400"
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => { setIsRenamingStyle(true); setRenamingStyleName(currentPromptStyle.name); }}
+                          className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"
+                          title="Переименовать стиль"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                      )
+                    )}
+                  </div>
                 ) : (
-                  <h3 className="font-semibold text-slate-800">
-                    {currentPromptStyle ? `Промт: ${currentPromptStyle.name}` : 'Промт стиля проекта'}
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-slate-800">
+                      {currentPromptStyle ? `Промт: ${currentPromptStyle.name}` : 'Промт стиля проекта'}
+                    </h3>
+                    {currentPromptStyle && currentPromptStyle.id !== 'legacy' && (
+                      isRenamingStyle ? (
+                        <input
+                          value={renamingStyleName}
+                          onChange={(e) => setRenamingStyleName(e.target.value)}
+                          onBlur={async () => {
+                            if (currentProject?.id && currentPromptStyle && renamingStyleName.trim() && renamingStyleName.trim() !== currentPromptStyle.name) {
+                              await updateProjectStyle(currentProject.id, currentPromptStyle.id, { name: renamingStyleName.trim() });
+                              setEditingStyle({ ...currentPromptStyle, name: renamingStyleName.trim() });
+                              toast.success('Стиль переименован');
+                            }
+                            setIsRenamingStyle(false);
+                          }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                          autoFocus
+                          className="px-2 py-1 rounded-lg border border-violet-200 text-sm w-40 focus:ring-2 focus:ring-violet-200 focus:border-violet-400"
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => { setIsRenamingStyle(true); setRenamingStyleName(currentPromptStyle.name); }}
+                          className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"
+                          title="Переименовать стиль"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                      )
+                    )}
+                  </div>
                 )}
                 {showPromptChat && (
                   <button type="button" onClick={() => setShowPromptChat(false)} className="p-1.5 -ml-1 rounded-lg hover:bg-slate-100 text-slate-500 flex items-center gap-1">
