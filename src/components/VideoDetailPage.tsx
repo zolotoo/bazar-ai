@@ -162,7 +162,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   const [isTranslating, setIsTranslating] = useState(false);
   const [copiedTranscript, setCopiedTranscript] = useState(false);
   const [copiedScript, setCopiedScript] = useState(false);
-  const [showVideo, setShowVideo] = useState(false);
+  const [showVideo, setShowVideo] = useState(!!(video.download_url));
   const [showFolderMenu, setShowFolderMenu] = useState(false);
   const [currentFolderId, setCurrentFolderId] = useState(video.folder_id || null);
   const [isStartingTranscription, setIsStartingTranscription] = useState(false);
@@ -245,6 +245,14 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   useEffect(() => {
     setScriptGeneratedByStyle(false);
   }, [video.id]);
+
+  // Синхронизация видео при обновлении данных (refresh)
+  useEffect(() => {
+    if (video.download_url) {
+      setDirectVideoUrl(video.download_url);
+      setShowVideo(true);
+    }
+  }, [video.id, video.download_url]);
 
   const { updateVideoFolder, updateVideoScript, updateVideoTranscript, updateVideoTranslation, updateVideoResponsible, updateVideoLinks } = useInboxVideos();
 
@@ -1047,9 +1055,12 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
 
         {/* Main content — на мобильных колонка, на десктопе 3 колонки */}
         <div className="flex-1 flex flex-col md:flex-row gap-4 min-h-0 overflow-y-auto md:overflow-hidden">
-          {/* Left: превью 9:16 — по клику загружается и проигрывается тут же */}
+          {/* Left: видео 9:16 — над папкой, iOS 26 glass стиль */}
           <div className="flex-shrink-0 flex flex-col gap-3 overflow-y-auto custom-scrollbar-light w-full md:w-auto md:min-w-[256px] md:max-w-[min(256px,28vw)]">
-            <div className="relative rounded-2xl overflow-hidden shadow-xl bg-black w-full max-w-[240px] mx-auto md:max-w-none md:mx-0" style={{ aspectRatio: '9/16' }}>
+            <div 
+              className="relative rounded-card-xl overflow-hidden shadow-glass border border-white/[0.35] bg-black w-full max-w-[240px] mx-auto md:max-w-none md:mx-0"
+              style={{ aspectRatio: '9/16' }}
+            >
               {showVideo && directVideoUrl ? (
                 <video
                   src={directVideoUrl}
@@ -1074,7 +1085,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                     <TokenBadge tokens={getTokenCost('load_video')} size="sm" />
                   </div>
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-14 h-14 rounded-full bg-white/95 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+                    <div className="w-14 h-14 rounded-full bg-glass-white/95 backdrop-blur-glass flex items-center justify-center shadow-glass group-hover:scale-110 transition-transform border border-white/40">
                       {isLoadingVideo ? (
                         <Loader2 className="w-6 h-6 text-slate-800 animate-spin" />
                       ) : (
