@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   ChevronLeft, FileText, Copy, ExternalLink, Loader2, Check,
-  Languages, ChevronDown, Save, Plus, Trash2, Wand2, Images, Heart, MessageCircle, RefreshCw, BookOpen, Pencil
+  Languages, ChevronDown, Save, Plus, Trash2, Wand2, Images, Heart, MessageCircle, RefreshCw, BookOpen, Pencil, Sparkles
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { toast } from 'sonner';
@@ -46,6 +46,21 @@ function formatNumber(num?: number): string {
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
   if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
   return num.toString();
+}
+
+// Виральность карусели: likes / (days * 1000)
+function calculateCarouselViralCoefficient(likes?: number, takenAt?: number | string | null): number {
+  if (!likes || likes < 30000 || takenAt == null) return 0;
+  let postDate: Date;
+  if (typeof takenAt === 'number') {
+    postDate = takenAt > 1e12 ? new Date(takenAt) : new Date(takenAt * 1000);
+  } else {
+    postDate = new Date(takenAt);
+  }
+  if (isNaN(postDate.getTime())) return 0;
+  const diffDays = Math.floor((Date.now() - postDate.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays <= 0) return 0;
+  return Math.round((likes / (diffDays * 1000)) * 100) / 100;
 }
 
 function proxyImageUrl(url?: string): string {
@@ -703,6 +718,10 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
               <div className="flex items-center gap-1.5 text-slate-600">
                 <MessageCircle className="w-4 h-4 text-slate-400" />
                 {formatNumber(carousel.comment_count)}
+              </div>
+              <div className="col-span-2 flex items-center gap-1.5 text-slate-600">
+                <Sparkles className="w-4 h-4 text-slate-400" />
+                Виральность: <span className="font-medium">{calculateCarouselViralCoefficient(carousel.like_count, carousel.taken_at).toFixed(1)}</span>
               </div>
             </div>
           </div>

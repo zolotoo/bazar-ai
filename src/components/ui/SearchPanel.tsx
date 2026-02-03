@@ -6,12 +6,12 @@ import { GlassTabButton, GlassTabGroup } from './GlassTabButton';
 import { GlassCardStatic } from './GlassCard';
 import { 
   searchInstagramVideos,
-  getReelByUrl,
   getHashtagReels,
   InstagramSearchResult
 } from '../../services/videoService';
 import { useFlowStore } from '../../stores/flowStore';
 import { useInboxVideos } from '../../hooks/useInboxVideos';
+import { useCarousels } from '../../hooks/useCarousels';
 import { useSearchHistory } from '../../hooks/useSearchHistory';
 import { useWorkspaceZones } from '../../hooks/useWorkspaceZones';
 import { useProjectContext } from '../../contexts/ProjectContext';
@@ -25,6 +25,9 @@ import { FolderPlus, Star, Sparkles as SparklesIcon, FileText, CheckCircle } fro
 import { toast } from 'sonner';
 import { TokenBadge } from './TokenBadge';
 import { getTokenCost } from '../../constants/tokenCosts';
+
+/** Скрыть вкладку "Поиск по слову" (функционал остаётся в коде, можно вернуть) */
+export const HIDE_SEARCH_BY_WORD = true;
 
 interface SearchPanelProps {
   isOpen: boolean;
@@ -90,6 +93,31 @@ function calculateViralCoefficient(views?: number, takenAt?: string | number | D
   return Math.round((views / (diffDays * 1000)) * 100) / 100;
 }
 
+// Расчёт виральности карусели: likes / (days * 1000), вместо просмотров — лайки
+function calculateCarouselViralCoefficient(likes?: number, takenAt?: string | number | Date): number {
+  if (!likes || likes < 30000 || !takenAt) return 0;
+  
+  let postDate: Date;
+  
+  if (takenAt instanceof Date) {
+    postDate = takenAt;
+  } else if (typeof takenAt === 'string') {
+    postDate = takenAt.includes('T') || takenAt.includes('-') ? new Date(takenAt) : new Date(Number(takenAt) * 1000);
+  } else if (typeof takenAt === 'number') {
+    postDate = takenAt > 1e12 ? new Date(takenAt) : new Date(takenAt * 1000);
+  } else {
+    return 0;
+  }
+  
+  if (isNaN(postDate.getTime())) return 0;
+  
+  const today = new Date();
+  const diffDays = Math.floor((today.getTime() - postDate.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays <= 0) return 0;
+  
+  return Math.round((likes / (diffDays * 1000)) * 100) / 100;
+}
+
 type SortOption = 'views' | 'likes' | 'viral' | 'date';
 
 // View mode: 'carousel' for saved videos, 'trending' for trending videos, 'results' for search
@@ -132,7 +160,10 @@ function formatVideoDate(takenAt?: string | number | Date): string {
   return `${Math.floor(diffDays / 365)} г.`;
 }
 
-export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentProjectId, currentProjectName = 'Проект' }: SearchPanelProps) {
+const DEFAULT_TAB: SearchTab = HIDE_SEARCH_BY_WORD ? 'link' : 'search';
+
+export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, currentProjectId, currentProjectName = 'Проект' }: SearchPanelProps) {
+  const effectiveInitialTab = HIDE_SEARCH_BY_WORD && initialTab === 'search' ? 'link' : initialTab;
   const [query, setQuery] = useState('');
   const [reels, setReels] = useState<InstagramSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -142,10 +173,10 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
   const [activeIndex, setActiveIndex] = useState(0);
   const [sortBy, setSortBy] = useState<SortOption>('date');
   const [selectedVideo, setSelectedVideo] = useState<InstagramSearchResult | null>(null);
-  const [activeTab, setActiveTab] = useState<SearchTab>(initialTab);
+  const [activeTab, setActiveTab] = useState<SearchTab>(effectiveInitialTab);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkLoading, setLinkLoading] = useState(false);
-  const [linkPreview, setLinkPreview] = useState<InstagramSearchResult | null>(null);
+  const [linkPreview, setLinkPreview] = useState<(InstagramSearchResult & { is_carousel?: boolean; carousel_slides?: string[] }) | null>(null);
   const [showFolderSelect, setShowFolderSelect] = useState(false);
   const [cardFolderSelect, setCardFolderSelect] = useState<string | null>(null);
   const [radarUsername, setRadarUsername] = useState('');
@@ -156,6 +187,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
   const [_selectedProjectForAdd, _setSelectedProjectForAdd] = useState<string | null>(currentProjectId || null);
   const { incomingVideos } = useFlowStore();
   const { addVideoToInbox, videos: inboxVideos } = useInboxVideos();
+  const { addCarousel } = useCarousels();
   const { history: searchHistory, addToHistory, refetch: refetchHistory, getTodayCache, getAllResultsByQuery } = useSearchHistory();
   useWorkspaceZones(); // keep hook for potential future use
   const { projects, currentProject } = useProjectContext();
@@ -259,7 +291,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
       refetchHistory();
       setReels([]);
       setQuery('');
-      setActiveTab(initialTab);
+      setActiveTab(HIDE_SEARCH_BY_WORD && initialTab === 'search' ? 'link' : initialTab);
       
       // Всегда загружаем популярные видео из общей базы для карусели
       loadPopularFromDatabase();
@@ -625,7 +657,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
     }
   }, [addRadarProfile, currentProjectId, currentProjectName]);
 
-  // Обработка ссылки на рилс - сразу сохраняем в "Все видео" текущего проекта
+  // Обработка ссылки на рилс/карусель - сохраняем в "Все видео" или "Карусели" в зависимости от типа
   const handleParseLink = async () => {
     if (!linkUrl.trim()) return;
     
@@ -638,7 +670,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
     setLinkLoading(true);
     setLinkPreview(null);
     try {
-      // Проверяем тип ссылки: профиль или ролик
+      // Проверяем тип ссылки: профиль или пост (reel/p)
       const profileMatch = linkUrl.match(/instagram\.com\/([^\/\?]+)\/?$/);
       const reelMatch = linkUrl.match(/instagram\.com\/(reel|p)\/([A-Za-z0-9_-]+)/);
       
@@ -660,44 +692,86 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
         }
       }
       
-      // Если это ролик - получаем данные (НЕ добавляем автора в радар)
-      const reel = await getReelByUrl(linkUrl);
+      // Если это пост (reel или p) — получаем данные через reel-info API
+      const res = await fetch('/api/reel-info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: linkUrl }),
+      });
+      const data = await res.json();
       
-      if (reel) {
-        // Извлекаем shortcode
-        let shortcode = reel.shortcode;
-        if (!shortcode && reel.url) {
-          const match = reel.url.match(/\/(reel|p)\/([A-Za-z0-9_-]+)/);
-          if (match) shortcode = match[2];
+      if (data.success) {
+        const shortcode = data.shortcode;
+        const isCarousel = data.is_carousel && Array.isArray(data.carousel_slides) && data.carousel_slides.length > 0;
+        
+        if (isCarousel) {
+          // Карусель — сохраняем в раздел Карусели
+          const added = await addCarousel({
+            shortcode,
+            url: data.url,
+            caption: data.caption,
+            owner_username: data.owner?.username,
+            like_count: data.like_count,
+            comment_count: data.comment_count,
+            taken_at: data.taken_at,
+            slide_count: data.slide_count ?? data.carousel_slides.length,
+            thumbnail_url: data.thumbnail_url ?? data.carousel_slides[0],
+            slide_urls: data.carousel_slides,
+          });
+          if (added) {
+            setLinkPreview({
+              id: shortcode,
+              shortcode,
+              url: data.url,
+              thumbnail_url: data.thumbnail_url,
+              display_url: data.thumbnail_url,
+              caption: data.caption,
+              view_count: 0,
+              like_count: data.like_count,
+              comment_count: data.comment_count,
+              taken_at: data.taken_at ? String(data.taken_at) : undefined,
+              owner: data.owner,
+              is_carousel: true,
+              carousel_slides: data.carousel_slides,
+            });
+            setLinkUrl('');
+          }
+        } else {
+          // Рилс — сохраняем в "Все видео"
+          const captionText = typeof data.caption === 'string' ? data.caption.slice(0, 200) : 'Видео из Instagram';
+          await addVideoToInbox({
+            title: captionText,
+            previewUrl: data.thumbnail_url || '',
+            url: data.url,
+            viewCount: data.view_count,
+            likeCount: data.like_count,
+            commentCount: data.comment_count,
+            ownerUsername: data.owner?.username,
+            shortcode,
+            projectId: currentProjectId,
+            folderId: undefined,
+            takenAt: data.taken_at,
+          });
+          setLinkPreview({
+            id: shortcode,
+            shortcode,
+            url: data.url,
+            thumbnail_url: data.thumbnail_url,
+            display_url: data.thumbnail_url,
+            caption: data.caption,
+            view_count: data.view_count,
+            like_count: data.like_count,
+            comment_count: data.comment_count,
+            taken_at: data.taken_at ? String(data.taken_at) : undefined,
+            owner: data.owner,
+            is_carousel: false,
+          });
+          toast.success(`Сохранено в "${currentProjectName}"`, {
+            description: 'Видео добавлено в "Все видео". Можете переместить в папку.',
+          });
         }
-        
-        // СРАЗУ сохраняем в "Все видео" текущего проекта
-        const captionText = typeof reel.caption === 'string' ? reel.caption.slice(0, 200) : 'Видео из Instagram';
-        
-        await addVideoToInbox({
-          title: captionText,
-          previewUrl: reel.thumbnail_url || reel.display_url || '',
-          url: reel.url,
-          viewCount: reel.view_count,
-          likeCount: reel.like_count,
-          commentCount: reel.comment_count,
-          ownerUsername: reel.owner?.username,
-          shortcode: shortcode,
-          projectId: currentProjectId,
-          folderId: undefined, // "Все видео"
-          takenAt: reel.taken_at,
-        });
-        
-        // Показываем превью с возможностью переместить в папку
-        setLinkPreview(reel);
-        
-        // НЕ сохраняем ссылку в историю поиска (только текстовые запросы)
-        
-        toast.success(`Сохранено в "${currentProjectName}"`, {
-          description: 'Видео добавлено в "Все видео". Можете переместить в папку.',
-        });
       } else {
-        toast.error('Не удалось получить данные рилса');
+        toast.error(data.error || 'Не удалось получить данные поста');
       }
     } catch (err) {
       console.error('Ошибка парсинга ссылки:', err);
@@ -935,13 +1009,15 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
             {/* Glass Tab Buttons */}
             <div className="flex justify-center mb-4">
               <GlassTabGroup>
-                <GlassTabButton
-                  isActive={activeTab === 'search'}
-                  onClick={() => setActiveTab('search')}
-                  icon={<Search className="w-4 h-4" />}
-                >
-                  Поиск
-                </GlassTabButton>
+                {!HIDE_SEARCH_BY_WORD && (
+                  <GlassTabButton
+                    isActive={activeTab === 'search'}
+                    onClick={() => setActiveTab('search')}
+                    icon={<Search className="w-4 h-4" />}
+                  >
+                    Поиск
+                  </GlassTabButton>
+                )}
                 <GlassTabButton
                   isActive={activeTab === 'link'}
                   onClick={() => setActiveTab('link')}
@@ -960,7 +1036,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
             </div>
 
             {/* Search Tab Content */}
-            {activeTab === 'search' && (
+            {!HIDE_SEARCH_BY_WORD && activeTab === 'search' && (
               <>
                 <GlassCardStatic className="shadow-glass">
                   <div className="flex items-center gap-3 px-5 py-4">
@@ -1111,12 +1187,14 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                           )}
                         </div>
 
-                        {/* Viral coefficient */}
+                        {/* Viral coefficient: для карусели — лайки, для рилса — просмотры */}
                         <div className="flex items-center gap-2 mb-4">
                           <SparklesIcon className="w-4 h-4 text-slate-600" />
                           <span className="text-sm text-slate-600">
                             Виральность: <span className="font-semibold text-slate-700">
-                              {calculateViralCoefficient(linkPreview.view_count, linkPreview.taken_at).toFixed(1)}
+                              {linkPreview.is_carousel
+                                ? calculateCarouselViralCoefficient(linkPreview.like_count, linkPreview.taken_at).toFixed(1)
+                                : calculateViralCoefficient(linkPreview.view_count, linkPreview.taken_at).toFixed(1)}
                             </span>
                           </span>
                         </div>
@@ -1126,12 +1204,14 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                           <div className="flex items-center gap-2">
                             <Check className="w-4 h-4 text-emerald-600" />
                             <span className="text-sm text-emerald-700">
-                              Сохранено в <span className="font-semibold">{currentProjectName}</span> → Все видео
+                              Сохранено в <span className="font-semibold">{currentProjectName}</span>
+                              {linkPreview.is_carousel ? ' → Карусели' : ' → Все видео'}
                             </span>
                           </div>
                         </div>
 
-                        {/* Выбор папки для перемещения */}
+                        {/* Выбор папки для перемещения (только для рилсов) */}
+                        {!linkPreview.is_carousel && (
                         <div className="mb-4">
                           <label className="text-xs text-slate-500 mb-1.5 block">Переместить в папку:</label>
                           <div className="grid grid-cols-2 gap-2">
@@ -1153,6 +1233,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = 'search', currentPro
                             })}
                           </div>
                         </div>
+                        )}
 
                         <div className="mt-auto flex items-center gap-2">
                           <button

@@ -4,7 +4,7 @@ import { LandingPage } from './components/LandingPage';
 import { History } from './components/History';
 import { ProfilePage } from './components/ProfilePage';
 import { IncomingVideosDrawer } from './components/sidebar/IncomingVideosDrawer';
-import { SearchPanel } from './components/ui/SearchPanel';
+import { SearchPanel, HIDE_SEARCH_BY_WORD } from './components/ui/SearchPanel';
 import { ProjectMembersModal } from './components/ui/ProjectMembersModal';
 import { 
   Sidebar, SidebarBody, SidebarLink, SidebarSection, SidebarProject, 
@@ -363,7 +363,7 @@ function EditProjectModal({ project, onSave, onDelete, onClose }: EditProjectMod
 function AppContent() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchTab, setSearchTab] = useState<SearchTab>('search');
+  const [searchTab, setSearchTab] = useState<SearchTab>(HIDE_SEARCH_BY_WORD ? 'link' : 'search');
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<{ id: string; name: string; color: string } | null>(null);
@@ -396,7 +396,7 @@ function AppContent() {
       setViewMode('workspace');
       setMobileFoldersOpen(true);
     } else if (id === 'search') {
-      setSearchTab('search');
+      setSearchTab(HIDE_SEARCH_BY_WORD ? 'link' : 'search');
       setIsSearchOpen(true);
     } else if (id === 'profile') {
       setViewMode('profile');
@@ -553,11 +553,13 @@ function AppContent() {
                   label="Поиск по ссылке"
                   onClick={() => { setSearchTab('link'); setIsSearchOpen(true); }}
                 />
-                <SidebarLink
-                  icon={<Search className="w-4 h-4" strokeWidth={2.5} />}
-                  label="Глобальный поиск"
-                  onClick={() => { setSearchTab('search'); setIsSearchOpen(true); }}
-                />
+                {!HIDE_SEARCH_BY_WORD && (
+                  <SidebarLink
+                    icon={<Search className="w-4 h-4" strokeWidth={2.5} />}
+                    label="Глобальный поиск"
+                    onClick={() => { setSearchTab('search'); setIsSearchOpen(true); }}
+                  />
+                )}
                 <SidebarLink
                   icon={<Clock className="w-4 h-4" strokeWidth={2.5} />}
                   label="История"
