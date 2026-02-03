@@ -68,7 +68,7 @@ const VideoCard = forwardRef<HTMLDivElement, VideoCardProps>(
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-          <p className="absolute bottom-1 left-1 right-1 text-[7px] font-bold uppercase tracking-tight text-white truncate drop-shadow-md">
+          <p className="absolute bottom-1 left-1 right-1 text-[7px] font-bold tracking-tight text-white truncate drop-shadow-md">
             {title}
           </p>
         </div>
@@ -261,7 +261,7 @@ export const AnimatedFolder3D: React.FC<AnimatedFolder3DProps> = ({
       
       {/* Hover hint */}
       <div 
-        className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center justify-center text-[8px] font-medium uppercase tracking-wider text-slate-400 transition-all duration-500"
+        className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center justify-center text-[8px] font-medium tracking-wider text-slate-400 transition-all duration-500"
         style={{ 
           opacity: isHovered ? 0 : 0.5,
           transform: isHovered ? "translateY(10px)" : "translateY(0)",
