@@ -1,4 +1,6 @@
-// Vercel Serverless Function - транскрибация видео через AssemblyAI
+// Vercel Serverless Function - транскрибация видео через AssemblyAI, каруселей через OpenRouter (Gemini)
+import { callOpenRouter, MODELS, MODELS_FALLBACK, geminiPartToOpenRouterImage } from '../lib/openRouter.js';
+
 export default async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -50,16 +52,11 @@ export default async function handler(req, res) {
   const imageUrls = Array.isArray(body.imageUrls) ? body.imageUrls : [];
   const imagesBase64 = Array.isArray(body.images) ? body.images : [];
 
-  // Карусель: imageUrls или images → Gemini (дешёвая модель 2.0-flash-lite)
+  // Карусель: imageUrls или images → OpenRouter (Gemini)
   if (imageUrls.length > 0 || imagesBase64.length > 0) {
-    const geminiKeys = (process.env.GEMINI_API_KEYS || '')
-      .split(',')
-      .map((k) => k.trim())
-      .filter(Boolean);
-    const single = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
-    const keys = geminiKeys.length ? geminiKeys : (single ? [single] : []);
-    if (!keys.length) {
-      return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'OPENROUTER_API_KEY not configured' });
     }
     const BATCH_SIZE = 9;
     const MAX_TOTAL = 50;
@@ -118,73 +115,59 @@ export default async function handler(req, res) {
     }
     const promptTemplate = (batchSize, offset) => `Extract ALL visible text from ${batchSize} Instagram carousel slides (${offset + 1}–${offset + batchSize}). For each image: text only. Reply JSON only:
 {"slides":[{"slide_index":0,"text":"...","description":""},{"slide_index":1,"text":"...","description":""}],"full_text":"all text combined"}`;
-    const modelsToTry = ['gemini-2.0-flash-lite', 'gemini-2.5-flash-lite', 'gemini-2.5-flash'];
     const allSlides = [];
     const fullTexts = [];
     try {
       for (let i = 0; i < allParts.length; i += BATCH_SIZE) {
         const batch = allParts.slice(i, i + BATCH_SIZE);
         const prompt = promptTemplate(batch.length, i);
-        const contentsParts = [{ text: prompt }, ...batch];
+        const content = [
+          { type: 'text', text: prompt },
+          ...batch.map((p) => geminiPartToOpenRouterImage(p)),
+        ];
         let lastErr = null;
         let batchDone = false;
-        for (const geminiKey of keys) {
-          if (batchDone) break;
-          for (const model of modelsToTry) {
+        for (const model of MODELS_FALLBACK) {
+          try {
+            const { text: rawText } = await callOpenRouter({
+              apiKey,
+              model,
+              messages: [{ role: 'user', content }],
+              temperature: 0.2,
+              max_tokens: 4096,
+              response_format: { type: 'json_object' },
+            });
+            if (!rawText) continue;
+            let jsonStr = (rawText.match(/\{[\s\S]*\}/) || [null])[0] || rawText;
+            jsonStr = jsonStr.replace(/,(\s*[}\]])/g, '$1');
+            let parsed;
             try {
-              const geminiRes = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiKey)}`,
-                {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    contents: [{ parts: contentsParts }],
-                    generationConfig: {
-                      temperature: 0.2,
-                      responseMimeType: 'application/json',
-                      maxOutputTokens: 4096,
-                    },
-                  }),
-                }
-              );
-              if (geminiRes.status === 429) continue;
-              if (!geminiRes.ok) {
-                lastErr = await geminiRes.text();
-                continue;
-              }
-              const data = await geminiRes.json();
-              const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-              if (!rawText) continue;
-              let jsonStr = (rawText.match(/\{[\s\S]*\}/) || [null])[0] || rawText;
-              jsonStr = jsonStr.replace(/,(\s*[}\]])/g, '$1');
-              let parsed;
-              try {
-                parsed = JSON.parse(jsonStr);
-              } catch (e) {
-                continue;
-              }
-              const slides = Array.isArray(parsed.slides) ? parsed.slides : [];
-              for (const s of slides) {
-                allSlides.push({
-                  slide_index: i + s.slide_index,
-                  text: s.text || '',
-                  description: s.description || '',
-                });
-              }
-              if (typeof parsed.full_text === 'string' && parsed.full_text.trim()) {
-                fullTexts.push(parsed.full_text);
-              } else {
-                fullTexts.push(slides.map((s) => s.text).join('\n\n'));
-              }
-              batchDone = true;
-              break;
+              parsed = JSON.parse(jsonStr);
             } catch (e) {
-              lastErr = e.message;
+              continue;
             }
+            const slides = Array.isArray(parsed.slides) ? parsed.slides : [];
+            for (const s of slides) {
+              allSlides.push({
+                slide_index: i + s.slide_index,
+                text: s.text || '',
+                description: s.description || '',
+              });
+            }
+            if (typeof parsed.full_text === 'string' && parsed.full_text.trim()) {
+              fullTexts.push(parsed.full_text);
+            } else {
+              fullTexts.push(slides.map((s) => s.text).join('\n\n'));
+            }
+            batchDone = true;
+            break;
+          } catch (e) {
+            lastErr = e.message;
+            if (e.message?.includes('429')) await new Promise((r) => setTimeout(r, 2000));
           }
         }
         if (!batchDone) {
-          return res.status(502).json({ error: 'Gemini API error', details: lastErr || 'Empty response' });
+          return res.status(502).json({ error: 'OpenRouter API error', details: lastErr || 'Empty response' });
         }
       }
       const fullText = fullTexts.join('\n\n');
