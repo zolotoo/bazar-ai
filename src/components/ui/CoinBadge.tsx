@@ -41,18 +41,18 @@ export function CoinBadge({ coins, className, size = 'sm', variant = 'default' }
         ],
         variant === 'dark' && [
           'bg-white/20 backdrop-blur-glass border border-white/30',
-          'text-amber-100 shadow-glass-sm',
+          'text-slate-200 shadow-glass-sm',
         ],
         className
       )}
     >
-      {/* 3D мультяшная монетка с логотипом Riri — прозрачный фон на тёмных кнопках */}
+      {/* Иконка коина в стиле логотипа Riri — серый/серебристый тон под общий UI */}
       <span
         className={cn(
           'flex items-center justify-center rounded-full overflow-hidden flex-shrink-0',
           variant === 'dark'
-            ? 'bg-transparent'
-            : 'bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 shadow-[inset_0_2px_0_rgba(255,255,255,0.5),inset_0_-2px_0_rgba(0,0,0,0.15),0_2px_6px_rgba(0,0,0,0.2)] border border-amber-300/60',
+            ? 'bg-white/20'
+            : 'bg-gradient-to-br from-slate-400 via-slate-500 to-slate-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_1px_3px_rgba(0,0,0,0.15)] border border-slate-400/50',
           iconSizes[size]
         )}
       >
@@ -60,14 +60,20 @@ export function CoinBadge({ coins, className, size = 'sm', variant = 'default' }
           <img
             src="/riri-coin.png"
             alt="Riri"
-            className={cn('w-full h-full object-cover rounded-full', iconSizes[size])}
+            loading="lazy"
+            decoding="async"
+            className={cn(
+              'w-full h-full object-cover rounded-full',
+              'grayscale contrast-110 brightness-95',
+              iconSizes[size]
+            )}
             onError={() => setImgError(true)}
           />
         ) : (
           <span
             className={cn(
-              'font-bold drop-shadow-[0_1px_0_rgba(255,255,255,0.5)]',
-              variant === 'dark' ? 'text-amber-100' : 'text-amber-900/95',
+              'font-bold drop-shadow-[0_1px_0_rgba(255,255,255,0.4)]',
+              variant === 'dark' ? 'text-slate-200' : 'text-slate-700',
               size === 'sm' ? 'text-[10px] leading-none' : 'text-xs leading-none'
             )}
           >

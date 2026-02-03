@@ -964,7 +964,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
 
   return (
     <div className="h-full overflow-hidden flex flex-col bg-base">
-      <div className="w-full h-full p-4 md:p-6 flex flex-col overflow-hidden min-h-0">
+      <div className="w-full h-full p-4 md:p-6 flex flex-col overflow-y-auto min-h-0">
         {/* Header — на мобильных компактнее */}
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-shrink-0">
           <div className="flex items-center gap-4">
@@ -1053,50 +1053,53 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
           </div>
         </div>
 
+        {/* Видео 9:16 — сверху, всегда видно, выше всего контента */}
+        <div className="flex-shrink-0 w-full flex justify-center mb-4">
+          <div 
+            className="relative rounded-card-xl overflow-hidden shadow-glass border border-white/[0.35] bg-black"
+            style={{ aspectRatio: '9/16', width: 'min(100%, 280px)' }}
+          >
+            {showVideo && directVideoUrl ? (
+              <video
+                src={directVideoUrl}
+                className="w-full h-full object-cover"
+                controls
+                autoPlay
+                playsInline
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={handleLoadVideo}
+                disabled={isLoadingVideo}
+                className="absolute inset-0 w-full h-full flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors group"
+              >
+                <img
+                  src={thumbnailUrl}
+                  alt=""
+                  className="w-full h-full object-cover absolute inset-0"
+                />
+                <div className="absolute bottom-2 right-2">
+                  <TokenBadge tokens={getTokenCost('load_video')} size="sm" />
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-full bg-glass-white/95 backdrop-blur-glass flex items-center justify-center shadow-glass group-hover:scale-110 transition-transform border border-white/40">
+                    {isLoadingVideo ? (
+                      <Loader2 className="w-6 h-6 text-slate-800 animate-spin" />
+                    ) : (
+                      <Play className="w-6 h-6 text-slate-800 ml-1" fill="currentColor" />
+                    )}
+                  </div>
+                </div>
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Main content — на мобильных колонка, на десктопе 3 колонки */}
         <div className="flex-1 flex flex-col md:flex-row gap-4 min-h-0 overflow-y-auto md:overflow-hidden">
-          {/* Left: видео 9:16 — над папкой, iOS 26 glass стиль */}
+          {/* Left: папка + статистика */}
           <div className="flex-shrink-0 flex flex-col gap-3 overflow-y-auto custom-scrollbar-light w-full md:w-auto md:min-w-[256px] md:max-w-[min(256px,28vw)]">
-            <div 
-              className="relative rounded-card-xl overflow-hidden shadow-glass border border-white/[0.35] bg-black w-full max-w-[240px] mx-auto md:max-w-none md:mx-0"
-              style={{ aspectRatio: '9/16' }}
-            >
-              {showVideo && directVideoUrl ? (
-                <video
-                  src={directVideoUrl}
-                  className="w-full h-full object-cover"
-                  controls
-                  autoPlay
-                  playsInline
-                />
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleLoadVideo}
-                  disabled={isLoadingVideo}
-                  className="absolute inset-0 w-full h-full flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors group"
-                >
-                  <img
-                    src={thumbnailUrl}
-                    alt=""
-                    className="w-full h-full object-cover absolute inset-0"
-                  />
-                  <div className="absolute bottom-2 right-2">
-                    <TokenBadge tokens={getTokenCost('load_video')} size="sm" />
-                  </div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-14 h-14 rounded-full bg-glass-white/95 backdrop-blur-glass flex items-center justify-center shadow-glass group-hover:scale-110 transition-transform border border-white/40">
-                      {isLoadingVideo ? (
-                        <Loader2 className="w-6 h-6 text-slate-800 animate-spin" />
-                      ) : (
-                        <Play className="w-6 h-6 text-slate-800 ml-1" fill="currentColor" />
-                      )}
-                    </div>
-                  </div>
-                </button>
-              )}
-            </div>
-
             {/* Current folder + move — z-[60] чтобы дропдаун был поверх раздела параметров */}
             <div className={cn(
               "rounded-card-xl p-3 shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] relative",
@@ -1362,7 +1365,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                 <h3 className="font-semibold text-slate-800">Транскрибация</h3>
               </div>
               
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-3">
                 {/* Tabs: Original / Translation */}
                 <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
                   <button
@@ -1371,7 +1374,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                       "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
                       transcriptTab === 'original'
                         ? "bg-white text-slate-800 shadow-sm"
-                        : "text-slate-500 hover:text-slate-700"
+                        : "text-slate-600 hover:text-slate-800"
                     )}
                   >
                     Оригинал
@@ -1382,7 +1385,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                       "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
                       transcriptTab === 'translation'
                         ? "bg-white text-slate-800 shadow-sm"
-                        : "text-slate-500 hover:text-slate-700"
+                        : "text-slate-600 hover:text-slate-800"
                     )}
                   >
                     Перевод
@@ -1394,7 +1397,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                     <button
                       onClick={handleSaveTranscript}
                       disabled={isSavingTranscript}
-                      className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium transition-all flex items-center gap-1.5 disabled:opacity-50"
+                      className="px-3 py-1.5 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-xs font-medium transition-all flex items-center gap-1.5 disabled:opacity-50 shrink-0"
                       title="Сохранить транскрипцию"
                     >
                       {isSavingTranscript ? (
@@ -1407,7 +1410,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                     <button
                       onClick={handleTranslate}
                       disabled={isTranslating}
-                      className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-50 flex items-center gap-1"
+                      className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-700 transition-colors disabled:opacity-50 flex items-center gap-1.5 shrink-0"
                       title="Перевести"
                     >
                       {isTranslating ? (
@@ -1419,7 +1422,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                     </button>
                     <button
                       onClick={handleCopyTranscript}
-                      className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
+                      className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-700 transition-colors shrink-0"
                       title="Копировать"
                     >
                       {copiedTranscript ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
@@ -1527,13 +1530,13 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                 )}
               </div>
               
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-3 flex-wrap">
                 {(projectStyles.length > 0 || currentProject?.stylePrompt) && transcript?.trim() && (
                   <div className="relative" ref={stylePickerRef}>
                     <button
                       onClick={() => setShowStylePickerPopover(!showStylePickerPopover)}
                       disabled={isGeneratingScript}
-                      className="px-3 py-1.5 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-xs font-medium transition-all flex items-center gap-1.5 disabled:opacity-50"
+                      className="px-3 py-1.5 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-xs font-medium transition-all flex items-center gap-2 disabled:opacity-50 shrink-0"
                       title="Выбрать стиль и сгенерировать"
                     >
                       {isGeneratingScript ? (
@@ -1634,7 +1637,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                     <button
                       onClick={handleSaveScript}
                       disabled={isSavingScript}
-                      className="px-3 py-1.5 rounded-lg bg-slate-600 text-white text-xs font-medium hover:bg-slate-700 transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                      className="px-3 py-1.5 rounded-lg bg-slate-600 text-white text-xs font-medium hover:bg-slate-700 transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50 shrink-0"
                     >
                       {isSavingScript ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1645,7 +1648,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                     </button>
                     <button
                       onClick={handleCopyScript}
-                      className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
+                      className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-700 transition-colors shrink-0"
                       title="Копировать"
                     >
                       {copiedScript ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
