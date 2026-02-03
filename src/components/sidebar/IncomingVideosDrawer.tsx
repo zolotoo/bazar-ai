@@ -207,7 +207,7 @@ export function IncomingVideosDrawer({ isOpen, onClose }: IncomingVideosDrawerPr
               </div>
               <div>
                 <p className="text-slate-700 font-medium text-sm leading-tight">Нет видео</p>
-                <p className="text-[11px] text-slate-500 mt-1 leading-tight">Добавьте через поиск</p>
+                <p className="text-[11px] text-slate-500 mt-1 leading-tight">Добавь через поиск</p>
               </div>
             </div>
           ) : (

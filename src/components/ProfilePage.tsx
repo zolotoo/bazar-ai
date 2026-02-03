@@ -185,7 +185,7 @@ export function ProfilePage() {
                 <Instagram className="w-6 h-6 text-pink-500" />
               </div>
               <p className="text-slate-500 text-sm">
-                Добавьте Instagram аккаунты для автоматического отслеживания новых рилсов
+                Добавь Instagram аккаунты — я буду автоматически отслеживать новые рилсы
               </p>
             </div>
           ) : (

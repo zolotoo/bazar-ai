@@ -342,7 +342,7 @@ export function History() {
                 <div className="flex flex-col items-center justify-center h-80 text-center">
                   <MarketingBadges badges={searchBadges} className="mb-8" />
                   <h3 className="text-lg font-medium text-slate-800 mb-1">Нет сохранённых видео</h3>
-                  <p className="text-slate-500 text-sm">Добавьте видео через поиск</p>
+                  <p className="text-slate-500 text-sm">Добавь видео через поиск</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">

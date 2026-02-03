@@ -949,7 +949,7 @@ export function Workspace(props?: WorkspaceProps) {
                 {selectedFolderId ? 'Папка пуста' : 'Нет видео'}
               </h3>
               <p className="text-slate-500 text-sm">
-                {selectedFolderId ? 'Перетащите видео сюда' : 'Добавьте видео через поиск или радар'}
+                {selectedFolderId ? 'Перетащи видео сюда' : 'Добавь видео через поиск или радар'}
               </p>
             </div>
           ) : (
@@ -1135,7 +1135,7 @@ export function Workspace(props?: WorkspaceProps) {
                         onClick={async () => {
                           const url = carouselLinkUrl.trim();
                           if (!url || !url.includes('instagram.com')) {
-                            toast.error('Вставьте ссылку на пост Instagram');
+                            toast.error('Вставь ссылку на пост Instagram');
                             return;
                           }
                           setIsAddingCarouselByLink(true);
@@ -1164,7 +1164,7 @@ export function Workspace(props?: WorkspaceProps) {
                                 toast.success('Карусель добавлена');
                               }
                             } else if (data.success && !data.is_carousel) {
-                              toast.error('Это не карусель — один пост. Добавляйте посты с несколькими фото.');
+                              toast.error('Это не карусель — один пост. Добавляй посты с несколькими фото.');
                             } else {
                               toast.error(data.error || 'Не удалось загрузить пост. Проверьте ссылку.');
                             }
@@ -1195,7 +1195,7 @@ export function Workspace(props?: WorkspaceProps) {
                     </div>
                     <h3 className="text-lg font-medium text-slate-800 mb-1">Пока каруселей нет</h3>
                     <p className="text-slate-500 text-sm max-w-sm mb-4">
-                      Вставьте ссылку на пост с каруселью (несколько фото) выше и нажмите «Добавить». Транскрипт по слайдам — через Gemini.
+                      Вставь ссылку на пост с каруселью (несколько фото) выше и нажми «Добавить». Транскрипт по слайдам — через Gemini.
                     </p>
                   </div>
                 ) : (

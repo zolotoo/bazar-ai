@@ -1109,7 +1109,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                   </div>
                   <div>
                     <h3 className="text-base font-semibold text-slate-800">Добавить по ссылке</h3>
-                    <p className="text-xs text-slate-500">Вставьте ссылку на рилс или карусель Instagram</p>
+                    <p className="text-xs text-slate-500">Вставь ссылку на рилс или карусель Instagram</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 mb-4">
@@ -1287,7 +1287,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                 {currentProjectId && (
                   <div className="mb-5 p-4 rounded-card-xl bg-glass-white/60 backdrop-blur-glass border border-white/[0.35] shadow-glass-sm">
                     <p className="text-xs text-slate-600 leading-relaxed">
-                      <span className="font-semibold text-slate-700">Как это работает:</span> Все видео добавленных профилей автоматически попадут в папку «Все видео» проекта «{currentProjectName}». При обновлении — новые видео добавятся, а статистика старых обновится.
+                      <span className="font-semibold text-slate-700">Как это работает:</span> Я автоматически добавляю все видео из этих профилей в папку «Все видео» проекта «{currentProjectName}». При обновлении — новые видео добавятся, а статистика старых обновится.
                     </p>
                   </div>
                 )}
@@ -1348,7 +1348,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                     ))}
                   </div>
                   <p className="text-xs text-slate-400 px-1">
-                    Можно ввести username (например: username) или ссылку на профиль Instagram
+                    Можешь ввести username (например: username) или ссылку на профиль Instagram
                   </p>
                 </div>
 
@@ -1454,8 +1454,8 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                 {currentProjectId && radarProfiles.length === 0 && (
                   <div className="text-center py-12">
                     <Radar className="w-14 h-14 text-slate-300 mx-auto mb-4" />
-                    <p className="text-slate-500 text-sm mb-1">Радар для «{currentProjectName}» пуст</p>
-                    <p className="text-slate-400 text-xs">Добавьте Instagram профили для автоматического сбора видео</p>
+                    <p className="text-slate-500 text-sm mb-1">Радар для «{currentProjectName}» пока пуст</p>
+                    <p className="text-slate-400 text-xs">Добавь Instagram профили — я буду автоматически собирать видео</p>
                   </div>
                 )}
               </GlassCardStatic>

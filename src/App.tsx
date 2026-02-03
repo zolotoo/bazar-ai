@@ -534,7 +534,7 @@ function AppContent() {
             <SidebarLogo />
             
             {/* Navigation */}
-            <SidebarSection title="Навигация">
+            <SidebarSection title="С чем тебе помочь?">
               <div className="space-y-0.5">
                 <SidebarLink
                   icon={<LayoutGrid className="w-4 h-4" strokeWidth={2.5} />}
@@ -570,7 +570,7 @@ function AppContent() {
             </SidebarSection>
             
             {/* Projects */}
-            <SidebarSection title="Проекты" onAdd={() => setIsCreateProjectOpen(true)}>
+            <SidebarSection title="Твои проекты" onAdd={() => setIsCreateProjectOpen(true)}>
               <div className="space-y-1">
                 {projects.length === 0 ? (
                   <button
