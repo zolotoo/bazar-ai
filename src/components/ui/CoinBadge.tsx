@@ -46,13 +46,13 @@ export function CoinBadge({ coins, className, size = 'sm', variant = 'default' }
         className
       )}
     >
-      {/* 3D мультяшная монетка с логотипом Riri */}
+      {/* 3D мультяшная монетка с логотипом Riri — прозрачный фон на тёмных кнопках */}
       <span
         className={cn(
           'flex items-center justify-center rounded-full overflow-hidden flex-shrink-0',
-          'bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600',
-          'shadow-[inset_0_2px_0_rgba(255,255,255,0.5),inset_0_-2px_0_rgba(0,0,0,0.15),0_2px_6px_rgba(0,0,0,0.2)]',
-          'border border-amber-300/60',
+          variant === 'dark'
+            ? 'bg-transparent'
+            : 'bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 shadow-[inset_0_2px_0_rgba(255,255,255,0.5),inset_0_-2px_0_rgba(0,0,0,0.15),0_2px_6px_rgba(0,0,0,0.2)] border border-amber-300/60',
           iconSizes[size]
         )}
       >
@@ -66,7 +66,8 @@ export function CoinBadge({ coins, className, size = 'sm', variant = 'default' }
         ) : (
           <span
             className={cn(
-              'font-bold text-amber-900/95 drop-shadow-[0_1px_0_rgba(255,255,255,0.5)]',
+              'font-bold drop-shadow-[0_1px_0_rgba(255,255,255,0.5)]',
+              variant === 'dark' ? 'text-amber-100' : 'text-amber-900/95',
               size === 'sm' ? 'text-[10px] leading-none' : 'text-xs leading-none'
             )}
           >
