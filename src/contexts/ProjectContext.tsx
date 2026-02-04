@@ -8,7 +8,7 @@ interface ProjectContextType {
   loading: boolean;
   createProject: (name: string, color?: string) => Promise<Project | null>;
   updateProject: (projectId: string, updates: Partial<Pick<Project, 'name' | 'color' | 'icon' | 'folders' | 'linksTemplate' | 'responsiblesTemplate' | 'stylePrompt' | 'styleMeta' | 'styleExamplesCount' | 'projectStyles'>>) => Promise<void>;
-  addProjectStyle: (projectId: string, style: Omit<ProjectStyle, 'id'>) => Promise<void>;
+  addProjectStyle: (projectId: string, style: Omit<ProjectStyle, 'id'>) => Promise<ProjectStyle | void>;
   updateProjectStyle: (projectId: string, styleId: string, updates: Partial<Omit<ProjectStyle, 'id'>>) => Promise<void>;
   removeProjectStyle: (projectId: string, styleId: string) => Promise<void>;
   deleteProject: (projectId: string) => Promise<void>;

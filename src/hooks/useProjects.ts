@@ -482,16 +482,19 @@ export function useProjects() {
     await updateProject(projectId, { folders: reorderedFolders });
   }, [projects, updateProject]);
 
-  // Стили проекта: добавить, обновить, удалить
-  const addProjectStyle = useCallback(async (projectId: string, style: Omit<ProjectStyle, 'id'>) => {
+  // Стили проекта: добавить, обновить, удалить. Возвращает созданный стиль.
+  const addProjectStyle = useCallback(async (projectId: string, style: Omit<ProjectStyle, 'id'>): Promise<ProjectStyle | void> => {
     const project = projects.find(p => p.id === projectId);
     if (!project) return;
     const styles = project.projectStyles || [];
+    // Не сохраняем виртуальный legacy в БД — только реальные стили
+    const stylesToSave = styles.filter(s => s.id !== 'legacy');
     const newStyle: ProjectStyle = {
       ...style,
       id: `style-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     };
-    await updateProject(projectId, { projectStyles: [...styles, newStyle] });
+    await updateProject(projectId, { projectStyles: [...stylesToSave, newStyle] });
+    return newStyle;
   }, [projects, updateProject]);
 
   const updateProjectStyle = useCallback(async (projectId: string, styleId: string, updates: Partial<Omit<ProjectStyle, 'id'>>) => {

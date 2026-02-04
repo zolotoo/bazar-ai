@@ -1742,7 +1742,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                             }
                             const newName = renamingStyleName.trim();
                             if (currentPromptStyle.id === 'legacy') {
-                              await addProjectStyle(currentProject.id, {
+                              const created = await addProjectStyle(currentProject.id, {
                                 name: newName,
                                 prompt: currentPromptStyle.prompt,
                                 meta: currentPromptStyle.meta,
@@ -1750,7 +1750,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                               });
                               await updateProject(currentProject.id, { stylePrompt: undefined, styleMeta: undefined, styleExamplesCount: 0 });
                               await refetchProjects();
-                              setEditingStyle(null);
+                              if (created) setEditingStyle(created);
                             } else {
                               await updateProjectStyle(currentProject.id, currentPromptStyle.id, { name: newName });
                               setEditingStyle({ ...currentPromptStyle, name: newName });
@@ -1792,7 +1792,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                             }
                             const newName = renamingStyleName.trim();
                             if (currentPromptStyle.id === 'legacy') {
-                              await addProjectStyle(currentProject.id, {
+                              const created = await addProjectStyle(currentProject.id, {
                                 name: newName,
                                 prompt: currentPromptStyle.prompt,
                                 meta: currentPromptStyle.meta,
@@ -1800,7 +1800,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                               });
                               await updateProject(currentProject.id, { stylePrompt: undefined, styleMeta: undefined, styleExamplesCount: 0 });
                               await refetchProjects();
-                              setEditingStyle(null);
+                              if (created) setEditingStyle(created);
                             } else {
                               await updateProjectStyle(currentProject.id, currentPromptStyle.id, { name: newName });
                               setEditingStyle({ ...currentPromptStyle, name: newName });
