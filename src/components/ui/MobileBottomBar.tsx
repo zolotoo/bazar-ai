@@ -29,18 +29,19 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
         className={cn(
           "mobile-tab-bar",
           "md:hidden fixed left-0 right-0 bottom-0 z-[9998]",
-          "pt-2 touch-manipulation",
+          "touch-manipulation",
           "pointer-events-none [&_ul]:pointer-events-auto",
           className
         )}
         style={{
-          paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))",
-          paddingLeft: "max(8px, env(safe-area-inset-left))",
-          paddingRight: "max(8px, env(safe-area-inset-right))",
+          paddingBottom: "max(16px, env(safe-area-inset-bottom, 16px))",
+          paddingLeft: "max(12px, env(safe-area-inset-left, 12px))",
+          paddingRight: "max(12px, env(safe-area-inset-right, 12px))",
+          paddingTop: 12,
         }}
         {...props}
       >
-        <ul className="flex items-center justify-around gap-1">
+        <ul className="flex items-center justify-around gap-0">
           {items.map((item) => {
             const Icon = item.icon;
             const isActive = item.id === activeId;
@@ -52,25 +53,26 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
                   role="tab"
                   onClick={() => onTabClick(item.id)}
                   className={cn(
-                    "flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[52px] py-2 px-3 rounded-full flex-1 max-w-[72px]",
+                    "flex flex-col items-center justify-center gap-1 min-w-[44px] min-h-[48px] py-2 px-4 rounded-full flex-1 max-w-[76px]",
                     "transition-all duration-200 touch-manipulation active:scale-95",
                     isActive
                       ? "bg-slate-600 text-white"
-                      : "bg-transparent text-slate-600"
+                      : "bg-transparent text-slate-700"
                   )}
                   aria-label={item.label}
                   aria-selected={isActive}
                   title={item.label}
                 >
                   <Icon
-                    className="w-6 h-6 flex-shrink-0"
+                    className="w-5 h-5 flex-shrink-0"
                     strokeWidth={isActive ? 2.5 : 2}
                   />
-                  {isActive && (
-                    <span className="text-[10px] font-medium font-heading tracking-[-0.01em] truncate w-full text-center text-white">
-                      {item.label}
-                    </span>
-                  )}
+                  <span className={cn(
+                    "text-[11px] font-medium font-heading tracking-[-0.01em] truncate w-full text-center",
+                    isActive ? "text-white" : "text-slate-700"
+                  )}>
+                    {item.label}
+                  </span>
                 </button>
               </li>
             );

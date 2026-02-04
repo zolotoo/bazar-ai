@@ -339,12 +339,16 @@ body {
     padding-bottom: max(8px, var(--safe-area-inset-bottom));
   }
 
-  /* Наш таб-бар — без фона, только кнопки стеклянные */
+  /* Наш таб-бар — liquid glass: сплошная форма, frosted glass фон */
   nav.mobile-tab-bar[role="tablist"] {
-    background: transparent !important;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    border-top: none !important;
+    background: rgba(255, 255, 255, 0.72) !important;
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-bottom: none;
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    margin: 0 12px;
   }
 
   /* iOS 26 List Styles */
@@ -416,8 +420,9 @@ body {
     }
 
     nav.mobile-tab-bar[role="tablist"] {
-      background: transparent !important;
-      border-top: none !important;
+      background: rgba(30, 25, 20, 0.75) !important;
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
     }
   }
 }
