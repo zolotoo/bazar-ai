@@ -54,9 +54,10 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
                   className={cn(
                     "flex flex-col items-center justify-center gap-1 min-w-[44px] min-h-[52px] py-2 px-2 rounded-2xl flex-1 max-w-[80px]",
                     "transition-all duration-200 touch-manipulation active:scale-95",
+                    "backdrop-blur-xl backdrop-saturate-[180%] border border-white/30",
                     isActive
-                      ? "text-slate-800"
-                      : "text-slate-600"
+                      ? "text-slate-800 bg-white/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]"
+                      : "text-slate-600 bg-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]"
                   )}
                   aria-label={item.label}
                   aria-selected={isActive}
