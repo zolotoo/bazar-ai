@@ -246,7 +246,7 @@ export const SidebarSection = ({ title, children, onAdd }: SidebarSectionProps) 
   const { open, animate } = useSidebar();
   
   return (
-    <div className="mb-4">
+    <div className="mb-8">
       <motion.div
         animate={{
           opacity: animate ? (open ? 1 : 0) : 1,
@@ -406,7 +406,7 @@ export const SidebarDivider = () => {
   const { open } = useSidebar();
   return (
     <div className={cn(
-      "h-px bg-slate-200/60 my-4 transition-all",
+      "h-px bg-gradient-to-r from-transparent via-slate-200/80 to-transparent my-6 transition-all",
       open ? "mx-4" : "mx-3"
     )} />
   );

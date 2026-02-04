@@ -555,6 +555,8 @@ function AppContent() {
               </div>
             </SidebarSection>
             
+            <SidebarDivider />
+            
             {/* Projects */}
             <SidebarSection title="Твои проекты" onAdd={() => setIsCreateProjectOpen(true)}>
               <div className="space-y-1">

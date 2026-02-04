@@ -105,15 +105,15 @@ export const VideoGradientCard = ({
         ref={cardRef}
         className={cn(
           "relative rounded-card-xl overflow-hidden cursor-pointer",
-          "backdrop-blur-sm",
-          "touch-manipulation",
+          "backdrop-blur-sm touch-manipulation",
+          "border border-white/50",
           className
         )}
         style={{
           aspectRatio: "9/16",
           boxShadow: isHovered 
-            ? "0 20px 56px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.03)"
-            : "0 8px 32px rgba(0, 0, 0, 0.06), 0 2px 12px rgba(0, 0, 0, 0.03), 0 0 0 1px rgba(0, 0, 0, 0.02)",
+            ? "0 24px 64px -8px rgba(0, 0, 0, 0.12), 0 12px 32px -8px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 0 0 1px rgba(0, 0, 0, 0.04)"
+            : "0 12px 40px -8px rgba(0, 0, 0, 0.08), 0 4px 16px -4px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 0 0 1px rgba(0, 0, 0, 0.04)",
         }}
         initial={false}
         animate={{
