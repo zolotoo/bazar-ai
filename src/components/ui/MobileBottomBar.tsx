@@ -53,11 +53,11 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
                   role="tab"
                   onClick={() => onTabClick(item.id)}
                   className={cn(
-                    "flex flex-col items-center justify-center gap-1 min-w-[44px] min-h-[48px] py-2 px-4 rounded-full flex-1 max-w-[76px]",
+                    "flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[48px] py-2.5 px-5 rounded-2xl flex-1 max-w-[80px]",
                     "transition-all duration-200 touch-manipulation active:scale-95",
                     isActive
-                      ? "bg-slate-600 text-white"
-                      : "bg-transparent text-slate-700"
+                      ? "bg-slate-600 text-white shadow-sm"
+                      : "bg-transparent text-slate-800"
                   )}
                   aria-label={item.label}
                   aria-selected={isActive}
@@ -65,11 +65,11 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
                 >
                   <Icon
                     className="w-5 h-5 flex-shrink-0"
-                    strokeWidth={isActive ? 2.5 : 2}
+                    strokeWidth={isActive ? 2.5 : 1.5}
                   />
                   <span className={cn(
                     "text-[11px] font-medium font-heading tracking-[-0.01em] truncate w-full text-center",
-                    isActive ? "text-white" : "text-slate-700"
+                    isActive ? "text-white" : "text-slate-800"
                   )}>
                     {item.label}
                   </span>

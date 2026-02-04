@@ -339,15 +339,15 @@ body {
     padding-bottom: max(8px, var(--safe-area-inset-bottom));
   }
 
-  /* Наш таб-бар — liquid glass: сплошная форма, frosted glass фон */
+  /* Наш таб-бар — как в референсе: чутка прозрачно, liquid glass */
   nav.mobile-tab-bar[role="tablist"] {
-    background: rgba(255, 255, 255, 0.72) !important;
-    backdrop-filter: blur(40px) saturate(180%);
-    -webkit-backdrop-filter: blur(40px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.5) !important;
+    backdrop-filter: blur(32px) saturate(180%);
+    -webkit-backdrop-filter: blur(32px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
     border-bottom: none;
     border-radius: 24px 24px 0 0;
-    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6);
     margin: 0 12px;
   }
 
