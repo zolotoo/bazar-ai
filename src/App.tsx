@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Workspace } from './components/Workspace';
 import { LandingPage } from './components/LandingPage';
+import { Dashboard, getDisplayName } from './components/Dashboard';
+import { OnboardingModal } from './components/OnboardingModal';
 import { History } from './components/History';
 import { ProfilePage } from './components/ProfilePage';
 import { IncomingVideosDrawer } from './components/sidebar/IncomingVideosDrawer';
@@ -18,7 +20,7 @@ import { ProjectProvider, useProjectContext } from './contexts/ProjectContext';
 import type { Project } from './hooks/useProjects';
 import { 
   Settings, Search, LayoutGrid, Clock, User, LogOut, 
-  Link, Radar, Plus, FolderOpen, X, Palette, Sparkles, Trash2, Users, Menu
+  Link, Radar, Plus, FolderOpen, X, Palette, Sparkles, Trash2, Users, Menu, Home
 } from 'lucide-react';
 import { GlassFolderIcon } from './components/ui/GlassFolderIcons';
 import { MobileBottomBar, type MobileTabId } from './components/ui/MobileBottomBar';
@@ -26,7 +28,7 @@ import { cn } from './utils/cn';
 import { Toaster, toast } from 'sonner';
 
 
-type ViewMode = 'workspace' | 'canvas' | 'history' | 'profile';
+type ViewMode = 'dashboard' | 'workspace' | 'canvas' | 'history' | 'profile';
 type SearchTab = 'search' | 'link' | 'radar';
 
 // Цвета для проектов
@@ -354,12 +356,14 @@ function AppContent() {
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<{ id: string; name: string; color: string } | null>(null);
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => !getDisplayName());
   const { logout, user } = useAuth();
-  const [viewMode, setViewMode] = useState<ViewMode>('workspace');
+  const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
   const [mobileFoldersOpen, setMobileFoldersOpen] = useState(false);
   const { videos } = useInboxVideos();
 
   const mobileTabs = [
+    { id: 'dashboard' as MobileTabId, icon: Home, label: 'Главная', iconColor: 'text-slate-500' },
     { id: 'workspace' as MobileTabId, icon: LayoutGrid, label: 'Лента', iconColor: 'text-slate-500' },
     { id: 'folders' as MobileTabId, icon: FolderOpen, label: 'Папки', iconColor: 'text-slate-600' },
     { id: 'search' as MobileTabId, icon: Search, label: 'Поиск', iconColor: 'text-slate-500' },
@@ -372,10 +376,14 @@ function AppContent() {
     : isSearchOpen ? 'search'
     : viewMode === 'workspace' && mobileFoldersOpen ? 'folders'
     : viewMode === 'profile' ? 'profile'
+    : viewMode === 'dashboard' ? 'dashboard'
     : 'workspace';
 
   const handleMobileTabClick = (id: MobileTabId) => {
-    if (id === 'workspace') {
+    if (id === 'dashboard') {
+      setViewMode('dashboard');
+      setMobileFoldersOpen(false);
+    } else if (id === 'workspace') {
       setViewMode('workspace');
       setMobileFoldersOpen(false);
     } else if (id === 'folders') {
@@ -523,6 +531,12 @@ function AppContent() {
             <SidebarSection title="С чем тебе помочь?">
               <div className="space-y-0.5">
                 <SidebarLink
+                  icon={<Home className="w-4 h-4" strokeWidth={2.5} />}
+                  label="Рабочий стол"
+                  onClick={() => setViewMode('dashboard')}
+                  isActive={viewMode === 'dashboard'}
+                />
+                <SidebarLink
                   icon={<LayoutGrid className="w-4 h-4" strokeWidth={2.5} />}
                   label="Лента"
                   onClick={() => setViewMode('workspace')}
@@ -664,6 +678,14 @@ function AppContent() {
 
       {/* Main Content — на мобильных отступ снизу под нижний таб-бар, верхняя полоска убрана */}
       <div className="flex-1 min-h-0 overflow-hidden pt-0 pb-20 md:pt-0 md:pb-0">
+        {viewMode === 'dashboard' && (
+          <Dashboard
+            onOpenSearch={(tab) => { setSearchTab(tab); setIsSearchOpen(true); }}
+            onOpenFeed={() => setViewMode('workspace')}
+            onOpenTeam={() => setIsMembersModalOpen(true)}
+            videosCount={videos.length}
+          />
+        )}
         {viewMode === 'workspace' && (
           <Workspace
             externalFolderPanelOpen={mobileFoldersOpen}
@@ -722,6 +744,12 @@ function AppContent() {
           onClose={() => setIsMembersModalOpen(false)}
         />
       )}
+
+      {/* Onboarding — имя при первом входе */}
+      <OnboardingModal
+        open={showOnboarding}
+        onComplete={() => setShowOnboarding(false)}
+      />
 
       {/* Toast notifications */}
       <Toaster 

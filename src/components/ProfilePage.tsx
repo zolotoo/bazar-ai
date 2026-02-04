@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { getDisplayName, setDisplayName } from './Dashboard';
 import { useSearchHistory } from '../hooks/useSearchHistory';
 import { useFlowStore } from '../stores/flowStore';
 import { useTrackedAccounts } from '../hooks/useTrackedAccounts';
@@ -39,6 +40,19 @@ export function ProfilePage() {
   const [newUsername, setNewUsername] = useState('');
   const [newFrequency, setNewFrequency] = useState(24);
   const [adding, setAdding] = useState(false);
+  const [displayName, setDisplayNameState] = useState('');
+  const [editingName, setEditingName] = useState(false);
+
+  useEffect(() => {
+    setDisplayNameState(getDisplayName() || '');
+  }, []);
+
+  const handleSaveDisplayName = () => {
+    if (displayName.trim()) {
+      setDisplayName(displayName.trim());
+      setEditingName(false);
+    }
+  };
 
   const handleAddAccount = async () => {
     if (!newUsername.trim()) return;
@@ -71,9 +85,27 @@ export function ProfilePage() {
               {user?.telegram_username?.[0]?.toUpperCase() || 'U'}
             </span>
           </div>
-          <h2 className="text-xl font-bold text-slate-800">
-            @{user?.telegram_username}
-          </h2>
+          {editingName ? (
+            <div className="flex items-center gap-2 mt-2">
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayNameState(e.target.value)}
+                placeholder="Твоё имя"
+                className="px-3 py-2 rounded-xl border border-slate-200 text-slate-800 text-sm"
+                autoFocus
+              />
+              <button onClick={handleSaveDisplayName} className="px-3 py-2 rounded-xl bg-slate-600 text-white text-sm">Сохранить</button>
+              <button onClick={() => { setEditingName(false); setDisplayNameState(getDisplayName() || ''); }} className="px-3 py-2 rounded-xl bg-slate-100 text-slate-600 text-sm">Отмена</button>
+            </div>
+          ) : (
+            <button onClick={() => setEditingName(true)} className="text-left">
+              <h2 className="text-xl font-bold text-slate-800">
+                {displayName || 'Как тебя зовут?'}
+              </h2>
+              <p className="text-sm text-slate-500 mt-0.5">@{user?.telegram_username}</p>
+            </button>
+          )}
           <div className="flex items-center gap-1 mt-2">
             <div className="w-2 h-2 rounded-full bg-emerald-500" />
             <span className="text-sm text-emerald-600">Подключен к Telegram</span>

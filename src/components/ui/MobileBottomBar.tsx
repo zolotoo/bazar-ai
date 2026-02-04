@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "../../utils/cn";
 import type { LucideIcon } from "lucide-react";
 
-export type MobileTabId = "workspace" | "folders" | "search" | "profile" | "menu";
+export type MobileTabId = "dashboard" | "workspace" | "folders" | "search" | "profile" | "menu";
 
 interface TabItem {
   id: MobileTabId;
