@@ -14,7 +14,7 @@ function hexToRgba(hex: string, alpha: number): string {
 interface GlassFolderIconProps {
   iconType: string;
   color: string;
-  size?: 12 | 16 | 20 | 24 | 28;
+  size?: 12 | 16 | 18 | 20 | 22 | 24 | 28;
   className?: string;
   /** На тёмном фоне — инвертировать (белый иконка) */
   invert?: boolean;
