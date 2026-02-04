@@ -230,7 +230,7 @@ export function useProjectMembers(projectId: string | null) {
           fetchMembers();
         }
       )
-      .subscribe((status, err) => {
+      .subscribe((_status, err) => {
         if (err && !err.message?.includes('relation') && !err.message?.includes('does not exist')) {
           console.warn('[ProjectMembers] Realtime subscription error:', err);
         }
