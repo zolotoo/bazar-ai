@@ -10,6 +10,7 @@
 
 import { supabase } from '../utils/supabase';
 import { downloadAndTranscribe, checkTranscriptionStatus } from './transcriptionService';
+import { toast } from 'sonner';
 
 export interface GlobalVideo {
   id: string;
@@ -199,6 +200,7 @@ export async function startGlobalTranscription(
     if (!result.success) {
       console.error('[GlobalVideo] Download failed:', result.error);
       await updateStatus('error');
+      toast.error('Ошибка транскрибации', { description: result.error || 'Не удалось скачать видео' });
       return;
     }
     
@@ -237,6 +239,7 @@ export async function startGlobalTranscription(
       .from('saved_videos')
       .update({ transcript_status: 'error' })
       .eq('id', userVideoId);
+    toast.error('Ошибка транскрибации', { description: err instanceof Error ? err.message : 'Неизвестная ошибка' });
   }
 }
 

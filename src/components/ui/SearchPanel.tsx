@@ -202,11 +202,14 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
     getProfileStats,
   } = useRadar(currentProjectId, radarUserId);
   
-  // Получаем все видео профиля из inboxVideos (без запросов к API)
+  // Получаем видео профиля из inbox текущего проекта (разделение по проектам)
   const getProfileVideosFromInbox = useCallback((username: string) => {
     return inboxVideos.filter((video: IncomingVideo) => {
       const ownerUsername = (video as any).owner_username;
-      return ownerUsername && ownerUsername.toLowerCase() === username.toLowerCase();
+      const videoProjectId = (video as any).project_id;
+      const ownerMatch = ownerUsername && ownerUsername.toLowerCase() === username.toLowerCase();
+      const projectMatch = !currentProjectId || videoProjectId === currentProjectId;
+      return ownerMatch && projectMatch;
     }).map((video: IncomingVideo) => {
       // Преобразуем IncomingVideo в формат RadarReel
       return {

@@ -108,7 +108,7 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
               transition={{ duration: 0.35 }}
               className="mb-8 md:mb-10"
             >
-              <h1 className="text-2xl md:text-3xl font-bold mb-[0.6em] leading-[0.8] font-heading">
+              <h1 className="text-2xl md:text-3xl font-bold mb-[0.1em] leading-[0.8] font-heading">
                 <span className="text-slate-500">{greeting},</span>{' '}
                 <span className="text-slate-800 italic">{name}</span>
               </h1>

@@ -37,7 +37,14 @@ export function useProjectSync(projectId: string | null) {
     };
   }, [userId]);
 
-  // Отправка изменения на сервер
+  // entity_id в project_changes — UUID; folder ID вида "folder-123" невалиден, передаём null
+  const toValidEntityId = (id: string | null): string | null => {
+    if (!id) return null;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(id) ? id : null;
+  };
+
+  // Отправка изменения на сервер (синхронизация опциональна — не блокирует основной flow)
   const sendChange = useCallback(async (
     changeType: string,
     entityType: string,
@@ -51,8 +58,8 @@ export function useProjectSync(projectId: string | null) {
     }
 
     try {
-      // Устанавливаем контекст пользователя для RLS
       await setUserContext(userId);
+      const validEntityId = toValidEntityId(entityId);
       
       const { data, error } = await supabase
         .from('project_changes')
@@ -61,7 +68,7 @@ export function useProjectSync(projectId: string | null) {
           user_id: userId,
           change_type: changeType,
           entity_type: entityType,
-          entity_id: entityId,
+          entity_id: validEntityId,
           old_data: oldData,
           new_data: newData,
           vector_clock: generateVectorClock(),

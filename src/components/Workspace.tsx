@@ -509,16 +509,16 @@ export function Workspace(props?: WorkspaceProps) {
     
     await updateFolder(currentProjectId, folderId, updates);
     
-    // Отправляем изменение для синхронизации
+    // Синхронизация — не блокируем UI при ошибке
     if (currentProjectId && oldData) {
       const changeType = updates.name ? 'folder_renamed' : 'project_updated';
-      await sendChange(
+      sendChange(
         changeType,
         'folder',
         folderId,
         oldData,
         { ...oldData, ...updates }
-      );
+      ).catch(() => { /* toast уже показан в sendChange */ });
     }
     
     setEditingFolder(null);
@@ -1259,12 +1259,13 @@ export function Workspace(props?: WorkspaceProps) {
                 </div>
               </div>
               
-              {/* Folder list */}
+              {/* Folder list — прокручиваемая область при большом количестве папок */}
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-slate-600 mb-3">
                   Папки проекта (перетащите для изменения порядка)
                 </label>
                 
+                <div className="max-h-[40vh] overflow-y-auto overflow-x-hidden pr-1 -mr-1 space-y-2">
                 {(currentProject?.folders?.slice().sort((a, b) => a.order - b.order) || []).map((folder, index) => (
                   <div
                     key={folder.id}
@@ -1345,6 +1346,7 @@ export function Workspace(props?: WorkspaceProps) {
                     Нет папок. Создайте первую папку выше.
                   </div>
                 )}
+                </div>
               </div>
             </div>
             
