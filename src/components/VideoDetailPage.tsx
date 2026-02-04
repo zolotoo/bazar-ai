@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { proxyImageUrl, PLACEHOLDER_400x600 } from '../utils/imagePlaceholder';
+import { proxyVideoUrl } from '../utils/videoProxy';
 import { checkTranscriptionStatus, downloadAndTranscribe } from '../services/transcriptionService';
 import { supabase } from '../utils/supabase';
 import { toast } from 'sonner';
@@ -1077,7 +1078,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
               >
               {showVideo && directVideoUrl && !videoLoadError ? (
                 <video
-                  src={directVideoUrl}
+                  src={proxyVideoUrl(directVideoUrl) || directVideoUrl}
                   className="w-full h-full object-cover"
                   controls
                   autoPlay
