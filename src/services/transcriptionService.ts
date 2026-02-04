@@ -10,29 +10,31 @@ export interface TranscriptionResult {
 }
 
 /**
- * Получает прямую ссылку на скачивание видео из Instagram
+ * Получает прямую ссылку на скачивание видео из Instagram.
+ * Сразу через reel-info (оплаченный instagram-scraper-20251) — без fallback на download-video.
  */
 export async function getVideoDownloadUrl(instagramUrl: string): Promise<string | null> {
   try {
     console.log('[Transcription] Getting download URL for:', instagramUrl);
-    
-    const response = await fetch('/api/download-video', {
+
+    const reelRes = await fetch('/api/reel-info', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: instagramUrl }),
     });
+    const reelData = await reelRes.json();
 
-    if (!response.ok) {
-      console.error('[Transcription] Download API error:', response.status);
+    if (!reelRes.ok) {
+      console.error('[Transcription] reel-info error:', reelRes.status);
       return null;
     }
 
-    const data = await response.json();
-    console.log('[Transcription] Download response:', data);
-    
-    return data.videoUrl || null;
+    if (reelData.success && reelData.video_url?.trim()) {
+      return reelData.video_url;
+    }
+
+    console.warn('[Transcription] reel-info did not return video_url');
+    return null;
   } catch (error) {
     console.error('[Transcription] Error getting download URL:', error);
     return null;

@@ -94,6 +94,15 @@ export const VideoGradientCard = ({
     }
   }, [hasWsrv, onThumbnailError, videoId, shortcode]);
 
+  // Старые видео с пустым thumbnail_url — проактивно подгружаем (onError не сработает для placeholder)
+  const hasEmptyThumb = !thumbnailUrl?.trim();
+  useEffect(() => {
+    if (hasEmptyThumb && onThumbnailError && videoId && shortcode) {
+      setIsRefreshingThumb(true);
+      Promise.resolve(onThumbnailError(videoId, shortcode, true)).finally(() => setIsRefreshingThumb(false));
+    }
+  }, [hasEmptyThumb, onThumbnailError, videoId, shortcode]);
+
   return (
     <div
       draggable={!!onDragStart}
