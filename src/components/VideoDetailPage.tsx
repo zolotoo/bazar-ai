@@ -1368,78 +1368,80 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
 
           {/* Middle: Transcript — на мобильных с мин. высотой для скролла */}
           <div className="flex-1 flex flex-col min-w-0 min-h-[320px] md:min-h-0 rounded-card-xl shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] overflow-hidden">
-            {/* Transcript header — на мобильных кнопки переносятся */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-b border-slate-100">
-              <div className="flex items-center gap-2 shrink-0">
-                <FileText className="w-5 h-5 text-slate-400 flex-shrink-0" />
-                <h3 className="font-semibold text-slate-800">Транскрибация</h3>
-              </div>
-              
-              <div className="flex flex-wrap items-center gap-2">
-                {/* Tabs: Original / Translation */}
-                <div className="flex items-center bg-slate-100 rounded-lg p-0.5 h-9">
+            {/* Transcript header — 2 ряда как в каруселях */}
+            <div className="flex flex-col gap-3 p-4 border-b border-slate-100">
+              {/* Ряд 1: заголовок + табы + Перевести */}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-slate-400 flex-shrink-0" />
+                  <h3 className="font-semibold text-slate-800">Транскрибация</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
+                    <button
+                      onClick={() => setTranscriptTab('original')}
+                      className={cn(
+                        "h-8 px-3 rounded-md text-xs font-medium transition-all flex items-center",
+                        transcriptTab === 'original'
+                          ? "bg-white text-slate-800 shadow-sm"
+                          : "text-slate-600 hover:text-slate-800"
+                      )}
+                    >
+                      Оригинал
+                    </button>
+                    <button
+                      onClick={() => setTranscriptTab('translation')}
+                      className={cn(
+                        "h-8 px-3 rounded-md text-xs font-medium transition-all flex items-center",
+                        transcriptTab === 'translation'
+                          ? "bg-white text-slate-800 shadow-sm"
+                          : "text-slate-600 hover:text-slate-800"
+                      )}
+                    >
+                      Перевод
+                    </button>
+                  </div>
                   <button
-                    onClick={() => setTranscriptTab('original')}
-                    className={cn(
-                      "h-full px-3 rounded-md text-xs font-medium transition-all flex items-center",
-                      transcriptTab === 'original'
-                        ? "bg-white text-slate-800 shadow-sm"
-                        : "text-slate-600 hover:text-slate-800"
-                    )}
+                    onClick={handleTranslate}
+                    disabled={!transcript || isTranslating}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium disabled:opacity-50"
+                    title="Перевести"
                   >
-                    Оригинал
-                  </button>
-                  <button
-                    onClick={() => setTranscriptTab('translation')}
-                    className={cn(
-                      "h-full px-3 rounded-md text-xs font-medium transition-all flex items-center",
-                      transcriptTab === 'translation'
-                        ? "bg-white text-slate-800 shadow-sm"
-                        : "text-slate-600 hover:text-slate-800"
+                    {isTranslating ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Languages className="w-3.5 h-3.5" />
                     )}
-                  >
-                    Перевод
+                    Перевести
+                    <TokenBadge tokens={getTokenCost('translate')} />
                   </button>
                 </div>
-
-                {transcript && (
-                  <>
-                    <button
-                      onClick={handleSaveTranscript}
-                      disabled={isSavingTranscript}
-                      className="h-9 px-3 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-xs font-medium transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 shrink-0"
-                      title="Сохранить транскрипцию"
-                    >
-                      {isSavingTranscript ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Save className="w-3.5 h-3.5" />
-                      )}
-                      Сохранить
-                    </button>
-                    <button
-                      onClick={handleTranslate}
-                      disabled={isTranslating}
-                      className="h-9 px-2.5 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 shrink-0"
-                      title="Перевести"
-                    >
-                      {isTranslating ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Languages className="w-4 h-4" />
-                      )}
-                      <TokenBadge tokens={getTokenCost('translate')} />
-                    </button>
-                    <button
-                      onClick={handleCopyTranscript}
-                      className="h-9 w-9 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-700 transition-colors shrink-0 flex items-center justify-center"
-                      title="Копировать"
-                    >
-                      {copiedTranscript ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                    </button>
-                  </>
-                )}
               </div>
+              {/* Ряд 2: Сохранить, Копировать */}
+              {transcript && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={handleSaveTranscript}
+                    disabled={isSavingTranscript}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-xs font-medium disabled:opacity-50"
+                    title="Сохранить транскрипцию"
+                  >
+                    {isSavingTranscript ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Save className="w-3.5 h-3.5" />
+                    )}
+                    Сохранить
+                  </button>
+                  <button
+                    onClick={handleCopyTranscript}
+                    className="flex items-center gap-1.5 p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-700"
+                    title="Копировать"
+                  >
+                    {copiedTranscript ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
+              )}
             </div>
             
             {/* Transcript content */}
@@ -1518,35 +1520,35 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
 
           {/* Right: Script — на мобильных с мин. высотой */}
           <div className="flex-1 flex flex-col min-w-0 min-h-[280px] md:min-h-0 rounded-card-xl shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] overflow-hidden">
-            {/* Script header — на мобильных кнопки переносятся */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-b border-slate-100">
-              <div className="flex items-center gap-2 flex-wrap">
-                <FileText className="w-5 h-5 text-slate-600 flex-shrink-0" />
-                <h3 className="font-semibold text-slate-800">Мой сценарий</h3>
-                {(projectStyles.length > 0 || currentProject?.stylePrompt) && (
-                  <button
-                    type="button"
-                    onClick={() => openPromptModal(projectStyles[0] || null)}
-                    className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-medium hover:bg-slate-200 transition-colors"
-                    title="Промт стиля"
-                  >
-                    {projectStyles.length || 1} стил{projectStyles.length === 1 || !projectStyles.length ? 'ь' : 'я'} · Промт
-                  </button>
-                )}
-                {video.script_text && (
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 text-[10px] font-medium">
-                    сохранён
-                  </span>
-                )}
-              </div>
-              
-              <div className="flex items-center gap-2 flex-wrap">
+            {/* Script header — 2 ряда как в каруселях */}
+            <div className="flex flex-col gap-3 p-4 border-b border-slate-100">
+              {/* Ряд 1: заголовок + стиль · Промт + сохранён + По стилю */}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <FileText className="w-5 h-5 text-slate-600 flex-shrink-0" />
+                  <h3 className="font-semibold text-slate-800">Мой сценарий</h3>
+                  {(projectStyles.length > 0 || currentProject?.stylePrompt) && (
+                    <button
+                      type="button"
+                      onClick={() => openPromptModal(projectStyles[0] || null)}
+                      className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-medium hover:bg-slate-200 transition-colors"
+                      title="Промт стиля"
+                    >
+                      {projectStyles.length || 1} стил{projectStyles.length === 1 || !projectStyles.length ? 'ь' : 'я'} · Промт
+                    </button>
+                  )}
+                  {video.script_text && (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 text-[10px] font-medium">
+                      сохранён
+                    </span>
+                  )}
+                </div>
                 {(projectStyles.length > 0 || currentProject?.stylePrompt) && transcript?.trim() && (
                   <div className="relative" ref={stylePickerRef}>
                     <button
                       onClick={() => setShowStylePickerPopover(!showStylePickerPopover)}
                       disabled={isGeneratingScript}
-                      className="h-9 px-3 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-xs font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 shrink-0"
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-xs font-medium disabled:opacity-50"
                       title="Выбрать стиль и сгенерировать"
                     >
                       {isGeneratingScript ? (
@@ -1623,31 +1625,34 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                     )}
                   </div>
                 )}
-                {scriptGeneratedByStyle && script?.trim() && (
-                  <button
-                    type="button"
-                    onClick={() => setShowChoiceModal(true)}
-                    className="h-9 px-3 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-medium transition-all flex items-center justify-center gap-1.5 shrink-0"
-                    title="Дать обратную связь — промт дообучится"
-                  >
-                    Что не так сделал?
-                  </button>
-                )}
+              </div>
+              {/* Ряд 2: Обучить стиль, Сохранить, Копировать, Что не так сделал? */}
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => { setCreatingNewStyle(true); setEditingStyle(null); setNewStyleName(''); setShowStyleTrainModal(true); }}
-                  className="h-9 px-3 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium transition-all flex items-center justify-center gap-1.5 shrink-0"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium"
                   title="Создать новый стиль по 1–5 примерам"
                 >
                   <BookOpen className="w-3.5 h-3.5" />
                   Обучить стиль
                 </button>
+                {scriptGeneratedByStyle && script?.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setShowChoiceModal(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-medium"
+                    title="Дать обратную связь — промт дообучится"
+                  >
+                    Что не так сделал?
+                  </button>
+                )}
                 {script && (
                   <>
                     <button
                       onClick={handleSaveScript}
                       disabled={isSavingScript}
-                      className="h-9 px-3 rounded-lg bg-slate-600 text-white text-xs font-medium hover:bg-slate-700 transition-all shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50 shrink-0"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-600 text-white text-xs font-medium hover:bg-slate-700 disabled:opacity-50"
                     >
                       {isSavingScript ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1658,7 +1663,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                     </button>
                     <button
                       onClick={handleCopyScript}
-                      className="h-9 w-9 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-700 transition-colors shrink-0 flex items-center justify-center"
+                      className="flex items-center justify-center p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-700"
                       title="Копировать"
                     >
                       {copiedScript ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
