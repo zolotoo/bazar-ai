@@ -187,8 +187,21 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'audioUrl is required (video) or imageUrls/images (carousel)' });
   }
 
+  // AssemblyAI не может загружать с Instagram CDN — проксируем через наш API
+  const INSTAGRAM_CDN = ['cdninstagram.com', 'fbcdn.net', 'scontent', 'cdn.fbsbx.com'];
+  const isInstagramCdn = INSTAGRAM_CDN.some(h => audioUrl.includes(h));
+  const isOurStorage = audioUrl.includes('supabase.co');
+  let audioUrlForAssembly = audioUrl;
+  if (isInstagramCdn && !isOurStorage) {
+    const protocol = req.headers['x-forwarded-proto'] || 'https';
+    const host = req.headers['x-forwarded-host'] || req.headers['host'] || process.env.VERCEL_URL || 'localhost:3000';
+    const baseUrl = `${protocol}://${host}`.replace(/:\d+$/, ''); // убрать порт для прода
+    audioUrlForAssembly = `${baseUrl}/api/video-proxy?url=${encodeURIComponent(audioUrl)}`;
+    console.log('Using proxy URL for AssemblyAI:', audioUrlForAssembly.slice(0, 80) + '...');
+  }
+
   try {
-    console.log('Starting transcription for:', audioUrl);
+    console.log('Starting transcription for:', audioUrlForAssembly.slice(0, 100));
     const response = await fetch('https://api.assemblyai.com/v2/transcript', {
       method: 'POST',
       headers: {
@@ -196,7 +209,7 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        audio_url: audioUrl,
+        audio_url: audioUrlForAssembly,
         language_detection: true,
       }),
     });
