@@ -141,7 +141,7 @@ export const MobileSidebar = ({
             style={{ willChange: "transform", WebkitOverflowScrolling: "touch" }}
           >
             <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0 safe-top border-b border-slate-100">
-              <span className="text-[15px] font-semibold text-slate-700">Меню</span>
+              <span className="text-[15px] font-semibold text-slate-700 font-heading tracking-[-0.01em]">Меню</span>
               <button
                 onClick={() => setOpen(false)}
                 className="p-2.5 -m-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-slate-100 text-slate-600 active:bg-slate-200 transition-colors touch-manipulation"
@@ -217,7 +217,7 @@ export const SidebarLink = ({
         }}
         transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
         className={cn(
-          "text-sm font-medium whitespace-nowrap overflow-hidden",
+          "text-sm font-medium whitespace-nowrap overflow-hidden font-heading tracking-[-0.01em]",
           "group-hover/sidebar:translate-x-0.5 transition-transform duration-150"
         )}
       >
@@ -257,7 +257,7 @@ export const SidebarSection = ({ title, children, onAdd }: SidebarSectionProps) 
         transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
         className="flex items-center justify-between px-3 mb-1.5 overflow-hidden"
       >
-        <span className="text-xs font-semibold text-slate-500 tracking-wider">
+        <span className="text-xs font-semibold text-slate-500 font-heading tracking-[-0.01em]">
           {title}
         </span>
         {onAdd && (
@@ -344,7 +344,7 @@ export const SidebarProject = ({
           opacity: animate ? (open ? 1 : 0) : 1,
         }}
         className={cn(
-          "flex-1 text-sm font-medium truncate",
+          "flex-1 text-sm font-medium truncate font-heading tracking-[-0.01em]",
           isActive ? "text-slate-800" : "text-slate-700"
         )}
       >
@@ -355,7 +355,7 @@ export const SidebarProject = ({
           animate={{
             opacity: animate ? (open ? 1 : 0) : 1,
           }}
-          className="px-2 py-0.5 rounded-full bg-slate-200/40 text-slate-700 text-xs font-semibold"
+          className="px-2 py-0.5 rounded-full bg-slate-200/40 text-slate-700 text-xs font-semibold font-heading tracking-[-0.01em]"
         >
           {badge}
         </motion.span>
@@ -398,8 +398,8 @@ export const SidebarLogo = () => {
         }}
         className="overflow-hidden leading-none"
       >
-        <h1 className="text-base font-semibold text-slate-800 whitespace-nowrap">Riri AI</h1>
-        <p className="text-[10px] text-slate-500 whitespace-nowrap font-medium mt-px">Твой ассистент</p>
+        <h1 className="text-base font-semibold text-slate-800 whitespace-nowrap font-heading tracking-[-0.01em]">Riri AI</h1>
+        <p className="text-[10px] text-slate-500 whitespace-nowrap font-medium mt-px font-heading tracking-[-0.01em]">Твой ассистент</p>
       </motion.div>
     </div>
   );
