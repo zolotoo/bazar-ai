@@ -96,11 +96,11 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
               transition={{ duration: 0.35 }}
               className="mb-8 md:mb-10"
             >
-              <h1 className="text-2xl md:text-3xl font-bold mb-0.5 leading-tight">
+              <h1 className="text-2xl md:text-3xl font-bold mb-0.5 leading-[0.9]">
                 <span className="text-slate-500">{greeting},</span>{' '}
                 <span className="text-slate-800">{name}</span>
               </h1>
-              <p className="text-slate-500 text-base md:text-lg font-normal">
+              <p className="text-slate-500 text-base md:text-lg font-normal leading-[0.9]">
                 Что хочешь сделать сегодня?
               </p>
             </motion.div>
