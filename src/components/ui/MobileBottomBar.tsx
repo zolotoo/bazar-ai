@@ -19,7 +19,7 @@ interface MobileBottomBarProps extends React.HTMLAttributes<HTMLElement> {
   onTabClick: (id: MobileTabId) => void;
 }
 
-/** Light theme tab bar — transparent, labels only when active, 4 buttons */
+/** iOS 26 style tab bar — glass morphism, frosted glass, labels only when active */
 export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProps>(
   ({ className, items, activeId, onTabClick, ...props }, ref) => {
     return (
@@ -28,8 +28,10 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
         role="tablist"
         className={cn(
           "md:hidden fixed left-0 right-0 bottom-0 z-[9998]",
-          "bg-transparent",
+          "bg-white/60 backdrop-blur-2xl backdrop-saturate-[180%]",
+          "border-t border-white/[0.4]",
           "pt-2 touch-manipulation",
+          "shadow-[0_-4px_24px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.6)]",
           className
         )}
         style={{
@@ -53,9 +55,10 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
                   className={cn(
                     "flex flex-col items-center justify-center gap-1 min-w-[44px] min-h-[52px] py-2 px-2 rounded-2xl flex-1 max-w-[80px]",
                     "transition-all duration-200 touch-manipulation active:scale-95",
+                    "backdrop-blur-xl backdrop-saturate-[180%]",
                     isActive
-                      ? "text-slate-800 bg-white/70 backdrop-blur-xl"
-                      : "text-slate-500 active:bg-white/30"
+                      ? "text-slate-800 bg-white/70 border border-white/60 shadow-[0_2px_12px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.9)]"
+                      : "text-slate-500 bg-white/30 border border-white/40 shadow-[0_1px_4px_rgba(0,0,0,0.03),inset_0_1px_0_rgba(255,255,255,0.5)] active:bg-white/50"
                   )}
                   aria-label={item.label}
                   aria-selected={isActive}
