@@ -352,7 +352,11 @@ function AppContent() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTab, setSearchTab] = useState<SearchTab>(HIDE_SEARCH_BY_WORD ? 'link' : 'search');
-  const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  // На мобильных сайдбар закрыт по умолчанию — пользователь открывает через «Меню»
+  const [sidebarExpanded, setSidebarExpanded] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return window.innerWidth >= 768;
+  });
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<{ id: string; name: string; color: string } | null>(null);
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
@@ -362,6 +366,14 @@ function AppContent() {
   const [mobileFoldersOpen, setMobileFoldersOpen] = useState(false);
   const { videos } = useInboxVideos();
 
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const handler = () => setIsMobile(mq.matches);
+    handler();
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
   const mobileTabs = [
     { id: 'dashboard' as MobileTabId, icon: Home, label: 'Главная', iconColor: 'text-slate-500' },
     { id: 'workspace' as MobileTabId, icon: LayoutGrid, label: 'Лента', iconColor: 'text-slate-500' },
@@ -597,36 +609,10 @@ function AppContent() {
                   </button>
                 ) : (
                   <>
-                    {/* Свои проекты */}
-                    {projects.filter((p: any) => !p.isShared).length > 0 && (
-                      <div className="space-y-1">
-                        {projects.filter((p: Project) => !p.isShared).map((project: Project) => (
-                          <div key={project.id} className="relative group">
-                            <SidebarProject
-                              name={project.name}
-                              color={project.color}
-                              isActive={currentProjectId === project.id}
-                              onClick={() => { selectProject(project.id); if (window.innerWidth < 768) setSidebarExpanded(false); }}
-                              onEdit={() => setEditingProject({ id: project.id, name: project.name, color: project.color })}
-                            />
-                            {currentProjectId === project.id && (
-                              <button
-                                onClick={() => setIsMembersModalOpen(true)}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-white/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/80"
-                                title="Управление участниками"
-                              >
-                                <Users className="w-3.5 h-3.5 text-slate-600" />
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {/* Общие проекты */}
+                    {/* На мобильных: общие проекты первыми, чтобы приглашённые видели их сразу */}
                     {projects.filter((p: any) => p.isShared).length > 0 && (
                       <>
-                        <div className="pt-2 mt-2 border-t border-slate-200/60">
+                        <div className={cn(isMobile ? "pt-0 mt-0" : "pt-2 mt-2 border-t border-slate-200/60")}>
                           <p className="px-3 py-1 text-xs font-medium text-slate-500 font-heading tracking-[-0.01em]">Общие проекты</p>
                         </div>
                         <div className="space-y-1">
@@ -638,7 +624,7 @@ function AppContent() {
                                   name={project.name}
                                   color={project.color}
                                   isActive={currentProjectId === project.id}
-                                  onClick={async () => { await handleProjectClick(project); if (window.innerWidth < 768) setSidebarExpanded(false); }}
+                                  onClick={async () => { await handleProjectClick(project); if (isMobile) setSidebarExpanded(false); }}
                                   onEdit={() => setEditingProject({ id: project.id, name: project.name, color: project.color })}
                                   badge={isPending ? 'Новое' : undefined}
                                 />
@@ -647,8 +633,8 @@ function AppContent() {
                                 )}
                                 {currentProjectId === project.id && !isPending && (
                                   <button
-                                    onClick={() => setIsMembersModalOpen(true)}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-white/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/80"
+                                    onClick={(e) => { e.stopPropagation(); setIsMembersModalOpen(true); }}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-white/60 backdrop-blur-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-white/80 touch-manipulation"
                                     title="Управление участниками"
                                   >
                                     <Users className="w-3.5 h-3.5 text-slate-600" />
@@ -659,6 +645,34 @@ function AppContent() {
                           })}
                         </div>
                       </>
+                    )}
+                    {/* Свои проекты */}
+                    {projects.filter((p: any) => !p.isShared).length > 0 && (
+                      <div className={cn("space-y-1", projects.filter((p: any) => p.isShared).length > 0 && "pt-2 mt-2 border-t border-slate-200/60")}>
+                        {projects.filter((p: any) => p.isShared).length > 0 && (
+                          <p className="px-3 py-1 text-xs font-medium text-slate-500 font-heading tracking-[-0.01em]">Мои проекты</p>
+                        )}
+                        {projects.filter((p: Project) => !p.isShared).map((project: Project) => (
+                          <div key={project.id} className="relative group">
+                            <SidebarProject
+                              name={project.name}
+                              color={project.color}
+                              isActive={currentProjectId === project.id}
+                              onClick={() => { selectProject(project.id); if (isMobile) setSidebarExpanded(false); }}
+                              onEdit={() => setEditingProject({ id: project.id, name: project.name, color: project.color })}
+                            />
+                            {currentProjectId === project.id && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setIsMembersModalOpen(true); }}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-white/60 backdrop-blur-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-white/80 touch-manipulation"
+                                title="Управление участниками"
+                              >
+                                <Users className="w-3.5 h-3.5 text-slate-600" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </>
                 )}

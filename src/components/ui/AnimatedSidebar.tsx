@@ -151,10 +151,10 @@ export const MobileSidebar = ({
               </button>
             </div>
             <div className={cn(
-              "flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4 pt-3 space-y-1",
+              "flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain p-4 pt-3 space-y-1",
               "[&_button]:min-h-[44px] [&_button]:touch-manipulation",
               "[&_[role='button']]:min-h-[44px]"
-            )}>
+            )} style={{ WebkitOverflowScrolling: 'touch' }}>
               {children}
             </div>
           </motion.div>
