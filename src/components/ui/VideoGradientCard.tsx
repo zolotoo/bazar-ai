@@ -94,17 +94,22 @@ export const VideoGradientCard = ({
     }
   }, [hasWsrv, onThumbnailError, videoId, shortcode]);
 
-  // Превью пустое (папка "Ожидает сценария" и др.) — проактивно подгружаем через reel-info
+  // Превью пустое (папка "Ожидает сценария" и др.) — проактивно подгружаем через reel-info.
+  // Первые 4 карточки (priority) — сразу, остальные — с задержкой, чтобы видимые грузились первыми.
   const emptyThumbFetched = useRef(false);
   useEffect(() => {
     const isEmpty = !thumbnailUrl || (typeof thumbnailUrl === 'string' && !thumbnailUrl.trim());
     if (isEmpty && onThumbnailError && videoId && shortcode && !emptyThumbFetched.current) {
       emptyThumbFetched.current = true;
-      setIsRefreshingThumb(true);
-      Promise.resolve(onThumbnailError(videoId, shortcode, true)).finally(() => setIsRefreshingThumb(false));
+      const delay = priority ? 0 : 600;
+      const t = setTimeout(() => {
+        setIsRefreshingThumb(true);
+        Promise.resolve(onThumbnailError(videoId, shortcode, true)).finally(() => setIsRefreshingThumb(false));
+      }, delay);
+      return () => clearTimeout(t);
     }
     if (!isEmpty) emptyThumbFetched.current = false;
-  }, [thumbnailUrl, onThumbnailError, videoId, shortcode]);
+  }, [thumbnailUrl, onThumbnailError, videoId, shortcode, priority]);
 
   return (
     <div
