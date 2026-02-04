@@ -10,5 +10,5 @@ export function proxyVideoUrl(url: string | null | undefined): string | null | u
   if (url.includes('supabase.co')) return url; // Наш storage — без прокси
   const needsProxy = INSTAGRAM_CDN_HOSTS.some(h => url.includes(h));
   if (!needsProxy) return url;
-  return `/api/video-proxy?url=${encodeURIComponent(url)}`;
+  return `/api/download-video?url=${encodeURIComponent(url)}`;
 }

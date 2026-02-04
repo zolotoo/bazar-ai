@@ -1,12 +1,70 @@
 // Vercel Serverless Function - скачивание видео через Instagram API
+// POST: получить ссылку на скачивание
+// GET ?url=...: проксировать видео (CORS, AssemblyAI, мобильное воспроизведение)
 export default async function handler(req, res) {
-  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
+  }
+
+  // GET — проксирование видео (объединено с video-proxy для лимита 12 функций)
+  if (req.method === 'GET') {
+    const url = req.query.url;
+    if (!url) {
+      return res.status(400).json({ error: 'url query param is required' });
+    }
+    let decodedUrl;
+    try {
+      decodedUrl = decodeURIComponent(url);
+    } catch {
+      return res.status(400).json({ error: 'Invalid url' });
+    }
+    const allowedHosts = ['cdninstagram.com', 'fbcdn.net', 'scontent', 'cdn.fbsbx.com'];
+    if (!allowedHosts.some(h => decodedUrl.includes(h))) {
+      return res.status(403).json({ error: 'URL not allowed' });
+    }
+    try {
+      const range = req.headers.range || '';
+      const response = await fetch(decodedUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; VideoProxy/1.0)',
+          ...(range && { Range: range }),
+        },
+      });
+      if (!response.ok) {
+        return res.status(response.status).json({ error: 'Upstream error' });
+      }
+      res.setHeader('Content-Type', response.headers.get('content-type') || 'video/mp4');
+      const contentLength = response.headers.get('content-length');
+      const acceptRanges = response.headers.get('accept-ranges');
+      if (contentLength) res.setHeader('Content-Length', contentLength);
+      if (acceptRanges) res.setHeader('Accept-Ranges', acceptRanges);
+      if (response.status === 206) {
+        res.setHeader('Content-Range', response.headers.get('content-range'));
+        res.status(206);
+      }
+      const { Readable } = await import('stream');
+      const reader = response.body.getReader();
+      const stream = new Readable({
+        async read() {
+          try {
+            const { done, value } = await reader.read();
+            this.push(done ? null : Buffer.from(value));
+          } catch (e) {
+            this.destroy(e);
+          }
+        },
+      });
+      stream.on('error', () => res.end());
+      stream.pipe(res);
+    } catch (err) {
+      console.error('Video proxy error:', err);
+      return res.status(502).json({ error: 'Proxy failed' });
+    }
+    return;
   }
 
   if (req.method !== 'POST') {

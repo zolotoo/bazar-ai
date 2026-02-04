@@ -196,7 +196,7 @@ export default async function handler(req, res) {
     const protocol = req.headers['x-forwarded-proto'] || 'https';
     const host = req.headers['x-forwarded-host'] || req.headers['host'] || process.env.VERCEL_URL || 'localhost:3000';
     const baseUrl = `${protocol}://${host}`.replace(/:\d+$/, ''); // убрать порт для прода
-    audioUrlForAssembly = `${baseUrl}/api/video-proxy?url=${encodeURIComponent(audioUrl)}`;
+    audioUrlForAssembly = `${baseUrl}/api/download-video?url=${encodeURIComponent(audioUrl)}`;
     console.log('Using proxy URL for AssemblyAI:', audioUrlForAssembly.slice(0, 80) + '...');
   }
 
