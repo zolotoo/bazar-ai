@@ -562,6 +562,18 @@ body {
   scrollbar-width: none;
 }
 
+/* Надёжная прокрутка на мобильных — листание карточек в ленте */
+.overflow-scroll-touch {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
+}
+@media (max-width: 768px) {
+  .overflow-scroll-touch {
+    overflow-y: scroll !important; /* force scroll context на iOS */
+  }
+}
+
 /* Hide scrollbar when sidebar is closed */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;

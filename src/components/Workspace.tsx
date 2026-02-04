@@ -607,7 +607,7 @@ export function Workspace(_props?: WorkspaceProps) {
           </motion.div>
         )}
       </AnimatePresence>
-      <div className="h-full overflow-hidden relative flex flex-col">
+      <div className="h-full min-h-0 overflow-hidden relative flex flex-col">
       {/* Floating Folder Widget - Desktop */}
       <div className={cn(
         "hidden md:block absolute top-4 right-4 z-40 bg-glass-white/80 backdrop-blur-glass-xl rounded-card-xl shadow-glass border border-white/[0.35] transition-all duration-300",
@@ -789,8 +789,11 @@ export function Workspace(_props?: WorkspaceProps) {
         )}
       </AnimatePresence>
 
-      {/* Main Content - Video Feed or Carousels, iOS 26 mobile padding */}
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 md:px-6 safe-left safe-right custom-scrollbar-light" style={{ maxHeight: '100%' }}>
+      {/* Main Content - Video Feed or Carousels. overflow-scroll-touch для листания на мобильных */}
+      <div 
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 md:px-6 safe-left safe-right custom-scrollbar-light overflow-scroll-touch" 
+        style={{ maxHeight: '100%' }}
+      >
         <div className="max-w-6xl mx-auto py-4 md:py-8 pb-28 md:pb-8 safe-top safe-bottom">
           {/* Tabs: Рилсы | Карусели (в каждом проекте два раздела) */}
           <div className="flex gap-1.5 p-1.5 mb-4 md:mb-6 rounded-2xl md:rounded-card-xl bg-slate-100/80 md:bg-glass-white/60 backdrop-blur-sm md:backdrop-blur-glass border border-slate-200/60 md:border-white/[0.35] w-full md:w-fit">
