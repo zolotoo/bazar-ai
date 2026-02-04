@@ -1,0 +1,14 @@
+---
+description: Always push to remote after making code changes
+alwaysApply: true
+---
+
+# Git Workflow
+
+После любых изменений в коде — всегда коммитить и пушить в origin.
+
+1. `git add -A`
+2. `git commit -m "описание изменений"`
+3. `git push`
+
+Не оставлять незапушенные коммиты в конце сессии.
