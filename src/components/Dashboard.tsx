@@ -50,6 +50,7 @@ const GRADIENT_CARDS = [
   {
     id: 'link',
     title: 'Найти ролик по ссылке',
+    accent: 'по ссылке',
     subtitle: 'Вставь ссылку на Instagram — получи данные и сохрани',
     icon: Link,
     gradient: 'from-blue-400 via-blue-500 to-blue-600',
@@ -59,6 +60,7 @@ const GRADIENT_CARDS = [
   {
     id: 'radar',
     title: 'Добавить в радар',
+    accent: 'радар',
     subtitle: 'Отслеживай новые видео с профилей',
     icon: Radar,
     gradient: 'from-emerald-400 via-emerald-500 to-emerald-600',
@@ -68,10 +70,20 @@ const GRADIENT_CARDS = [
 ];
 
 const WHITE_CARDS = [
-  { id: 'feed', title: 'Мини лента', subtitle: 'Твои сохранённые видео по папкам', icon: LayoutGrid, onAction: (fn: () => void) => fn() },
-  { id: 'script', title: 'ИИ-сценарист', subtitle: 'Сценарии по стилю и примерам', icon: FileText, onAction: (fn: () => void) => fn() },
-  { id: 'team', title: 'Команда', subtitle: 'Участники проекта и приглашения', icon: Users, onAction: (fn: () => void) => fn() },
+  { id: 'feed', title: 'Мини лента', accent: 'Мини', subtitle: 'Твои сохранённые видео по папкам', icon: LayoutGrid, onAction: (fn: () => void) => fn() },
+  { id: 'script', title: 'ИИ-сценарист', accent: 'ИИ', subtitle: 'Сценарии по стилю и примерам', icon: FileText, onAction: (fn: () => void) => fn() },
+  { id: 'team', title: 'Команда', accent: null, subtitle: 'Участники проекта и приглашения', icon: Users, onAction: (fn: () => void) => fn() },
 ];
+
+function renderTitleWithAccent(title: string, accent: string | null) {
+  if (!accent || !title.includes(accent)) return title;
+  const [before, after] = title.split(accent);
+  return (
+    <>
+      {before}<span className="font-heading italic">{accent}</span>{after}
+    </>
+  );
+}
 
 export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 0 }: DashboardProps) {
   const displayName = getDisplayName();
@@ -96,11 +108,11 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
               transition={{ duration: 0.35 }}
               className="mb-8 md:mb-10"
             >
-              <h1 className="text-2xl md:text-3xl font-bold mb-0.5 leading-[0.9]">
+              <h1 className="text-2xl md:text-3xl font-bold mb-0.5 leading-[0.8] font-heading">
                 <span className="text-slate-500">{greeting},</span>{' '}
-                <span className="text-slate-800">{name}</span>
+                <span className="text-slate-800 italic">{name}</span>
               </h1>
-              <p className="text-slate-500 text-base md:text-lg font-normal leading-[0.9]">
+              <p className="text-slate-500 text-base md:text-lg font-normal leading-[0.8] font-heading">
                 Что хочешь сделать сегодня?
               </p>
             </motion.div>
@@ -138,7 +150,7 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
                         <card.icon className="w-5 h-5" strokeWidth={2.5} />
                       </div>
                     </div>
-                    <h3 className="text-base md:text-lg font-bold mb-1">{card.title}</h3>
+                    <h3 className="text-base md:text-lg font-bold mb-1 font-heading">{renderTitleWithAccent(card.title, card.accent)}</h3>
                     <p className="text-white/90 text-sm mb-4 flex-1 leading-snug">
                       {card.subtitle}
                     </p>
@@ -186,8 +198,8 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
                         </span>
                       )}
                     </div>
-                    <h3 className="font-semibold text-slate-900 text-sm md:text-base mb-1.5">
-                      {card.title}
+                    <h3 className="font-semibold text-slate-900 text-sm md:text-base mb-1.5 font-heading">
+                      {renderTitleWithAccent(card.title, card.accent)}
                     </h3>
                     <p className="text-slate-600 text-xs md:text-sm mb-4 leading-relaxed">
                       {card.subtitle}
