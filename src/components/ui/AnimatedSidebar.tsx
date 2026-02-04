@@ -65,13 +65,14 @@ export const Sidebar = ({
   );
 };
 
-type SidebarBodyProps = { className?: string; children?: React.ReactNode };
+type SidebarBodyProps = { className?: string; children?: React.ReactNode; variant?: 'default' | 'minimal' };
 
 export const SidebarBody = (props: SidebarBodyProps) => {
+  const { variant = 'default', ...rest } = props;
   return (
     <>
-      <DesktopSidebar {...props} />
-      <MobileSidebar {...(props as React.ComponentProps<"div">)} />
+      <DesktopSidebar {...rest} variant={variant} />
+      <MobileSidebar {...(rest as React.ComponentProps<"div">)} />
     </>
   );
 };
@@ -81,14 +82,15 @@ type DesktopSidebarProps = SidebarBodyProps;
 export const DesktopSidebar = ({
   className,
   children,
+  variant = 'default',
 }: DesktopSidebarProps) => {
   return (
     <motion.div
       className={cn(
         "h-full px-4 py-4 hidden md:flex md:flex-col flex-shrink-0",
-        "bg-glass-white/80 backdrop-blur-glass-xl backdrop-saturate-[180%]",
-        "border-r border-white/[0.35]",
-        "shadow-glass",
+        variant === 'minimal'
+          ? "bg-slate-50/95 border-r border-slate-200/60"
+          : "bg-glass-white/80 backdrop-blur-glass-xl backdrop-saturate-[180%] border-r border-white/[0.35] shadow-glass",
         className
       )}
       animate={{

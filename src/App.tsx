@@ -507,19 +507,24 @@ function AppContent() {
   }
 
   return (
-    <div className="w-full h-screen text-foreground overflow-hidden bg-base flex flex-col md:flex-row safe-top safe-bottom">
-      {/* Subtle cool blobs — non-distracting, spatial depth only */}
-      <div className="fixed top-[-15%] right-[-5%] w-[50%] h-[50%] bg-gradient-to-bl from-slate-200/30 via-transparent to-transparent rounded-full blur-[120px] pointer-events-none" />
-      <div className="fixed bottom-[-15%] left-[-5%] w-[45%] h-[45%] bg-gradient-to-tr from-slate-100/40 via-transparent to-transparent rounded-full blur-[100px] pointer-events-none" />
-      
-      {/* Noise texture overlay */}
-      <div className="fixed inset-0 opacity-[0.015] pointer-events-none" style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`
-      }} />
+    <div className={cn(
+        "w-full h-screen text-foreground overflow-hidden flex flex-col md:flex-row safe-top safe-bottom",
+        viewMode === 'dashboard' ? "bg-[#fafafa]" : "bg-base"
+      )}>
+      {/* Background: clean for dashboard, subtle blobs for other views */}
+      {viewMode !== 'dashboard' && (
+        <>
+          <div className="fixed top-[-15%] right-[-5%] w-[50%] h-[50%] bg-gradient-to-bl from-slate-200/30 via-transparent to-transparent rounded-full blur-[120px] pointer-events-none" />
+          <div className="fixed bottom-[-15%] left-[-5%] w-[45%] h-[45%] bg-gradient-to-tr from-slate-100/40 via-transparent to-transparent rounded-full blur-[100px] pointer-events-none" />
+          <div className="fixed inset-0 opacity-[0.015] pointer-events-none" style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`
+          }} />
+        </>
+      )}
 
       {/* Animated Sidebar */}
       <Sidebar open={sidebarExpanded} setOpen={setSidebarExpanded}>
-        <SidebarBody className="justify-between gap-3">
+        <SidebarBody className="justify-between gap-3" variant={viewMode === 'dashboard' ? 'minimal' : 'default'}>
           <div className={cn(
             "flex flex-col flex-1 overflow-y-auto overflow-x-hidden",
             sidebarExpanded ? "custom-scrollbar-light" : "scrollbar-hide"
