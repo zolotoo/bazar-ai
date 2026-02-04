@@ -5,7 +5,7 @@
 **Riri AI** — название продукта и персонального ассистента. В коде используется как:
 - Бренд: «Riri AI»
 - Логотип: `/riri-logo.png`
-- Telegram-бот: `@riri_ai_bot` (в `LandingPage.tsx` указан `@riri_ai_bot`, в `AuthContext.tsx` — `@riri_ai_bot`)
+- Telegram-бот: `@ririai_bot` (в `LandingPage.tsx` указан `@ririai_bot`, в `AuthContext.tsx` — `@ririai_bot`)
 - Package name: `riri-ai`
 
 ### Где упоминается Riri
@@ -14,7 +14,7 @@
 |------|----------|
 | `AnimatedSidebar.tsx` | Логотип и заголовок «Riri AI» в сайдбаре |
 | `LandingPage.tsx` | «Я Riri AI — твой персональный ассистент...», ссылка на бота |
-| `AuthContext.tsx` | Сообщение об ошибке: «Напиши мне @riri_ai_bot - /start» |
+| `AuthContext.tsx` | Сообщение об ошибке: «Напиши мне @ririai_bot - /start» |
 | `index.html` | Title, meta description, favicon |
 | `App.tsx` | Логотип в хедере |
 | `ProfilePage.tsx` | «Riri AI v1.0» |
@@ -54,7 +54,7 @@
 
 ## Другие обращения к пользователю (по приложению)
 
-- **AuthContext**: «Я не могу отправить тебе сообщение :( Напиши мне @riri_ai_bot - /start И нажми кнопку «Получить код» заново»
+- **AuthContext**: «Я не могу отправить тебе сообщение :( Напиши мне @ririai_bot - /start И нажми кнопку «Получить код» заново»
 - **LandingPage**: «Я Riri AI — твой персональный ассистент, который сделает твои ролики вирусными»
 - **Workspace**: «Добавьте видео через поиск или радар», «Перетащите видео сюда»
 - **SearchPanel**: «Начните поиск», «Введите запрос в поисковую строку...»

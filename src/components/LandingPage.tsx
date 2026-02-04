@@ -206,7 +206,7 @@ export function LandingPage() {
                             rel="noopener noreferrer"
                             className="font-medium underline"
                           >
-                            @riri_ai_bot
+                            @ririai_bot
                           </a>
                           {' '}- /start и нажми «Получить код» заново
                         </p>

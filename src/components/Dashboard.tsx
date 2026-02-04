@@ -70,7 +70,7 @@ const GRADIENT_CARDS = [
 ];
 
 const WHITE_CARDS = [
-  { id: 'feed', title: 'Мини лента', accent: 'Мини', subtitle: 'Твои сохранённые видео по папкам', icon: LayoutGrid, onAction: (fn: () => void) => fn() },
+  { id: 'feed', title: 'Лента', accent: null, subtitle: 'Твои сохранённые видео по папкам', icon: LayoutGrid, onAction: (fn: () => void) => fn() },
   { id: 'script', title: 'ИИ-сценарист', accent: 'ИИ', subtitle: 'Сценарии по стилю и примерам', icon: FileText, onAction: (fn: () => void) => fn() },
   { id: 'team', title: 'Команда', accent: null, subtitle: 'Участники проекта и приглашения', icon: Users, onAction: (fn: () => void) => fn() },
 ];
@@ -198,7 +198,7 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
                         </span>
                       )}
                     </div>
-                    <h3 className="font-semibold text-slate-900 text-sm md:text-base mb-1.5 font-heading">
+                    <h3 className="font-semibold text-slate-800 text-sm md:text-base mb-1.5 font-heading">
                       {renderTitleWithAccent(card.title, card.accent)}
                     </h3>
                     <p className="text-slate-600 text-xs md:text-sm mb-4 leading-relaxed">
