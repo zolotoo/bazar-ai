@@ -94,23 +94,6 @@ export const VideoGradientCard = ({
     }
   }, [hasWsrv, onThumbnailError, videoId, shortcode]);
 
-  // Превью пустое (папка "Ожидает сценария" и др.) — проактивно подгружаем через reel-info.
-  // Первые 4 карточки (priority) — сразу, остальные — с задержкой, чтобы видимые грузились первыми.
-  const emptyThumbFetched = useRef(false);
-  useEffect(() => {
-    const isEmpty = !thumbnailUrl || (typeof thumbnailUrl === 'string' && !thumbnailUrl.trim());
-    if (isEmpty && onThumbnailError && videoId && shortcode && !emptyThumbFetched.current) {
-      emptyThumbFetched.current = true;
-      const delay = priority ? 0 : 600;
-      const t = setTimeout(() => {
-        setIsRefreshingThumb(true);
-        Promise.resolve(onThumbnailError(videoId, shortcode, true)).finally(() => setIsRefreshingThumb(false));
-      }, delay);
-      return () => clearTimeout(t);
-    }
-    if (!isEmpty) emptyThumbFetched.current = false;
-  }, [thumbnailUrl, onThumbnailError, videoId, shortcode, priority]);
-
   return (
     <div
       draggable={!!onDragStart}
@@ -169,7 +152,7 @@ export const VideoGradientCard = ({
             alt=""
             className={cn(
               "absolute inset-0 w-full h-full object-cover transition-opacity duration-300",
-              imgLoaded && !imgError ? "opacity-100" : "opacity-0"
+              (imgLoaded && !imgError) || imgError ? "opacity-100" : "opacity-0"
             )}
             loading={priority || !isMobile ? "eager" : "lazy"}
             decoding="async"
