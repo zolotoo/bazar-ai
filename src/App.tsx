@@ -406,6 +406,15 @@ function AppContent() {
   // Хук для управления участниками (для принятия приглашений)
   const { acceptInvitation } = useProjectMembers(currentProjectId);
   
+  // Синхронизация списка проектов при изменении участников (добавление/удаление)
+  useEffect(() => {
+    const handleMembersUpdated = () => {
+      refetchProjects();
+    };
+    window.addEventListener('members-updated', handleMembersUpdated as EventListener);
+    return () => window.removeEventListener('members-updated', handleMembersUpdated as EventListener);
+  }, [refetchProjects]);
+
   // Обработка уведомлений о pending приглашениях
   useEffect(() => {
     const handlePendingInvitations = (event: CustomEvent) => {

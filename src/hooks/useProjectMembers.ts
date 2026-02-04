@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase, setUserContext } from '../utils/supabase';
 import { useAuth } from './useAuth';
 
@@ -95,7 +95,7 @@ export function useProjectMembers(projectId: string | null) {
   // Приглашение участника через API
   const inviteMember = useCallback(async (
     username: string,
-    _role: 'read' | 'write' | 'admin' = 'write'
+    role: 'read' | 'write' | 'admin' = 'write'
   ) => {
     if (!projectId || !userId) {
       throw new Error('Project ID or user ID is missing');
@@ -108,6 +108,7 @@ export function useProjectMembers(projectId: string | null) {
         projectId,
         username,
         userId,
+        role,
       }),
     });
 
@@ -194,9 +195,55 @@ export function useProjectMembers(projectId: string | null) {
     await fetchMembers();
   }, [userId, fetchMembers]);
 
+  // Загрузка при монтировании и смене проекта
   useEffect(() => {
     fetchMembers();
   }, [fetchMembers]);
+
+  // Синхронизация в реальном времени: слушаем событие members-updated
+  useEffect(() => {
+    const handleMembersUpdated = (event: CustomEvent<{ projectId: string }>) => {
+      if (event.detail?.projectId === projectId) {
+        fetchMembers();
+      }
+    };
+    window.addEventListener('members-updated', handleMembersUpdated as EventListener);
+    return () => window.removeEventListener('members-updated', handleMembersUpdated as EventListener);
+  }, [projectId, fetchMembers]);
+
+  // Прямая подписка на изменения project_members (если таблица в realtime)
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  useEffect(() => {
+    if (!projectId || !userId) return;
+
+    const channel = supabase
+      .channel(`project_members:${projectId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'project_members',
+          filter: `project_id=eq.${projectId}`,
+        },
+        () => {
+          fetchMembers();
+        }
+      )
+      .subscribe((status, err) => {
+        if (err && !err.message?.includes('relation') && !err.message?.includes('does not exist')) {
+          console.warn('[ProjectMembers] Realtime subscription error:', err);
+        }
+      });
+
+    channelRef.current = channel;
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [projectId, userId, fetchMembers]);
 
   return {
     members,

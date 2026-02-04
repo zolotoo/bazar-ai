@@ -45,26 +45,7 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Project not found' });
     }
 
-    const isOwner = project.owner_id === userId;
-    
-    if (!isOwner) {
-      const { data: member, error: memberError } = await supabase
-        .from('project_members')
-        .select('role')
-        .eq('project_id', projectId)
-        .eq('user_id', userId)
-        .eq('status', 'active')
-        .single();
-
-      if (memberError && (memberError.code === 'PGRST116' || memberError.message?.includes('relation'))) {
-        return res.status(500).json({ error: 'Collaboration tables not set up' });
-      }
-
-      if (memberError || !member || member.role !== 'admin') {
-        return res.status(403).json({ error: 'Insufficient permissions' });
-      }
-    }
-
+    // Сначала получаем участника для проверки прав
     const { data: memberToRemove, error: memberFetchError } = await supabase
       .from('project_members')
       .select('*')
@@ -87,6 +68,28 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Cannot remove project owner' });
     }
 
+    const isOwner = project.owner_id === userId;
+    const isSelfRemoval = memberToRemove.user_id === userId;
+
+    // Разрешаем: владелец/админ удаляет кого угодно, или пользователь удаляет себя (выход из проекта)
+    if (!isOwner && !isSelfRemoval) {
+      const { data: member, error: memberError } = await supabase
+        .from('project_members')
+        .select('role')
+        .eq('project_id', projectId)
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .single();
+
+      if (memberError && (memberError.code === 'PGRST116' || memberError.message?.includes('relation'))) {
+        return res.status(500).json({ error: 'Collaboration tables not set up' });
+      }
+
+      if (memberError || !member || member.role !== 'admin') {
+        return res.status(403).json({ error: 'Insufficient permissions' });
+      }
+    }
+
     const { error: removeError } = await supabase
       .from('project_members')
       .update({ status: 'removed' })
@@ -95,6 +98,17 @@ export default async function handler(req, res) {
 
     if (removeError) {
       throw removeError;
+    }
+
+    // Очищаем presence удалённого участника
+    try {
+      await supabase
+        .from('project_presence')
+        .delete()
+        .eq('project_id', projectId)
+        .eq('user_id', memberToRemove.user_id);
+    } catch (presenceErr) {
+      // Игнорируем если таблица не существует
     }
 
     // Записываем изменение (если таблица существует)

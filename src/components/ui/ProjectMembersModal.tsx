@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useProjectMembers } from '@/hooks/useProjectMembers';
 import { useAuth } from '@/hooks/useAuth';
-import { UserPlus, X, Shield, Edit, Eye, Trash2, Loader2, HelpCircle } from 'lucide-react';
+import { useProjectContext } from '@/contexts/ProjectContext';
+import { UserPlus, X, Shield, Edit, Eye, Trash2, Loader2, HelpCircle, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/utils/cn';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,11 +16,12 @@ interface ProjectMembersModalProps {
 export function ProjectMembersModal({ projectId, isOpen, onClose }: ProjectMembersModalProps) {
   const { members, loading, inviteMember, removeMember, updateMemberRole } = useProjectMembers(projectId);
   const { user } = useAuth();
+  const { refetch: refetchProjects, projects, selectProject } = useProjectContext();
   const [inviteUsername, setInviteUsername] = useState('');
   const [isInviting, setIsInviting] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'read' | 'write' | 'admin'>('write');
 
-  const userId = user?.telegram_username ? `tg-@${user.telegram_username}` : null;
+  const userId = user?.telegram_username ? `tg-${user.telegram_username}` : null;
   const currentMember = members.find((m: any) => m.user_id === userId);
 
   const handleInvite = async () => {
@@ -40,14 +42,21 @@ export function ProjectMembersModal({ projectId, isOpen, onClose }: ProjectMembe
     }
   };
 
-  const handleRemove = async (memberId: string, username: string) => {
-    if (!confirm(`Удалить @${username} из проекта?`)) {
-      return;
-    }
+  const handleRemove = async (memberId: string, username: string, isSelf: boolean) => {
+    const message = isSelf
+      ? 'Выйти из проекта? Вы сможете вернуться только по повторному приглашению.'
+      : `Удалить @${username} из проекта?`;
+    if (!confirm(message)) return;
 
     try {
       await removeMember(memberId);
-      toast.success('Участник удален');
+      toast.success(isSelf ? 'Вы вышли из проекта' : 'Участник удален');
+      await refetchProjects();
+      if (isSelf) {
+        const otherProject = projects.find((p: any) => p.id !== projectId);
+        if (otherProject) selectProject(otherProject.id);
+        onClose();
+      }
     } catch (error: any) {
       toast.error(error.message || 'Не удалось удалить участника');
     }
@@ -266,13 +275,23 @@ export function ProjectMembersModal({ projectId, isOpen, onClose }: ProjectMembe
                             <option value="admin">Администратор</option>
                           </select>
                           <button
-                            onClick={() => handleRemove(member.id, username)}
+                            onClick={() => handleRemove(member.id, username, false)}
                             className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition-colors touch-manipulation"
                             title="Удалить участника"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
+                      )}
+                      {isCurrentUser && (
+                        <button
+                          onClick={() => handleRemove(member.id, username, true)}
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200/80 hover:bg-red-50 hover:border-red-200 text-slate-600 hover:text-red-600 text-xs font-medium transition-colors touch-manipulation"
+                          title="Выйти из проекта"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          Выйти
+                        </button>
                       )}
                     </motion.div>
                   );

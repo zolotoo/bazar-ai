@@ -37,7 +37,7 @@ export default async function handler(req, res) {
   // Создаем клиент Supabase с переменными окружения
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-  const { projectId, username, userId } = req.body;
+  const { projectId, username, userId, role = 'write' } = req.body;
 
   console.log('[Invite] Request received:', { projectId, username, userId });
 
@@ -130,11 +130,12 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'User is already a member' });
       }
       // Если был удален, активируем снова
+      const validRole = ['read', 'write', 'admin'].includes(role) ? role : 'write';
       const { error: updateError } = await supabase
         .from('project_members')
         .update({
           status: 'active',
-          role: 'write',
+          role: validRole,
           joined_at: new Date().toISOString(),
         })
         .eq('id', existing.id);
@@ -152,13 +153,14 @@ export default async function handler(req, res) {
     }
 
     // Создаем новую запись участника
-    console.log('[Invite] Creating new member:', { projectId, normalizedInviteeId, userId });
+    const validRole = ['read', 'write', 'admin'].includes(role) ? role : 'write';
+    console.log('[Invite] Creating new member:', { projectId, normalizedInviteeId, userId, role: validRole });
     const { data: member, error: insertError } = await supabase
       .from('project_members')
       .insert({
         project_id: projectId,
         user_id: normalizedInviteeId,
-        role: 'write',
+        role: validRole,
         invited_by: userId,
         status: 'pending',
       })
@@ -199,7 +201,7 @@ export default async function handler(req, res) {
         entity_type: 'member',
         entity_id: member.id,
         old_data: null,
-        new_data: { user_id: normalizedInviteeId, role: 'write' },
+        new_data: { user_id: normalizedInviteeId, role: validRole },
         vector_clock: {},
       });
     } catch (changeError) {
