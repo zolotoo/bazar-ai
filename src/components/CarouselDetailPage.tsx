@@ -123,6 +123,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
   const [showEditScriptModal, setShowEditScriptModal] = useState(false);
   const [scriptAiForRefine, setScriptAiForRefine] = useState('');
   const [scriptHumanForRefine, setScriptHumanForRefine] = useState('');
+  const [editScriptFeedback, setEditScriptFeedback] = useState('');
   const [editScriptLeftTab, setEditScriptLeftTab] = useState<'original' | 'translation' | 'ai'>('ai');
   const [feedbackText, setFeedbackText] = useState('');
   const [isRefiningPrompt, setIsRefiningPrompt] = useState(false);
@@ -375,6 +376,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
           translation_text: translation || undefined,
           script_ai: scriptAiForRefine.trim(),
           script_human: scriptHumanForRefine.trim(),
+          feedback: editScriptFeedback.trim() || undefined,
         }),
       });
       const data = await res.json();
@@ -389,6 +391,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
         setShowEditScriptModal(false);
         setScriptAiForRefine('');
         setScriptHumanForRefine('');
+        setEditScriptFeedback('');
         toast.success('Промт дообучен на ваших правках');
         if (data.clarifying_questions?.length) {
           setClarifyingQuestions(data.clarifying_questions);
@@ -1379,6 +1382,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                   setShowChoiceModal(false);
                   setScriptAiForRefine(script || '');
                   setScriptHumanForRefine(script || '');
+                  setEditScriptFeedback('');
                   setEditScriptLeftTab('ai');
                   setShowEditScriptModal(true);
                 }}
@@ -1462,8 +1466,8 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                     : (scriptAiForRefine || '—')}
                 </pre>
               </div>
-              <div className="flex-1 flex flex-col min-h-0">
-                <label className="text-xs font-medium text-slate-500 mb-1">Ваш идеальный сценарий</label>
+              <div className="flex-1 flex flex-col min-h-0 gap-2">
+                <label className="text-xs font-medium text-slate-500">Ваш идеальный сценарий</label>
                 <textarea
                   value={scriptHumanForRefine}
                   onChange={(e) => setScriptHumanForRefine(e.target.value)}
@@ -1471,6 +1475,17 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                   placeholder="Отредактируйте сценарий..."
                   disabled={isRefiningPrompt}
                 />
+                <div>
+                  <label className="text-xs font-medium text-slate-500">Дополнительный комментарий (опционально)</label>
+                  <input
+                    type="text"
+                    value={editScriptFeedback}
+                    onChange={(e) => setEditScriptFeedback(e.target.value)}
+                    placeholder="Например: хук слишком длинный, убери воду, добавь CTA"
+                    className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
+                    disabled={isRefiningPrompt}
+                  />
+                </div>
               </div>
             </div>
             <div className="p-4 border-t border-slate-100 flex justify-end gap-2">

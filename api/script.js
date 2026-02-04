@@ -175,43 +175,59 @@ async function handleRefine(req, res) {
   }
   if (!OPENROUTER_API_KEY) return res.status(500).json({ error: 'OPENROUTER_API_KEY not configured' });
 
-  const userText = `Текущий промт для генерации сценария:
+  const userText = `Ты дообучаешь промт для генерации сценариев. Пользователь дал обратную связь — нужно КОНКРЕТНО учесть её в промте.
+
+ТЕКУЩИЙ ПРОМТ (его нужно обновить, сохранив всё важное):
 ---
 ${prompt.trim()}
 ---
 
-По этому промту был сгенерирован сценарий.
-
+КОНТЕКСТ:
 Исходный сценарий (оригинал):
 ${transcript_text.trim()}
 ${translation_text && translation_text.trim() ? '\nПеревод на русский:\n' + translation_text.trim() : ''}
 
-Сгенерированный сценарий:
+Сгенерированный сценарий (то, что не устроило пользователя):
 ${script_text.trim()}
 
-Обратная связь пользователя:
-${feedback.trim()}
+ОБРАТНАЯ СВЯЗЬ ПОЛЬЗОВАТЕЛЯ:
+«${feedback.trim()}»
 
-Задача: обнови промт так, чтобы в следующий раз нейросеть избегала того, что не так, и сохраняла то, что хорошо. Верни только один валидный JSON без лишнего текста и без запятой перед }. Переносы в строках — только \\n.
+ИНСТРУКЦИИ:
+1. Разбери обратную связь: что именно не так? что пользователь хочет изменить/добавить/убрать?
+2. Обнови промт так, чтобы учесть обратную связь. Можешь менять, добавлять, убирать правила — промт должен быть гибким и отражать актуальные пожелания пользователя.
+3. Если старые правила противоречат обратной связи — измени или убери их. Если нужно — добавь новые.
+
+Верни только валидный JSON. Переносы в строках — только \\n.
 {
-  "prompt": "обновлённый полный текст промта (на русском)",
+  "prompt": "полный обновлённый промт (учти обратную связь, при необходимости замени противоречащие правила)",
   "meta": {
-    "rules": ["правило 1", ...],
+    "rules": ["правило 1", "правило 2", ...],
     "doNot": ["чего избегать", ...],
-    "summary": "краткое описание стиля в 1–2 предложения"
+    "summary": "краткое описание стиля"
   },
-  "clarifying_questions": ["один короткий уточняющий вопрос, если нужен", "второй вопрос или не включай"]
+  "clarifying_questions": []
 }
-Если уточнения не нужны — clarifying_questions не включай или пустой массив.`;
+Если нужны уточняющие вопросы — добавь в clarifying_questions. Иначе пустой массив.`;
 
+  const refineModels = [MODELS.PRO_3, MODELS.FLASH];
+  let rawText = null;
+  for (const model of refineModels) {
+    try {
+      const result = await callOpenRouter({
+        apiKey: OPENROUTER_API_KEY,
+        model,
+        messages: [{ role: 'user', content: userText }],
+        temperature: 0.2,
+        response_format: { type: 'json_object' },
+      });
+      rawText = result.text;
+      if (rawText) break;
+    } catch (err) {
+      if (err.message?.includes('429')) await new Promise((r) => setTimeout(r, 2000));
+    }
+  }
   try {
-    const { text: rawText } = await callOpenRouter({
-      apiKey: OPENROUTER_API_KEY,
-      model: MODELS.FLASH,
-      messages: [{ role: 'user', content: userText }],
-      temperature: 0.2,
-      response_format: { type: 'json_object' },
-    });
     if (!rawText) return res.status(502).json({ error: 'OpenRouter returned empty response' });
 
     let jsonStr = (rawText.match(/\{[\s\S]*\}/) || [null])[0] || rawText;
@@ -253,51 +269,86 @@ ${feedback.trim()}
   }
 }
 
+/** Простой diff: что добавлено/убрано между двумя текстами */
+function computeSimpleDiff(before, after) {
+  const a = String(before).trim().split(/\n/).filter(Boolean);
+  const b = String(after).trim().split(/\n/).filter(Boolean);
+  const setA = new Set(a);
+  const setB = new Set(b);
+  const added = b.filter((line) => !setA.has(line));
+  const removed = a.filter((line) => !setB.has(line));
+  return { added, removed };
+}
+
 async function handleRefineByDiff(req, res) {
-  const { prompt, transcript_text, translation_text, script_ai, script_human } = req.body;
+  const { prompt, transcript_text, translation_text, script_ai, script_human, feedback } = req.body;
   if (!OPENROUTER_API_KEY) return res.status(500).json({ error: 'OPENROUTER_API_KEY not configured' });
 
-  const userText = `Текущий промт для генерации сценария:
+  const { added, removed } = computeSimpleDiff(script_ai, script_human);
+  const diffHint =
+    added.length > 0 || removed.length > 0
+      ? `\n\nПОДСКАЗКА (строки, которые пользователь добавил/убрал):\nДобавлено: ${added.slice(0, 15).join(' | ') || '—'}\nУбрано: ${removed.slice(0, 15).join(' | ') || '—'}`
+      : '';
+
+  const userText = `Ты дообучаешь промт по правкам пользователя. Нейросеть сгенерировала сценарий, пользователь отредактировал его. Нужно понять КОНКРЕТНО что изменилось и добавить правила в промт.
+
+ТЕКУЩИЙ ПРОМТ (сохрани все правила, добавь новые):
 ---
 ${prompt.trim()}
 ---
 
-По этому промту нейросеть сгенерировала сценарий. Пользователь вручную отредактировал его до своего идеального варианта.
-
-Исходный сценарий (оригинал):
+КОНТЕКСТ — исходник:
 ${transcript_text.trim()}
-${translation_text && String(translation_text).trim() ? '\nПеревод на русский:\n' + String(translation_text).trim() : ''}
+${translation_text && String(translation_text).trim() ? '\nПеревод:\n' + String(translation_text).trim() : ''}
 
-Сценарий, который сгенерировала нейросеть:
+СЦЕНАРИЙ НЕЙРОСЕТИ (до правок):
 ---
 ${String(script_ai).trim()}
 ---
 
-Идеальный сценарий после правок пользователя:
+ИДЕАЛЬНЫЙ СЦЕНАРИЙ ПОЛЬЗОВАТЕЛЯ (после правок):
 ---
 ${String(script_human).trim()}
 ---
+${feedback && String(feedback).trim() ? `\nДОПОЛНИТЕЛЬНЫЙ КОММЕНТАРИЙ ПОЛЬЗОВАТЕЛЯ:\n«${String(feedback).trim()}»\n` : ''}
+${diffHint}
 
-Задача: пойми, что пользователь изменил и почему это важно (структура, тон, добавления, удаления). Обнови промт так, чтобы в следующий раз нейросеть сразу выдавала сценарий ближе к идеалу пользователя. Верни только один валидный JSON без лишнего текста и без запятой перед }. Переносы в строках — только \\n.
+ИНСТРУКЦИИ:
+1. Сравни два сценария построчно. Выпиши: что пользователь ДОБАВИЛ, что УБРАЛ, что ИЗМЕНИЛ (структура, тон, формулировки).
+2. Обнови промт так, чтобы в следующий раз нейросеть выдавала сценарий ближе к идеалу пользователя. Можешь менять, добавлять, убирать правила — промт должен быть гибким.
+3. Если старые правила противоречат правкам пользователя — измени или убери их. Добавь новые правила на основе правок.
+
+Верни только валидный JSON. Переносы в строках — только \\n.
 {
-  "prompt": "обновлённый полный текст промта (на русском)",
+  "changes_identified": ["что изменил пользователь 1", "что изменил 2", ...],
+  "prompt": "полный обновлённый промт (учти правки, при необходимости замени противоречащие правила)",
   "meta": {
-    "rules": ["правило 1", ...],
+    "rules": ["правило 1", "правило 2", ...],
     "doNot": ["чего избегать", ...],
-    "summary": "краткое описание стиля в 1–2 предложения"
+    "summary": "краткое описание стиля"
   },
-  "clarifying_questions": ["один короткий вопрос: почему изменил вот это?", "второй или не включай"]
+  "clarifying_questions": []
 }
-Если нужны 1–2 уточняющих вопроса (почему изменил X, зачем добавил Y) — верни в clarifying_questions. Иначе не включай или пустой массив.`;
+changes_identified — список конкретных изменений. clarifying_questions — уточняющие вопросы, если нужны.`;
 
+  const refineByDiffModels = [MODELS.PRO_3, MODELS.FLASH];
+  let rawText = null;
+  for (const model of refineByDiffModels) {
+    try {
+      const result = await callOpenRouter({
+        apiKey: OPENROUTER_API_KEY,
+        model,
+        messages: [{ role: 'user', content: userText }],
+        temperature: 0.2,
+        response_format: { type: 'json_object' },
+      });
+      rawText = result.text;
+      if (rawText) break;
+    } catch (err) {
+      if (err.message?.includes('429')) await new Promise((r) => setTimeout(r, 2000));
+    }
+  }
   try {
-    const { text: rawText } = await callOpenRouter({
-      apiKey: OPENROUTER_API_KEY,
-      model: MODELS.FLASH,
-      messages: [{ role: 'user', content: userText }],
-      temperature: 0.2,
-      response_format: { type: 'json_object' },
-    });
     if (!rawText) return res.status(502).json({ error: 'OpenRouter returned empty response' });
 
     let jsonStr = (rawText.match(/\{[\s\S]*\}/) || [null])[0] || rawText;
