@@ -27,8 +27,8 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
         ref={ref}
         role="tablist"
         className={cn(
+          "mobile-tab-bar",
           "md:hidden fixed left-0 right-0 bottom-0 z-[9998]",
-          "bg-white/[0.12] backdrop-blur-3xl backdrop-saturate-[180%]",
           "pt-2 touch-manipulation",
           "pointer-events-none [&_ul]:pointer-events-auto",
           className

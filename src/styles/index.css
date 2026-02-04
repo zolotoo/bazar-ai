@@ -330,13 +330,21 @@ body {
     border-bottom: 0.5px solid rgba(0, 0, 0, 0.1);
   }
 
-  /* iOS 26 Tab Bar Style */
+  /* iOS 26 Tab Bar Style — общий, переопределяется .mobile-tab-bar */
   [role="tablist"] {
     backdrop-filter: var(--ios-blur);
     -webkit-backdrop-filter: var(--ios-blur);
     background: rgba(255, 255, 255, 0.85);
     border-top: 0.5px solid rgba(0, 0, 0, 0.1);
     padding-bottom: max(8px, var(--safe-area-inset-bottom));
+  }
+
+  /* Наш таб-бар — frosted glass, без сплошного белого */
+  nav.mobile-tab-bar[role="tablist"] {
+    background: rgba(255, 255, 255, 0.12) !important;
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border-top: 0.5px solid rgba(255, 255, 255, 0.25);
   }
 
   /* iOS 26 List Styles */
@@ -405,6 +413,11 @@ body {
     [role="tablist"] {
       background: rgba(30, 25, 20, 0.9);
       border-top: 0.5px solid rgba(255, 255, 255, 0.1);
+    }
+
+    nav.mobile-tab-bar[role="tablist"] {
+      background: rgba(30, 25, 20, 0.4) !important;
+      border-top: 0.5px solid rgba(255, 255, 255, 0.15);
     }
   }
 }
