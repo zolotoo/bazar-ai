@@ -52,8 +52,8 @@ const GRADIENT_CARDS = [
     title: 'Найти ролик по ссылке',
     subtitle: 'Вставь ссылку на Instagram — получи данные и сохрани',
     icon: Link,
-    gradient: 'from-blue-500 via-blue-600 to-blue-700',
-    cta: 'Открыть',
+    gradient: 'from-blue-400 via-blue-500 to-blue-600',
+    cta: 'Открыть →',
     onAction: (fn: (t: 'link') => void) => fn('link'),
   },
   {
@@ -61,8 +61,8 @@ const GRADIENT_CARDS = [
     title: 'Добавить в радар',
     subtitle: 'Отслеживай новые видео с профилей',
     icon: Radar,
-    gradient: 'from-emerald-500 via-emerald-600 to-emerald-700',
-    cta: 'Открыть',
+    gradient: 'from-emerald-400 via-emerald-500 to-emerald-600',
+    cta: 'Открыть →',
     onAction: (fn: (t: 'radar') => void) => fn('radar'),
   },
 ];
@@ -81,7 +81,7 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-[#fafafa] safe-top safe-bottom safe-left safe-right custom-scrollbar-light">
       {/* Main content card — floating white container like reference */}
-      <div className="mx-4 md:mx-6 lg:mx-8 py-6 md:py-8 lg:py-10">
+      <div className="mx-4 md:mx-6 lg:mx-8 py-6 md:py-8 lg:py-10 pb-12 md:pb-16">
         <div className="max-w-5xl mx-auto">
           <div
             className="bg-white rounded-3xl p-6 md:p-8 lg:p-10"
@@ -89,22 +89,23 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
               boxShadow: '0 4px 24px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04)',
             }}
           >
-            {/* Greeting — friendly headline */}
+            {/* Greeting — friendly headline (phrase lighter, name bolder like reference) */}
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35 }}
               className="mb-8 md:mb-10"
             >
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-800 mb-1">
-                {greeting}, {name}
+              <h1 className="text-2xl md:text-3xl font-bold mb-1">
+                <span className="text-slate-500">{greeting},</span>{' '}
+                <span className="text-slate-800">{name}</span>
               </h1>
               <p className="text-slate-500 text-base md:text-lg font-normal">
                 Что хочешь сделать сегодня?
               </p>
             </motion.div>
 
-            {/* Two main gradient action cards */}
+            {/* Two main gradient action cards — compact height, layered shadows, visible gradient */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 mb-8">
               {GRADIENT_CARDS.map((card, i) => (
                 <motion.div
@@ -118,33 +119,42 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
                     card.gradient
                   )}
                   style={{
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.08)',
+                    boxShadow:
+                      '0 4px 6px -1px rgba(0,0,0,0.08), 0 10px 20px -5px rgba(0,0,0,0.1), 0 20px 40px -10px rgba(0,0,0,0.08)',
                   }}
                 >
-                  <div className="p-6 md:p-8 flex flex-col h-full min-h-[200px] md:min-h-[220px]">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                        <card.icon className="w-6 h-6" strokeWidth={2.5} />
+                  {/* Subtle 3D-style decorative shape */}
+                  <div
+                    className="absolute -right-8 -bottom-8 w-32 h-32 rounded-full bg-white/10"
+                    aria-hidden
+                  />
+                  <div
+                    className="absolute -right-4 -top-4 w-24 h-24 rounded-full bg-white/5"
+                    aria-hidden
+                  />
+                  <div className="relative p-5 md:p-6 flex flex-col min-h-[140px] md:min-h-[160px]">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="w-11 h-11 rounded-xl bg-white/25 flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <card.icon className="w-5 h-5" strokeWidth={2.5} />
                       </div>
                     </div>
-                    <h3 className="text-lg md:text-xl font-bold mb-2">{card.title}</h3>
-                    <p className="text-white/90 text-sm md:text-base mb-6 flex-1">
+                    <h3 className="text-base md:text-lg font-bold mb-1">{card.title}</h3>
+                    <p className="text-white/90 text-sm mb-4 flex-1 leading-snug">
                       {card.subtitle}
                     </p>
                     <button
                       type="button"
                       onClick={() => card.onAction(onOpenSearch)}
-                      className="self-start px-5 py-2.5 rounded-xl bg-white/25 hover:bg-white/30 text-white font-semibold text-sm flex items-center gap-2 transition-colors"
+                      className="self-start px-4 py-2 rounded-lg bg-white/25 hover:bg-white/30 text-white font-semibold text-sm transition-colors"
                     >
                       {card.cta}
-                      <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
                     </button>
                   </div>
                 </motion.div>
               ))}
             </div>
 
-            {/* Three white cards below — clean, soft shadow */}
+            {/* Three white cards below — refined style with shadows, underlays, readable text */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5">
               {WHITE_CARDS.map((card, i) => (
                 <motion.button
@@ -154,29 +164,39 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.35, delay: 0.1 + i * 0.05 }}
-                  className="bg-white rounded-2xl p-5 md:p-6 text-left border border-slate-100 hover:border-slate-200 transition-colors group"
+                  className="relative bg-white rounded-2xl p-5 md:p-6 text-left border border-slate-100/80 hover:border-slate-200 hover:shadow-lg transition-all duration-200 group overflow-hidden"
                   style={{
-                    boxShadow: '0 2px 12px rgba(0,0,0,0.04), 0 1px 4px rgba(0,0,0,0.02)',
+                    boxShadow:
+                      '0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.05), 0 2px 6px rgba(0,0,0,0.03)',
                   }}
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
-                      <card.icon className="w-5 h-5 text-slate-600" strokeWidth={2.5} />
+                  {/* Subtle underlay */}
+                  <div
+                    className="absolute inset-0 bg-gradient-to-br from-slate-50/50 to-transparent pointer-events-none"
+                    aria-hidden
+                  />
+                  <div className="relative flex flex-col h-full">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
+                        <card.icon className="w-5 h-5 text-slate-600" strokeWidth={2.5} />
+                      </div>
+                      {card.id === 'feed' && videosCount > 0 && (
+                        <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold tabular-nums">
+                          {videosCount}
+                        </span>
+                      )}
                     </div>
-                    {card.id === 'feed' && videosCount > 0 && (
-                      <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold tabular-nums">
-                        {videosCount}
-                      </span>
-                    )}
+                    <h3 className="font-semibold text-slate-800 text-sm md:text-base mb-1.5">
+                      {card.title}
+                    </h3>
+                    <p className="text-slate-600 text-xs md:text-sm mb-4 leading-relaxed">
+                      {card.subtitle}
+                    </p>
+                    <span className="inline-flex items-center gap-1.5 text-slate-600 font-medium text-sm group-hover:text-slate-800 mt-auto transition-colors">
+                      Перейти
+                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                    </span>
                   </div>
-                  <h3 className="font-semibold text-slate-800 text-sm md:text-base mb-1">
-                    {card.title}
-                  </h3>
-                  <p className="text-slate-500 text-xs md:text-sm mb-4">{card.subtitle}</p>
-                  <span className="inline-flex items-center gap-1.5 text-slate-600 font-medium text-sm group-hover:text-slate-800 transition-colors">
-                    Перейти
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                  </span>
                 </motion.button>
               ))}
             </div>
