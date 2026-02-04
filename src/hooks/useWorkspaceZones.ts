@@ -18,6 +18,7 @@ export interface ZoneVideo {
   title: string;
   preview_url: string;
   url: string;
+  shortcode?: string;
   zone_id: string | null;
   folder_id?: string; // Для отображения в какой папке находится видео
   position_x: number;

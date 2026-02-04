@@ -23,13 +23,15 @@ export interface VideoGradientCardProps {
   showFolderMenu?: boolean;
   onFolderMenuToggle?: () => void;
   folderMenu?: React.ReactNode;
-  /** При ошибке загрузки превью — обновить через reel-info + Storage (для сохранённых видео) */
-  onThumbnailError?: (videoId: string, shortcode: string) => void | Promise<void>;
+  /** При ошибке загрузки превью — обновить через reel-info + Storage. silent=true — без тоста (проактивная подгрузка) */
+  onThumbnailError?: (videoId: string, shortcode: string, silent?: boolean) => void | Promise<void>;
   /** При успешной загрузке — сохранить в Storage (если URL не из Storage) */
   onThumbnailLoad?: (videoId: string, shortcode: string, url: string) => void | Promise<void>;
   videoId?: string;
   shortcode?: string;
   className?: string;
+  /** Первые карточки в ленте — eager loading */
+  priority?: boolean;
 }
 
 function formatNumber(num?: number): string {
@@ -62,11 +64,13 @@ export const VideoGradientCard = ({
   videoId,
   shortcode,
   className,
+  priority = false,
 }: VideoGradientCardProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
   const [isRefreshingThumb, setIsRefreshingThumb] = useState(false);
   useEffect(() => {
     const m = () => setIsMobile(window.matchMedia('(max-width: 768px)').matches);
@@ -75,9 +79,10 @@ export const VideoGradientCard = ({
     return () => window.removeEventListener('resize', m);
   }, []);
 
-  // Сброс ошибки при смене превью
+  // Сброс состояния при смене превью
   useEffect(() => {
     setImgError(false);
+    setImgLoaded(false);
   }, [thumbnailUrl]);
 
   // Если в БД сохранился битый wsrv.nl URL — сразу триггерим refresh
@@ -88,6 +93,18 @@ export const VideoGradientCard = ({
       Promise.resolve(onThumbnailError(videoId, shortcode)).finally(() => setIsRefreshingThumb(false));
     }
   }, [hasWsrv, onThumbnailError, videoId, shortcode]);
+
+  // Превью пустое (папка "Ожидает сценария" и др.) — проактивно подгружаем через reel-info
+  const emptyThumbFetched = useRef(false);
+  useEffect(() => {
+    const isEmpty = !thumbnailUrl || (typeof thumbnailUrl === 'string' && !thumbnailUrl.trim());
+    if (isEmpty && onThumbnailError && videoId && shortcode && !emptyThumbFetched.current) {
+      emptyThumbFetched.current = true;
+      setIsRefreshingThumb(true);
+      Promise.resolve(onThumbnailError(videoId, shortcode, true)).finally(() => setIsRefreshingThumb(false));
+    }
+    if (!isEmpty) emptyThumbFetched.current = false;
+  }, [thumbnailUrl, onThumbnailError, videoId, shortcode]);
 
   return (
     <div
@@ -131,20 +148,29 @@ export const VideoGradientCard = ({
         onTouchEnd={() => !isMobile && setTimeout(() => setIsHovered(false), 150)}
         onClick={onClick}
       >
-        {/* Превью: img для надёжной загрузки на мобильных, плейсхолдер пока грузится */}
+        {/* Превью: img, lazy на мобильных для ускорения */}
         <motion.div
-          className="absolute inset-0 z-0 bg-slate-200/80 overflow-hidden"
+          className="absolute inset-0 z-0 overflow-hidden"
           animate={{ scale: isMobile ? 1 : isHovered ? 1.08 : 1 }}
           transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
         >
+          {/* Фон: пока грузится или ошибка — видимый плейсхолдер */}
+          <div className={cn(
+            "absolute inset-0 bg-slate-200",
+            !imgLoaded && !imgError && "animate-pulse"
+          )} />
           <img
             src={imgError ? PLACEHOLDER_270x360 : proxyImageUrl(thumbnailUrl)}
             alt=""
-            className="absolute inset-0 w-full h-full object-cover"
-            loading="eager"
+            className={cn(
+              "absolute inset-0 w-full h-full object-cover transition-opacity duration-300",
+              imgLoaded && !imgError ? "opacity-100" : "opacity-0"
+            )}
+            loading={priority || !isMobile ? "eager" : "lazy"}
             decoding="async"
-            fetchPriority="high"
+            fetchPriority={priority ? "high" : "auto"}
             onLoad={(e) => {
+              setImgLoaded(true);
               const loadedUrl = (e.target as HTMLImageElement).currentSrc || (e.target as HTMLImageElement).src;
               if (onThumbnailLoad && videoId && shortcode && loadedUrl && !loadedUrl.startsWith('data:') && !loadedUrl.includes('supabase.co')) {
                 onThumbnailLoad(videoId, shortcode, loadedUrl);
@@ -152,6 +178,7 @@ export const VideoGradientCard = ({
             }}
             onError={() => {
               setImgError(true);
+              setImgLoaded(true);
               if (onThumbnailError && videoId && shortcode && !isRefreshingThumb) {
                 setIsRefreshingThumb(true);
                 Promise.resolve(onThumbnailError(videoId, shortcode)).finally(() => setIsRefreshingThumb(false));
@@ -160,16 +187,15 @@ export const VideoGradientCard = ({
           />
         </motion.div>
 
-        {/* Gradient overlay — светлее, чтобы превью было видно */}
+        {/* Gradient overlay — ещё светлее, превью видно */}
         <div
-          className="absolute inset-0 z-10"
+          className="absolute inset-0 z-10 pointer-events-none"
           style={{
             background: `linear-gradient(to top, 
-              rgba(20, 20, 24, 0.92) 0%, 
-              rgba(30, 30, 36, 0.6) 30%, 
-              rgba(40, 40, 48, 0.25) 50%, 
-              rgba(50, 50, 58, 0.08) 70%, 
-              transparent 85%
+              rgba(15, 15, 18, 0.85) 0%, 
+              rgba(25, 25, 30, 0.45) 35%, 
+              rgba(35, 35, 42, 0.15) 55%, 
+              transparent 75%
             )`,
           }}
         />

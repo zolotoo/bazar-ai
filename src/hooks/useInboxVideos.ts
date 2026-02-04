@@ -81,6 +81,7 @@ export function useInboxVideos() {
 
   // Преобразование из БД в IncomingVideo
   const transformVideo = useCallback((video: SavedVideo): IncomingVideo & { 
+    shortcode?: string;
     view_count?: number; 
     like_count?: number; 
     comment_count?: number;
@@ -126,6 +127,7 @@ export function useInboxVideos() {
       title: video.caption || 'Без названия',
       previewUrl: video.thumbnail_url || '',
       url: video.video_url || `https://instagram.com/reel/${video.shortcode}`,
+      shortcode: video.shortcode,
       receivedAt: new Date(video.added_at),
       view_count: video.view_count,
       like_count: video.like_count,
@@ -648,7 +650,7 @@ export function useInboxVideos() {
    * Обновляет превью: reel-info → save-thumbnail → update DB.
    * Вызывать при onError загрузки картинки (истёкший Instagram URL).
    */
-  const refreshThumbnail = useCallback(async (videoId: string, shortcode: string) => {
+  const refreshThumbnail = useCallback(async (videoId: string, shortcode: string, silent = false) => {
     try {
       const res = await fetch('/api/reel-info', {
         method: 'POST',
@@ -658,7 +660,7 @@ export function useInboxVideos() {
       const data = await res.json();
       const thumbUrl = data?.thumbnail_url || data?.carousel_slides?.[0];
       if (!thumbUrl) {
-        toast.error('Не удалось получить превью');
+        if (!silent) toast.error('Не удалось получить превью');
         return;
       }
       const saveRes = await fetch('/api/save-thumbnail', {
@@ -668,7 +670,7 @@ export function useInboxVideos() {
       });
       const saveData = await saveRes.json();
       if (!saveData.success || !saveData.storageUrl) {
-        toast.error('Не удалось сохранить превью');
+        if (!silent) toast.error('Не удалось сохранить превью');
         return;
       }
       await supabase
@@ -679,10 +681,10 @@ export function useInboxVideos() {
         .from('videos')
         .update({ thumbnail_url: saveData.storageUrl })
         .eq('shortcode', shortcode);
-      toast.success('Превью обновлено');
+      if (!silent) toast.success('Превью обновлено');
       fetchVideos();
     } catch {
-      toast.error('Ошибка обновления превью');
+      if (!silent) toast.error('Ошибка обновления превью');
     }
   }, [fetchVideos]);
 
