@@ -841,7 +841,7 @@ export function Workspace(props?: WorkspaceProps) {
                     <GlassFolderIcon iconType={currentFolderConfig.iconType} color={currentFolderConfig.color} size={28} invert />
                     <div>
                       <h1 className="text-xl md:text-2xl font-bold text-slate-800">{currentFolderConfig.title}</h1>
-                      <p className="text-slate-500 text-xs md:text-sm tabular-nums">{feedVideos.length} видео</p>
+                      <p className="text-slate-500 text-xs md:text-sm tabular-nums mt-1">{feedVideos.length} видео</p>
                     </div>
                   </>
                 ) : (
@@ -849,7 +849,7 @@ export function Workspace(props?: WorkspaceProps) {
                     <GlassFolderIcon iconType="sparkles" color="#475569" size={28} simple />
                     <div>
                       <h1 className="text-xl md:text-2xl font-bold text-slate-800">Все видео</h1>
-                      <p className="text-slate-500 text-xs md:text-sm tabular-nums">{feedVideos.length} видео • отсортировала по виральности</p>
+                      <p className="text-slate-500 text-xs md:text-sm tabular-nums mt-1">{feedVideos.length} видео • отсортировала по виральности</p>
                     </div>
                   </>
                 )}
@@ -869,14 +869,15 @@ export function Workspace(props?: WorkspaceProps) {
                 )}
                 <div className="flex items-center gap-1.5 md:gap-2 bg-white/80 md:bg-glass-white/60 backdrop-blur-sm md:backdrop-blur-glass rounded-full p-1.5 md:p-2 shadow-sm md:shadow-glass-sm border border-slate-200/60 md:border-white/[0.35] overflow-x-auto overflow-y-hidden flex-1 min-w-0 scrollbar-hide">
                 {[
-                  { value: 'viral', label: 'Виральность', icon: Sparkles },
-                  { value: 'views', label: 'Просмотры', icon: Eye },
-                  { value: 'likes', label: 'Лайки', icon: Heart },
-                  { value: 'recent', label: 'Недавно', icon: Inbox },
-                ].map(({ value, label, icon: Icon }) => (
+                  { value: 'viral', label: 'Виральность', icon: Sparkles, title: 'По коэффициенту виральности' },
+                  { value: 'views', label: 'Просмотры', icon: Eye, title: 'По количеству просмотров' },
+                  { value: 'likes', label: 'Лайки', icon: Heart, title: 'По количеству лайков' },
+                  { value: 'recent', label: 'Недавно', icon: Inbox, title: 'По дате добавления' },
+                ].map(({ value, label, icon: Icon, title }) => (
                   <button
                     key={value}
                     onClick={() => setSortBy(value as typeof sortBy)}
+                    title={title}
                     className={cn(
                       "flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 min-h-[44px] rounded-pill text-[10px] md:text-xs font-semibold transition-all active:scale-95 touch-manipulation whitespace-nowrap",
                       sortBy === value 
@@ -885,7 +886,7 @@ export function Workspace(props?: WorkspaceProps) {
                     )}
                   >
                     <Icon className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" strokeWidth={2.5} />
-                    <span className="hidden sm:inline">{label}</span>
+                    <span>{label}</span>
                   </button>
                 ))}
                 </div>

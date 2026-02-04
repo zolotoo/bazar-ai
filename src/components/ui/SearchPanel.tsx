@@ -1112,7 +1112,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                   </div>
                   <div>
                     <h3 className="text-base font-semibold text-slate-800">Добавить по ссылке</h3>
-                    <p className="text-xs text-slate-500">Вставь ссылку на рилс или карусель Instagram</p>
+                    <p className="text-xs text-slate-500 mt-1">Вставь ссылку на рилс или карусель Instagram</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 mb-4">
@@ -1124,23 +1124,25 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
                     placeholder="https://instagram.com/reel/ABC123..."
                     className="flex-1 px-4 py-3 rounded-card-xl border border-white/[0.5] bg-glass-white/60 backdrop-blur-glass outline-none focus:ring-2 focus:ring-slate-300/50 focus:border-slate-400/50 text-sm"
                   />
-                  <button
-                    onClick={handleParseLink}
-                    disabled={!linkUrl.trim() || linkLoading}
-                    className={cn(
-                      "px-5 py-3 rounded-card-xl font-medium text-sm transition-all active:scale-95 flex items-center gap-2",
-                      "bg-slate-600 hover:bg-slate-700 text-white shadow-glass hover:shadow-glass-hover",
-                      "disabled:opacity-40 disabled:cursor-not-allowed"
-                    )}
-                  >
-                    {linkLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Search className="w-4 h-4" />
-                    )}
-                    Найти
-                    <TokenBadge tokens={getTokenCost('link_add')} />
-                  </button>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      onClick={handleParseLink}
+                      disabled={!linkUrl.trim() || linkLoading}
+                      className={cn(
+                        "px-5 py-3 rounded-card-xl font-medium text-sm transition-all active:scale-95 flex items-center justify-center gap-2",
+                        "bg-slate-600 hover:bg-slate-700 text-white shadow-glass hover:shadow-glass-hover",
+                        "disabled:opacity-40 disabled:cursor-not-allowed"
+                      )}
+                    >
+                      {linkLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Search className="w-4 h-4" />
+                      )}
+                      Найти
+                    </button>
+                    <TokenBadge tokens={getTokenCost('link_add')} className="self-center" />
+                  </div>
                 </div>
 
                 {/* Link Preview — компактная карточка без большого превью видео */}
