@@ -187,7 +187,7 @@ export const SidebarLink = ({
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-2 py-1 rounded-lg transition-all w-full text-left group/sidebar",
+        "flex items-center gap-2 py-1.5 rounded-xl transition-all w-full text-left group/sidebar",
         "font-medium",
         open ? "px-2.5" : "px-2 justify-center",
         isActive 
@@ -199,7 +199,7 @@ export const SidebarLink = ({
       )}
     >
       <div className={cn(
-        "flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg transition-all",
+        "flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-xl transition-all",
         isActive && "bg-slate-200/30",
         !open && isActive && "bg-slate-200/40"
       )}>
@@ -246,14 +246,14 @@ export const SidebarSection = ({ title, children, onAdd }: SidebarSectionProps) 
   const { open, animate } = useSidebar();
   
   return (
-    <div className="mb-8">
+    <div className="mb-4">
       <motion.div
         animate={{
           opacity: animate ? (open ? 1 : 0) : 1,
           height: animate ? (open ? "auto" : 0) : "auto",
         }}
         transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-        className="flex items-center justify-between px-3 mb-2 overflow-hidden"
+        className="flex items-center justify-between px-3 mb-1.5 overflow-hidden"
       >
         <span className="text-xs font-semibold text-slate-500 tracking-wider">
           {title}
@@ -271,7 +271,7 @@ export const SidebarSection = ({ title, children, onAdd }: SidebarSectionProps) 
       </motion.div>
       <div className={cn(
         "space-y-0.5",
-        !open && "flex flex-col items-center gap-1.5"
+        !open && "flex flex-col items-center gap-1"
       )}>
         {children}
       </div>
@@ -307,7 +307,7 @@ export const SidebarProject = ({
     <div
       onClick={onClick}
       className={cn(
-        "group flex items-center gap-3 py-2 rounded-2xl transition-all cursor-pointer relative",
+        "group flex items-center gap-3 py-2 rounded-xl transition-all cursor-pointer relative",
         open ? "px-4" : "px-3 justify-center",
         isActive 
           ? "bg-glass-white/80 backdrop-blur-glass shadow-glass-sm" 
@@ -406,7 +406,7 @@ export const SidebarDivider = () => {
   const { open } = useSidebar();
   return (
     <div className={cn(
-      "h-px bg-gradient-to-r from-transparent via-slate-200/80 to-transparent my-6 transition-all",
+      "h-px bg-gradient-to-r from-transparent via-slate-200/80 to-transparent my-4 transition-all",
       open ? "mx-4" : "mx-3"
     )} />
   );
