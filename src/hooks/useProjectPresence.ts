@@ -31,40 +31,47 @@ export function useProjectPresence(projectId: string | null) {
   ) => {
     if (!projectId || !userId) return;
 
+    const payload = {
+      project_id: projectId,
+      user_id: userId,
+      entity_type: entityType,
+      entity_id: entityId,
+      cursor_position: cursorPosition,
+      last_seen: new Date().toISOString(),
+    };
+
     try {
-      // Устанавливаем контекст пользователя для RLS
       await setUserContext(userId);
-      
-      // Из-за уникального индекса с COALESCE, используем DELETE + INSERT вместо upsert
-      // Удаляем все записи для этого пользователя в проекте (для упрощения)
+
+      // Сначала удаляем старые записи пользователя в проекте
       await supabase
         .from('project_presence')
         .delete()
         .eq('project_id', projectId)
         .eq('user_id', userId);
-      
-      // Затем вставляем новую запись
+
       const { error } = await supabase
         .from('project_presence')
-        .insert({
-          project_id: projectId,
-          user_id: userId,
-          entity_type: entityType,
-          entity_id: entityId,
-          cursor_position: cursorPosition,
-          last_seen: new Date().toISOString(),
-        });
+        .insert(payload);
 
       if (error) {
-        // Игнорируем ошибки если таблица не существует
         if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
           console.warn('[ProjectPresence] Table project_presence does not exist. Please run the migration.');
+          return;
+        }
+        // 23505 = duplicate key — race condition: запись уже есть, обновляем last_seen
+        if (error.code === '23505') {
+          const { error: updateErr } = await supabase
+            .from('project_presence')
+            .update({ last_seen: payload.last_seen, entity_type: entityType, entity_id: entityId, cursor_position: cursorPosition })
+            .eq('project_id', projectId)
+            .eq('user_id', userId);
+          if (updateErr) console.error('Error updating presence (fallback):', updateErr);
           return;
         }
         throw error;
       }
     } catch (err) {
-      // Если таблица не существует, просто игнорируем
       if (err instanceof Error && (err.message?.includes('relation') || err.message?.includes('does not exist'))) {
         console.warn('[ProjectPresence] Table project_presence does not exist. Please run the migration.');
       } else {

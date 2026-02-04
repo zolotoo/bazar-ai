@@ -249,7 +249,7 @@ export function Workspace(_props?: WorkspaceProps) {
     title: v.title,
     preview_url: v.previewUrl,
     url: v.url,
-    shortcode: v.shortcode ?? v.url?.match(/(?:reel|p)\/([A-Za-z0-9_-]+)/)?.[1],
+    shortcode: v.shortcode ?? v.url?.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/)?.[1],
     zone_id: folderId,
     folder_id: (v as any).folder_id || null,
     position_x: 0,
@@ -950,7 +950,7 @@ export function Workspace(_props?: WorkspaceProps) {
                     onClick={() => setSelectedVideo(video)}
                     showFolderMenu={cardMenuVideoId === video.id}
                     videoId={!String(video.id).startsWith('local-') ? video.id : undefined}
-                    shortcode={video.shortcode ?? video.url?.match(/(?:reel|p)\/([A-Za-z0-9_-]+)/)?.[1]}
+                    shortcode={video.shortcode ?? video.url?.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/)?.[1]}
                     onThumbnailError={refreshThumbnail}
                     onThumbnailLoad={saveThumbnailFromUrl}
                     onFolderMenuToggle={() => {

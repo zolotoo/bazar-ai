@@ -363,7 +363,7 @@ export function History() {
                         date={dateText || '—'}
                         viralCoef={viralCoef}
                         videoId={!String(video.id).startsWith('local-') ? video.id : undefined}
-                        shortcode={video.url?.match(/(?:reel|p)\/([A-Za-z0-9_-]+)/)?.[1]}
+                        shortcode={video.url?.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/)?.[1]}
                         onThumbnailError={refreshThumbnail}
                         onThumbnailLoad={saveThumbnailFromUrl}
                         onAdd={() => {

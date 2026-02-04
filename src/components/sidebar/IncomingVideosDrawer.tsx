@@ -93,7 +93,7 @@ function VideoCard({
             onError={(e) => {
               e.currentTarget.src = PLACEHOLDER_320x400;
               const videoId = (video as any).id;
-              const shortcode = (video as any).url?.match(/(?:reel|p)\/([A-Za-z0-9_-]+)/)?.[1];
+              const shortcode = (video as any).url?.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/)?.[1];
               if (onThumbnailError && videoId && shortcode && !String(videoId).startsWith('local-')) {
                 onThumbnailError(videoId, shortcode);
               }

@@ -53,9 +53,9 @@ export default async function handler(req, res) {
     
     if (response.ok) {
       const data = await response.json();
-      console.log('API raw response keys:', data?.data ? Object.keys(data.data).slice(0, 20) : 'no data');
-      
-      const media = data?.data;
+      // API может вернуть data.data, data.items[0] или data напрямую
+      const media = data?.data || data?.items?.[0] || data;
+      console.log('API raw response keys:', media ? Object.keys(media).slice(0, 25) : 'no data');
       
       if (media) {
         // Статистика в metrics
@@ -105,7 +105,15 @@ export default async function handler(req, res) {
           const u = c?.url || '';
           return u.includes('cdninstagram.com') || u.includes('fbcdn.net') || u.includes('scontent.');
         })?.url;
-        const fallbackThumb = media.thumbnail_url || candidates[0]?.url || media.image_versions?.items?.[0]?.url || carousel_slides[0]?.url || '';
+        // Максимум fallback'ов: API может возвращать разные структуры
+        const fallbackThumb = media.thumbnail_url
+          || candidates[0]?.url
+          || media.display_url
+          || media.display_resources?.[0]?.src
+          || media.thumbnail_src
+          || media.image_versions?.items?.[0]?.url
+          || carousel_slides[0]?.url
+          || '';
 
         const result = {
           success: true,

@@ -358,12 +358,26 @@ export function useInboxVideos() {
     
     // Пытаемся сохранить превью в Supabase Storage (постоянный URL вместо истекающего Instagram)
     let thumbnailToSave = video.previewUrl;
-    if (shortcode && video.previewUrl && !video.previewUrl.includes('supabase')) {
+    // Если превью пустое — пробуем получить через reel-info (API мог вернуть другой формат)
+    if (!thumbnailToSave && shortcode) {
+      try {
+        const infoRes = await fetch('/api/reel-info', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ shortcode, url: video.url }),
+        });
+        const infoData = await infoRes.json();
+        thumbnailToSave = infoData?.thumbnail_url || infoData?.carousel_slides?.[0] || '';
+      } catch {
+        /* ignore */
+      }
+    }
+    if (shortcode && thumbnailToSave && !thumbnailToSave.includes('supabase')) {
       try {
         const res = await fetch('/api/save-thumbnail', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: video.previewUrl, shortcode }),
+          body: JSON.stringify({ url: thumbnailToSave, shortcode }),
         });
         const data = await res.json();
         if (data.success && data.storageUrl) {
