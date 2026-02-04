@@ -4,6 +4,7 @@ import { cn } from "../../utils/cn";
 import React, { useState, createContext, useContext, ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
+import { GlassFolderIcon } from "./GlassFolderIcons";
 
 interface SidebarContextProps {
   open: boolean;
@@ -286,6 +287,8 @@ interface SidebarProjectProps {
   onEdit?: () => void;
   icon?: ReactNode;
   badge?: string; // Текст бейджа (например, "Новое")
+  /** iOS 26 glass иконка вместо Lucide */
+  useGlassIcon?: boolean;
 }
 
 export const SidebarProject = ({ 
@@ -295,7 +298,8 @@ export const SidebarProject = ({
   onClick, 
   onEdit,
   icon,
-  badge
+  badge,
+  useGlassIcon = true,
 }: SidebarProjectProps) => {
   const { open, animate } = useSidebar();
   
@@ -315,12 +319,16 @@ export const SidebarProject = ({
           "rounded-xl flex items-center justify-center flex-shrink-0 transition-all",
           open ? "w-7 h-7" : "w-10 h-10"
         )}
-        style={{ backgroundColor: color + '15' }}
+        style={!useGlassIcon ? { backgroundColor: color + '15' } : undefined}
       >
-        {icon ? React.cloneElement(icon as React.ReactElement, { 
-          className: open ? "w-4 h-4" : "w-5 h-5",
-          strokeWidth: 2.5
-        }) : (
+        {useGlassIcon ? (
+          <GlassFolderIcon iconType="folder" color={color || '#64748b'} size={open ? 16 : 20} />
+        ) : icon ? (
+          React.cloneElement(icon as React.ReactElement, { 
+            className: open ? "w-4 h-4" : "w-5 h-5",
+            strokeWidth: 2.5
+          })
+        ) : (
           <div 
             className={cn("rounded-lg transition-all", open ? "w-4 h-4" : "w-5 h-5")} 
             style={{ backgroundColor: color }} 

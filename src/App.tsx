@@ -20,6 +20,7 @@ import {
   Settings, Search, LayoutGrid, Clock, User, LogOut, 
   Link, Radar, Plus, FolderOpen, X, Palette, Sparkles, Trash2, Users, Menu
 } from 'lucide-react';
+import { GlassFolderIcon } from './components/ui/GlassFolderIcons';
 import { MobileBottomBar, type MobileTabId } from './components/ui/MobileBottomBar';
 import { cn } from './utils/cn';
 import { Toaster, toast } from 'sonner';
@@ -138,12 +139,7 @@ function CreateProjectModal({ onSave, onClose }: CreateProjectModalProps) {
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
             <p className="text-xs text-slate-500 mb-2">Предпросмотр</p>
             <div className="flex items-center gap-3">
-              <div 
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ backgroundColor: color + '20' }}
-              >
-                <FolderOpen className="w-5 h-5" style={{ color }} strokeWidth={2.5} />
-              </div>
+              <GlassFolderIcon iconType="folder" color={color} size={20} />
               <span className="font-medium text-slate-800">
                 {name || 'Название проекта'}
               </span>
@@ -223,12 +219,7 @@ function EditProjectModal({ project, onSave, onDelete, onClose }: EditProjectMod
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-100 safe-top safe-x">
           <div className="flex items-center gap-3">
-            <div 
-              className="w-10 h-10 rounded-2xl flex items-center justify-center"
-              style={{ backgroundColor: color + '20' }}
-            >
-              <FolderOpen className="w-5 h-5" style={{ color }} />
-            </div>
+            <GlassFolderIcon iconType="folder" color={color} size={20} />
             <div>
               <h2 className="text-lg font-semibold text-slate-800">Редактировать проект</h2>
               <p className="text-sm text-slate-500">Изменить название и цвет</p>
@@ -289,12 +280,7 @@ function EditProjectModal({ project, onSave, onDelete, onClose }: EditProjectMod
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
             <p className="text-xs text-slate-500 mb-2">Предпросмотр</p>
             <div className="flex items-center gap-3">
-              <div 
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ backgroundColor: color + '20' }}
-              >
-                <FolderOpen className="w-5 h-5" style={{ color }} strokeWidth={2.5} />
-              </div>
+              <GlassFolderIcon iconType="folder" color={color} size={20} />
               <span className="font-medium text-slate-800">
                 {name || 'Название проекта'}
               </span>
@@ -592,7 +578,6 @@ function AppContent() {
                               isActive={currentProjectId === project.id}
                               onClick={() => { selectProject(project.id); if (window.innerWidth < 768) setSidebarExpanded(false); }}
                               onEdit={() => setEditingProject({ id: project.id, name: project.name, color: project.color })}
-                              icon={<FolderOpen className="w-4 h-4" style={{ color: project.color || '#64748b' }} strokeWidth={2.5} />}
                             />
                             {currentProjectId === project.id && (
                               <button
@@ -625,7 +610,6 @@ function AppContent() {
                                   isActive={currentProjectId === project.id}
                                   onClick={async () => { await handleProjectClick(project); if (window.innerWidth < 768) setSidebarExpanded(false); }}
                                   onEdit={() => setEditingProject({ id: project.id, name: project.name, color: project.color })}
-                                  icon={<FolderOpen className="w-4 h-4" style={{ color: project.color || '#64748b' }} strokeWidth={2.5} />}
                                   badge={isPending ? 'Новое' : undefined}
                                 />
                                 {isPending && (

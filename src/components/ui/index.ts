@@ -9,6 +9,7 @@ export { GlassTabButton, GlassTabGroup } from './GlassTabButton';
 export { GlassCard, GlassCardStatic, type GlassCardProps } from './GlassCard';
 export { TokenBadge } from './TokenBadge';
 export { CoinBadge } from './CoinBadge';
+export { GlassFolderIcon } from './GlassFolderIcons';
 export {
   GlassFolder,
   GlassCheck,

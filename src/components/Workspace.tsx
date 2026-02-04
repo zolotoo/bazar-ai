@@ -7,7 +7,7 @@ import { useActionHistory } from '../hooks/useActionHistory';
 import { useProjectSync } from '../hooks/useProjectSync';
 import { useProjectPresence } from '../hooks/useProjectPresence';
 import { PresenceIndicator } from './ui/PresenceIndicator';
-import { Sparkles, Star, FileText, Trash2, ExternalLink, Plus, Inbox, Lightbulb, Camera, Scissors, Check, FolderOpen, Settings, GripVertical, X, Palette, Eye, Heart, ChevronDown, ChevronRight, Undo2, Images, Link2, Loader2, MessageCircle, BookOpen } from 'lucide-react';
+import { Sparkles, FileText, Trash2, ExternalLink, Plus, Inbox, FolderOpen, Settings, GripVertical, X, Palette, Eye, Heart, ChevronDown, ChevronRight, Undo2, Images, Link2, Loader2, MessageCircle, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../utils/cn';
 import { proxyImageUrl } from '../utils/imagePlaceholder';
@@ -18,6 +18,7 @@ import { useCarousels, type SavedCarousel } from '../hooks/useCarousels';
 import { calculateViralMultiplier, applyViralMultiplierToCoefficient, getProfileStats } from '../services/profileStatsService';
 import { dialogScale, backdropFade, iosSpringSoft } from '../utils/motionPresets';
 import { TokenBadge } from './ui/TokenBadge';
+import { GlassFolderIcon } from './ui/GlassFolderIcons';
 import { getTokenCost } from '../constants/tokenCosts';
 
 
@@ -97,25 +98,6 @@ const defaultFolderConfigs: FolderConfig[] = [
   { id: '4', title: 'Готовое', color: '#334155', iconType: 'check' },
   { id: 'rejected', title: 'Не подходит', color: '#ef4444', iconType: 'rejected' },
 ];
-
-// Иконки маппинг
-const getIconComponent = (iconType: string, color: string, size: string = "w-5 h-5") => {
-  const style = { color };
-  
-  switch (iconType) {
-    case 'all': return <Inbox className={size} style={style} />;
-    case 'lightbulb': return <Lightbulb className={size} style={style} />;
-    case 'plus': return <Plus className={size} style={style} />;
-    case 'star': return <Star className={size} style={style} />;
-    case 'sparkles': return <Sparkles className={size} style={style} />;
-    case 'file': return <FileText className={size} style={style} />;
-    case 'camera': return <Camera className={size} style={style} />;
-    case 'scissors': return <Scissors className={size} style={style} />;
-    case 'check': return <Check className={size} style={style} />;
-    case 'rejected': return <Trash2 className={size} style={style} />;
-    default: return <FolderOpen className={size} style={style} />;
-  }
-};
 
 interface WorkspaceProps {
   externalFolderPanelOpen?: boolean;
@@ -643,7 +625,7 @@ export function Workspace(props?: WorkspaceProps) {
           onClick={() => setIsFolderWidgetOpen(!isFolderWidgetOpen)}
         >
           <div className="flex items-center gap-2">
-            <FolderOpen className="w-5 h-5 text-slate-600" strokeWidth={2.5} />
+            <GlassFolderIcon iconType="folder" color="#475569" size={20} />
             <span className="text-sm font-semibold text-slate-700">Папки</span>
           </div>
           {isFolderWidgetOpen ? (
@@ -666,12 +648,7 @@ export function Workspace(props?: WorkspaceProps) {
                   : "hover:bg-glass-white/60 text-slate-600"
               )}
             >
-              <div className={cn(
-                "w-8 h-8 rounded-lg flex items-center justify-center",
-                selectedFolderId === null ? "bg-slate-200/30" : "bg-slate-100/80"
-              )}>
-                <Inbox className="w-4 h-4" style={{ color: selectedFolderId === null ? '#64748b' : '#64748b' }} strokeWidth={2.5} />
-              </div>
+              <GlassFolderIcon iconType="inbox" color="#64748b" size={20} />
               <div className="flex-1 min-w-0">
                 <span className="text-sm font-medium block truncate">Все видео</span>
                 <span className="text-xs text-slate-400 tabular-nums">{totalVideos} видео</span>
@@ -698,12 +675,7 @@ export function Workspace(props?: WorkspaceProps) {
                     isRejected && "opacity-70"
                   )}
                 >
-                  <div 
-                    className="w-8 h-8 rounded-lg flex items-center justify-center"
-                    style={{ backgroundColor: `${folder.color}20` }}
-                  >
-                    {getIconComponent(folder.iconType, folder.color, "w-4 h-4")}
-                  </div>
+                  <GlassFolderIcon iconType={folder.iconType} color={folder.color} size={20} />
                   <div className="flex-1 min-w-0">
                     <span className={cn(
                       "text-sm font-medium block truncate",
@@ -775,12 +747,7 @@ export function Workspace(props?: WorkspaceProps) {
                     selectedFolderId === null && "ring-2 ring-slate-300/40 bg-white/70"
                   )}
                 >
-                  <div className={cn(
-                    "w-12 h-12 rounded-2xl flex items-center justify-center mb-2 flex-shrink-0",
-                    selectedFolderId === null ? "bg-slate-200/40" : "bg-slate-100/80"
-                  )}>
-                    <Inbox className="w-6 h-6" style={{ color: selectedFolderId === null ? '#64748b' : '#64748b' }} strokeWidth={2.5} />
-                  </div>
+                  <GlassFolderIcon iconType="inbox" color="#64748b" size={24} className="mb-2" />
                   <span className={cn("text-sm font-semibold truncate w-full text-center", selectedFolderId === null ? "text-slate-700" : "text-slate-700")}>Все видео</span>
                   <span className="text-xs text-slate-400 mt-0.5">{totalVideos}</span>
                 </button>
@@ -801,12 +768,7 @@ export function Workspace(props?: WorkspaceProps) {
                         isRejected && "opacity-70"
                       )}
                     >
-                      <div
-                        className="w-12 h-12 rounded-2xl flex items-center justify-center mb-2 flex-shrink-0"
-                        style={{ backgroundColor: `${folder.color}22` }}
-                      >
-                        {getIconComponent(folder.iconType, folder.color, "w-6 h-6")}
-                      </div>
+                      <GlassFolderIcon iconType={folder.iconType} color={folder.color} size={24} className="mb-2" />
                       <span className={cn("text-sm font-semibold truncate w-full text-center", isSelected && "text-slate-800")}>{folder.title}</span>
                       <span className="text-xs text-slate-400 mt-0.5">{count}</span>
                     </button>
@@ -876,12 +838,7 @@ export function Workspace(props?: WorkspaceProps) {
               <div className="flex items-center gap-3">
                 {currentFolderConfig ? (
                   <>
-                    <div 
-                      className="w-12 h-12 rounded-2xl flex items-center justify-center"
-                      style={{ backgroundColor: currentFolderConfig.color }}
-                    >
-                      {getIconComponent(currentFolderConfig.iconType, '#ffffff', "w-6 h-6")}
-                    </div>
+                    <GlassFolderIcon iconType={currentFolderConfig.iconType} color={currentFolderConfig.color} size={24} invert />
                     <div>
                       <h1 className="text-xl md:text-2xl font-bold text-slate-800">{currentFolderConfig.title}</h1>
                       <p className="text-slate-500 text-xs md:text-sm tabular-nums">{feedVideos.length} видео</p>
@@ -889,9 +846,7 @@ export function Workspace(props?: WorkspaceProps) {
                   </>
                 ) : (
                   <>
-                    <div className="w-12 h-12 rounded-card-xl bg-slate-200/40 flex items-center justify-center shadow-glass-sm">
-                      <Sparkles className="w-6 h-6 text-slate-700" strokeWidth={2.5} />
-                    </div>
+                    <GlassFolderIcon iconType="sparkles" color="#475569" size={24} />
                     <div>
                       <h1 className="text-xl md:text-2xl font-bold text-slate-800">Все видео</h1>
                       <p className="text-slate-500 text-xs md:text-sm tabular-nums">{feedVideos.length} видео • отсортировала по виральности</p>
@@ -1042,12 +997,7 @@ export function Workspace(props?: WorkspaceProps) {
                                   }}
                                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md hover:bg-slate-50 transition-colors text-left"
                                 >
-                                  <div 
-                                    className="w-4 h-4 rounded flex items-center justify-center"
-                                    style={{ backgroundColor: `${folder.color}20` }}
-                                  >
-                                    {getIconComponent(folder.iconType, folder.color, "w-2.5 h-2.5")}
-                                  </div>
+                                  <GlassFolderIcon iconType={folder.iconType} color={folder.color} size={16} />
                                   <span className="text-xs text-slate-600">{folder.title}</span>
                                 </button>
                               ))}
