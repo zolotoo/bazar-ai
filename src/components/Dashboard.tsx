@@ -80,7 +80,7 @@ function renderTitleWithAccent(title: string, accent: string | null) {
   const [before, after] = title.split(accent);
   return (
     <>
-      {before}<span className="font-heading italic">{accent}</span>{after}
+      {before}<span className="font-heading italic text-inherit">{accent}</span>{after}
     </>
   );
 }
@@ -108,7 +108,7 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
               transition={{ duration: 0.35 }}
               className="mb-8 md:mb-10"
             >
-              <h1 className="text-2xl md:text-3xl font-bold mb-0.5 leading-[0.8] font-heading">
+              <h1 className="text-2xl md:text-3xl font-bold mb-[0.6em] leading-[0.8] font-heading">
                 <span className="text-slate-500">{greeting},</span>{' '}
                 <span className="text-slate-800 italic">{name}</span>
               </h1>
@@ -150,7 +150,7 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
                         <card.icon className="w-5 h-5" strokeWidth={2.5} />
                       </div>
                     </div>
-                    <h3 className="text-base md:text-lg font-bold mb-1 font-heading">{renderTitleWithAccent(card.title, card.accent)}</h3>
+                    <h3 className="text-base md:text-lg font-bold mb-[0.6em] font-heading">{renderTitleWithAccent(card.title, card.accent)}</h3>
                     <p className="text-white/90 text-sm mb-4 flex-1 leading-snug">
                       {card.subtitle}
                     </p>
@@ -198,7 +198,7 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
                         </span>
                       )}
                     </div>
-                    <h3 className="font-semibold text-slate-800 text-sm md:text-base mb-1.5 font-heading">
+                    <h3 className="font-bold text-slate-900 text-sm md:text-base mb-[0.6em] font-heading">
                       {renderTitleWithAccent(card.title, card.accent)}
                     </h3>
                     <p className="text-slate-600 text-xs md:text-sm mb-4 leading-relaxed">
