@@ -100,11 +100,11 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-[#fafafa] safe-top safe-bottom safe-left safe-right custom-scrollbar-light">
-      {/* Main content card — floating white container like reference */}
-      <div className="mx-4 md:mx-6 lg:mx-8 py-6 md:py-8 lg:py-10 pb-12 md:pb-16">
+      {/* Main content card — iOS 26: компактнее на мобильных */}
+      <div className="mx-4 md:mx-6 lg:mx-8 py-4 md:py-8 lg:py-10 pb-8 md:pb-16">
         <div className="max-w-5xl mx-auto">
           <div
-            className="bg-white rounded-3xl p-6 md:p-8 lg:p-10"
+            className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-8 lg:p-10"
             style={{
               boxShadow: '0 4px 24px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04)',
             }}
@@ -114,7 +114,7 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35 }}
-              className="mb-8 md:mb-10"
+              className="mb-6 md:mb-10"
             >
               <h1 className="text-2xl md:text-3xl font-bold mb-[0.1em] leading-[0.8] font-heading">
                 <span className="text-slate-500">{greeting},</span>{' '}
@@ -126,7 +126,7 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
             </motion.div>
 
             {/* Two main gradient action cards — compact height, layered shadows, visible gradient */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
               {GRADIENT_CARDS.map((card, i) => (
                 <motion.div
                   key={card.id}
@@ -152,7 +152,7 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
                     className="absolute -right-4 -top-4 w-24 h-24 rounded-full bg-white/5 blur-3xl"
                     aria-hidden
                   />
-                  <div className="relative p-5 md:p-6 flex flex-col min-h-[140px] md:min-h-[160px]">
+                  <div className="relative p-4 md:p-6 flex flex-col min-h-[120px] md:min-h-[160px]">
                     <div className="flex items-start justify-between mb-3">
                       <div className="w-11 h-11 rounded-xl bg-white/25 flex items-center justify-center flex-shrink-0 shadow-sm">
                         <card.icon className="w-5 h-5" strokeWidth={2.5} />
@@ -165,7 +165,7 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
                     <button
                       type="button"
                       onClick={() => card.onAction(onOpenSearch)}
-                      className="self-start px-4 py-2 rounded-lg bg-white/25 hover:bg-white/30 text-white font-semibold text-sm transition-colors"
+                      className="self-start px-4 py-2.5 min-h-[44px] rounded-xl bg-white/25 hover:bg-white/30 active:bg-white/35 text-white font-semibold text-sm transition-colors touch-manipulation"
                     >
                       {card.cta}
                     </button>
@@ -174,8 +174,8 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
               ))}
             </div>
 
-            {/* Three white cards below — refined style with shadows, underlays, readable text */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5">
+            {/* Three white cards below — iOS 26: 1 col на мобильных */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-5">
               {WHITE_CARDS.map((card, i) => (
                 <motion.button
                   key={card.id}
@@ -184,7 +184,7 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.35, delay: 0.1 + i * 0.05 }}
-                  className="relative bg-white rounded-2xl p-5 md:p-6 text-left border border-slate-100/80 hover:border-slate-200 hover:shadow-lg transition-all duration-200 group overflow-hidden"
+                  className="relative bg-white rounded-2xl p-4 md:p-6 text-left border border-slate-100/80 hover:border-slate-200 hover:shadow-lg transition-all duration-200 group overflow-hidden active:scale-[0.99] touch-manipulation"
                   style={{
                     boxShadow:
                       '0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.05), 0 2px 6px rgba(0,0,0,0.03)',

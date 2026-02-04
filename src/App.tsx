@@ -536,7 +536,7 @@ function AppContent() {
 
   return (
     <div className={cn(
-        "w-full h-screen text-foreground overflow-hidden flex flex-col md:flex-row safe-top safe-bottom",
+        "w-full h-[100dvh] md:h-screen text-foreground overflow-hidden flex flex-col md:flex-row safe-top safe-bottom",
         viewMode === 'dashboard' ? "bg-[#fafafa]" : "bg-base"
       )}>
       {/* Background: clean for dashboard, subtle blobs for other views */}
@@ -711,8 +711,8 @@ function AppContent() {
         </SidebarBody>
       </Sidebar>
 
-      {/* Main Content — на мобильных отступ снизу под нижний таб-бар, верхняя полоска убрана */}
-      <div className="flex-1 min-h-0 overflow-hidden pt-0 pb-20 md:pt-0 md:pb-0 flex flex-col">
+      {/* Main Content — iOS 26: на мобильных отступ снизу под таб-бар */}
+      <div className="flex-1 min-h-0 overflow-hidden pt-0 pb-24 md:pt-0 md:pb-0 flex flex-col">
         {viewMode === 'dashboard' && (
           <Dashboard
             onOpenSearch={(tab) => { setSearchTab(tab); setIsSearchOpen(true); }}

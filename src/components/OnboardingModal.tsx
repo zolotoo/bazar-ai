@@ -29,7 +29,7 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/30 backdrop-blur-md safe-top safe-bottom safe-left safe-right"
+        className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center p-0 md:p-4 bg-black/40 backdrop-blur-sm safe-top safe-bottom safe-left safe-right"
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -37,16 +37,17 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
           exit={{ opacity: 0, scale: 0.98 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           className={cn(
-            'w-full max-w-md rounded-3xl overflow-hidden',
-            'bg-white/95 backdrop-blur-2xl',
-            'border border-white/70',
-            'shadow-[0_24px_80px_rgba(0,0,0,0.15),0_8px_32px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.9)]'
+            'w-full max-w-md overflow-hidden',
+            'rounded-t-3xl md:rounded-3xl',
+            'bg-white border border-slate-200/80',
+            'shadow-[0_24px_80px_rgba(0,0,0,0.15),0_8px_32px_rgba(0,0,0,0.08)]',
+            'mt-auto md:mt-0'
           )}
         >
           {/* Gradient accent */}
           <div className="h-1.5 bg-gradient-to-r from-blue-500 via-emerald-500 to-violet-500" />
 
-          <div className="p-8 md:p-10">
+          <div className="p-6 md:p-10 pb-8 md:pb-10 safe-bottom">
             <div className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center mx-auto mb-6 bg-slate-100 p-2 shadow-glass">
               <img src="/riri-logo.png" alt="Riri AI" className="w-full h-full object-contain" />
             </div>

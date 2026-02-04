@@ -19,46 +19,59 @@ interface MobileBottomBarProps extends React.HTMLAttributes<HTMLElement> {
   onTabClick: (id: MobileTabId) => void;
 }
 
+/** iOS 26 style tab bar — frosted glass, labels, 44px targets */
 export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProps>(
   ({ className, items, activeId, onTabClick, ...props }, ref) => {
     return (
       <nav
         ref={ref}
+        role="tablist"
         className={cn(
-          "md:hidden fixed left-0 right-0 z-[9998] flex items-center justify-center gap-0",
-          "pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1.5",
-          "touch-manipulation",
+          "md:hidden fixed left-0 right-0 bottom-0 z-[9998]",
+          "bg-white/90 backdrop-blur-xl backdrop-saturate-[180%]",
+          "border-t border-slate-200/60",
+          "pt-2 touch-manipulation",
           className
         )}
-        style={{ bottom: 0, paddingLeft: "max(12px, env(safe-area-inset-left))", paddingRight: "max(12px, env(safe-area-inset-right))" }}
+        style={{
+          paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))",
+          paddingLeft: "max(8px, env(safe-area-inset-left))",
+          paddingRight: "max(8px, env(safe-area-inset-right))",
+        }}
         {...props}
       >
-        {/* Отдельные мелкие кнопки без подложки и без подписей */}
-        <ul className="flex items-center justify-center gap-2">
+        <ul className="flex items-center justify-around gap-1">
           {items.map((item) => {
             const Icon = item.icon;
             const isActive = item.id === activeId;
 
             return (
-              <li key={item.id}>
+              <li key={item.id} className="flex-1 flex justify-center min-w-0">
                 <button
                   type="button"
+                  role="tab"
                   onClick={() => onTabClick(item.id)}
                   className={cn(
-                    "flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-200 touch-manipulation",
-                    "active:scale-90",
+                    "flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[52px] py-2 px-2 rounded-2xl flex-1 max-w-[72px]",
+                    "transition-all duration-200 touch-manipulation active:scale-95",
                     isActive
-                      ? "bg-[#f97316] text-white"
-                      : "text-slate-600 active:bg-slate-100"
+                      ? "text-slate-800 bg-slate-100/90"
+                      : "text-slate-500 active:bg-slate-50"
                   )}
                   aria-label={item.label}
-                  aria-current={isActive ? "true" : undefined}
+                  aria-selected={isActive}
                   title={item.label}
                 >
                   <Icon
-                    className="w-5 h-5 flex-shrink-0"
+                    className="w-6 h-6 flex-shrink-0"
                     strokeWidth={isActive ? 2.5 : 2}
                   />
+                  <span className={cn(
+                    "text-[10px] font-medium font-heading tracking-[-0.01em] truncate w-full text-center",
+                    isActive ? "text-slate-800" : "text-slate-500"
+                  )}>
+                    {item.label}
+                  </span>
                 </button>
               </li>
             );

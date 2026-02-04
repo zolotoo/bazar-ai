@@ -176,6 +176,21 @@ body {
   --ios-touch-target: 44px; /* Minimum touch target size */
 }
 
+/* iOS 26 / Android — viewport и safe area */
+@media (max-width: 767px) {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    /* 100dvh = видимая высота с учётом браузерного UI */
+    height: 100%;
+  }
+  body {
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
 /* Mobile-first responsive breakpoints */
 @media (max-width: 640px) {
   /* Меньше blur на мобильных — меньше фризов */

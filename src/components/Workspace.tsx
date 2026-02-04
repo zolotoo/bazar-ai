@@ -796,18 +796,18 @@ export function Workspace(props?: WorkspaceProps) {
 
       {/* Кнопка «Папки» на мобильных убрана — открытие только через нижний таб-бар */}
 
-      {/* Main Content - Video Feed or Carousels */}
+      {/* Main Content - Video Feed or Carousels, iOS 26 mobile padding */}
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 md:px-6 safe-left safe-right custom-scrollbar-light" style={{ maxHeight: '100%' }}>
-        <div className="max-w-6xl mx-auto py-5 md:py-8 safe-top safe-bottom">
+        <div className="max-w-6xl mx-auto py-4 md:py-8 pb-28 md:pb-8 safe-top safe-bottom">
           {/* Tabs: Рилсы | Карусели (в каждом проекте два раздела) */}
-          <div className="flex gap-1.5 p-1.5 mb-4 md:mb-6 rounded-card-xl bg-glass-white/60 backdrop-blur-glass border border-white/[0.35] w-fit">
+          <div className="flex gap-1.5 p-1.5 mb-4 md:mb-6 rounded-2xl md:rounded-card-xl bg-slate-100/80 md:bg-glass-white/60 backdrop-blur-sm md:backdrop-blur-glass border border-slate-200/60 md:border-white/[0.35] w-full md:w-fit">
             <button
               onClick={() => setContentSection('reels')}
               className={cn(
-                'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all touch-manipulation',
+                'flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-3 md:py-2.5 min-h-[44px] rounded-xl text-sm font-semibold transition-all touch-manipulation',
                 contentSection === 'reels'
-                  ? 'bg-slate-200/50 text-slate-800 shadow-glass-sm'
-                  : 'text-slate-600 hover:bg-white/50 hover:text-slate-800'
+                  ? 'bg-white text-slate-800 shadow-sm'
+                  : 'text-slate-600 active:bg-white/50'
               )}
             >
               <Sparkles className="w-4 h-4" strokeWidth={2.5} />
@@ -817,10 +817,10 @@ export function Workspace(props?: WorkspaceProps) {
             <button
               onClick={() => setContentSection('carousels')}
               className={cn(
-                'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all touch-manipulation',
+                'flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-3 md:py-2.5 min-h-[44px] rounded-xl text-sm font-semibold transition-all touch-manipulation',
                 contentSection === 'carousels'
-                  ? 'bg-slate-200/50 text-slate-800 shadow-glass-sm'
-                  : 'text-slate-600 hover:bg-white/50 hover:text-slate-800'
+                  ? 'bg-white text-slate-800 shadow-sm'
+                  : 'text-slate-600 active:bg-white/50'
               )}
             >
               <Images className="w-4 h-4" strokeWidth={2.5} />
@@ -832,10 +832,10 @@ export function Workspace(props?: WorkspaceProps) {
           {/* Рилсы: текущая лента */}
           {contentSection === 'reels' && (
           <>
-          {/* Header — glass bar */}
-          <div className="mb-6 md:mb-8 rounded-card-xl bg-glass-white/80 backdrop-blur-glass-xl shadow-glass border border-white/[0.35] px-5 py-4 md:px-6 md:py-5">
-            <div className="flex items-start md:items-center justify-between flex-wrap gap-4 md:gap-5">
-              <div className="flex items-center gap-3">
+          {/* Header — glass bar, на мобильных сортировка прокручивается */}
+          <div className="mb-6 md:mb-8 rounded-2xl md:rounded-card-xl bg-slate-50/90 md:bg-glass-white/80 backdrop-blur-sm md:backdrop-blur-glass-xl shadow-sm md:shadow-glass border border-slate-200/60 md:border-white/[0.35] px-4 py-4 md:px-6 md:py-5 overflow-hidden">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-5">
+              <div className="flex items-center gap-3 flex-shrink-0">
                 {currentFolderConfig ? (
                   <>
                     <GlassFolderIcon iconType={currentFolderConfig.iconType} color={currentFolderConfig.color} size={28} invert />
@@ -856,19 +856,18 @@ export function Workspace(props?: WorkspaceProps) {
               </div>
 
               {/* Сортировка и кнопка отмены */}
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Undo button */}
+              <div className="flex items-center gap-2 min-w-0">
                 {canUndo && (
                   <button
                     onClick={handleUndo}
-                    className="flex items-center gap-2 px-3 py-1.5 min-h-[44px] rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 text-xs font-medium transition-all shadow-sm touch-manipulation"
+                    className="flex items-center gap-2 px-3 py-1.5 min-h-[44px] rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 text-xs font-medium transition-all shadow-sm touch-manipulation flex-shrink-0"
                     title="Отменить последнее действие"
                   >
                     <Undo2 className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Отменить</span>
                   </button>
                 )}
-                <div className="flex items-center gap-1.5 md:gap-2 bg-glass-white/60 backdrop-blur-glass rounded-pill p-1.5 md:p-2 shadow-glass-sm border border-white/[0.35] overflow-x-auto flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 md:gap-2 bg-white/80 md:bg-glass-white/60 backdrop-blur-sm md:backdrop-blur-glass rounded-full p-1.5 md:p-2 shadow-sm md:shadow-glass-sm border border-slate-200/60 md:border-white/[0.35] overflow-x-auto overflow-y-hidden flex-1 min-w-0 scrollbar-hide">
                 {[
                   { value: 'viral', label: 'Виральность', icon: Sparkles },
                   { value: 'views', label: 'Просмотры', icon: Eye },
