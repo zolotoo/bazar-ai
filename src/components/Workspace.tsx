@@ -104,8 +104,7 @@ interface WorkspaceProps {
   onExternalFolderPanelClose?: () => void;
 }
 
-export function Workspace(props?: WorkspaceProps) {
-  const { externalFolderPanelOpen, onExternalFolderPanelClose } = props ?? {};
+export function Workspace(_props?: WorkspaceProps) {
   const { loading } = useWorkspaceZones();
   const { videos: inboxVideos, removeVideo: removeInboxVideo, restoreVideo, updateVideoFolder, loadMore, hasMore, loadingMore, refetch: refetchInboxVideos, refreshThumbnail, saveThumbnailFromUrl } = useInboxVideos();
   const { 
@@ -140,16 +139,10 @@ export function Workspace(props?: WorkspaceProps) {
   const [descriptionModalText, setDescriptionModalText] = useState<string | null>(null);
   const { carousels, loading: carouselsLoading, addCarousel, refetch: refetchCarousels } = useCarousels();
 
-  // Открытие панели папок с нижнего бара (мобильные)
-  useEffect(() => {
-    if (externalFolderPanelOpen) {
-      setIsFolderWidgetOpen(true);
-    }
-  }, [externalFolderPanelOpen]);
+  const [isMobileFolderPanelOpen, setIsMobileFolderPanelOpen] = useState(false);
 
-  const closeFolderPanel = () => {
-    setIsFolderWidgetOpen(false);
-    onExternalFolderPanelClose?.();
+  const closeMobileFolderPanel = () => {
+    setIsMobileFolderPanelOpen(false);
   };
   
   // Преобразуем папки проекта в FolderConfig формат
@@ -700,46 +693,47 @@ export function Workspace(props?: WorkspaceProps) {
         )}
       </div>
 
-      {/* Панель Папки на мобильных — плавное появление */}
+      {/* Панель Папки на мобильных — выдвигается справа */}
       <AnimatePresence>
-        {isFolderWidgetOpen && (
+        {isMobileFolderPanelOpen && (
           <>
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
-              className="md:hidden fixed inset-0 z-[200] bg-black/30 backdrop-blur-sm touch-manipulation safe-top safe-bottom safe-left safe-right"
-              onClick={closeFolderPanel}
+              transition={{ duration: 0.2 }}
+              className="md:hidden fixed inset-0 z-[200] bg-black/20 touch-manipulation"
+              onClick={closeMobileFolderPanel}
               aria-hidden
             />
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'tween', duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
               className={cn(
-                "md:hidden fixed inset-0 z-[201] flex flex-col",
-                "bg-white/60 backdrop-blur-3xl",
-                "safe-top safe-bottom safe-left safe-right overflow-hidden"
+                "md:hidden fixed top-0 right-0 bottom-0 z-[201] w-[min(320px,85vw)] flex flex-col",
+                "bg-white/95 backdrop-blur-2xl",
+                "border-l border-slate-200/80 shadow-[-8px_0_32px_rgba(0,0,0,0.08)]",
+                "safe-top safe-bottom safe-right overflow-hidden"
               )}
+              style={{ willChange: 'transform' }}
             >
             <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0 safe-top">
               <span className="text-[15px] font-semibold text-slate-700">Папки</span>
               <button
-                onClick={closeFolderPanel}
-                className="p-2.5 -m-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-white/50 backdrop-blur-sm text-slate-500 active:bg-white/70 transition-colors touch-manipulation border border-white/60"
+                onClick={closeMobileFolderPanel}
+                className="p-2.5 -m-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-slate-100 text-slate-500 active:bg-slate-200 transition-colors touch-manipulation"
                 aria-label="Закрыть"
               >
                 <X className="w-5 h-5" strokeWidth={2.5} />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-6 safe-bottom">
-              {/* Сетка карточек как Invoices/Figma — 2 колонки, полупрозрачные карточки */}
               <div className="grid grid-cols-2 gap-3">
                 {/* Карточка «Все видео» */}
                 <button
-                  onClick={() => { setSelectedFolderId(null); closeFolderPanel(); }}
+                  onClick={() => { setSelectedFolderId(null); closeMobileFolderPanel(); }}
                   className={cn(
                     "flex flex-col items-center rounded-2xl p-4 min-h-[120px] transition-all active:scale-[0.97] touch-manipulation",
                     "bg-white/50 backdrop-blur-md border border-white/60",
@@ -759,7 +753,7 @@ export function Workspace(props?: WorkspaceProps) {
                   return (
                     <button
                       key={folder.id}
-                      onClick={() => { setSelectedFolderId(folder.id); closeFolderPanel(); }}
+                      onClick={() => { setSelectedFolderId(folder.id); closeMobileFolderPanel(); }}
                       className={cn(
                         "flex flex-col items-center rounded-2xl p-4 min-h-[120px] transition-all active:scale-[0.97] touch-manipulation",
                         "bg-white/50 backdrop-blur-md border border-white/60",
@@ -777,7 +771,7 @@ export function Workspace(props?: WorkspaceProps) {
 
                 {/* Карточка «Настроить папки» — на всю ширину */}
                 <button
-                  onClick={() => { setShowFolderSettings(true); closeFolderPanel(); }}
+                  onClick={() => { setShowFolderSettings(true); closeMobileFolderPanel(); }}
                   className={cn(
                     "col-span-2 flex items-center justify-center gap-2 rounded-2xl py-3 px-4 mt-1 transition-all active:scale-[0.99] touch-manipulation",
                     "bg-white/40 backdrop-blur-md border border-white/50 text-slate-500",
@@ -793,8 +787,6 @@ export function Workspace(props?: WorkspaceProps) {
           </>
         )}
       </AnimatePresence>
-
-      {/* Кнопка «Папки» на мобильных убрана — открытие только через нижний таб-бар */}
 
       {/* Main Content - Video Feed or Carousels, iOS 26 mobile padding */}
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 md:px-6 safe-left safe-right custom-scrollbar-light" style={{ maxHeight: '100%' }}>
@@ -832,10 +824,11 @@ export function Workspace(props?: WorkspaceProps) {
           {/* Рилсы: текущая лента */}
           {contentSection === 'reels' && (
           <>
-          {/* Header — glass bar, на мобильных сортировка прокручивается */}
+          {/* Header — glass bar, на мобильных кнопка папок справа */}
           <div className="mb-6 md:mb-8 rounded-2xl md:rounded-card-xl bg-slate-50/90 md:bg-glass-white/80 backdrop-blur-sm md:backdrop-blur-glass-xl shadow-sm md:shadow-glass border border-slate-200/60 md:border-white/[0.35] px-4 py-4 md:px-6 md:py-5 overflow-hidden">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-5">
-              <div className="flex items-center gap-3 flex-shrink-0">
+              <div className="flex items-center justify-between md:justify-start gap-3 flex-shrink-0 min-w-0">
+                <div className="flex items-center gap-3 min-w-0">
                 {currentFolderConfig ? (
                   <>
                     <GlassFolderIcon iconType={currentFolderConfig.iconType} color={currentFolderConfig.color} size={28} invert />
@@ -853,6 +846,15 @@ export function Workspace(props?: WorkspaceProps) {
                     </div>
                   </>
                 )}
+                </div>
+                {/* Кнопка папок — мобильные, сверху справа */}
+                <button
+                  onClick={() => setIsMobileFolderPanelOpen(true)}
+                  className="md:hidden p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-white/80 backdrop-blur-sm border border-slate-200/60 text-slate-600 active:bg-slate-100 transition-colors touch-manipulation flex-shrink-0"
+                  aria-label="Папки"
+                >
+                  <FolderOpen className="w-5 h-5" strokeWidth={2.5} />
+                </button>
               </div>
 
               {/* Сортировка и кнопка отмены */}

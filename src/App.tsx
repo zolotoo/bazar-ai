@@ -20,7 +20,7 @@ import { ProjectProvider, useProjectContext } from './contexts/ProjectContext';
 import type { Project } from './hooks/useProjects';
 import { 
   Settings, Search, LayoutGrid, Clock, User, LogOut, 
-  Link, Radar, Plus, FolderOpen, X, Palette, Sparkles, Trash2, Users, Menu, Home
+  Link, Radar, Plus, X, Palette, Sparkles, Trash2, Users, Menu, Home
 } from 'lucide-react';
 import { GlassFolderIcon } from './components/ui/GlassFolderIcons';
 import { MobileBottomBar, type MobileTabId } from './components/ui/MobileBottomBar';
@@ -370,7 +370,6 @@ function AppContent() {
     }
   }, [user?.telegram_username]);
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
-  const [mobileFoldersOpen, setMobileFoldersOpen] = useState(false);
   const { videos } = useInboxVideos();
 
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
@@ -384,16 +383,12 @@ function AppContent() {
   const mobileTabs = [
     { id: 'dashboard' as MobileTabId, icon: Home, label: 'Главная', iconColor: 'text-slate-500' },
     { id: 'workspace' as MobileTabId, icon: LayoutGrid, label: 'Лента', iconColor: 'text-slate-500' },
-    { id: 'folders' as MobileTabId, icon: FolderOpen, label: 'Папки', iconColor: 'text-slate-600' },
-    { id: 'search' as MobileTabId, icon: Search, label: 'Поиск', iconColor: 'text-slate-500' },
     { id: 'profile' as MobileTabId, icon: User, label: 'Профиль', iconColor: 'text-slate-500' },
     { id: 'menu' as MobileTabId, icon: Menu, label: 'Меню', iconColor: 'text-slate-500' },
   ];
 
   const mobileActiveId: MobileTabId | null =
     sidebarExpanded ? 'menu'
-    : isSearchOpen ? 'search'
-    : viewMode === 'workspace' && mobileFoldersOpen ? 'folders'
     : viewMode === 'profile' ? 'profile'
     : viewMode === 'dashboard' ? 'dashboard'
     : 'workspace';
@@ -401,19 +396,10 @@ function AppContent() {
   const handleMobileTabClick = (id: MobileTabId) => {
     if (id === 'dashboard') {
       setViewMode('dashboard');
-      setMobileFoldersOpen(false);
     } else if (id === 'workspace') {
       setViewMode('workspace');
-      setMobileFoldersOpen(false);
-    } else if (id === 'folders') {
-      setViewMode('workspace');
-      setMobileFoldersOpen(true);
-    } else if (id === 'search') {
-      setSearchTab(HIDE_SEARCH_BY_WORD ? 'link' : 'search');
-      setIsSearchOpen(true);
     } else if (id === 'profile') {
       setViewMode('profile');
-      setMobileFoldersOpen(false);
     } else if (id === 'menu') {
       setSidebarExpanded(true);
     }
@@ -720,12 +706,7 @@ function AppContent() {
             telegramUsername={user?.telegram_username}
           />
         )}
-        {viewMode === 'workspace' && (
-          <Workspace
-            externalFolderPanelOpen={mobileFoldersOpen}
-            onExternalFolderPanelClose={() => setMobileFoldersOpen(false)}
-          />
-        )}
+        {viewMode === 'workspace' && <Workspace />}
         {viewMode === 'history' && <History />}
         {viewMode === 'profile' && <ProfilePage />}
       </div>

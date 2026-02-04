@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "../../utils/cn";
 import type { LucideIcon } from "lucide-react";
 
-export type MobileTabId = "dashboard" | "workspace" | "folders" | "search" | "profile" | "menu";
+export type MobileTabId = "dashboard" | "workspace" | "profile" | "menu";
 
 interface TabItem {
   id: MobileTabId;
@@ -19,7 +19,7 @@ interface MobileBottomBarProps extends React.HTMLAttributes<HTMLElement> {
   onTabClick: (id: MobileTabId) => void;
 }
 
-/** iOS 26 style tab bar — frosted glass, labels, 44px targets */
+/** Light theme tab bar — transparent, labels only when active, 4 buttons */
 export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProps>(
   ({ className, items, activeId, onTabClick, ...props }, ref) => {
     return (
@@ -28,8 +28,7 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
         role="tablist"
         className={cn(
           "md:hidden fixed left-0 right-0 bottom-0 z-[9998]",
-          "bg-white/90 backdrop-blur-xl backdrop-saturate-[180%]",
-          "border-t border-slate-200/60",
+          "bg-transparent",
           "pt-2 touch-manipulation",
           className
         )}
@@ -52,11 +51,11 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
                   role="tab"
                   onClick={() => onTabClick(item.id)}
                   className={cn(
-                    "flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[52px] py-2 px-2 rounded-2xl flex-1 max-w-[72px]",
+                    "flex flex-col items-center justify-center gap-1 min-w-[44px] min-h-[52px] py-2 px-2 rounded-2xl flex-1 max-w-[80px]",
                     "transition-all duration-200 touch-manipulation active:scale-95",
                     isActive
-                      ? "text-slate-800 bg-slate-100/90"
-                      : "text-slate-500 active:bg-slate-50"
+                      ? "text-slate-800 bg-white/70 backdrop-blur-xl"
+                      : "text-slate-500 active:bg-white/30"
                   )}
                   aria-label={item.label}
                   aria-selected={isActive}
@@ -66,12 +65,11 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
                     className="w-6 h-6 flex-shrink-0"
                     strokeWidth={isActive ? 2.5 : 2}
                   />
-                  <span className={cn(
-                    "text-[10px] font-medium font-heading tracking-[-0.01em] truncate w-full text-center",
-                    isActive ? "text-slate-800" : "text-slate-500"
-                  )}>
-                    {item.label}
-                  </span>
+                  {isActive && (
+                    <span className="text-[10px] font-medium font-heading tracking-[-0.01em] truncate w-full text-center text-slate-800">
+                      {item.label}
+                    </span>
+                  )}
                 </button>
               </li>
             );
