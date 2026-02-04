@@ -123,13 +123,13 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
                       '0 4px 6px -1px rgba(0,0,0,0.08), 0 10px 20px -5px rgba(0,0,0,0.1), 0 20px 40px -10px rgba(0,0,0,0.08)',
                   }}
                 >
-                  {/* Subtle 3D-style decorative shape */}
+                  {/* Subtle 3D-style decorative shape — размыты чтобы не выделялись */}
                   <div
-                    className="absolute -right-8 -bottom-8 w-32 h-32 rounded-full bg-white/10"
+                    className="absolute -right-8 -bottom-8 w-32 h-32 rounded-full bg-white/10 blur-3xl"
                     aria-hidden
                   />
                   <div
-                    className="absolute -right-4 -top-4 w-24 h-24 rounded-full bg-white/5"
+                    className="absolute -right-4 -top-4 w-24 h-24 rounded-full bg-white/5 blur-3xl"
                     aria-hidden
                   />
                   <div className="relative p-5 md:p-6 flex flex-col min-h-[140px] md:min-h-[160px]">
@@ -186,7 +186,7 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
                         </span>
                       )}
                     </div>
-                    <h3 className="font-semibold text-slate-800 text-sm md:text-base mb-1.5">
+                    <h3 className="font-semibold text-slate-900 text-sm md:text-base mb-1.5">
                       {card.title}
                     </h3>
                     <p className="text-slate-600 text-xs md:text-sm mb-4 leading-relaxed">
