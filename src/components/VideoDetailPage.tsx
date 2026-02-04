@@ -8,7 +8,7 @@ import {
 import { cn } from '../utils/cn';
 import { proxyImageUrl, PLACEHOLDER_400x600 } from '../utils/imagePlaceholder';
 import { proxyVideoUrl } from '../utils/videoProxy';
-import { checkTranscriptionStatus, downloadAndTranscribe } from '../services/transcriptionService';
+import { checkTranscriptionStatus, getVideoDownloadUrl, startTranscription } from '../services/transcriptionService';
 import { supabase } from '../utils/supabase';
 import { toast } from 'sonner';
 import { useInboxVideos } from '../hooks/useInboxVideos';
@@ -347,102 +347,84 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
     setShowFolderMenu(false);
   };
   
-  // Запуск транскрибации вручную
-  const handleStartTranscription = async () => {
+  /**
+   * Загрузка видео + транскрибация одним действием.
+   * Один запрос к reel-info — получаем video_url, показываем видео и запускаем транскрибацию.
+   */
+  const handleLoadAndTranscribe = async () => {
+    setVideoLoadError(false);
     if (!video.url) {
       toast.error('URL видео не найден');
       return;
     }
-    
-    setIsStartingTranscription(true);
-    setTranscriptStatus('downloading');
-    toast.info('Запускаю транскрибацию...', { description: 'Это займёт несколько минут' });
-    
-    try {
-      // Обновляем статус в базе
-      await supabase
-        .from('saved_videos')
-        .update({ transcript_status: 'downloading' })
-        .eq('id', video.id);
-      
-      // Запускаем скачивание и транскрибацию
-      const result = await downloadAndTranscribe(video.url);
-      
-      if (!result.success) {
-        setTranscriptStatus('error');
-        toast.error('Ошибка транскрибации', { description: result.error });
-        await supabase
-          .from('saved_videos')
-          .update({ transcript_status: 'error' })
-          .eq('id', video.id);
-        return;
-      }
-      
-      // Сохраняем данные
-      await supabase
-        .from('saved_videos')
-        .update({ 
-          download_url: result.videoUrl,
-          transcript_id: result.transcriptId,
-          transcript_status: 'processing',
-        })
-        .eq('id', video.id);
-      
-      setLocalTranscriptId(result.transcriptId);
-      setTranscriptStatus('processing');
-      toast.success('Транскрибация запущена', { description: 'Ожидайте результат...' });
-      
-    } catch (err) {
-      console.error('Transcription error:', err);
-      setTranscriptStatus('error');
-      toast.error('Ошибка при запуске транскрибации');
-    } finally {
-      setIsStartingTranscription(false);
-    }
-  };
-  
-  // Загрузка прямой ссылки на видео
-  const handleLoadVideo = async () => {
-    setVideoLoadError(false);
+
+    // Уже загружено — просто показать или запустить транскрибацию
     if (directVideoUrl) {
       setShowVideo(true);
-      return;
-    }
-    
-    if (!video.url) {
-      toast.error('URL видео не найден');
-      return;
-    }
-    
-    setIsLoadingVideo(true);
-    
-    try {
-      const response = await fetch('/api/download-video', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: video.url }),
-      });
-      
-      const data = await response.json();
-      
-      if (data.success && data.videoUrl) {
-        setDirectVideoUrl(data.videoUrl);
-        setShowVideo(true);
-        
-        // Сохраняем URL в базу для будущего использования
-        await supabase
-          .from('saved_videos')
-          .update({ download_url: data.videoUrl })
-          .eq('id', video.id);
-      } else {
-        toast.error('Не удалось загрузить видео');
-        console.error('Video download failed:', data);
+      const needsTranscription = !transcript && transcriptStatus !== 'completed' && transcriptStatus !== 'processing';
+      if (needsTranscription) {
+        await runTranscription(directVideoUrl);
       }
+      return;
+    }
+
+    setIsLoadingVideo(true);
+    setTranscriptStatus('downloading');
+    toast.info('Загружаю видео...', { description: 'Одновременно запускаю транскрибацию' });
+
+    try {
+      const videoUrl = await getVideoDownloadUrl(video.url);
+
+      if (!videoUrl) {
+        setTranscriptStatus('error');
+        toast.error('Не удалось получить видео', { description: 'Проверьте ссылку или попробуйте позже' });
+        return;
+      }
+
+      setDirectVideoUrl(videoUrl);
+      setShowVideo(true);
+
+      await supabase
+        .from('saved_videos')
+        .update({ download_url: videoUrl, transcript_status: 'downloading' })
+        .eq('id', video.id);
+
+      await runTranscription(videoUrl);
     } catch (err) {
-      console.error('Error loading video:', err);
+      console.error('Load/transcribe error:', err);
+      setTranscriptStatus('error');
       toast.error('Ошибка загрузки видео');
     } finally {
       setIsLoadingVideo(false);
+    }
+  };
+
+  const runTranscription = async (videoUrl: string) => {
+    setIsStartingTranscription(true);
+    try {
+      const result = await startTranscription(videoUrl);
+
+      if (!result) {
+        setTranscriptStatus('error');
+        toast.error('Ошибка запуска транскрибации');
+        await supabase.from('saved_videos').update({ transcript_status: 'error' }).eq('id', video.id);
+        return;
+      }
+
+      setLocalTranscriptId(result.transcriptId);
+      setTranscriptStatus('processing');
+
+      await supabase
+        .from('saved_videos')
+        .update({ transcript_id: result.transcriptId, transcript_status: 'processing' })
+        .eq('id', video.id);
+
+      toast.success('Транскрибация запущена', { description: 'Ожидайте результат...' });
+    } catch (err) {
+      setTranscriptStatus('error');
+      toast.error('Ошибка транскрибации');
+    } finally {
+      setIsStartingTranscription(false);
     }
   };
 
@@ -1093,9 +1075,9 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
               ) : (
                 <button
                   type="button"
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleLoadVideo(); }}
-                  disabled={isLoadingVideo}
-                  title={videoLoadError ? 'Повторить загрузку' : `Загрузить и смотреть (${getTokenCost('load_video')} коинов)`}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleLoadAndTranscribe(); }}
+                  disabled={isLoadingVideo || isStartingTranscription}
+                  title={videoLoadError ? 'Повторить загрузку' : `Загрузить и транскрибировать (${getTokenCost('load_video')} коинов)`}
                   className="absolute inset-0 w-full h-full flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors group cursor-pointer z-10 touch-manipulation"
                 >
                   <img
@@ -1108,7 +1090,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                   </div>
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="w-10 h-10 rounded-full bg-white/95 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                      {isLoadingVideo ? (
+                      {(isLoadingVideo || isStartingTranscription) ? (
                         <Loader2 className="w-5 h-5 text-slate-800 animate-spin" />
                       ) : (
                         <Play className="w-5 h-5 text-slate-800 ml-0.5" fill="currentColor" />
@@ -1542,8 +1524,8 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                     }
                   </p>
                   <button
-                    onClick={handleStartTranscription}
-                    disabled={isStartingTranscription}
+                    onClick={handleLoadAndTranscribe}
+                    disabled={isStartingTranscription || isLoadingVideo}
                     className="px-4 py-2.5 rounded-card-xl bg-slate-600 hover:bg-slate-700 text-white font-medium transition-all shadow-glass flex items-center gap-2 disabled:opacity-50"
                   >
                     {isStartingTranscription ? (
