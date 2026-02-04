@@ -118,6 +118,19 @@ export async function waitForTranscription(transcriptId: string, maxWaitMs = 300
 }
 
 /**
+ * Нормализует Instagram URL для API (reels→reel, добавляет www)
+ */
+function normalizeInstagramUrl(url: string): string {
+  const match = url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
+  if (match) {
+    const shortcode = match[1];
+    const isPost = url.includes('/p/');
+    return `https://www.instagram.com/${isPost ? 'p' : 'reel'}/${shortcode}/`;
+  }
+  return url;
+}
+
+/**
  * Полный процесс: скачивание + транскрибация
  */
 export async function downloadAndTranscribe(instagramUrl: string): Promise<{
@@ -127,8 +140,9 @@ export async function downloadAndTranscribe(instagramUrl: string): Promise<{
   error?: string;
 }> {
   try {
+    const normalizedUrl = normalizeInstagramUrl(instagramUrl);
     // 1. Получаем ссылку на скачивание
-    const videoUrl = await getVideoDownloadUrl(instagramUrl);
+    const videoUrl = await getVideoDownloadUrl(normalizedUrl);
     
     if (!videoUrl) {
       return { success: false, error: 'Failed to get video download URL' };

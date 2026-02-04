@@ -669,7 +669,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
     try {
       // Проверяем тип ссылки: профиль или пост (reel/p)
       const profileMatch = linkUrl.match(/instagram\.com\/([^\/\?]+)\/?$/);
-      const reelMatch = linkUrl.match(/instagram\.com\/(reel|p)\/([A-Za-z0-9_-]+)/);
+      const reelMatch = linkUrl.match(/instagram\.com\/(reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
       
       // Если это профиль (без /reel/ или /p/)
       if (profileMatch && !reelMatch) {
@@ -785,8 +785,8 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
     // Извлекаем shortcode из URL если его нет
     let shortcode = linkPreview.shortcode;
     if (!shortcode && linkPreview.url) {
-      const match = linkPreview.url.match(/\/(reel|p)\/([A-Za-z0-9_-]+)/);
-      if (match) shortcode = match[2];
+const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
+    if (match) shortcode = match[1];
     }
     
     const folderName = folderId ? folderConfigs.find(f => f.id === folderId)?.title || 'папку' : 'Все видео';
@@ -838,8 +838,8 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
     // Извлекаем shortcode из URL если его нет
     let shortcode: string | undefined = result.shortcode;
     if (!shortcode && result.url) {
-      const match = result.url.match(/\/(reel|p)\/([A-Za-z0-9_-]+)/);
-      if (match) shortcode = match[2];
+      const match = result.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
+      if (match) shortcode = match[1];
     }
     
     try {

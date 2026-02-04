@@ -439,9 +439,9 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   // При открытии - проверяем есть ли транскрибация и перевод в глобальной таблице
   useEffect(() => {
     const checkGlobalData = async () => {
-      // Извлекаем shortcode из URL
-      const match = video.url?.match(/\/(reel|p)\/([A-Za-z0-9_-]+)/);
-      const shortcode = match ? match[2] : null;
+      // Извлекаем shortcode из URL (reel, reels, p, tv)
+      const match = video.url?.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
+      const shortcode = match ? match[1] : null;
       
       if (!shortcode) return;
       
@@ -623,8 +623,8 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
         }
 
         // Также сохраняем в глобальную таблицу по shortcode
-        const match = video.url?.match(/\/(reel|p)\/([A-Za-z0-9_-]+)/);
-        const shortcode = match ? match[2] : null;
+        const match = video.url?.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
+        const shortcode = match ? match[1] : null;
         if (shortcode) {
           await supabase
             .from('videos')

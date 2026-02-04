@@ -43,11 +43,11 @@ interface VideoData {
   instagramId?: string;
 }
 
-// Извлекаем shortcode из Instagram URL
+// Извлекаем shortcode из Instagram URL (reel, reels, p, tv)
 export function extractShortcode(url: string): string | null {
   if (!url) return null;
-  const match = url.match(/\/(reel|p)\/([A-Za-z0-9_-]+)/);
-  return match ? match[2] : null;
+  const match = url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
+  return match ? match[1] : null;
 }
 
 /**

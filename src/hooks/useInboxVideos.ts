@@ -776,8 +776,8 @@ export function useInboxVideos() {
 
   // Вспомогательная функция для извлечения shortcode
   const extractShortcode = (url: string): string | undefined => {
-    const match = url.match(/\/(reel|p)\/([A-Za-z0-9_-]+)/);
-    return match ? match[2] : undefined;
+    const match = url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
+    return match ? match[1] : undefined;
   };
 
   /**

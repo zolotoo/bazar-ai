@@ -22,10 +22,10 @@ export default async function handler(req, res) {
   // ОСНОВНОЙ КЛЮЧ - оплаченный instagram-scraper-20251
   const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY || '959a088626msh74020d3fb11ad19p1e067bjsnb273d9fac830';
   
-  // Извлекаем shortcode из URL если нужно
+  // Извлекаем shortcode из URL если нужно (reel, reels, p, tv)
   let code = shortcode;
   if (!code && url) {
-    const match = url.match(/(?:reel|p)\/([A-Za-z0-9_-]+)/);
+    const match = url.match(/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
     code = match ? match[1] : null;
   }
 
