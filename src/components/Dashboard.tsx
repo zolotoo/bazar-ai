@@ -15,6 +15,14 @@ export function getDisplayName(): string | null {
   }
 }
 
+/** Имя для приветствия: из localStorage или telegram_username (если залогинен) */
+export function getEffectiveDisplayName(telegramUsername?: string | null): string {
+  const stored = getDisplayName();
+  if (stored?.trim()) return stored.trim();
+  if (telegramUsername?.trim()) return telegramUsername.trim();
+  return 'друг';
+}
+
 export function setDisplayName(name: string): void {
   try {
     localStorage.setItem(DISPLAY_NAME_KEY, name.trim());
@@ -44,6 +52,7 @@ interface DashboardProps {
   onOpenFeed: () => void;
   onOpenTeam: () => void;
   videosCount?: number;
+  telegramUsername?: string | null;
 }
 
 const GRADIENT_CARDS = [
@@ -85,10 +94,9 @@ function renderTitleWithAccent(title: string, accent: string | null) {
   );
 }
 
-export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 0 }: DashboardProps) {
-  const displayName = getDisplayName();
+export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 0, telegramUsername }: DashboardProps) {
   const greeting = getGreeting();
-  const name = displayName || 'друг';
+  const name = getEffectiveDisplayName(telegramUsername);
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-[#fafafa] safe-top safe-bottom safe-left safe-right custom-scrollbar-light">

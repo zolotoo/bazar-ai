@@ -362,6 +362,13 @@ function AppContent() {
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => !getDisplayName());
   const { logout, user } = useAuth();
+
+  // Если пользователь залогинен по нику — не спрашиваем имя, используем username
+  useEffect(() => {
+    if (user?.telegram_username && !getDisplayName()) {
+      setShowOnboarding(false);
+    }
+  }, [user?.telegram_username]);
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
   const [mobileFoldersOpen, setMobileFoldersOpen] = useState(false);
   const { videos } = useInboxVideos();
@@ -712,6 +719,7 @@ function AppContent() {
             onOpenFeed={() => setViewMode('workspace')}
             onOpenTeam={() => setIsMembersModalOpen(true)}
             videosCount={videos.length}
+            telegramUsername={user?.telegram_username}
           />
         )}
         {viewMode === 'workspace' && (
