@@ -310,29 +310,30 @@ export const SidebarProject = ({
       onClick={onClick}
       className={cn(
         "group flex items-center gap-3 py-2 rounded-xl transition-all cursor-pointer relative",
-        open ? "px-4" : "px-3 justify-center",
+        open ? "px-4 pl-3" : "px-3 justify-center",
         isActive 
           ? "bg-glass-white/80 backdrop-blur-glass shadow-glass-sm" 
           : "hover:bg-glass-white/50 hover:backdrop-blur-glass"
       )}
     >
-      <div 
-        className={cn(
-          "rounded-xl flex items-center justify-center flex-shrink-0 transition-all",
-          open ? "w-7 h-7" : "w-10 h-10"
-        )}
-        style={!useGlassIcon ? { backgroundColor: color + '15' } : undefined}
-      >
+      {open && (
+        <div
+          className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full flex-shrink-0"
+          style={{ backgroundColor: color || '#64748b' }}
+          aria-hidden
+        />
+      )}
+      <div className="flex items-center justify-center flex-shrink-0">
         {useGlassIcon ? (
-          <GlassFolderIcon iconType="folder" color={color || '#64748b'} size={open ? 16 : 20} />
+          <GlassFolderIcon iconType="folder" color={color || '#64748b'} size={open ? 22 : 24} simple />
         ) : icon ? (
           React.cloneElement(icon as React.ReactElement, { 
-            className: open ? "w-4 h-4" : "w-5 h-5",
+            className: open ? "w-5 h-5" : "w-6 h-6",
             strokeWidth: 2.5
           })
         ) : (
           <div 
-            className={cn("rounded-lg transition-all", open ? "w-4 h-4" : "w-5 h-5")} 
+            className={cn("rounded transition-all", open ? "w-5 h-5" : "w-6 h-6")} 
             style={{ backgroundColor: color }} 
           />
         )}

@@ -14,15 +14,17 @@ function hexToRgba(hex: string, alpha: number): string {
 interface GlassFolderIconProps {
   iconType: string;
   color: string;
-  size?: 12 | 16 | 20 | 24;
+  size?: 12 | 16 | 20 | 24 | 28;
   className?: string;
   /** На тёмном фоне — инвертировать (белый иконка) */
   invert?: boolean;
+  /** Без контейнера — только иконка, крупнее и чище */
+  simple?: boolean;
 }
 
 /**
- * Иконки папок и проектов в стиле iOS 26 / glass.
- * Округлый контейнер + символ в наших цветах (slate + accent).
+ * Иконки папок и проектов.
+ * simple=true — только иконка без круга/контейнера.
  */
 export function GlassFolderIcon({
   iconType,
@@ -30,11 +32,13 @@ export function GlassFolderIcon({
   size = 20,
   className,
   invert = false,
+  simple = false,
 }: GlassFolderIconProps) {
   const solid = invert ? '#fff' : color;
   const bg = invert ? 'rgba(255,255,255,0.2)' : hexToRgba(color, 0.22);
 
   const vb = 24;
+  const iconSize = simple ? size : Math.max(10, size - 4);
 
   const iconEl = (() => {
     switch (iconType) {
@@ -79,6 +83,16 @@ export function GlassFolderIcon({
     }
   })();
 
+  if (simple) {
+    return (
+      <span className={cn('inline-flex items-center justify-center flex-shrink-0', className)}>
+        <svg width={iconSize} height={iconSize} viewBox={`0 0 ${vb} ${vb}`} fill="none" className="flex-shrink-0">
+          {iconEl}
+        </svg>
+      </span>
+    );
+  }
+
   return (
     <span
       className={cn(
@@ -92,7 +106,7 @@ export function GlassFolderIcon({
         backgroundColor: bg,
       }}
     >
-      <svg width={Math.max(10, size - 4)} height={Math.max(10, size - 4)} viewBox={`0 0 ${vb} ${vb}`} fill="none" className="flex-shrink-0">
+      <svg width={iconSize} height={iconSize} viewBox={`0 0 ${vb} ${vb}`} fill="none" className="flex-shrink-0">
         {iconEl}
       </svg>
     </span>

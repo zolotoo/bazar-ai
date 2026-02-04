@@ -141,7 +141,7 @@ function CreateProjectModal({ onSave, onClose }: CreateProjectModalProps) {
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
             <p className="text-xs text-slate-500 mb-2">Предпросмотр</p>
             <div className="flex items-center gap-3">
-              <GlassFolderIcon iconType="folder" color={color} size={20} />
+              <GlassFolderIcon iconType="folder" color={color} size={22} simple />
               <span className="font-medium text-slate-800">
                 {name || 'Название проекта'}
               </span>
@@ -221,7 +221,7 @@ function EditProjectModal({ project, onSave, onDelete, onClose }: EditProjectMod
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-100 safe-top safe-x">
           <div className="flex items-center gap-3">
-            <GlassFolderIcon iconType="folder" color={color} size={20} />
+            <GlassFolderIcon iconType="folder" color={color} size={22} simple />
             <div>
               <h2 className="text-lg font-semibold text-slate-800">Редактировать проект</h2>
               <p className="text-sm text-slate-500">Изменить название и цвет</p>
@@ -282,7 +282,7 @@ function EditProjectModal({ project, onSave, onDelete, onClose }: EditProjectMod
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
             <p className="text-xs text-slate-500 mb-2">Предпросмотр</p>
             <div className="flex items-center gap-3">
-              <GlassFolderIcon iconType="folder" color={color} size={20} />
+              <GlassFolderIcon iconType="folder" color={color} size={22} simple />
               <span className="font-medium text-slate-800">
                 {name || 'Название проекта'}
               </span>

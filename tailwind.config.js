@@ -11,6 +11,7 @@ export default {
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
         serif: ['Playfair Display', 'serif'],
         display: ['Playfair Display', 'serif'],
+        heading: ['Roboto', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
       },
       fontWeight: {
         normal: '400',
