@@ -160,16 +160,16 @@ export const VideoGradientCard = ({
           />
         </motion.div>
 
-        {/* Gradient overlay */}
+        {/* Gradient overlay — светлее, чтобы превью было видно */}
         <div
           className="absolute inset-0 z-10"
           style={{
             background: `linear-gradient(to top, 
-              rgba(30, 30, 35, 0.98) 0%, 
-              rgba(40, 40, 48, 0.85) 25%, 
-              rgba(50, 50, 60, 0.5) 45%, 
-              rgba(60, 60, 70, 0.2) 60%, 
-              transparent 75%
+              rgba(20, 20, 24, 0.92) 0%, 
+              rgba(30, 30, 36, 0.6) 30%, 
+              rgba(40, 40, 48, 0.25) 50%, 
+              rgba(50, 50, 58, 0.08) 70%, 
+              transparent 85%
             )`,
           }}
         />

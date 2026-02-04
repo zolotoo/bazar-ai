@@ -967,7 +967,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
 
   return (
     <div className="h-full overflow-hidden flex flex-col bg-base">
-      <div className="w-full h-full p-4 md:p-6 flex flex-col overflow-y-auto min-h-0">
+      <div className="w-full h-full p-4 md:p-6 pb-28 md:pb-6 flex flex-col overflow-y-auto min-h-0">
         {/* Header — на мобильных компактнее */}
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-shrink-0">
           <div className="flex items-center gap-4">
