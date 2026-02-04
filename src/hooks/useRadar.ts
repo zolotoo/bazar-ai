@@ -3,7 +3,6 @@ import { InstagramSearchResult } from '../services/videoService';
 import { supabase } from '../utils/supabase';
 import { 
   getOrCreateGlobalVideo, 
-  startGlobalTranscription,
   extractShortcode,
 } from '../services/globalVideoService';
 import {
@@ -489,13 +488,7 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
           if (result?.created && result.id) {
             newCount++;
             savedReels.push({ ...reel, isNew: true, projectId: targetProjectId, savedToInbox: true });
-            
-            // Запускаем транскрибацию ТОЛЬКО если нужно (нет в общей базе)
-            if (result.needsTranscription && result.shortcode) {
-              startGlobalTranscription(result.id, result.globalVideoId, result.shortcode, reel.url);
-            } else {
-              console.log('[Radar] Skipping transcription - already exists in global DB');
-            }
+            // Транскрибация только по кнопке — не запускаем автоматически
           } else if (result?.updated) {
             updatedCount++;
             savedReels.push({ ...reel, isNew: false, projectId: targetProjectId, savedToInbox: true });

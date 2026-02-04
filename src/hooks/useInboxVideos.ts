@@ -552,22 +552,11 @@ export function useInboxVideos() {
         setVideos(prev => [savedVideo, ...prev.filter(v => v.id !== localVideo.id)]);
         setIncomingVideos([savedVideo, ...useFlowStore.getState().incomingVideos.filter(v => v.id !== localVideo.id)]);
         
-        // 4. Запускаем транскрибацию ТОЛЬКО если нет готовой
-        if (needsTranscription && shortcode) {
-          console.log('[InboxVideos] Starting new transcription');
-          startGlobalTranscription(
-            data.id,
-            globalVideo?.id,
-            shortcode,
-            video.url
-          );
-        } else {
-          console.log('[InboxVideos] Skipping transcription - already exists');
-          if (existingTranscription?.hasTranscription) {
-            toast.success('Транскрибация найдена', {
-              description: 'Видео уже было обработано ранее',
-            });
-          }
+        // 4. Транскрибация только по кнопке — не запускаем автоматически
+        if (existingTranscription?.hasTranscription) {
+          toast.success('Транскрибация найдена', {
+            description: 'Видео уже было обработано ранее',
+          });
         }
         
         // Отправляем событие синхронизации для общих проектов
