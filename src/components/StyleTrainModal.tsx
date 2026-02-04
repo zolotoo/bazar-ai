@@ -26,6 +26,8 @@ interface StyleTrainModalProps {
   setNewStyleName?: (v: string) => void;
   editingStyle?: { id: string; name: string } | null;
   onSuccess?: (prompt: string) => void;
+  /** При true — спрашиваем название стиля сразу (для каруселей) */
+  fromCarousel?: boolean;
 }
 
 export function StyleTrainModal({
@@ -36,6 +38,7 @@ export function StyleTrainModal({
   setNewStyleName = () => {},
   editingStyle = null,
   onSuccess,
+  fromCarousel = false,
 }: StyleTrainModalProps) {
   const { videos: projectVideos } = useInboxVideos();
   const { carousels: projectCarousels } = useCarousels();
@@ -65,10 +68,11 @@ export function StyleTrainModal({
     );
   };
 
+  const needStyleName = creatingNewStyle || editingStyle?.id === 'legacy';
   const handleTrain = async () => {
     if (!currentProject?.id || selectedIds.length === 0) return;
-    const name = creatingNewStyle ? newStyleName.trim() : editingStyle?.name || 'Стиль';
-    if (creatingNewStyle && !name) {
+    const name = needStyleName ? newStyleName.trim() : editingStyle?.name || 'Стиль';
+    if (needStyleName && !name) {
       toast.error('Введите название стиля');
       return;
     }
@@ -90,14 +94,17 @@ export function StyleTrainModal({
       });
       const data = await res.json();
       if (data.success && data.prompt) {
-        if (creatingNewStyle) {
+        const styleName = name || 'Новый стиль';
+        if (creatingNewStyle || editingStyle?.id === 'legacy') {
+          const finalName = editingStyle?.id === 'legacy' ? (name || editingStyle.name || 'Стиль по умолчанию') : styleName;
+          // Всегда сохраняем в project_styles, никогда в legacy (addProjectStyle сам очистит legacy при миграции)
           await addProjectStyle(currentProject.id, {
-            name: name || 'Новый стиль',
+            name: finalName,
             prompt: data.prompt,
             meta: data.meta,
             examplesCount: examples.length,
           });
-          toast.success(`Стиль «${name}» создан по ${examples.length} пример${examples.length === 1 ? 'у' : examples.length < 5 ? 'ам' : 'ам'}`);
+          toast.success(`Стиль «${finalName}» создан по ${examples.length} пример${examples.length === 1 ? 'у' : examples.length < 5 ? 'ам' : 'ам'}`);
         } else if (editingStyle) {
           await updateProjectStyle(currentProject.id, editingStyle.id, {
             prompt: data.prompt,
@@ -106,11 +113,14 @@ export function StyleTrainModal({
           });
           toast.success(`Стиль «${editingStyle.name}» обновлён`);
         } else {
-          await updateProject(currentProject.id, {
-            stylePrompt: data.prompt,
-            styleMeta: data.meta,
-            styleExamplesCount: examples.length,
+          // Fallback: миграция legacy → project_styles
+          await addProjectStyle(currentProject.id, {
+            name: 'Стиль по умолчанию',
+            prompt: data.prompt,
+            meta: data.meta,
+            examplesCount: examples.length,
           });
+          await updateProject(currentProject.id, { stylePrompt: undefined, styleMeta: undefined, styleExamplesCount: 0 });
           toast.success(`Стиль обучен по ${examples.length} пример${examples.length === 1 ? 'у' : examples.length < 5 ? 'ам' : 'ам'}`);
         }
         onSuccess?.(data.prompt);
@@ -132,22 +142,39 @@ export function StyleTrainModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !isAnalyzing && onClose()}>
       <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-        <div className="p-4 border-b border-slate-100">
-          <h3 className="font-semibold text-slate-800">
-            {creatingNewStyle ? 'Создать новый стиль' : editingStyle ? `Переобучить «${editingStyle.name}»` : 'Обучить стиль по примерам'}
-          </h3>
-          <p className="text-slate-500 text-sm mt-1">
-            {creatingNewStyle
-              ? 'Выберите 1–5 рилсов или каруселей с транскриптом и вашим сценарием. Нейросеть создаст промт и вы назовёте этот стиль.'
-              : editingStyle
-              ? 'Выберите примеры заново. Промт стиля будет заменён.'
-              : currentProject?.stylePrompt
-              ? 'Выберите примеры заново (можно добавить новые). Текущий промт будет заменён.'
-              : 'Выберите 1–5 рилсов или каруселей с транскриптом и сценарием. Нейросеть выявит закономерности.'}
-          </p>
-          {creatingNewStyle && (
-            <div className="mt-3">
-              <label className="block text-xs font-medium text-slate-500 mb-1">Название стиля</label>
+        <div className="p-4 border-b border-slate-100 flex flex-col gap-3">
+          {fromCarousel && creatingNewStyle && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Как назвать этот стиль?</label>
+              <input
+                type="text"
+                value={newStyleName}
+                onChange={(e) => setNewStyleName(e.target.value)}
+                placeholder="Например: Карусели Гальв, Короткие посты"
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
+                autoFocus
+              />
+            </div>
+          )}
+          <div>
+            <h3 className="font-semibold text-slate-800">
+              {creatingNewStyle ? 'Создать новый стиль' : editingStyle ? `Переобучить «${editingStyle.name}»` : 'Обучить стиль по примерам'}
+            </h3>
+            <p className="text-slate-500 text-sm mt-1">
+              {creatingNewStyle
+                ? fromCarousel
+                  ? 'Выберите 1–5 каруселей или рилсов с транскриптом и сценарием. Нейросеть создаст промт.'
+                  : 'Выберите 1–5 рилсов или каруселей с транскриптом и вашим сценарием. Нейросеть создаст промт и вы назовёте этот стиль.'
+                : editingStyle
+                ? 'Выберите примеры заново. Промт стиля будет заменён.'
+                : currentProject?.stylePrompt
+                ? 'Выберите примеры заново (можно добавить новые). Текущий промт будет заменён.'
+                : 'Выберите 1–5 рилсов или каруселей с транскриптом и сценарием. Нейросеть выявит закономерности.'}
+            </p>
+          </div>
+          {needStyleName && !(fromCarousel && creatingNewStyle) && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Название стиля</label>
               <input
                 type="text"
                 value={newStyleName}
@@ -198,7 +225,7 @@ export function StyleTrainModal({
             <button
               type="button"
               onClick={handleTrain}
-              disabled={isAnalyzing || selectedIds.length === 0}
+              disabled={isAnalyzing || selectedIds.length === 0 || (needStyleName && !newStyleName.trim())}
               className="px-4 py-1.5 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50"
             >
               {isAnalyzing ? (

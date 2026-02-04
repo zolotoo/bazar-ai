@@ -489,27 +489,35 @@ export function useProjects() {
     const styles = project.projectStyles || [];
     // Не сохраняем виртуальный legacy в БД — только реальные стили
     const stylesToSave = styles.filter(s => s.id !== 'legacy');
+    const hadOnlyLegacy = styles.length > 0 && stylesToSave.length === 0;
     const newStyle: ProjectStyle = {
       ...style,
       id: `style-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     };
-    await updateProject(projectId, { projectStyles: [...stylesToSave, newStyle] });
+    const updates: Parameters<typeof updateProject>[1] = { projectStyles: [...stylesToSave, newStyle] };
+    if (hadOnlyLegacy) {
+      updates.stylePrompt = undefined;
+      updates.styleMeta = undefined;
+      updates.styleExamplesCount = 0;
+    }
+    await updateProject(projectId, updates);
     return newStyle;
   }, [projects, updateProject]);
 
   const updateProjectStyle = useCallback(async (projectId: string, styleId: string, updates: Partial<Omit<ProjectStyle, 'id'>>) => {
     const project = projects.find(p => p.id === projectId);
     if (!project) return;
-    const styles = (project.projectStyles || []).map(s =>
-      s.id === styleId ? { ...s, ...updates } : s
-    );
+    const styles = (project.projectStyles || [])
+      .map(s => (s.id === styleId ? { ...s, ...updates } : s))
+      .filter(s => s.id !== 'legacy'); // legacy виртуальный, не сохраняем в БД
     await updateProject(projectId, { projectStyles: styles });
   }, [projects, updateProject]);
 
   const removeProjectStyle = useCallback(async (projectId: string, styleId: string) => {
     const project = projects.find(p => p.id === projectId);
     if (!project) return;
-    const styles = (project.projectStyles || []).filter(s => s.id !== styleId);
+    const styles = (project.projectStyles || [])
+      .filter(s => s.id !== styleId && s.id !== 'legacy');
     await updateProject(projectId, { projectStyles: styles });
   }, [projects, updateProject]);
 

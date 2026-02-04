@@ -1055,7 +1055,8 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
         newStyleName={newStyleName}
         setNewStyleName={setNewStyleName}
         editingStyle={editingStyle}
-        onSuccess={(prompt) => setEditedPromptText(prompt)}
+        onSuccess={async (prompt) => { setEditedPromptText(prompt); await refetchProjects(); }}
+        fromCarousel
       />
 
       {/* Модальное окно: просмотр и редактирование промта стиля */}
