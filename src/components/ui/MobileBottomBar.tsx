@@ -28,9 +28,9 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
         role="tablist"
         className={cn(
           "md:hidden fixed left-0 right-0 bottom-0 z-[9998]",
-          "bg-white/[0.15] backdrop-blur-2xl backdrop-saturate-[180%]",
-          "border-t border-white/[0.25]",
+          "bg-transparent",
           "pt-2 touch-manipulation",
+          "pointer-events-none [&_ul]:pointer-events-auto",
           className
         )}
         style={{
@@ -55,8 +55,8 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
                     "flex flex-col items-center justify-center gap-1 min-w-[44px] min-h-[52px] py-2 px-2 rounded-2xl flex-1 max-w-[80px]",
                     "transition-all duration-200 touch-manipulation active:scale-95",
                     isActive
-                      ? "text-slate-800 bg-white/[0.25] backdrop-blur-xl border border-white/[0.35]"
-                      : "text-slate-600 bg-transparent active:bg-white/[0.12]"
+                      ? "text-slate-800"
+                      : "text-slate-600"
                   )}
                   aria-label={item.label}
                   aria-selected={isActive}

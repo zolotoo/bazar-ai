@@ -695,8 +695,8 @@ function AppContent() {
         </SidebarBody>
       </Sidebar>
 
-      {/* Main Content — iOS 26: на мобильных отступ снизу под таб-бар */}
-      <div className="flex-1 min-h-0 overflow-hidden pt-0 pb-24 md:pt-0 md:pb-0 flex flex-col">
+      {/* Main Content — контент идёт до низа, таб-бар поверх */}
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
         {viewMode === 'dashboard' && (
           <Dashboard
             onOpenSearch={(tab) => { setSearchTab(tab); setIsSearchOpen(true); }}

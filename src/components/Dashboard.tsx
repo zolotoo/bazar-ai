@@ -101,7 +101,7 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-[#fafafa] safe-top safe-bottom safe-left safe-right custom-scrollbar-light">
       {/* Main content card — iOS 26: компактнее на мобильных */}
-      <div className="mx-4 md:mx-6 lg:mx-8 py-4 md:py-8 lg:py-10 pb-8 md:pb-16">
+      <div className="mx-4 md:mx-6 lg:mx-8 py-4 md:py-8 lg:py-10 pb-24 md:pb-16">
         <div className="max-w-5xl mx-auto">
           <div
             className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-8 lg:p-10"

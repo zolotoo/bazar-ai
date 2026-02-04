@@ -77,7 +77,7 @@ export function ProfilePage() {
 
   return (
     <div className="h-full overflow-y-auto custom-scrollbar-light">
-      <div className="max-w-lg mx-auto w-full p-6 pt-8">
+      <div className="max-w-lg mx-auto w-full p-6 pt-8 pb-24 md:pb-6">
         {/* User Info */}
         <div className="flex flex-col items-center mb-8">
           <div className="w-24 h-24 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center mb-4 shadow-xl shadow-orange-500/30">
