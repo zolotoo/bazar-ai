@@ -452,8 +452,7 @@ export function useInboxVideos() {
       
       let data;
       let error;
-      let needsTranscription = true;
-      
+
       if (existingUserVideo) {
         // 3a. Обновляем существующее видео пользователя
         console.log('[InboxVideos] User video exists, updating:', existingUserVideo.id);
@@ -479,10 +478,7 @@ export function useInboxVideos() {
         if (existingTranscription?.hasTranscription) {
           updateData.transcript_status = existingTranscription.transcriptStatus;
           updateData.transcript_text = existingTranscription.transcriptText;
-          needsTranscription = false;
           console.log('[InboxVideos] Copying transcription from global DB');
-        } else if (existingUserVideo.transcript_status === 'completed') {
-          needsTranscription = false;
         }
         
         const result = await supabase
@@ -528,7 +524,6 @@ export function useInboxVideos() {
         if (existingTranscription?.hasTranscription) {
           insertData.transcript_status = existingTranscription.transcriptStatus;
           insertData.transcript_text = existingTranscription.transcriptText;
-          needsTranscription = false;
           console.log('[InboxVideos] Copying transcription from global DB to new user video');
         }
         
