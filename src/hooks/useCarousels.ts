@@ -125,7 +125,22 @@ export function useCarousels() {
         console.error('Error fetching carousels:', error);
         setCarousels([]);
       } else {
-        setCarousels((data || []).map(transformRow));
+        const rows = (data || []).map(transformRow);
+        // Дедупликация по shortcode: одна карусель могла быть добавлена разными участниками.
+        // Берём запись с thumbnail_url или slide_urls (чтобы у всех участников было превью).
+        const byShortcode = new Map<string, typeof rows[0]>();
+        for (const r of rows) {
+          const existing = byShortcode.get(r.shortcode);
+          const hasMedia = !!(r.thumbnail_url?.trim() || (r.slide_urls?.length ?? 0) > 0);
+          const existingHasMedia = existing && !!(existing.thumbnail_url?.trim() || (existing.slide_urls?.length ?? 0) > 0);
+          if (!existing || (hasMedia && !existingHasMedia)) {
+            byShortcode.set(r.shortcode, r);
+          }
+        }
+        const deduped = Array.from(byShortcode.values()).sort(
+          (a, b) => new Date(b.added_at).getTime() - new Date(a.added_at).getTime()
+        );
+        setCarousels(deduped);
         setHasMore((data?.length || 0) === PAGE_SIZE);
       }
     } catch (err) {
@@ -301,6 +316,24 @@ export function useCarousels() {
     }
   }, []);
 
+  /** Подгружает превью для карусели с пустым thumbnail (как refreshThumbnail для видео) */
+  const refreshCarouselThumbnail = useCallback(async (carouselId: string, shortcode: string) => {
+    try {
+      const res = await fetch('/api/reel-info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shortcode, url: `https://www.instagram.com/p/${shortcode}/` }),
+      });
+      const data = await res.json();
+      const slideUrls = data?.carousel_slides;
+      const thumbUrl = data?.thumbnail_url || slideUrls?.[0];
+      if (!slideUrls?.length && !thumbUrl) return;
+      await updateCarouselSlideUrls(carouselId, slideUrls || [thumbUrl].filter(Boolean), thumbUrl);
+    } catch (e) {
+      console.warn('[Carousels] Failed to refresh thumbnail:', e);
+    }
+  }, [updateCarouselSlideUrls]);
+
   const removeCarousel = useCallback(async (id: string) => {
     const item = carousels.find(c => c.id === id);
     try {
@@ -331,6 +364,7 @@ export function useCarousels() {
     updateCarouselLinks,
     updateCarouselResponsibles,
     removeCarousel,
+    refreshCarouselThumbnail,
     refetch: fetchCarousels,
   };
 }

@@ -106,6 +106,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [codeSent, setCodeSent] = useState(false);
   const [pendingUsername, setPendingUsername] = useState<string | null>(null);
 
+  const SESSION_CHECK_TIMEOUT_MS = 6000;
+
   // Проверяем сессию при загрузке
   useEffect(() => {
     const checkSession = async () => {
@@ -119,13 +121,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        // Проверяем сессию в Supabase (без join с users)
-        const { data, error } = await supabase
+        const sessionPromise = supabase
           .from('sessions')
           .select('token, telegram_username, expires_at, created_at')
           .eq('token', sessionToken)
           .gt('expires_at', new Date().toISOString())
           .maybeSingle();
+
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Session check timeout')), SESSION_CHECK_TIMEOUT_MS)
+        );
+
+        const { data, error } = await Promise.race([sessionPromise, timeoutPromise]);
 
         console.log('[Auth] Session check result:', { data, error });
 
@@ -159,6 +166,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       } catch (err) {
         console.error('[Auth] Session check error:', err);
+        if (err instanceof Error && err.message === 'Session check timeout') {
+          console.warn('[Auth] Session check timed out — обновите страницу');
+        }
         clearSession();
       } finally {
         setLoading(false);

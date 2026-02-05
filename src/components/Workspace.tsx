@@ -137,7 +137,16 @@ export function Workspace(_props?: WorkspaceProps) {
   const [carouselLinkUrl, setCarouselLinkUrl] = useState('');
   const [isAddingCarouselByLink, setIsAddingCarouselByLink] = useState(false);
   const [descriptionModalText, setDescriptionModalText] = useState<string | null>(null);
-  const { carousels, loading: carouselsLoading, addCarousel, refetch: refetchCarousels } = useCarousels();
+  const { carousels, loading: carouselsLoading, addCarousel, refreshCarouselThumbnail, refetch: refetchCarousels } = useCarousels();
+
+  // Проактивная подгрузка превью для каруселей с пустым thumbnail (как у видео)
+  useEffect(() => {
+    if (contentSection !== 'carousels' || !refreshCarouselThumbnail) return;
+    const needRefresh = carousels.filter(
+      c => !c.thumbnail_url?.trim() && (!c.slide_urls?.length || c.slide_urls.length === 0) && c.shortcode
+    ).slice(0, 3);
+    needRefresh.forEach(c => refreshCarouselThumbnail(c.id, c.shortcode));
+  }, [contentSection, carousels, refreshCarouselThumbnail]);
 
   const [isMobileFolderPanelOpen, setIsMobileFolderPanelOpen] = useState(false);
 
@@ -1171,6 +1180,11 @@ export function Workspace(_props?: WorkspaceProps) {
                               src={proxyImageUrl(c.thumbnail_url || c.slide_urls?.[0] || undefined)}
                               alt=""
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              onError={() => {
+                                if (c.shortcode && refreshCarouselThumbnail) {
+                                  refreshCarouselThumbnail(c.id, c.shortcode);
+                                }
+                              }}
                             />
                             <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded-md bg-black/60 text-white text-[10px] font-medium flex items-center gap-0.5">
                               <Images className="w-2.5 h-2.5" />
