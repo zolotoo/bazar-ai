@@ -99,9 +99,11 @@ export function useProjects() {
   }, [user]);
 
   // Загрузка проектов (включая общие)
-  const fetchProjects = useCallback(async () => {
+  // silent=true — фоновая подгрузка без экрана загрузки (при возврате на вкладку, после правок и т.д.)
+  const fetchProjects = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent ?? (projects.length > 0);
     const userId = getUserId();
-    setLoading(true);
+    if (!silent) setLoading(true);
     
     try {
       // Загружаем собственные проекты
@@ -220,11 +222,19 @@ export function useProjects() {
         setProjects(loadedProjects);
         
         // Устанавливаем текущий проект
-        const savedProjectId = localStorage.getItem('currentProjectId');
-        if (savedProjectId && loadedProjects.find(p => p.id === savedProjectId)) {
-          setCurrentProjectId(savedProjectId);
+        if (silent) {
+          // Фоновый рефетч — сохраняем выбор пользователя, меняем только если проект удалён
+          setCurrentProjectId(prev => {
+            const stillExists = loadedProjects.find(p => p.id === prev);
+            return stillExists ? prev : (loadedProjects[0]?.id ?? null);
+          });
         } else {
-          setCurrentProjectId(loadedProjects[0].id);
+          const savedProjectId = localStorage.getItem('currentProjectId');
+          if (savedProjectId && loadedProjects.find(p => p.id === savedProjectId)) {
+            setCurrentProjectId(savedProjectId);
+          } else {
+            setCurrentProjectId(loadedProjects[0].id);
+          }
         }
       } else {
         // Создаем дефолтный проект
@@ -275,9 +285,9 @@ export function useProjects() {
       setProjects([defaultProject]);
       setCurrentProjectId(defaultProject.id);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  }, [getUserId]);
+  }, [getUserId, projects.length]);
 
   // Создание проекта
   const createProject = useCallback(async (name: string, customColor?: string): Promise<Project | null> => {
@@ -532,11 +542,11 @@ export function useProjects() {
     }
   }, [user, fetchProjects]);
 
-  // Рефетч при возврате на вкладку — приглашённый увидит новый проект
+  // Рефетч при возврате на вкладку — приглашённый увидит новый проект (silent: без экрана загрузки)
   useEffect(() => {
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible' && user) {
-        fetchProjects();
+        fetchProjects({ silent: true });
       }
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
