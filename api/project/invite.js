@@ -96,10 +96,9 @@ export default async function handler(req, res) {
       }
     }
 
-    // Нормализуем username (убираем @ если есть, добавляем префикс tg-)
-    const normalizedInviteeId = username.startsWith('@') 
-      ? `tg-${username.slice(1)}` 
-      : `tg-${username}`;
+    // Нормализуем username: убираем @, lowercase (как в сессии при логине)
+    const rawUsername = username.startsWith('@') ? username.slice(1) : username;
+    const normalizedInviteeId = `tg-${rawUsername.trim().toLowerCase()}`;
     
     console.log('[Invite] Normalized invitee ID:', { username, normalizedInviteeId });
 
@@ -129,13 +128,14 @@ export default async function handler(req, res) {
       if (existing.status === 'active') {
         return res.status(400).json({ error: 'User is already a member' });
       }
-      // Если был удален, активируем снова
+      // Если был удален, активируем снова (user_id приводим к lowercase для совпадения с сессией)
       const validRole = ['read', 'write', 'admin'].includes(role) ? role : 'write';
       const { error: updateError } = await supabase
         .from('project_members')
         .update({
           status: 'active',
           role: validRole,
+          user_id: normalizedInviteeId,
           joined_at: new Date().toISOString(),
         })
         .eq('id', existing.id);

@@ -51,6 +51,7 @@ export interface Project {
   createdAt: Date;
   isShared?: boolean;
   membershipStatus?: 'active' | 'pending';
+  owner_id?: string;
 }
 
 const DEFAULT_LINKS_TEMPLATE: ProjectTemplateItem[] = [
@@ -204,6 +205,7 @@ export function useProjects() {
             createdAt: new Date(p.created_at),
             isShared: p.isShared || false,
             membershipStatus: p.membershipStatus,
+            owner_id: p.owner_id || p.user_id,
           };
         });
         
@@ -528,6 +530,17 @@ export function useProjects() {
     if (user) {
       fetchProjects();
     }
+  }, [user, fetchProjects]);
+
+  // Рефетч при возврате на вкладку — приглашённый увидит новый проект
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user) {
+        fetchProjects();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
   }, [user, fetchProjects]);
 
   return {

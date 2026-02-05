@@ -17,12 +17,14 @@ export function ProjectMembersModal({ projectId, isOpen, onClose }: ProjectMembe
   const { members, loading, inviteMember, removeMember, updateMemberRole } = useProjectMembers(projectId);
   const { user } = useAuth();
   const { refetch: refetchProjects, projects, selectProject } = useProjectContext();
+  const userId = user?.telegram_username ? `tg-${user.telegram_username}` : null;
+  const currentProject = projects.find((p: any) => p.id === projectId);
+  const isOwner = currentProject && userId && (currentProject.owner_id === userId || (currentProject as any).user_id === userId);
   const [inviteUsername, setInviteUsername] = useState('');
   const [isInviting, setIsInviting] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'read' | 'write' | 'admin'>('write');
-
-  const userId = user?.telegram_username ? `tg-${user.telegram_username}` : null;
   const currentMember = members.find((m: any) => m.user_id === userId);
+
 
   const handleInvite = async () => {
     if (!inviteUsername.trim()) {
@@ -221,7 +223,7 @@ export function ProjectMembersModal({ projectId, isOpen, onClose }: ProjectMembe
                 {members.map((member: any) => {
                   const username = member.user_id.replace('tg-@', '').replace('tg-', '');
                   const isCurrentUser = member.user_id === userId;
-                  const canManage = currentMember?.role === 'admin' || currentMember?.user_id === member.user_id;
+                  const canManage = isOwner || currentMember?.role === 'admin' || currentMember?.user_id === member.user_id;
 
                   return (
                     <motion.div
