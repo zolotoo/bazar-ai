@@ -1,5 +1,59 @@
 import { createClient } from '@supabase/supabase-js';
 
+/** Отправка уведомления в Telegram о приглашении в проект */
+async function sendInviteTelegramNotification(supabase, projectName, inviteeUserId, memberId) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  let appUrl = process.env.APP_URL;
+  if (!appUrl && process.env.VERCEL_URL) {
+    appUrl = `https://${process.env.VERCEL_URL}`;
+  }
+  if (!appUrl) appUrl = null;
+
+  if (!botToken || !appUrl) {
+    console.log('[Invite] Skip Telegram notification: TELEGRAM_BOT_TOKEN or APP_URL not set');
+    return;
+  }
+
+  const username = inviteeUserId.replace(/^tg-/, '');
+
+  try {
+    const updatesRes = await fetch(`https://api.telegram.org/bot${botToken}/getUpdates?limit=100`);
+    const updatesData = await updatesRes.json();
+    let chatId = null;
+
+    if (updatesData.ok && updatesData.result) {
+      for (const u of updatesData.result) {
+        const from = u.message?.from;
+        if (from?.username?.toLowerCase() === username) {
+          chatId = from.id;
+          break;
+        }
+      }
+    }
+
+    if (!chatId) {
+      console.log('[Invite] Chat ID not found for', username, '- user should message @ririai_bot /start');
+      return;
+    }
+
+    const inviteLink = `${appUrl}/invite?m=${memberId}`;
+    const text = `👋 Тебя пригласили в проект «${projectName || 'Без названия'}»!\n\nНажми, чтобы открыть:\n${inviteLink}`;
+
+    const sendRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
+    });
+
+    if (!sendRes.ok) {
+      const err = await sendRes.json();
+      console.warn('[Invite] Telegram send failed:', err);
+    }
+  } catch (err) {
+    console.warn('[Invite] Telegram notification error:', err.message);
+  }
+}
+
 // Переменные окружения читаются внутри handler для каждого запроса
 // Это гарантирует, что они будут доступны после добавления в Vercel без перезапуска
 
@@ -52,7 +106,7 @@ export default async function handler(req, res) {
     // Проверяем права пользователя (владелец или админ)
     const { data: project, error: projectError } = await supabase
       .from('projects')
-      .select('owner_id')
+      .select('owner_id, name')
       .eq('id', projectId)
       .single();
 
@@ -145,6 +199,9 @@ export default async function handler(req, res) {
         throw updateError;
       }
 
+      const { data: proj } = await supabase.from('projects').select('name').eq('id', projectId).single();
+      await sendInviteTelegramNotification(supabase, proj?.name, normalizedInviteeId, existing.id);
+
       return res.status(200).json({ 
         success: true, 
         message: 'Member reactivated',
@@ -219,6 +276,9 @@ export default async function handler(req, res) {
         shared_at: new Date().toISOString(),
       })
       .eq('id', projectId);
+
+    // Отправляем уведомление в Telegram
+    await sendInviteTelegramNotification(supabase, project.name, normalizedInviteeId, member.id);
 
     return res.status(200).json({ 
       success: true, 

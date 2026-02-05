@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Workspace } from './components/Workspace';
 import { LandingPage } from './components/LandingPage';
 import { Dashboard, getDisplayName } from './components/Dashboard';
@@ -420,6 +420,63 @@ function AppContent() {
     return () => window.removeEventListener('members-updated', handleMembersUpdated as EventListener);
   }, [refetchProjects]);
 
+  // Обработка ссылки-приглашения /invite?m=memberId — принимаем и переходим в проект
+  const inviteProcessedRef = useRef<string | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const memberId = params.get('m');
+    if (!memberId || !user?.telegram_username || inviteProcessedRef.current === memberId) return;
+
+    const userId = `tg-${user.telegram_username}`;
+    inviteProcessedRef.current = memberId;
+
+    (async () => {
+      try {
+        await setUserContext(userId);
+        const { data: member, error } = await supabase
+          .from('project_members')
+          .select('id, project_id, user_id, status')
+          .eq('id', memberId)
+          .single();
+
+        if (error || !member) {
+          toast.error('Приглашение не найдено или истекло');
+          return;
+        }
+        if (member.user_id !== userId) {
+          toast.error('Это приглашение предназначено другому пользователю');
+          return;
+        }
+        if (member.status === 'active') {
+          selectProject(member.project_id);
+          refetchProjects();
+          window.history.replaceState({}, '', window.location.pathname);
+          return;
+        }
+        if (member.status !== 'pending') {
+          toast.error('Приглашение уже обработано');
+          return;
+        }
+
+        const { error: updateErr } = await supabase
+          .from('project_members')
+          .update({ status: 'active', joined_at: new Date().toISOString() })
+          .eq('id', memberId)
+          .eq('user_id', userId);
+
+        if (updateErr) throw updateErr;
+
+        toast.success('Вы приняли приглашение в проект');
+        await refetchProjects();
+        selectProject(member.project_id);
+        window.history.replaceState({}, '', window.location.pathname);
+      } catch (err) {
+        console.error('Invite link accept error:', err);
+        toast.error('Не удалось принять приглашение');
+      }
+    })();
+  }, [user?.telegram_username, selectProject, refetchProjects]);
+
   // Обработка уведомлений о pending приглашениях
   useEffect(() => {
     const handlePendingInvitations = (event: CustomEvent) => {
@@ -795,7 +852,8 @@ function App() {
           <div className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center shadow-glass animate-pulse bg-slate-100 p-2">
             <img src="/riri-logo.png" alt="Riri AI" className="w-full h-full object-contain" />
           </div>
-          <p className="text-slate-500 text-sm font-medium">Секунду...</p>
+          <p className="text-slate-500 text-sm font-medium">Проверка сессии...</p>
+          <p className="text-slate-400 text-xs">Если долго — обновите страницу</p>
         </div>
       </div>
     );
