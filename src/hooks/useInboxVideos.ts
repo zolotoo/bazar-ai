@@ -650,6 +650,7 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
           }));
         }
         
+        fetchFolderCounts();
         return savedVideo;
       }
 
@@ -658,7 +659,7 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
       console.error('Error saving video:', err);
       return localVideo;
     }
-  }, [setIncomingVideos, transformVideo, getUserId]);
+  }, [setIncomingVideos, transformVideo, getUserId, fetchFolderCounts]);
 
   /**
    * Ручной запуск транскрибации (для кнопки "Транскрибировать")
@@ -864,6 +865,7 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
         .delete()
         .eq('user_id', userId)
         .eq('id', videoId);
+      fetchFolderCounts();
     } catch (err) {
       console.error('Error removing video:', err);
       // Восстанавливаем при ошибке
@@ -873,7 +875,7 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
     }
     
     return videoData;
-  }, [setIncomingVideos, getUserId, videos]);
+  }, [setIncomingVideos, getUserId, videos, fetchFolderCounts]);
 
   // Вспомогательная функция для извлечения shortcode
   const extractShortcode = (url: string): string | undefined => {
