@@ -179,6 +179,47 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
     }
   }, [sortBy]);
 
+  // Подсчёт видео по папкам (для бейджей) — отдельный лёгкий запрос
+  const fetchFolderCounts = useCallback(async () => {
+    if (!currentProjectId) {
+      setFolderCounts({});
+      return;
+    }
+    const userId = getUserId();
+    try {
+      let query = supabase
+        .from('saved_videos')
+        .select('folder_id')
+        .eq('project_id', currentProjectId);
+      const { data: membersData } = await supabase
+        .from('project_members')
+        .select('user_id')
+        .eq('project_id', currentProjectId)
+        .in('status', ['active', 'pending']);
+      const isSharedProject = membersData && membersData.length > 0;
+      if (isSharedProject) {
+        const { data: projectData } = await supabase
+          .from('projects')
+          .select('owner_id')
+          .eq('id', currentProjectId)
+          .single();
+        const allUserIds = [...new Set([...membersData!.map(m => m.user_id), projectData?.owner_id].filter(Boolean))];
+        query = query.in('user_id', allUserIds);
+      } else {
+        query = query.eq('user_id', userId);
+      }
+      const { data } = await query;
+      const counts: Record<string, number> = {};
+      (data || []).forEach((row: { folder_id: string | null }) => {
+        const key = row.folder_id ?? '__null__';
+        counts[key] = (counts[key] || 0) + 1;
+      });
+      setFolderCounts(counts);
+    } catch {
+      setFolderCounts({});
+    }
+  }, [currentProjectId, getUserId]);
+
   // Загрузка видео пользователя
   const fetchVideos = useCallback(async () => {
     const userId = getUserId();
@@ -257,54 +298,14 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
         setIncomingVideos([]);
         setHasMore(false);
       }
+      fetchFolderCounts();
     } catch (err) {
       console.error('Error loading saved videos:', err);
       setError(err instanceof Error ? err : new Error('Failed to fetch videos'));
     } finally {
       setLoading(false);
     }
-  }, [setIncomingVideos, transformVideo, getUserId, currentProjectId, filterFolderId, sortBy, getOrderConfig]);
-
-  // Подсчёт видео по папкам (для бейджей) — отдельный лёгкий запрос
-  const fetchFolderCounts = useCallback(async () => {
-    if (!currentProjectId) {
-      setFolderCounts({});
-      return;
-    }
-    const userId = getUserId();
-    try {
-      let query = supabase
-        .from('saved_videos')
-        .select('folder_id')
-        .eq('project_id', currentProjectId);
-      const { data: membersData } = await supabase
-        .from('project_members')
-        .select('user_id')
-        .eq('project_id', currentProjectId)
-        .in('status', ['active', 'pending']);
-      const isSharedProject = membersData && membersData.length > 0;
-      if (isSharedProject) {
-        const { data: projectData } = await supabase
-          .from('projects')
-          .select('owner_id')
-          .eq('id', currentProjectId)
-          .single();
-        const allUserIds = [...new Set([...membersData!.map(m => m.user_id), projectData?.owner_id].filter(Boolean))];
-        query = query.in('user_id', allUserIds);
-      } else {
-        query = query.eq('user_id', userId);
-      }
-      const { data } = await query;
-      const counts: Record<string, number> = {};
-      (data || []).forEach((row: { folder_id: string | null }) => {
-        const key = row.folder_id ?? '__null__';
-        counts[key] = (counts[key] || 0) + 1;
-      });
-      setFolderCounts(counts);
-    } catch {
-      setFolderCounts({});
-    }
-  }, [currentProjectId, getUserId]);
+  }, [setIncomingVideos, transformVideo, getUserId, currentProjectId, filterFolderId, sortBy, getOrderConfig, fetchFolderCounts]);
 
   // Подгрузить следующую страницу (для проектов с большим количеством видео)
   // Пагинация учитывает folderId — подгружаем следующие страницы только из выбранной папки
