@@ -179,6 +179,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
   const [_selectedProjectForAdd, _setSelectedProjectForAdd] = useState<string | null>(currentProjectId || null);
   const mountedRef = useRef(true);
   useEffect(() => () => { mountedRef.current = false; }, []);
+  const { incomingVideos } = useFlowStore();
   const { addVideoToInbox, videos: inboxVideos } = useInboxVideos();
   const { addCarousel } = useCarousels();
   const { history: searchHistory, addToHistory, refetch: refetchHistory, getTodayCache, getAllResultsByQuery } = useSearchHistory();

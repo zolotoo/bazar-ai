@@ -181,32 +181,30 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
 
   // Подсчёт видео по папкам (для бейджей) — отдельный лёгкий запрос
   const fetchFolderCounts = useCallback(async () => {
-    if (!currentProjectId) {
-      setFolderCounts({});
-      return;
-    }
     const userId = getUserId();
     try {
-      let query = supabase
-        .from('saved_videos')
-        .select('folder_id')
-        .eq('project_id', currentProjectId);
-      const { data: membersData } = await supabase
-        .from('project_members')
-        .select('user_id')
-        .eq('project_id', currentProjectId)
-        .in('status', ['active', 'pending']);
-      const isSharedProject = membersData && membersData.length > 0;
-      if (isSharedProject) {
-        const { data: projectData } = await supabase
-          .from('projects')
-          .select('owner_id')
-          .eq('id', currentProjectId)
-          .single();
-        const allUserIds = [...new Set([...membersData!.map(m => m.user_id), projectData?.owner_id].filter(Boolean))];
-        query = query.in('user_id', allUserIds);
+      let query = supabase.from('saved_videos').select('folder_id');
+      if (currentProjectId) {
+        query = query.eq('project_id', currentProjectId);
+        const { data: membersData } = await supabase
+          .from('project_members')
+          .select('user_id')
+          .eq('project_id', currentProjectId)
+          .in('status', ['active', 'pending']);
+        const isSharedProject = membersData && membersData.length > 0;
+        if (isSharedProject) {
+          const { data: projectData } = await supabase
+            .from('projects')
+            .select('owner_id')
+            .eq('id', currentProjectId)
+            .single();
+          const allUserIds = [...new Set([...membersData!.map(m => m.user_id), projectData?.owner_id].filter(Boolean))];
+          query = query.in('user_id', allUserIds);
+        } else {
+          query = query.eq('user_id', userId);
+        }
       } else {
-        query = query.eq('user_id', userId);
+        query = query.is('project_id', null).eq('user_id', userId);
       }
       const { data } = await query;
       const counts: Record<string, number> = {};
@@ -383,8 +381,10 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
   useEffect(() => {
     const handleVideosUpdated = (event: CustomEvent) => {
       const { projectId } = event.detail;
-      // Перезагружаем видео если это текущий проект
-      if (projectId === currentProjectId) {
+      if (projectId !== currentProjectId) return;
+      // Рефетчим только если не загружено больше одной страницы — иначе потеряем подгруженные видео
+      const currentCount = videos.length;
+      if (currentCount <= PAGE_SIZE) {
         console.log('[InboxVideos] Videos updated by another user, refetching...');
         fetchVideos();
       }
@@ -394,7 +394,7 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
     return () => {
       window.removeEventListener('videos-updated', handleVideosUpdated as EventListener);
     };
-  }, [currentProjectId, fetchVideos]);
+  }, [currentProjectId, fetchVideos, videos.length]);
 
   /**
    * Добавляет видео в сохранённые
@@ -783,10 +783,21 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
     const userId = getUserId();
     const folderValue = newFolderId === 'inbox' ? null : newFolderId;
 
-    // Оптимистичное обновление
-    setVideos(prev => prev.map(v =>
-      v.id === videoId ? { ...v, folder_id: folderValue } as any : v
-    ));
+    // Оптимистичное обновление: обновляем папку и убираем из списка, если видео переместили в другую папку
+    setVideos(prev => {
+      const updated = prev.map(v =>
+        v.id === videoId ? { ...v, folder_id: folderValue } as any : v
+      );
+      let result = updated;
+      if (filterFolderId !== undefined) {
+        result = updated.filter(v => {
+          const fid = (v as any).folder_id;
+          return filterFolderId === null ? (fid == null) : fid === filterFolderId;
+        });
+      }
+      setIncomingVideos(result);
+      return result;
+    });
 
     try {
       let query = supabase
@@ -808,13 +819,14 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
         return false;
       }
 
+      fetchFolderCounts();
       return true;
     } catch (err) {
       console.error('Error updating video folder:', err);
       fetchVideos();
       return false;
     }
-  }, [getUserId, currentProjectId, fetchVideos]);
+  }, [getUserId, currentProjectId, fetchVideos, fetchFolderCounts, filterFolderId]);
 
   /**
    * Удаляет видео из сохранённых
@@ -1119,6 +1131,7 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
 
   return {
     videos,
+    folderCounts,
     loading,
     loadingMore,
     hasMore,

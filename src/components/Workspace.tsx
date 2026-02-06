@@ -106,7 +106,9 @@ interface WorkspaceProps {
 
 export function Workspace(_props?: WorkspaceProps) {
   const { loading } = useWorkspaceZones();
-  const { videos: inboxVideos, removeVideo: removeInboxVideo, restoreVideo, updateVideoFolder, loadMore, hasMore, loadingMore, refetch: refetchInboxVideos, refreshThumbnail, saveThumbnailFromUrl } = useInboxVideos({
+  const [sortBy, setSortBy] = useState<'viral' | 'views' | 'likes' | 'date' | 'recent'>('viral');
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null); // null = все видео (кроме "не подходит")
+  const { videos: inboxVideos, folderCounts, removeVideo: removeInboxVideo, restoreVideo, updateVideoFolder, loadMore, hasMore, loadingMore, refetch: refetchInboxVideos, refreshThumbnail, saveThumbnailFromUrl } = useInboxVideos({
     folderId: selectedFolderId,
     sortBy,
   });
@@ -126,8 +128,6 @@ export function Workspace(_props?: WorkspaceProps) {
   const [selectedVideo, setSelectedVideo] = useState<ZoneVideo | null>(null);
   const [moveMenuVideoId, setMoveMenuVideoId] = useState<string | null>(null);
   const [cardMenuVideoId, setCardMenuVideoId] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<'viral' | 'views' | 'likes' | 'date' | 'recent'>('viral');
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null); // null = все видео (кроме "не подходит")
   const [showFolderSettings, setShowFolderSettings] = useState(false);
   const [editingFolder, setEditingFolder] = useState<ProjectFolder | null>(null);
   const [newFolderName, setNewFolderName] = useState('');
@@ -356,21 +356,21 @@ export function Workspace(_props?: WorkspaceProps) {
     return folder?.color || '#94a3b8';
   };
   
-  // Подсчёт видео в папке
+  // Подсчёт видео в папке (из отдельного запроса folderCounts)
   const getVideoCountInFolder = (folderId: string | null): number => {
-    if (folderId === null) {
-      // Все видео кроме "Не подходит"
-      return inboxVideos.filter(v => (v as any).folder_id !== rejectedFolderId).length;
-    }
-    return inboxVideos.filter(v => (v as any).folder_id === folderId).length;
+    const key = folderId === null ? '__null__' : folderId;
+    return folderCounts[key] ?? 0;
   };
 
   // ВСЕ ХУКИ ДОЛЖНЫ БЫТЬ ДО УСЛОВНЫХ ВОЗВРАТОВ!
-  const videosForFeed = useMemo(() => getVideosForFeed(), [inboxVideos, selectedFolderId, rejectedFolderId]);
+  const videosForFeed = useMemo(() => getVideosForFeed(), [inboxVideos]);
   const feedVideos = useMemo(() => {
     return getSortedVideos(videosForFeed);
   }, [videosForFeed, sortBy, profileStatsCache]);
-  const totalVideos = inboxVideos.filter(v => (v as any).folder_id !== rejectedFolderId).length;
+  const totalVideos = Object.entries(folderCounts).reduce(
+    (sum, [key, count]) => (key === rejectedFolderId ? sum : sum + count),
+    0
+  );
   
   // Создаем стабильную строку зависимостей для usernames
   const usernamesKey = useMemo(() => {
