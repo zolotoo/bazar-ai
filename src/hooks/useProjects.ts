@@ -366,7 +366,7 @@ export function useProjects() {
 
       if (error) {
         console.error('Error updating project:', error);
-        return;
+        throw new Error(error.message || 'Не удалось сохранить проект');
       }
 
       setProjects(prev => prev.map(p => 
@@ -374,6 +374,7 @@ export function useProjects() {
       ));
     } catch (err) {
       console.error('Failed to update project:', err);
+      throw err;
     }
   }, []);
 

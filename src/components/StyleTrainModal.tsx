@@ -25,9 +25,11 @@ interface StyleTrainModalProps {
   newStyleName?: string;
   setNewStyleName?: (v: string) => void;
   editingStyle?: { id: string; name: string } | null;
-  onSuccess?: (prompt: string) => void;
+  onSuccess?: (prompt: string) => void | Promise<void>;
   /** При true — спрашиваем название стиля сразу (для каруселей) */
   fromCarousel?: boolean;
+  /** Явный projectId — когда открыто из карусели, чтобы сохранить стиль в проект карусели */
+  targetProjectId?: string | null;
 }
 
 export function StyleTrainModal({
@@ -39,6 +41,7 @@ export function StyleTrainModal({
   editingStyle = null,
   onSuccess,
   fromCarousel = false,
+  targetProjectId,
 }: StyleTrainModalProps) {
   const { videos: projectVideos } = useInboxVideos();
   const { carousels: projectCarousels } = useCarousels();
@@ -69,8 +72,9 @@ export function StyleTrainModal({
   };
 
   const needStyleName = creatingNewStyle || editingStyle?.id === 'legacy';
+  const projectId = targetProjectId || currentProject?.id;
   const handleTrain = async () => {
-    if (!currentProject?.id || selectedIds.length === 0) return;
+    if (!projectId || selectedIds.length === 0) return;
     const name = needStyleName ? newStyleName.trim() : editingStyle?.name || 'Стиль';
     if (needStyleName && !name) {
       toast.error('Введите название стиля');
@@ -98,15 +102,19 @@ export function StyleTrainModal({
         if (creatingNewStyle || editingStyle?.id === 'legacy') {
           const finalName = editingStyle?.id === 'legacy' ? (name || editingStyle.name || 'Стиль по умолчанию') : styleName;
           // Всегда сохраняем в project_styles, никогда в legacy (addProjectStyle сам очистит legacy при миграции)
-          await addProjectStyle(currentProject.id, {
+          await addProjectStyle(projectId, {
             name: finalName,
             prompt: data.prompt,
             meta: data.meta,
             examplesCount: examples.length,
           });
           toast.success(`Стиль «${finalName}» создан по ${examples.length} пример${examples.length === 1 ? 'у' : examples.length < 5 ? 'ам' : 'ам'}`);
+          await onSuccess?.(data.prompt);
+          onClose();
+          setSelectedIds([]);
+          return;
         } else if (editingStyle) {
-          await updateProjectStyle(currentProject.id, editingStyle.id, {
+          await updateProjectStyle(projectId!, editingStyle.id, {
             prompt: data.prompt,
             meta: data.meta,
             examplesCount: examples.length,
@@ -114,16 +122,16 @@ export function StyleTrainModal({
           toast.success(`Стиль «${editingStyle.name}» обновлён`);
         } else {
           // Fallback: миграция legacy → project_styles
-          await addProjectStyle(currentProject.id, {
+          await addProjectStyle(projectId, {
             name: 'Стиль по умолчанию',
             prompt: data.prompt,
             meta: data.meta,
             examplesCount: examples.length,
           });
-          await updateProject(currentProject.id, { stylePrompt: undefined, styleMeta: undefined, styleExamplesCount: 0 });
+          await updateProject(projectId, { stylePrompt: undefined, styleMeta: undefined, styleExamplesCount: 0 });
           toast.success(`Стиль обучен по ${examples.length} пример${examples.length === 1 ? 'у' : examples.length < 5 ? 'ам' : 'ам'}`);
         }
-        onSuccess?.(data.prompt);
+        await onSuccess?.(data.prompt);
         onClose();
         setSelectedIds([]);
       } else {
@@ -131,7 +139,8 @@ export function StyleTrainModal({
       }
     } catch (err) {
       console.error('Train style error:', err);
-      toast.error('Ошибка обучения стиля');
+      const msg = err instanceof Error ? err.message : '';
+      toast.error(msg?.includes('сохранить') ? msg : 'Ошибка обучения стиля');
     } finally {
       setIsAnalyzing(false);
     }

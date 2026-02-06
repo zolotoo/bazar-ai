@@ -133,7 +133,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
   const [showClarifyModal, setShowClarifyModal] = useState(false);
   const [lastRefinedPrompt, setLastRefinedPrompt] = useState('');
 
-  const { currentProject, currentProjectId, updateProject, updateProjectStyle, addProjectStyle, refetch: refetchProjects } = useProjectContext();
+  const { currentProject, currentProjectId, updateProject, updateProjectStyle, addProjectStyle, refetch: refetchProjects, selectProject } = useProjectContext();
   const { user } = useAuth();
   const radarUserId = user?.telegram_username ? `tg-${user.telegram_username}` : 'anonymous';
   const { profiles: radarProfiles, addProfile: addRadarProfile } = useRadar(currentProjectId, radarUserId);
@@ -1095,8 +1095,14 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
         newStyleName={newStyleName}
         setNewStyleName={setNewStyleName}
         editingStyle={editingStyle}
-        onSuccess={async (prompt) => { setEditedPromptText(prompt); await refetchProjects(); }}
+        onSuccess={async (prompt) => {
+          setEditedPromptText(prompt);
+          const targetId = carousel.project_id ?? currentProjectId;
+          if (targetId && targetId !== currentProjectId) selectProject(targetId);
+          await refetchProjects();
+        }}
         fromCarousel
+        targetProjectId={carousel.project_id ?? currentProjectId}
       />
 
       {/* Модальное окно: просмотр и редактирование промта стиля */}
