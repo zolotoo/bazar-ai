@@ -169,7 +169,11 @@ async function saveReelToInbox(reel: RadarReel, projectId: string, userId: strin
   }
 }
 
-export function useRadar(currentProjectId?: string | null, userId?: string) {
+export function useRadar(
+  currentProjectId?: string | null,
+  userId?: string,
+  isSharedProject?: boolean
+) {
   const [profiles, setProfiles] = useState<TrackedProfile[]>([]);
   const [recentReels, setRecentReels] = useState<RadarReel[]>([]);
   const [loading, setLoading] = useState(false);
@@ -177,68 +181,50 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
   const [stats, setStats] = useState({ newVideos: 0, updatedVideos: 0 });
   const [profileStatsCache, setProfileStatsCache] = useState<Map<string, InstagramProfileStats>>(new Map());
 
-  // Загрузка профилей из Supabase (или миграция из localStorage)
+  // Загрузка профилей из Supabase (для общих проектов — от всех участников)
   useEffect(() => {
     if (!userId || userId === 'anonymous') {
-      // Анонимный пользователь — только localStorage
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
+      if (saved && currentProjectId) {
         try {
           const allProfiles = JSON.parse(saved) as TrackedProfile[];
-          setProfiles(allProfiles.map(p => ({
-            ...p,
-            projectId: p.projectId || 'default',
-            updateFrequencyDays: p.updateFrequencyDays ?? 7,
-          })));
+          const filtered = allProfiles
+            .filter(p => p.projectId === currentProjectId)
+            .map(p => ({ ...p, updateFrequencyDays: p.updateFrequencyDays ?? 7 }));
+          setProfiles(filtered);
         } catch (e) {
           console.error('Failed to parse radar profiles:', e);
         }
+      } else {
+        setProfiles([]);
       }
+      return;
+    }
+
+    if (!currentProjectId) {
+      setProfiles([]);
       return;
     }
 
     let cancelled = false;
 
     async function loadFromSupabase() {
-      const { data, error } = await supabase
-        .from('radar_profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .order('added_at', { ascending: false });
-
-      if (cancelled) return;
-      if (error) {
-        console.error('[Radar] Error loading from Supabase:', error);
-        // Fallback на localStorage при ошибке БД
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          try {
-            const allProfiles = JSON.parse(saved) as TrackedProfile[];
-            setProfiles(allProfiles.map(p => ({
-              ...p,
-              projectId: p.projectId || 'default',
-              updateFrequencyDays: p.updateFrequencyDays ?? 7,
-            })));
-          } catch {}
-        }
-        return;
-      }
-
-      const dbProfiles = (data ?? []).map(dbRowToProfile);
+      // Миграция из localStorage (однократно) — загружаем свои профили для проверки
       const migrated = localStorage.getItem(STORAGE_MIGRATED_KEY);
-
       if (!migrated) {
-        // Однократная миграция из localStorage в Supabase
+        const { data: myData } = await supabase
+          .from('radar_profiles')
+          .select('*')
+          .eq('user_id', userId);
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
           try {
             const localProfiles = JSON.parse(saved) as TrackedProfile[];
             const toMigrate = localProfiles
               .map(p => ({ ...p, projectId: p.projectId || 'default' }))
-              .filter(p => !dbProfiles.some(
-                db => db.username === p.username && db.projectId === p.projectId
+              .filter(p => !(myData ?? []).some(
+                db => db.instagram_username === p.username && db.project_id === p.projectId
               ));
-
             for (const p of toMigrate) {
               await supabase.from('radar_profiles').upsert({
                 project_id: p.projectId,
@@ -254,23 +240,128 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
             console.error('[Radar] Migration error:', e);
           }
         }
-        // Перезагружаем после миграции
-        const { data: afterData } = await supabase
+      }
+
+      if (isSharedProject) {
+        // Общий проект: загружаем радар от всех участников
+        const { data: membersData } = await supabase
+          .from('project_members')
+          .select('user_id')
+          .eq('project_id', currentProjectId)
+          .in('status', ['active', 'pending']);
+        const { data: projectData } = await supabase
+          .from('projects')
+          .select('user_id, owner_id')
+          .eq('id', currentProjectId)
+          .single();
+        const memberIds = new Set((membersData ?? []).map(m => m.user_id));
+        if (projectData?.user_id) memberIds.add(projectData.user_id);
+        if (projectData?.owner_id) memberIds.add(projectData.owner_id);
+
+        const { data, error } = await supabase
           .from('radar_profiles')
           .select('*')
+          .eq('project_id', currentProjectId)
+          .in('user_id', Array.from(memberIds))
+          .order('added_at', { ascending: false });
+
+        if (cancelled) return;
+        if (error) {
+          console.error('[Radar] Error loading shared radar:', error);
+          setProfiles([]);
+          return;
+        }
+        // Дедупликация по username (оставляем запись с последним last_checked_at)
+        const byUsername = new Map<string, typeof data[0]>();
+        for (const row of data ?? []) {
+          const un = row.instagram_username.toLowerCase();
+          const existing = byUsername.get(un);
+          if (!existing || (row.last_checked_at || '') > (existing.last_checked_at || '')) {
+            byUsername.set(un, row);
+          }
+        }
+        if (!cancelled) setProfiles(Array.from(byUsername.values()).map(dbRowToProfile));
+      } else {
+        // Обычный проект: только свои профили
+        const { data, error } = await supabase
+          .from('radar_profiles')
+          .select('*')
+          .eq('project_id', currentProjectId)
           .eq('user_id', userId)
           .order('added_at', { ascending: false });
-        if (!cancelled && afterData) {
-          setProfiles(afterData.map(dbRowToProfile));
+
+        if (cancelled) return;
+        if (error) {
+          console.error('[Radar] Error loading from Supabase:', error);
+          setProfiles([]);
+          return;
         }
-      } else if (!cancelled) {
-        setProfiles(dbProfiles);
+        if (!cancelled) setProfiles((data ?? []).map(dbRowToProfile));
       }
     }
 
     loadFromSupabase();
     return () => { cancelled = true; };
-  }, [userId]);
+  }, [userId, currentProjectId, isSharedProject]);
+
+  // Realtime: подписка на изменения радара в общих проектах
+  useEffect(() => {
+    if (!currentProjectId || !isSharedProject || !userId || userId === 'anonymous') return;
+
+    const channel = supabase
+      .channel(`radar:${currentProjectId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'radar_profiles',
+          filter: `project_id=eq.${currentProjectId}`,
+        },
+        () => {
+          // Перезагружаем при любом изменении
+          loadRadarRefetch();
+        }
+      )
+      .subscribe();
+
+    let loadRadarRefetch: () => void = () => {};
+    const fetchProfiles = async () => {
+      const { data: membersData } = await supabase
+        .from('project_members')
+        .select('user_id')
+        .eq('project_id', currentProjectId)
+        .in('status', ['active', 'pending']);
+      const { data: projectData } = await supabase
+        .from('projects')
+        .select('user_id, owner_id')
+        .eq('id', currentProjectId)
+        .single();
+      const memberIds = new Set((membersData ?? []).map(m => m.user_id));
+      if (projectData?.user_id) memberIds.add(projectData.user_id);
+      if (projectData?.owner_id) memberIds.add(projectData.owner_id);
+      const { data } = await supabase
+        .from('radar_profiles')
+        .select('*')
+        .eq('project_id', currentProjectId)
+        .in('user_id', Array.from(memberIds))
+        .order('added_at', { ascending: false });
+      const byUsername = new Map<string, NonNullable<typeof data>[0]>();
+      for (const row of data ?? []) {
+        const un = row.instagram_username.toLowerCase();
+        const existing = byUsername.get(un);
+        if (!existing || (row.last_checked_at || '') > (existing.last_checked_at || '')) {
+          byUsername.set(un, row);
+        }
+      }
+      setProfiles(Array.from(byUsername.values()).map(dbRowToProfile));
+    };
+    loadRadarRefetch = fetchProfiles;
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentProjectId, isSharedProject, userId]);
 
   // Синхронизация в localStorage для анонимных (бэкап) и откат при ошибках
   useEffect(() => {
@@ -382,11 +473,6 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
     const cleanUsername = username.replace(/^@/, '').trim().toLowerCase();
     const targetProjectId = projectId || currentProjectId;
     
-    const toRemove = profiles.find(p => 
-      p.username.toLowerCase() === cleanUsername && 
-      (targetProjectId ? p.projectId === targetProjectId : true)
-    );
-
     setProfiles(prev => prev.filter(p => 
       !(p.username.toLowerCase() === cleanUsername && 
         (targetProjectId ? p.projectId === targetProjectId : true))
@@ -397,21 +483,24 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
         (targetProjectId ? r.projectId === targetProjectId : true))
     ));
 
-    // Удаляем из Supabase
-    if (userId && userId !== 'anonymous' && toRemove?.id && !toRemove.id.startsWith('local-')) {
-      await supabase
-        .from('radar_profiles')
-        .delete()
-        .eq('id', toRemove.id);
-    } else if (userId && userId !== 'anonymous') {
-      await supabase
-        .from('radar_profiles')
-        .delete()
-        .eq('project_id', targetProjectId)
-        .eq('user_id', userId)
-        .eq('instagram_username', cleanUsername);
+    if (userId && userId !== 'anonymous') {
+      if (isSharedProject) {
+        // Общий проект: удаляем для всех (любой участник может убрать)
+        await supabase
+          .from('radar_profiles')
+          .delete()
+          .eq('project_id', targetProjectId)
+          .eq('instagram_username', cleanUsername);
+      } else {
+        await supabase
+          .from('radar_profiles')
+          .delete()
+          .eq('project_id', targetProjectId)
+          .eq('user_id', userId)
+          .eq('instagram_username', cleanUsername);
+      }
     }
-  }, [currentProjectId, profiles, userId]);
+  }, [currentProjectId, userId, isSharedProject]);
 
   // Обновить частоту автообновления профиля
   const updateProfileFrequency = useCallback(async (
@@ -429,13 +518,21 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
         : p
     ));
 
-    await supabase
-      .from('radar_profiles')
-      .update({ update_frequency_days: updateFrequencyDays })
-      .eq('project_id', targetProjectId)
-      .eq('user_id', userId)
-      .eq('instagram_username', cleanUsername);
-  }, [currentProjectId, userId]);
+    if (isSharedProject) {
+      await supabase
+        .from('radar_profiles')
+        .update({ update_frequency_days: updateFrequencyDays })
+        .eq('project_id', targetProjectId)
+        .eq('instagram_username', cleanUsername);
+    } else {
+      await supabase
+        .from('radar_profiles')
+        .update({ update_frequency_days: updateFrequencyDays })
+        .eq('project_id', targetProjectId)
+        .eq('user_id', userId)
+        .eq('instagram_username', cleanUsername);
+    }
+  }, [currentProjectId, userId, isSharedProject]);
 
   // Получить рилсы одного пользователя и сохранить в inbox проекта
   const fetchUserReels = useCallback(async (username: string, projectId?: string) => {
@@ -516,12 +613,15 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
 
         // Сохраняем last_checked_at в Supabase
         if (userId && userId !== 'anonymous') {
-          await supabase
+          let updateQuery = supabase
             .from('radar_profiles')
             .update({ last_checked_at: nowIso, reels_count: data.reels.length })
             .eq('project_id', targetProjectId)
-            .eq('user_id', userId)
             .eq('instagram_username', cleanUsername);
+          if (!isSharedProject) {
+            updateQuery = updateQuery.eq('user_id', userId);
+          }
+          await updateQuery;
         }
 
         // Возвращаем ВСЕ видео профиля (не только последние 6)
@@ -540,7 +640,7 @@ export function useRadar(currentProjectId?: string | null, userId?: string) {
     } finally {
       setLoadingUsername(null);
     }
-  }, [currentProjectId, userId]);
+  }, [currentProjectId, userId, isSharedProject]);
 
   // Обновить статистику одного профиля
   const updateProfileStats = useCallback(async (username: string, forceUpdate = false) => {

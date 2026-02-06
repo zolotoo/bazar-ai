@@ -200,7 +200,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
     updateProfileFrequency: updateRadarProfileFrequency,
     refreshAll: refreshRadar,
     getProfileStats,
-  } = useRadar(currentProjectId, radarUserId);
+  } = useRadar(currentProjectId, radarUserId, currentProject?.isShared);
   
   // Получаем видео профиля из inbox текущего проекта (разделение по проектам)
   const getProfileVideosFromInbox = useCallback((username: string) => {
@@ -655,10 +655,10 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
   }, [addRadarProfile, currentProjectId, currentProjectName, radarAddFrequencyDays]);
 
   // Обработка ссылки на рилс/карусель - сохраняем в "Все видео" или "Карусели" в зависимости от типа
+  // Операция продолжается в фоне даже если панель закрыли — данные сохранятся в БД
   const handleParseLink = async () => {
     if (!linkUrl.trim()) return;
     
-    // Проверяем что проект выбран
     if (!currentProjectId) {
       toast.error('Сначала выберите проект в боковом меню');
       return;
