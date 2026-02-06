@@ -8,7 +8,8 @@ import {
 import { cn } from '../utils/cn';
 import { proxyImageUrl, PLACEHOLDER_400x600 } from '../utils/imagePlaceholder';
 import { proxyVideoUrl } from '../utils/videoProxy';
-import { checkTranscriptionStatus, getVideoDownloadUrl, startTranscription } from '../services/transcriptionService';
+import { checkTranscriptionStatus, getVideoDownloadUrl } from '../services/transcriptionService';
+import { getOrCreateGlobalVideo, extractShortcode, startGlobalTranscriptionWithVideoUrl } from '../services/globalVideoService';
 import { supabase } from '../utils/supabase';
 import { toast } from 'sonner';
 import { useInboxVideos } from '../hooks/useInboxVideos';
@@ -400,30 +401,28 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
     }
   };
 
+  /** Запускает транскрибацию в фоне — polling продолжается даже если пользователь ушёл */
   const runTranscription = async (videoUrl: string) => {
     setIsStartingTranscription(true);
     try {
-      const result = await startTranscription(videoUrl);
+      const shortcode = extractShortcode(video.url || '');
+      const globalVideo = shortcode ? await getOrCreateGlobalVideo({ shortcode, url: video.url }) : null;
 
-      if (!result) {
+      const transcriptId = await startGlobalTranscriptionWithVideoUrl(
+        video.id, globalVideo?.id ?? undefined, shortcode, videoUrl
+      );
+      if (transcriptId) {
+        setLocalTranscriptId(transcriptId);
+        setTranscriptStatus('processing');
+        toast.success('Транскрибация запущена', { description: 'Можно уйти — результат подгрузится сам' });
+      } else {
         setTranscriptStatus('error');
         toast.error('Ошибка запуска транскрибации');
-        await supabase.from('saved_videos').update({ transcript_status: 'error' }).eq('id', video.id);
-        return;
       }
-
-      setLocalTranscriptId(result.transcriptId);
-      setTranscriptStatus('processing');
-
-      await supabase
-        .from('saved_videos')
-        .update({ transcript_id: result.transcriptId, transcript_status: 'processing' })
-        .eq('id', video.id);
-
-      toast.success('Транскрибация запущена', { description: 'Ожидайте результат...' });
     } catch (err) {
       setTranscriptStatus('error');
-      toast.error('Ошибка транскрибации');
+      toast.error('Ошибка запуска транскрибации');
+      await supabase.from('saved_videos').update({ transcript_status: 'error' }).eq('id', video.id);
     } finally {
       setIsStartingTranscription(false);
     }
@@ -1175,7 +1174,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                   </div>,
                   document.body
                 ) : (
-                <div className="absolute left-0 right-0 top-full mt-1 rounded-card-xl shadow-glass-lg bg-glass-white/95 backdrop-blur-glass-xl border border-white/[0.35] p-1.5 z-[70] shadow-xl">
+                <div className="absolute left-0 right-0 top-full mt-1 rounded-card-xl shadow-glass-lg bg-glass-white/95 backdrop-blur-glass-xl border border-white/[0.35] p-1.5 z-[70] shadow-xl max-h-[min(50vh,280px)] overflow-y-auto custom-scrollbar-light">
                   {folderConfigs.map(folder => (
                     <button
                       key={folder.id ?? 'inbox'}

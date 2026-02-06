@@ -9,7 +9,7 @@
  */
 
 import { supabase } from '../utils/supabase';
-import { downloadAndTranscribe, checkTranscriptionStatus } from './transcriptionService';
+import { downloadAndTranscribe, checkTranscriptionStatus, startTranscription } from './transcriptionService';
 import { toast } from 'sonner';
 
 export interface GlobalVideo {
@@ -240,6 +240,53 @@ export async function startGlobalTranscription(
       .update({ transcript_status: 'error' })
       .eq('id', userVideoId);
     toast.error('Ошибка транскрибации', { description: err instanceof Error ? err.message : 'Неизвестная ошибка' });
+  }
+}
+
+/**
+ * Запускает транскрибацию когда videoUrl уже есть (напр. из VideoDetailPage).
+ * Polling идёт в фоне — работает даже если пользователь ушёл со страницы.
+ */
+export async function startGlobalTranscriptionWithVideoUrl(
+  userVideoId: string,
+  globalVideoId: string | undefined,
+  shortcode: string | null,
+  videoUrl: string
+): Promise<string | null> {
+  try {
+    const updateStatus = async (status: string) => {
+      if (globalVideoId) {
+        await supabase.from('videos').update({ transcript_status: status }).eq('id', globalVideoId);
+      }
+      await supabase.from('saved_videos').update({ transcript_status: status }).eq('id', userVideoId);
+    };
+    await updateStatus('processing');
+
+    const result = await startTranscription(videoUrl);
+    if (!result) {
+      await updateStatus('error');
+      return null;
+    }
+
+    if (globalVideoId) {
+      await supabase.from('videos').update({
+        download_url: videoUrl,
+        transcript_id: result.transcriptId,
+        transcript_status: 'processing',
+      }).eq('id', globalVideoId);
+    }
+    await supabase.from('saved_videos').update({
+      download_url: videoUrl,
+      transcript_id: result.transcriptId,
+      transcript_status: 'processing',
+    }).eq('id', userVideoId);
+
+    pollGlobalTranscriptionStatus(userVideoId, globalVideoId, shortcode, result.transcriptId);
+    return result.transcriptId;
+  } catch (err) {
+    console.error('[GlobalVideo] Transcription with URL error:', err);
+    await supabase.from('saved_videos').update({ transcript_status: 'error' }).eq('id', userVideoId);
+    return null;
   }
 }
 

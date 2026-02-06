@@ -177,7 +177,8 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
   const [_spinOffset, setSpinOffset] = useState(0);
   const [_showProjectSelect, _setShowProjectSelect] = useState(false);
   const [_selectedProjectForAdd, _setSelectedProjectForAdd] = useState<string | null>(currentProjectId || null);
-  const { incomingVideos } = useFlowStore();
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
   const { addVideoToInbox, videos: inboxVideos } = useInboxVideos();
   const { addCarousel } = useCarousels();
   const { history: searchHistory, addToHistory, refetch: refetchHistory, getTodayCache, getAllResultsByQuery } = useSearchHistory();
@@ -666,6 +667,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
     
     setLinkLoading(true);
     setLinkPreview(null);
+    toast.info('Добавляю...', { description: 'Можно закрыть — сохранится в фоне' });
     try {
       // Проверяем тип ссылки: профиль или пост (reel/p)
       const profileMatch = linkUrl.match(/instagram\.com\/([^\/\?]+)\/?$/);
@@ -679,12 +681,11 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
           toast.success(`@${username} добавлен в радар`, {
             description: `Проект: ${currentProjectName}. Обновление каждые ${radarAddFrequencyDays} дн. Загружаем видео...`,
           });
-          setLinkUrl('');
-          setLinkLoading(false);
+          if (mountedRef.current) { setLinkUrl(''); setLinkLoading(false); }
           return;
         } else {
           toast.error('Профиль уже отслеживается в этом проекте');
-          setLinkLoading(false);
+          if (mountedRef.current) setLinkLoading(false);
           return;
         }
       }
@@ -715,7 +716,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
             thumbnail_url: data.thumbnail_url ?? data.carousel_slides[0],
             slide_urls: data.carousel_slides,
           });
-          if (added) {
+          if (added && mountedRef.current) {
             setLinkPreview({
               id: shortcode,
               shortcode,
@@ -749,20 +750,22 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
             folderId: undefined,
             takenAt: data.taken_at,
           });
-          setLinkPreview({
-            id: shortcode,
-            shortcode,
-            url: data.url,
-            thumbnail_url: data.thumbnail_url,
-            display_url: data.thumbnail_url,
-            caption: data.caption,
-            view_count: data.view_count,
-            like_count: data.like_count,
-            comment_count: data.comment_count,
-            taken_at: data.taken_at ? String(data.taken_at) : undefined,
-            owner: data.owner,
-            is_carousel: false,
-          });
+          if (mountedRef.current) {
+            setLinkPreview({
+              id: shortcode,
+              shortcode,
+              url: data.url,
+              thumbnail_url: data.thumbnail_url,
+              display_url: data.thumbnail_url,
+              caption: data.caption,
+              view_count: data.view_count,
+              like_count: data.like_count,
+              comment_count: data.comment_count,
+              taken_at: data.taken_at ? String(data.taken_at) : undefined,
+              owner: data.owner,
+              is_carousel: false,
+            });
+          }
           toast.success(`Сохранено в "${currentProjectName}"`, {
             description: 'Видео добавлено в "Все видео". Можете переместить в папку.',
           });
@@ -774,7 +777,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
       console.error('Ошибка парсинга ссылки:', err);
       toast.error('Ошибка при добавлении ссылки');
     } finally {
-      setLinkLoading(false);
+      if (mountedRef.current) setLinkLoading(false);
     }
   };
 

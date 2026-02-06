@@ -57,12 +57,24 @@ export type ResponsibleValueByTemplate = { templateId: string; value: string };
 
 const PAGE_SIZE = 60;
 
+export type InboxSortBy = 'viral' | 'views' | 'likes' | 'date' | 'recent';
+
+export interface UseInboxVideosOptions {
+  /** Фильтр по папке: null = только "без папки", string = конкретная папка, undefined = все (для drawer) */
+  folderId?: string | null;
+  /** Сортировка — применяется на уровне БД для views/likes/date/recent; viral сортируется на клиенте */
+  sortBy?: InboxSortBy;
+}
+
 /**
  * Хук для работы с сохранёнными видео пользователя.
  * Загружает видео страницами, чтобы не лагать на проектах с большим количеством видео.
+ * При передаче folderId загрузка и пагинация работают только по видео в этой папке.
  */
-export function useInboxVideos() {
+export function useInboxVideos(options?: UseInboxVideosOptions) {
+  const { folderId: filterFolderId, sortBy = 'recent' } = options ?? {};
   const [videos, setVideos] = useState<IncomingVideo[]>([]);
+  const [folderCounts, setFolderCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -151,20 +163,43 @@ export function useInboxVideos() {
     };
   }, []);
 
+  // Сортировка на уровне БД (viral — только на клиенте)
+  const getOrderConfig = useCallback(() => {
+    switch (sortBy) {
+      case 'views':
+        return { column: 'view_count' as const, ascending: false, nullsFirst: false };
+      case 'likes':
+        return { column: 'like_count' as const, ascending: false, nullsFirst: false };
+      case 'date':
+        return { column: 'taken_at' as const, ascending: false, nullsFirst: false };
+      case 'viral':
+      case 'recent':
+      default:
+        return { column: 'added_at' as const, ascending: false };
+    }
+  }, [sortBy]);
+
   // Загрузка видео пользователя
   const fetchVideos = useCallback(async () => {
     const userId = getUserId();
-    console.log('[InboxVideos] Fetching videos for user:', userId, 'project:', currentProjectId);
+    console.log('[InboxVideos] Fetching videos for user:', userId, 'project:', currentProjectId, 'folder:', filterFolderId, 'sortBy:', sortBy);
     
     try {
       let query = supabase
         .from('saved_videos')
         .select('*');
       
+      // Фильтр по папке: при выборе папки загружаем только видео из неё
+      if (filterFolderId !== undefined) {
+        if (filterFolderId === null) {
+          query = query.is('folder_id', null);
+        } else {
+          query = query.eq('folder_id', filterFolderId);
+        }
+      }
+      
       // Фильтруем строго по проекту - если проект выбран, показываем ТОЛЬКО видео этого проекта
-      // Видео с project_id = null или другим project_id не должны показываться
       if (currentProjectId) {
-        // Проверяем, является ли проект общим (есть ли участники)
         const { data: membersData } = await supabase
           .from('project_members')
           .select('user_id')
@@ -174,9 +209,7 @@ export function useInboxVideos() {
         const isSharedProject = membersData && membersData.length > 0;
         
         if (isSharedProject) {
-          // Для общих проектов загружаем видео всех участников проекта
           const memberUserIds = membersData.map(m => m.user_id);
-          // Добавляем владельца проекта
           const { data: projectData } = await supabase
             .from('projects')
             .select('owner_id')
@@ -188,24 +221,23 @@ export function useInboxVideos() {
           query = query
             .eq('project_id', currentProjectId)
             .in('user_id', allUserIds);
-          
-          console.log('[InboxVideos] Shared project detected, loading videos for all members:', allUserIds);
         } else {
-          // Для обычных проектов загружаем только видео текущего пользователя
           query = query
             .eq('project_id', currentProjectId)
             .eq('user_id', userId);
         }
       } else {
-        // Если проект не выбран, показываем только видео без проекта (project_id IS NULL) текущего пользователя
         query = query
           .is('project_id', null)
           .eq('user_id', userId);
       }
       
-      const { data, error: fetchError } = await query
-        .order('added_at', { ascending: false })
-        .range(0, PAGE_SIZE - 1);
+      const orderConfig = getOrderConfig();
+      const orderQuery = 'nullsFirst' in orderConfig
+        ? query.order(orderConfig.column, { ascending: orderConfig.ascending, nullsFirst: orderConfig.nullsFirst })
+        : query.order(orderConfig.column, { ascending: orderConfig.ascending });
+      
+      const { data, error: fetchError } = await orderQuery.range(0, PAGE_SIZE - 1);
 
       console.log('[InboxVideos] Fetch result:', { count: data?.length, error: fetchError, projectId: currentProjectId });
 
@@ -231,15 +263,67 @@ export function useInboxVideos() {
     } finally {
       setLoading(false);
     }
-  }, [setIncomingVideos, transformVideo, getUserId, currentProjectId]);
+  }, [setIncomingVideos, transformVideo, getUserId, currentProjectId, filterFolderId, sortBy, getOrderConfig]);
+
+  // Подсчёт видео по папкам (для бейджей) — отдельный лёгкий запрос
+  const fetchFolderCounts = useCallback(async () => {
+    if (!currentProjectId) {
+      setFolderCounts({});
+      return;
+    }
+    const userId = getUserId();
+    try {
+      let query = supabase
+        .from('saved_videos')
+        .select('folder_id')
+        .eq('project_id', currentProjectId);
+      const { data: membersData } = await supabase
+        .from('project_members')
+        .select('user_id')
+        .eq('project_id', currentProjectId)
+        .in('status', ['active', 'pending']);
+      const isSharedProject = membersData && membersData.length > 0;
+      if (isSharedProject) {
+        const { data: projectData } = await supabase
+          .from('projects')
+          .select('owner_id')
+          .eq('id', currentProjectId)
+          .single();
+        const allUserIds = [...new Set([...membersData!.map(m => m.user_id), projectData?.owner_id].filter(Boolean))];
+        query = query.in('user_id', allUserIds);
+      } else {
+        query = query.eq('user_id', userId);
+      }
+      const { data } = await query;
+      const counts: Record<string, number> = {};
+      (data || []).forEach((row: { folder_id: string | null }) => {
+        const key = row.folder_id ?? '__null__';
+        counts[key] = (counts[key] || 0) + 1;
+      });
+      setFolderCounts(counts);
+    } catch {
+      setFolderCounts({});
+    }
+  }, [currentProjectId, getUserId]);
 
   // Подгрузить следующую страницу (для проектов с большим количеством видео)
+  // Пагинация учитывает folderId — подгружаем следующие страницы только из выбранной папки
   const loadMore = useCallback(async () => {
     if (!hasMore || loadingMore || loading) return;
     const userId = getUserId();
     setLoadingMore(true);
     try {
       let query = supabase.from('saved_videos').select('*');
+      
+      // Тот же фильтр по папке, что и при первой загрузке
+      if (filterFolderId !== undefined) {
+        if (filterFolderId === null) {
+          query = query.is('folder_id', null);
+        } else {
+          query = query.eq('folder_id', filterFolderId);
+        }
+      }
+      
       if (currentProjectId) {
         const { data: membersData } = await supabase
           .from('project_members')
@@ -262,10 +346,14 @@ export function useInboxVideos() {
       } else {
         query = query.is('project_id', null).eq('user_id', userId);
       }
+      
       const offset = videos.length;
-      const { data, error: fetchError } = await query
-        .order('added_at', { ascending: false })
-        .range(offset, offset + PAGE_SIZE - 1);
+      const orderConfig = getOrderConfig();
+      const orderQuery = 'nullsFirst' in orderConfig
+        ? query.order(orderConfig.column, { ascending: orderConfig.ascending, nullsFirst: orderConfig.nullsFirst })
+        : query.order(orderConfig.column, { ascending: orderConfig.ascending });
+      
+      const { data, error: fetchError } = await orderQuery.range(offset, offset + PAGE_SIZE - 1);
       if (fetchError) return;
       if (data && data.length > 0) {
         const transformed = data.map(transformVideo);
@@ -281,14 +369,14 @@ export function useInboxVideos() {
     } finally {
       setLoadingMore(false);
     }
-  }, [hasMore, loadingMore, loading, getUserId, currentProjectId, videos.length, transformVideo, setIncomingVideos]);
+  }, [hasMore, loadingMore, loading, getUserId, currentProjectId, videos.length, transformVideo, setIncomingVideos, filterFolderId, getOrderConfig]);
 
-  // Перезагружаем видео при смене пользователя или проекта
+  // Перезагружаем видео при смене пользователя, проекта, папки или сортировки
   useEffect(() => {
     if (user) {
       fetchVideos();
     }
-  }, [user, currentProjectId, fetchVideos]);
+  }, [user, currentProjectId, filterFolderId, sortBy, fetchVideos]);
 
   // Слушаем события обновления видео от других участников проекта
   useEffect(() => {

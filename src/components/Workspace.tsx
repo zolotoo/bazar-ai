@@ -106,7 +106,10 @@ interface WorkspaceProps {
 
 export function Workspace(_props?: WorkspaceProps) {
   const { loading } = useWorkspaceZones();
-  const { videos: inboxVideos, removeVideo: removeInboxVideo, restoreVideo, updateVideoFolder, loadMore, hasMore, loadingMore, refetch: refetchInboxVideos, refreshThumbnail, saveThumbnailFromUrl } = useInboxVideos();
+  const { videos: inboxVideos, removeVideo: removeInboxVideo, restoreVideo, updateVideoFolder, loadMore, hasMore, loadingMore, refetch: refetchInboxVideos, refreshThumbnail, saveThumbnailFromUrl } = useInboxVideos({
+    folderId: selectedFolderId,
+    sortBy,
+  });
   const { 
     currentProject, 
     currentProjectId, 
@@ -566,7 +569,7 @@ export function Workspace(_props?: WorkspaceProps) {
         {selectedCarousel && (
           <motion.div
             key="carousel-detail-overlay"
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6"
+            className="fixed inset-0 z-[100] flex overflow-y-auto justify-center items-start md:items-center p-4 md:p-6 py-6 md:py-6"
             initial="hidden"
             animate="visible"
             exit="exit"
@@ -574,7 +577,7 @@ export function Workspace(_props?: WorkspaceProps) {
           >
             <div className="absolute inset-0 bg-black/25 backdrop-blur-glass-2xl" onClick={() => setSelectedCarousel(null)} aria-hidden />
             <motion.div
-              className="relative w-full max-w-[95vw] md:max-w-6xl h-[90vh] max-h-[900px] rounded-card-2xl overflow-hidden shadow-float-lg bg-base-alt border border-white/[0.35]"
+              className="relative w-full max-w-[95vw] md:max-w-6xl h-[90vh] max-h-[900px] min-h-0 rounded-card-2xl overflow-hidden shadow-float-lg bg-base-alt border border-white/[0.35] flex-shrink-0 my-auto md:my-0"
               variants={dialogScale}
               transition={iosSpringSoft}
               onClick={e => e.stopPropagation()}
@@ -590,7 +593,7 @@ export function Workspace(_props?: WorkspaceProps) {
         {selectedVideo && videoDetailProps && (
           <motion.div
             key="video-detail-overlay"
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6"
+            className="fixed inset-0 z-[100] flex overflow-y-auto justify-center items-start md:items-center p-4 md:p-6 py-6 md:py-6"
             initial="hidden"
             animate="visible"
             exit="exit"
@@ -602,7 +605,7 @@ export function Workspace(_props?: WorkspaceProps) {
               aria-hidden
             />
             <motion.div
-              className="relative w-full max-w-[95vw] md:max-w-6xl h-[90vh] max-h-[900px] rounded-card-2xl overflow-hidden shadow-float-lg bg-base-alt border border-white/[0.35]"
+              className="relative w-full max-w-[95vw] md:max-w-6xl h-[90vh] max-h-[900px] min-h-0 rounded-card-2xl overflow-hidden shadow-float-lg bg-base-alt border border-white/[0.35] flex-shrink-0 my-auto md:my-0"
               variants={dialogScale}
               transition={iosSpringSoft}
               onClick={e => e.stopPropagation()}
@@ -640,12 +643,12 @@ export function Workspace(_props?: WorkspaceProps) {
         
         {/* Widget Content */}
         {isFolderWidgetOpen && (
-          <div className="px-2 pb-3">
+          <div className="px-2 pb-3 flex flex-col max-h-[min(60vh,400px)] min-h-0">
             {/* Все видео (лента) */}
             <button
               onClick={() => setSelectedFolderId(null)}
               className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-card transition-all text-left mb-2",
+                "w-full flex items-center gap-3 px-3 py-2.5 rounded-card transition-all text-left mb-2 shrink-0",
                 selectedFolderId === null 
                   ? "bg-slate-200/40 text-slate-800 shadow-glass-sm" 
                   : "hover:bg-glass-white/60 text-slate-600"
@@ -658,9 +661,10 @@ export function Workspace(_props?: WorkspaceProps) {
               </div>
             </button>
             
-            <div className="my-3" aria-hidden />
+            <div className="my-3 shrink-0" aria-hidden />
             
-            {/* Папки */}
+            {/* Папки — скролл при большом количестве */}
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar-light -mx-1 px-1">
             {folderConfigs.map(folder => {
               const count = getVideoCountInFolder(folder.id);
               const isSelected = selectedFolderId === folder.id;
@@ -689,12 +693,13 @@ export function Workspace(_props?: WorkspaceProps) {
                 </button>
               );
             })}
+            </div>
             
             {/* Settings button */}
-            <div className="my-3" aria-hidden />
+            <div className="my-3 shrink-0" aria-hidden />
             <button
               onClick={() => setShowFolderSettings(true)}
-              className="w-full flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-xl hover:bg-slate-50 active:bg-slate-100 text-slate-500 text-sm transition-colors touch-manipulation"
+              className="w-full flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-xl hover:bg-slate-50 active:bg-slate-100 text-slate-500 text-sm transition-colors touch-manipulation shrink-0"
             >
               <Settings className="w-4 h-4" />
               Настроить папки
@@ -1000,9 +1005,9 @@ export function Workspace(_props?: WorkspaceProps) {
                             <span className="text-sm text-slate-700">Переместить</span>
                           </button>
                           
-                          {/* Подменю с папками */}
+                          {/* Подменю с папками — скролл при большом количестве */}
                           {moveMenuVideoId === video.id && (
-                            <div className="absolute left-full top-0 ml-1 bg-glass-white/90 backdrop-blur-glass-xl rounded-card shadow-glass border border-white/[0.35] p-1.5 min-w-[140px] z-[110] animate-in fade-in slide-in-from-left-2 duration-150">
+                            <div className="absolute left-full top-0 ml-1 bg-glass-white/90 backdrop-blur-glass-xl rounded-card shadow-glass border border-white/[0.35] p-1.5 min-w-[140px] max-h-[min(50vh,280px)] overflow-y-auto z-[110] animate-in fade-in slide-in-from-left-2 duration-150 custom-scrollbar-light">
                               {folderConfigs.map(folder => (
                                 <button
                                   key={folder.id}
