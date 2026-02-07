@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useWorkspaceZones, ZoneVideo } from '../hooks/useWorkspaceZones';
 import { useInboxVideos } from '../hooks/useInboxVideos';
@@ -7,7 +7,7 @@ import { useActionHistory } from '../hooks/useActionHistory';
 import { useProjectSync } from '../hooks/useProjectSync';
 import { useProjectPresence } from '../hooks/useProjectPresence';
 import { PresenceIndicator } from './ui/PresenceIndicator';
-import { Sparkles, FileText, Trash2, ExternalLink, Plus, Inbox, FolderOpen, Settings, GripVertical, X, Palette, Eye, Heart, ChevronDown, ChevronRight, Undo2, Images, Link2, Loader2, MessageCircle, BookOpen } from 'lucide-react';
+import { Sparkles, FileText, Trash2, ExternalLink, Plus, Inbox, FolderOpen, Settings, GripVertical, X, Palette, Eye, Heart, ChevronDown, ChevronRight, Undo2, Images, Link2, Loader2, MessageCircle, BookOpen, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../utils/cn';
 import { proxyImageUrl } from '../utils/imagePlaceholder';
@@ -106,8 +106,40 @@ interface WorkspaceProps {
 
 export function Workspace(_props?: WorkspaceProps) {
   const { loading } = useWorkspaceZones();
-  const [sortBy, setSortBy] = useState<'viral' | 'views' | 'likes' | 'date' | 'recent'>('viral');
+  const [sortBy, setSortBy] = useState<'viral' | 'views' | 'likes' | 'date' | 'recent' | 'views_from_avg'>('viral');
+  const [sortFilterMinViral, setSortFilterMinViral] = useState(() => {
+    try {
+      const v = localStorage.getItem('workspace_sortFilterMinViral');
+      return v ? Math.max(0, parseFloat(v) || 10) : 10;
+    } catch { return 10; }
+  });
+  const [sortFilterMinViews, setSortFilterMinViews] = useState(() => {
+    try {
+      const v = localStorage.getItem('workspace_sortFilterMinViews');
+      return v ? Math.max(0, parseInt(v, 10) || 0) : 0;
+    } catch { return 0; }
+  });
+  const [showSortSettings, setShowSortSettings] = useState(false);
+  const sortSettingsRef = useRef<HTMLDivElement>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null); // null = все видео (кроме "не подходит")
+  
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (showSortSettings && sortSettingsRef.current && !sortSettingsRef.current.contains(e.target as Node)) {
+        setShowSortSettings(false);
+      }
+    };
+    document.addEventListener('click', h);
+    return () => document.removeEventListener('click', h);
+  }, [showSortSettings]);
+  
+  useEffect(() => {
+    try { localStorage.setItem('workspace_sortFilterMinViral', String(sortFilterMinViral)); } catch { /* ignore */ }
+  }, [sortFilterMinViral]);
+  useEffect(() => {
+    try { localStorage.setItem('workspace_sortFilterMinViews', String(sortFilterMinViews)); } catch { /* ignore */ }
+  }, [sortFilterMinViews]);
+  
   const { videos: inboxVideos, folderCounts, removeVideo: removeInboxVideo, restoreVideo, updateVideoFolder, loadMore, hasMore, loadingMore, refetch: refetchInboxVideos, refreshThumbnail, saveThumbnailFromUrl } = useInboxVideos({
     folderId: selectedFolderId,
     sortBy,
@@ -292,38 +324,45 @@ export function Workspace(_props?: WorkspaceProps) {
     return inboxVideos.map(v => transformInboxVideo(v, (v as any).folder_id));
   };
   
-  // Сортировка видео с применением множителя залётности
+  // Фильтрация и сортировка видео
   const getSortedVideos = (videos: ZoneVideo[]): ZoneVideo[] => {
-    return [...videos].sort((a, b) => {
+    const withViral = (v: ZoneVideo) => {
+      const coef = calculateViralCoefficient(v.view_count, v.taken_at || v.created_at);
+      const profile = v.owner_username ? profileStatsCache.get(v.owner_username.toLowerCase()) : null;
+      const mult = calculateViralMultiplier(v.view_count || 0, profile);
+      return applyViralMultiplierToCoefficient(coef, mult);
+    };
+    
+    let filtered = videos;
+    if (sortBy === 'viral' && sortFilterMinViral > 0) {
+      filtered = videos.filter(v => withViral(v) >= sortFilterMinViral);
+    }
+    if ((sortBy === 'views' || sortBy === 'views_from_avg') && sortFilterMinViews > 0) {
+      filtered = filtered.filter(v => (v.view_count || 0) >= sortFilterMinViews);
+    }
+    
+    const avgViews = sortBy === 'views_from_avg' && filtered.length > 0
+      ? filtered.reduce((s, v) => s + (v.view_count || 0), 0) / filtered.length
+      : 0;
+    
+    return [...filtered].sort((a, b) => {
       switch (sortBy) {
-        case 'viral':
-          const coefA = calculateViralCoefficient(a.view_count, a.taken_at || a.created_at);
-          const coefB = calculateViralCoefficient(b.view_count, b.taken_at || b.created_at);
-          
-          // Получаем статистику профилей для применения множителя
-          const profileA = a.owner_username ? profileStatsCache.get(a.owner_username.toLowerCase()) : null;
-          const profileB = b.owner_username ? profileStatsCache.get(b.owner_username.toLowerCase()) : null;
-          
-          const multA = calculateViralMultiplier(a.view_count || 0, profileA);
-          const multB = calculateViralMultiplier(b.view_count || 0, profileB);
-          
-          const finalCoefA = applyViralMultiplierToCoefficient(coefA, multA);
-          const finalCoefB = applyViralMultiplierToCoefficient(coefB, multB);
-          
-          return finalCoefB - finalCoefA;
+        case 'viral': {
+          return withViral(b) - withViral(a);
+        }
         case 'views':
           return (b.view_count || 0) - (a.view_count || 0);
+        case 'views_from_avg': {
+          const deltaA = (a.view_count || 0) - avgViews;
+          const deltaB = (b.view_count || 0) - avgViews;
+          return deltaB - deltaA;
+        }
         case 'likes':
           return (b.like_count || 0) - (a.like_count || 0);
         case 'date':
-          const dateA = a.taken_at || a.created_at || '';
-          const dateB = b.taken_at || b.created_at || '';
-          return String(dateB).localeCompare(String(dateA));
+          return String(b.taken_at || b.created_at || '').localeCompare(String(a.taken_at || a.created_at || ''));
         case 'recent':
-          // По недавно добавленным (по created_at из saved_videos)
-          const createdA = a.created_at || '';
-          const createdB = b.created_at || '';
-          return String(createdB).localeCompare(String(createdA));
+          return String(b.created_at || '').localeCompare(String(a.created_at || ''));
         default:
           return 0;
       }
@@ -352,7 +391,7 @@ export function Workspace(_props?: WorkspaceProps) {
   const videosForFeed = useMemo(() => getVideosForFeed(), [inboxVideos]);
   const feedVideos = useMemo(() => {
     return getSortedVideos(videosForFeed);
-  }, [videosForFeed, sortBy, profileStatsCache]);
+  }, [videosForFeed, sortBy, sortFilterMinViral, sortFilterMinViews, profileStatsCache]);
   const totalVideos = Object.entries(folderCounts).reduce(
     (sum, [key, count]) => (key === rejectedFolderId ? sum : sum + count),
     0
@@ -846,7 +885,15 @@ export function Workspace(_props?: WorkspaceProps) {
                     <GlassFolderIcon iconType="sparkles" color="#475569" size={28} simple />
                     <div>
                       <h1 className="text-xl md:text-2xl font-bold text-slate-800">Все видео</h1>
-                      <p className="text-slate-500 text-xs md:text-sm tabular-nums mt-1">{feedVideos.length} видео • отсортировала по виральности</p>
+                      <p className="text-slate-500 text-xs md:text-sm tabular-nums mt-1">
+                        {feedVideos.length} видео
+                        {' • '}
+                        {sortBy === 'viral' && `виральность${sortFilterMinViral > 0 ? ` ≥${sortFilterMinViral}` : ''}`}
+                        {sortBy === 'views' && `просмотры${sortFilterMinViews > 0 ? ` ≥${formatNumber(sortFilterMinViews)}` : ''}`}
+                        {sortBy === 'views_from_avg' && `от среднего${sortFilterMinViews > 0 ? ` (≥${formatNumber(sortFilterMinViews)})` : ''}`}
+                        {sortBy === 'likes' && 'лайки'}
+                        {sortBy === 'recent' && 'недавно'}
+                      </p>
                     </div>
                   </>
                 )}
@@ -875,8 +922,9 @@ export function Workspace(_props?: WorkspaceProps) {
                 )}
                 <div className="flex items-center gap-1.5 md:gap-2 bg-white/80 md:bg-glass-white/60 backdrop-blur-sm md:backdrop-blur-glass rounded-full p-1.5 md:p-2 shadow-sm md:shadow-glass-sm border border-slate-200/60 md:border-white/[0.35] overflow-x-auto overflow-y-hidden flex-1 min-w-0 scrollbar-hide">
                 {[
-                  { value: 'viral', label: 'Виральность', icon: Sparkles, title: 'По коэффициенту виральности' },
-                  { value: 'views', label: 'Просмотры', icon: Eye, title: 'По количеству просмотров' },
+                  { value: 'viral', label: 'Виральность', icon: Sparkles, title: 'По коэффициенту виральности (≥' + sortFilterMinViral + ')' },
+                  { value: 'views', label: 'Просмотры', icon: Eye, title: 'По количеству просмотров (≥' + formatNumber(sortFilterMinViews) + ')' },
+                  { value: 'views_from_avg', label: 'От среднего', icon: TrendingUp, title: 'По отклонению просмотров от среднего (≥' + formatNumber(sortFilterMinViews) + ')' },
                   { value: 'likes', label: 'Лайки', icon: Heart, title: 'По количеству лайков' },
                   { value: 'recent', label: 'Недавно', icon: Inbox, title: 'По дате добавления' },
                 ].map(({ value, label, icon: Icon, title }) => (
@@ -895,6 +943,48 @@ export function Workspace(_props?: WorkspaceProps) {
                     <span>{label}</span>
                   </button>
                 ))}
+                <div ref={sortSettingsRef} className="relative flex-shrink-0">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowSortSettings(s => !s); }}
+                    title="Настройки фильтров сортировки"
+                    className={cn(
+                      "flex items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-pill transition-all",
+                      showSortSettings ? "bg-slate-200/50 text-slate-800" : "text-slate-500 hover:text-slate-700 hover:bg-slate-100/60"
+                    )}
+                  >
+                    <Settings className="w-4 h-4" strokeWidth={2.5} />
+                  </button>
+                  {showSortSettings && (
+                    <div className="absolute right-0 top-full mt-1.5 z-50 p-3 rounded-xl bg-white/95 backdrop-blur-xl shadow-lg border border-slate-200/80 min-w-[200px]">
+                      <div className="text-xs font-semibold text-slate-600 mb-2">Фильтры сортировки</div>
+                      <div className="space-y-2.5">
+                        <label className="block text-xs text-slate-600">
+                          Виральность ≥
+                          <input
+                            type="number"
+                            min={0}
+                            step={0.5}
+                            value={sortFilterMinViral}
+                            onChange={(e) => setSortFilterMinViral(Math.max(0, parseFloat(e.target.value) || 0))}
+                            className="ml-2 w-16 px-2 py-1 rounded-lg border border-slate-200 text-slate-800 text-sm"
+                          />
+                        </label>
+                        <label className="block text-xs text-slate-600">
+                          Просмотры ≥
+                          <input
+                            type="number"
+                            min={0}
+                            step={1000}
+                            value={sortFilterMinViews || ''}
+                            onChange={(e) => setSortFilterMinViews(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                            placeholder="0"
+                            className="ml-2 w-20 px-2 py-1 rounded-lg border border-slate-200 text-slate-800 text-sm"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
                 </div>
               </div>
             </div>

@@ -59,7 +59,7 @@ const PAGE_SIZE = 60;
 /** Для viral/recent — загружаем все в папке (до лимита), чтобы сортировка была по всей папке */
 const FULL_SORT_LIMIT = 2000;
 
-export type InboxSortBy = 'viral' | 'views' | 'likes' | 'date' | 'recent';
+export type InboxSortBy = 'viral' | 'views' | 'likes' | 'date' | 'recent' | 'views_from_avg';
 
 export interface UseInboxVideosOptions {
   /** Фильтр по папке: null = только "без папки", string = конкретная папка, undefined = все (для drawer) */
@@ -169,6 +169,7 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
   const getOrderConfig = useCallback(() => {
     switch (sortBy) {
       case 'views':
+      case 'views_from_avg':
         return { column: 'view_count' as const, ascending: false, nullsFirst: false };
       case 'likes':
         return { column: 'like_count' as const, ascending: false, nullsFirst: false };
@@ -278,8 +279,8 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
         ? query.order(orderConfig.column, { ascending: orderConfig.ascending, nullsFirst: orderConfig.nullsFirst })
         : query.order(orderConfig.column, { ascending: orderConfig.ascending });
       
-      // Для viral — загружаем все видео в папке (до лимита), иначе сортировка только по загруженным
-      const needsFullSort = sortBy === 'viral' && filterFolderId !== undefined;
+      // Для viral и views_from_avg — загружаем все видео в папке (до лимита)
+      const needsFullSort = (sortBy === 'viral' || sortBy === 'views_from_avg') && filterFolderId !== undefined;
       const initialLimit = needsFullSort ? FULL_SORT_LIMIT : PAGE_SIZE;
       
       const { data, error: fetchError } = await orderQuery.range(0, initialLimit - 1);
