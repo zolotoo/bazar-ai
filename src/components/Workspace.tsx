@@ -174,7 +174,7 @@ export function Workspace(_props?: WorkspaceProps) {
     prevContentSectionRef.current = contentSection;
   }, [contentSection]);
 
-  // Проактивная подгрузка превью для каруселей с пустым thumbnail (как у видео)
+  // Проактивная подгрузка превью для каруселей с пустым thumbnail (добавлено другим юзером)
   useEffect(() => {
     if (contentSection !== 'carousels' || !refreshCarouselThumbnail) return;
     const needRefresh = carousels.filter(
@@ -182,6 +182,24 @@ export function Workspace(_props?: WorkspaceProps) {
     ).slice(0, 3);
     needRefresh.forEach(c => refreshCarouselThumbnail(c.id, c.shortcode));
   }, [contentSection, carousels, refreshCarouselThumbnail]);
+
+  // Проактивная подгрузка превью для рилсов — как у каруселей: пустое или битое превью (добавлено другим юзером)
+  useEffect(() => {
+    if (contentSection !== 'reels' || !refreshThumbnail) return;
+    const needRefresh = inboxVideos.filter((v: any) => {
+      const url = (v.previewUrl || v.preview_url || '').toLowerCase();
+      const shortcode = v.shortcode ?? v.url?.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/)?.[1];
+      if (!shortcode || String(v.id).startsWith('local-')) return false;
+      const empty = !url?.trim();
+      const broken = empty || url?.includes('instagram.com') || url?.includes('wsrv.nl') || url?.includes('cdninstagram') || url?.includes('fbcdn.net');
+      const hasStorage = url?.includes('supabase.co');
+      return broken && !hasStorage;
+    }).slice(0, 5);
+    needRefresh.forEach((v: any) => {
+      const shortcode = v.shortcode ?? v.url?.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/)?.[1];
+      if (shortcode) refreshThumbnail(v.id, shortcode, true);
+    });
+  }, [contentSection, inboxVideos, refreshThumbnail]);
 
   const [isMobileFolderPanelOpen, setIsMobileFolderPanelOpen] = useState(false);
 
