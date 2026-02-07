@@ -45,17 +45,22 @@ async function handleAnalyze(req, res) {
   if (!OPENROUTER_API_KEY) return res.status(500).json({ error: 'OPENROUTER_API_KEY not configured' });
 
   const parts = [];
-  parts.push(`Задача: по примерам адаптации сценариев выявить закономерности и сформулировать промт для нейросети.
+  parts.push(`Задача: по примерам адаптации сценариев выявить ПРАВИЛА и ЗАКОНОМЕРНОСТИ, а не смыслы.
 
 У тебя есть примеры. В каждом примере:
 1) Исходный сценарий (оригинал, транскрипт)
 2) Перевод на русский (если есть)
 3) Моя адаптация — как я переписал сценарий
 
+КРИТИЧНО:
+— НЕ запоминай конкретные смыслы, идеи, факты из примеров. Они уникальны для каждого видео.
+— ВЫЯВИ ПРАВИЛА: как я структурирую, как сокращаю, как добавляю хуки, какой тон, какие типовые трансформации (оригинал → моя версия).
+— Промт должен описывать КАК переписывать любой новый исходник, а не ЧТО писать. Универсальные правила, применимые к новым сценариям.
+
 Нужно:
-— выявить закономерности моей адаптации;
+— сравнить оригинал и мою адаптацию: что изменилось по форме, структуре, подаче;
 — зафиксировать правила (логика, стиль, структура, типовые трансформации);
-— сформулировать один рабочий промт, пригодный для повторного использования при генерации нового сценария по новому исходнику.
+— сформулировать один рабочий промт для генерации новых сценариев по новым исходникам.
 
 Ответ пришли строго в формате JSON без markdown-блоков и без лишнего текста. Один валидный JSON: без запятой перед закрывающей скобкой, переносы в строках только как \\n.
 {
@@ -74,17 +79,27 @@ async function handleAnalyze(req, res) {
     if (ex.translation_text && ex.translation_text.trim()) {
       parts.push(`Перевод на русский:\n${ex.translation_text}\n`);
     }
-    parts.push(`Моя адаптация:\n${ex.script_text}\n`);
+    parts.push(`Моя адаптация (сравни с оригиналом — какие правила применил):\n${ex.script_text}\n`);
   });
 
+  const analyzeModels = [MODELS.PRO_3, MODELS.FLASH];
+  let rawText = null;
+  for (const model of analyzeModels) {
+    try {
+      const result = await callOpenRouter({
+        apiKey: OPENROUTER_API_KEY,
+        model,
+        messages: [{ role: 'user', content: parts.join('') }],
+        temperature: 0.2,
+        response_format: { type: 'json_object' },
+      });
+      rawText = result.text;
+      if (rawText) break;
+    } catch (err) {
+      if (err.message?.includes('429')) await new Promise((r) => setTimeout(r, 2000));
+    }
+  }
   try {
-    const { text: rawText } = await callOpenRouter({
-      apiKey: OPENROUTER_API_KEY,
-      model: MODELS.FLASH,
-      messages: [{ role: 'user', content: parts.join('') }],
-      temperature: 0.3,
-      response_format: { type: 'json_object' },
-    });
     if (!rawText) return res.status(502).json({ error: 'OpenRouter returned empty response' });
 
     let jsonStr = (rawText.match(/\{[\s\S]*\}/) || [null])[0] || rawText;
