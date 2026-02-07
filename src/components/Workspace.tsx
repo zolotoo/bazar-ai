@@ -110,8 +110,8 @@ export function Workspace(_props?: WorkspaceProps) {
   const [sortFilterMinViral, setSortFilterMinViral] = useState(() => {
     try {
       const v = localStorage.getItem('workspace_sortFilterMinViral');
-      return v ? Math.max(0, parseFloat(v) || 10) : 10;
-    } catch { return 10; }
+      return v ? Math.max(0, parseFloat(v) || 0) : 0;
+    } catch { return 0; }
   });
   const [sortFilterMinViews, setSortFilterMinViews] = useState(() => {
     try {
@@ -119,19 +119,7 @@ export function Workspace(_props?: WorkspaceProps) {
       return v ? Math.max(0, parseInt(v, 10) || 0) : 0;
     } catch { return 0; }
   });
-  const [showSortSettings, setShowSortSettings] = useState(false);
-  const sortSettingsRef = useRef<HTMLDivElement>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null); // null = все видео (кроме "не подходит")
-  
-  useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (showSortSettings && sortSettingsRef.current && !sortSettingsRef.current.contains(e.target as Node)) {
-        setShowSortSettings(false);
-      }
-    };
-    document.addEventListener('click', h);
-    return () => document.removeEventListener('click', h);
-  }, [showSortSettings]);
   
   useEffect(() => {
     try { localStorage.setItem('workspace_sortFilterMinViral', String(sortFilterMinViral)); } catch { /* ignore */ }
@@ -168,11 +156,23 @@ export function Workspace(_props?: WorkspaceProps) {
   const [profileStatsCache, setProfileStatsCache] = useState<Map<string, any>>(new Map());
   // Раздел контента в проекте: рилсы или карусели
   const [contentSection, setContentSection] = useState<'reels' | 'carousels'>('reels');
+  const [reelsGridKey, setReelsGridKey] = useState(0);
   const [selectedCarousel, setSelectedCarousel] = useState<SavedCarousel | null>(null);
   const [carouselLinkUrl, setCarouselLinkUrl] = useState('');
   const [isAddingCarouselByLink, setIsAddingCarouselByLink] = useState(false);
   const [descriptionModalText, setDescriptionModalText] = useState<string | null>(null);
   const { carousels, loading: carouselsLoading, addCarousel, refreshCarouselThumbnail, refetch: refetchCarousels } = useCarousels();
+
+  // Форсируем ремаунт релс-сетки при показе — иначе превью не грузятся до смены вкладки
+  const prevContentSectionRef = useRef<'reels' | 'carousels' | null>(null);
+  useEffect(() => {
+    if (contentSection === 'reels' && prevContentSectionRef.current !== 'reels') {
+      const id = requestAnimationFrame(() => setReelsGridKey(k => k + 1));
+      prevContentSectionRef.current = contentSection;
+      return () => cancelAnimationFrame(id);
+    }
+    prevContentSectionRef.current = contentSection;
+  }, [contentSection]);
 
   // Проактивная подгрузка превью для каруселей с пустым thumbnail (как у видео)
   useEffect(() => {
@@ -908,6 +908,34 @@ export function Workspace(_props?: WorkspaceProps) {
                 </button>
               </div>
 
+              {/* Фильтры сортировки — всегда видны сверху, отдельно от кнопок */}
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                <span className="text-xs text-slate-500 font-medium">Фильтры:</span>
+                <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                  виральность ≥
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={sortFilterMinViral}
+                    onChange={(e) => setSortFilterMinViral(Math.max(0, parseFloat(e.target.value) || 0))}
+                    className="w-14 px-2 py-1.5 rounded-lg border border-slate-200 text-slate-800 text-sm bg-white"
+                  />
+                </label>
+                <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                  просмотры ≥
+                  <input
+                    type="number"
+                    min={0}
+                    step={1000}
+                    value={sortFilterMinViews || ''}
+                    onChange={(e) => setSortFilterMinViews(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                    placeholder="0"
+                    className="w-20 px-2 py-1.5 rounded-lg border border-slate-200 text-slate-800 text-sm bg-white"
+                  />
+                </label>
+              </div>
+
               {/* Сортировка и кнопка отмены */}
               <div className="flex items-center gap-2 min-w-0">
                 {canUndo && (
@@ -922,9 +950,9 @@ export function Workspace(_props?: WorkspaceProps) {
                 )}
                 <div className="flex items-center gap-1.5 md:gap-2 bg-white/80 md:bg-glass-white/60 backdrop-blur-sm md:backdrop-blur-glass rounded-full p-1.5 md:p-2 shadow-sm md:shadow-glass-sm border border-slate-200/60 md:border-white/[0.35] overflow-x-auto overflow-y-hidden flex-1 min-w-0 scrollbar-hide">
                 {[
-                  { value: 'viral', label: 'Виральность', icon: Sparkles, title: 'По коэффициенту виральности (≥' + sortFilterMinViral + ')' },
-                  { value: 'views', label: 'Просмотры', icon: Eye, title: 'По количеству просмотров (≥' + formatNumber(sortFilterMinViews) + ')' },
-                  { value: 'views_from_avg', label: 'От среднего', icon: TrendingUp, title: 'По отклонению просмотров от среднего (≥' + formatNumber(sortFilterMinViews) + ')' },
+                  { value: 'viral', label: 'Виральность', icon: Sparkles, title: 'По коэффициенту виральности' },
+                  { value: 'views', label: 'Просмотры', icon: Eye, title: 'По количеству просмотров' },
+                  { value: 'views_from_avg', label: 'От среднего', icon: TrendingUp, title: 'По отклонению просмотров от среднего' },
                   { value: 'likes', label: 'Лайки', icon: Heart, title: 'По количеству лайков' },
                   { value: 'recent', label: 'Недавно', icon: Inbox, title: 'По дате добавления' },
                 ].map(({ value, label, icon: Icon, title }) => (
@@ -943,48 +971,6 @@ export function Workspace(_props?: WorkspaceProps) {
                     <span>{label}</span>
                   </button>
                 ))}
-                <div ref={sortSettingsRef} className="relative flex-shrink-0">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setShowSortSettings(s => !s); }}
-                    title="Настройки фильтров сортировки"
-                    className={cn(
-                      "flex items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-pill transition-all",
-                      showSortSettings ? "bg-slate-200/50 text-slate-800" : "text-slate-500 hover:text-slate-700 hover:bg-slate-100/60"
-                    )}
-                  >
-                    <Settings className="w-4 h-4" strokeWidth={2.5} />
-                  </button>
-                  {showSortSettings && (
-                    <div className="absolute right-0 top-full mt-1.5 z-50 p-3 rounded-xl bg-white/95 backdrop-blur-xl shadow-lg border border-slate-200/80 min-w-[200px]">
-                      <div className="text-xs font-semibold text-slate-600 mb-2">Фильтры сортировки</div>
-                      <div className="space-y-2.5">
-                        <label className="block text-xs text-slate-600">
-                          Виральность ≥
-                          <input
-                            type="number"
-                            min={0}
-                            step={0.5}
-                            value={sortFilterMinViral}
-                            onChange={(e) => setSortFilterMinViral(Math.max(0, parseFloat(e.target.value) || 0))}
-                            className="ml-2 w-16 px-2 py-1 rounded-lg border border-slate-200 text-slate-800 text-sm"
-                          />
-                        </label>
-                        <label className="block text-xs text-slate-600">
-                          Просмотры ≥
-                          <input
-                            type="number"
-                            min={0}
-                            step={1000}
-                            value={sortFilterMinViews || ''}
-                            onChange={(e) => setSortFilterMinViews(Math.max(0, parseInt(e.target.value, 10) || 0))}
-                            placeholder="0"
-                            className="ml-2 w-20 px-2 py-1 rounded-lg border border-slate-200 text-slate-800 text-sm"
-                          />
-                        </label>
-                      </div>
-                    </div>
-                  )}
-                </div>
                 </div>
               </div>
             </div>
@@ -1004,7 +990,7 @@ export function Workspace(_props?: WorkspaceProps) {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5 pb-20 md:pb-6 safe-bottom">
+            <div key={reelsGridKey} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5 pb-20 md:pb-6 safe-bottom">
               {feedVideos.map((video, idx) => {
                 const thumbnailUrl = video.preview_url;
                 const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at || video.created_at);
