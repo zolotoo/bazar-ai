@@ -527,15 +527,23 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
         console.log('[InboxVideos] Global video:', globalVideo?.id, 'transcript:', globalVideo?.transcript_status);
       }
       
-      // 2. Проверяем есть ли у ПОЛЬЗОВАТЕЛЯ это видео
+      // 2. Проверяем есть ли у ПОЛЬЗОВАТЕЛЯ это видео В ДАННОМ ПРОЕКТЕ
+      // Важно: один shortcode может быть в разных проектах — у каждого своя запись (свой сценарий, ссылки)
       let existingUserVideo = null;
       if (shortcode) {
-        const { data: existing } = await supabase
+        const targetProjectIdForCheck = video.projectId !== undefined ? video.projectId : currentProjectId || null;
+        let query = supabase
           .from('saved_videos')
           .select('id, transcript_status, transcript_text')
           .eq('user_id', userId)
-          .eq('shortcode', shortcode)
-          .maybeSingle();
+          .eq('shortcode', shortcode);
+        // Фильтруем по project_id: совпадение null с null, иначе по значению
+        if (targetProjectIdForCheck) {
+          query = query.eq('project_id', targetProjectIdForCheck);
+        } else {
+          query = query.is('project_id', null);
+        }
+        const { data: existing } = await query.maybeSingle();
         existingUserVideo = existing;
       }
       

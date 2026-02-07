@@ -93,20 +93,26 @@ async function saveReelToInbox(reel: RadarReel, projectId: string, userId: strin
     
     const needsTranscription = !globalVideo?.transcript_status || globalVideo.transcript_status === 'error';
     
-    // 2. Проверяем, есть ли уже у ПОЛЬЗОВАТЕЛЯ это видео
+    // 2. Проверяем, есть ли уже у ПОЛЬЗОВАТЕЛЯ это видео В ДАННОМ ПРОЕКТЕ
+    // Один shortcode может быть в разных проектах — у каждого своя запись
     let existingUserVideo = null;
     if (shortcode) {
-      const { data } = await supabase
+      let query = supabase
         .from('saved_videos')
         .select('id')
         .eq('user_id', userId)
-        .eq('shortcode', shortcode)
-        .maybeSingle();
+        .eq('shortcode', shortcode);
+      if (projectId) {
+        query = query.eq('project_id', projectId);
+      } else {
+        query = query.is('project_id', null);
+      }
+      const { data } = await query.maybeSingle();
       existingUserVideo = data;
     }
 
     if (existingUserVideo) {
-      console.log('[Radar] User already has this video:', existingUserVideo.id);
+      console.log('[Radar] User already has this video in this project:', existingUserVideo.id);
       
       // Обновляем статистику и копируем транскрибацию из глобальной таблицы
       await supabase
