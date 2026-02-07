@@ -62,6 +62,8 @@ async function handleAnalyze(req, res) {
 — зафиксировать правила (логика, стиль, структура, типовые трансформации);
 — сформулировать один рабочий промт для генерации новых сценариев по новым исходникам.
 
+После создания промта сформулируй 3–5 уточняющих вопросов о ключевых предположениях. Формат: «Правильно ли я понимаю, что ...?» Например: от лица кого пишем текст, хук меняем или оставляем, какая структура, тон. Эти вопросы помогут пользователю подтвердить или скорректировать понимание.
+
 Ответ пришли строго в формате JSON без markdown-блоков и без лишнего текста. Один валидный JSON: без запятой перед закрывающей скобкой, переносы в строках только как \\n.
 {
   "prompt": "полный текст промта для нейросети (на русском)",
@@ -69,7 +71,8 @@ async function handleAnalyze(req, res) {
     "rules": ["правило 1", "правило 2", ...],
     "doNot": ["чего избегать", ...],
     "summary": "краткое описание стиля в 1–2 предложения"
-  }
+  },
+  "clarifying_questions": ["Правильно ли я понимаю, что ...?", "Правильно ли я понимаю, что ...?", ...]
 }
 `);
 
@@ -121,6 +124,9 @@ async function handleAnalyze(req, res) {
     }
     const promptText = typeof parsed.prompt === 'string' ? parsed.prompt : '';
     const meta = parsed.meta && typeof parsed.meta === 'object' ? parsed.meta : {};
+    const clarifying_questions = Array.isArray(parsed.clarifying_questions)
+      ? parsed.clarifying_questions.filter((q) => typeof q === 'string' && q.trim())
+      : [];
     if (!promptText) return res.status(502).json({ error: 'Invalid JSON structure' });
     return res.status(200).json({
       success: true,
@@ -130,6 +136,7 @@ async function handleAnalyze(req, res) {
         doNot: Array.isArray(meta.doNot) ? meta.doNot : [],
         summary: typeof meta.summary === 'string' ? meta.summary : '',
       },
+      clarifying_questions: clarifying_questions.slice(0, 6),
     });
   } catch (err) {
     console.error('script analyze error:', err);
@@ -190,13 +197,17 @@ async function handleRefine(req, res) {
   }
   if (!OPENROUTER_API_KEY) return res.status(500).json({ error: 'OPENROUTER_API_KEY not configured' });
 
-  const isClarifyAnswer = feedback.trim().startsWith('Уточняющий вопрос:');
+  const fb = feedback.trim();
+  const isClarifyAnswer = fb.startsWith('Уточняющий вопрос:');
+  const isTrainVerify = fb.includes('Ответы на уточняющие вопросы по обучению');
   const clarifyPreamble = isClarifyAnswer
     ? `Пользователь ответил на твой уточняющий вопрос. Если он подтвердил (да, можно, правильно) — примени изменение. Если отверг (нет, оставь) — не меняй промт. Если уточнил иначе — учти его ответ. clarifying_questions оставь пустым.\n\n`
+    : isTrainVerify
+    ? `Пользователь прошёл этап верификации после обучения. Ниже — его ответы на уточняющие вопросы по промту. Примени изменения: если подтвердил — закрепи в промте; если скорректировал — учти правку; если пропустил — оставь как есть. clarifying_questions: []\n\n`
     : '';
 
-  const instructions = isClarifyAnswer
-    ? 'Примени изменение на основе ответа пользователя. clarifying_questions: []'
+  const instructions = isClarifyAnswer || isTrainVerify
+    ? 'Примени изменения на основе ответов пользователя. clarifying_questions: []'
     : `1. Разбери обратную связь: к чему КОНКРЕТНО она относится?
 2. Если хочешь только ДОБАВИТЬ новые правила — сделай это, верни обновлённый prompt.
 3. Если хочешь УДАЛИТЬ или ИЗМЕНИТЬ существующее правило — ОБЯЗАТЕЛЬНО добавь в clarifying_questions вопрос для верификации. Формат: «Правильно ли я понимаю, что [правило X] можно удалить?» или «Можно ли заменить [правило X] на [Y]?» В таком случае верни prompt БЕЗ изменений — изменение применим после подтверждения.

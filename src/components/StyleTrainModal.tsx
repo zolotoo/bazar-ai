@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2, Sparkles } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { toast } from 'sonner';
@@ -49,6 +49,23 @@ export function StyleTrainModal({
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [trainStep, setTrainStep] = useState<'select' | 'verify'>('select');
+  const [draftPrompt, setDraftPrompt] = useState('');
+  const [draftMeta, setDraftMeta] = useState<{ rules?: string[]; doNot?: string[]; summary?: string }>({});
+  const [trainClarifyQuestions, setTrainClarifyQuestions] = useState<string[]>([]);
+  const [trainClarifyIndex, setTrainClarifyIndex] = useState(0);
+  const [trainClarifyAnswers, setTrainClarifyAnswers] = useState<Record<number, string>>({});
+  const [isRefining, setIsRefining] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setTrainStep('select');
+      setDraftPrompt('');
+      setTrainClarifyQuestions([]);
+      setTrainClarifyIndex(0);
+      setTrainClarifyAnswers({});
+    }
+  }, [open]);
 
   const videoCandidates: ExampleWithScript[] = ((projectVideos || []) as { id: string; title?: string; transcript_text?: string; translation_text?: string; script_text?: string }[])
     .filter((v) => v.transcript_text?.trim() && v.script_text?.trim())
@@ -73,6 +90,30 @@ export function StyleTrainModal({
 
   const needStyleName = creatingNewStyle || editingStyle?.id === 'legacy';
   const projectId = targetProjectId || currentProject?.id;
+
+  const saveStyle = async (
+    pid: string,
+    styleName: string,
+    prompt: string,
+    meta: { rules?: string[]; doNot?: string[]; summary?: string },
+    examplesCount: number,
+    editing?: { id: string; name: string } | null,
+    creating?: boolean
+  ) => {
+    if (creating || editing?.id === 'legacy') {
+      const finalName = editing?.id === 'legacy' ? (styleName || editing.name || 'Стиль по умолчанию') : styleName;
+      await addProjectStyle(pid, { name: finalName, prompt, meta, examplesCount });
+      toast.success(`Стиль «${finalName}» создан по ${examplesCount} пример${examplesCount === 1 ? 'у' : examplesCount < 5 ? 'ам' : 'ам'}`);
+    } else if (editing) {
+      await updateProjectStyle(pid, editing.id, { prompt, meta, examplesCount });
+      toast.success(`Стиль «${editing.name}» обновлён`);
+    } else {
+      await addProjectStyle(pid, { name: 'Стиль по умолчанию', prompt, meta, examplesCount });
+      await updateProject(pid, { stylePrompt: undefined, styleMeta: undefined, styleExamplesCount: 0 });
+      toast.success(`Стиль обучен по ${examplesCount} пример${examplesCount === 1 ? 'у' : examplesCount < 5 ? 'ам' : 'ам'}`);
+    }
+  };
+
   const handleTrain = async () => {
     if (!projectId || selectedIds.length === 0) return;
     const name = needStyleName ? newStyleName.trim() : editingStyle?.name || 'Стиль';
@@ -98,39 +139,17 @@ export function StyleTrainModal({
       });
       const data = await res.json();
       if (data.success && data.prompt) {
-        const styleName = name || 'Новый стиль';
-        if (creatingNewStyle || editingStyle?.id === 'legacy') {
-          const finalName = editingStyle?.id === 'legacy' ? (name || editingStyle.name || 'Стиль по умолчанию') : styleName;
-          // Всегда сохраняем в project_styles, никогда в legacy (addProjectStyle сам очистит legacy при миграции)
-          await addProjectStyle(projectId, {
-            name: finalName,
-            prompt: data.prompt,
-            meta: data.meta,
-            examplesCount: examples.length,
-          });
-          toast.success(`Стиль «${finalName}» создан по ${examples.length} пример${examples.length === 1 ? 'у' : examples.length < 5 ? 'ам' : 'ам'}`);
-          await onSuccess?.(data.prompt);
-          onClose();
-          setSelectedIds([]);
+        const questions = data.clarifying_questions || [];
+        if (questions.length > 0) {
+          setDraftPrompt(data.prompt);
+          setDraftMeta(data.meta || {});
+          setTrainClarifyQuestions(questions);
+          setTrainClarifyIndex(0);
+          setTrainClarifyAnswers({});
+          setTrainStep('verify');
           return;
-        } else if (editingStyle) {
-          await updateProjectStyle(projectId!, editingStyle.id, {
-            prompt: data.prompt,
-            meta: data.meta,
-            examplesCount: examples.length,
-          });
-          toast.success(`Стиль «${editingStyle.name}» обновлён`);
-        } else {
-          // Fallback: миграция legacy → project_styles
-          await addProjectStyle(projectId, {
-            name: 'Стиль по умолчанию',
-            prompt: data.prompt,
-            meta: data.meta,
-            examplesCount: examples.length,
-          });
-          await updateProject(projectId, { stylePrompt: undefined, styleMeta: undefined, styleExamplesCount: 0 });
-          toast.success(`Стиль обучен по ${examples.length} пример${examples.length === 1 ? 'у' : examples.length < 5 ? 'ам' : 'ам'}`);
         }
+        await saveStyle(projectId, name, data.prompt, data.meta, examples.length, editingStyle, creatingNewStyle);
         await onSuccess?.(data.prompt);
         onClose();
         setSelectedIds([]);
@@ -146,11 +165,170 @@ export function StyleTrainModal({
     }
   };
 
+  const currentAnswer = trainClarifyAnswers[trainClarifyIndex] ?? '';
+  const isLastQuestion = trainClarifyIndex >= trainClarifyQuestions.length - 1;
+
+  const handleVerifySubmit = async () => {
+    const q = trainClarifyQuestions[trainClarifyIndex];
+    if (!q || !projectId) return;
+    const answer = currentAnswer.trim();
+    const nextAnswers = { ...trainClarifyAnswers, [trainClarifyIndex]: answer };
+    setTrainClarifyAnswers(nextAnswers);
+    if (!isLastQuestion) {
+      setTrainClarifyIndex((i) => i + 1);
+      return;
+    }
+    await finishVerify(nextAnswers);
+  };
+
+  const finishVerify = async (answers: Record<number, string>) => {
+    if (!projectId || !draftPrompt) return;
+    const examples = selectedIds
+      .map((id) => candidates.find((x) => x.id === id))
+      .filter((x): x is ExampleWithScript => Boolean(x))
+      .map((x) => ({
+        transcript_text: x.transcript_text,
+        translation_text: isRussian(x.transcript_text || '') ? '' : (x.translation_text || ''),
+        script_text: x.script_text,
+      }));
+    const firstEx = examples[0];
+    if (!firstEx?.transcript_text || !firstEx?.script_text) {
+      await saveStyle(projectId, needStyleName ? newStyleName.trim() : editingStyle?.name || 'Стиль', draftPrompt, draftMeta, examples.length, editingStyle, creatingNewStyle);
+      await onSuccess?.(draftPrompt);
+      onClose();
+      setSelectedIds([]);
+      setTrainStep('select');
+      return;
+    }
+    const answersText = trainClarifyQuestions
+      .map((question, i) => {
+        const a = answers[i] ?? '';
+        return `Уточняющий вопрос: ${question}\nОтвет: ${a || '(пропущено)'}`;
+      })
+      .join('\n\n');
+    const feedback = `Ответы на уточняющие вопросы по обучению (примени изменения к промту):\n\n${answersText}`;
+    setIsRefining(true);
+    try {
+      const res = await fetch('/api/script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: draftPrompt,
+          transcript_text: firstEx.transcript_text,
+          translation_text: firstEx.translation_text || '',
+          script_text: firstEx.script_text,
+          feedback,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.prompt) {
+        await saveStyle(projectId, needStyleName ? newStyleName.trim() : editingStyle?.name || 'Стиль', data.prompt, data.meta || draftMeta, examples.length, editingStyle, creatingNewStyle);
+        await onSuccess?.(data.prompt);
+        onClose();
+        setSelectedIds([]);
+        setTrainStep('select');
+      } else {
+        toast.error(data.error || 'Ошибка уточнения');
+      }
+    } catch (err) {
+      console.error('Verify refine error:', err);
+      toast.error('Ошибка уточнения промта');
+    } finally {
+      setIsRefining(false);
+    }
+  };
+
+  const handleVerifySkipAll = async () => {
+    if (!projectId || !draftPrompt) return;
+    const examples = selectedIds
+      .map((id) => candidates.find((x) => x.id === id))
+      .filter((x): x is ExampleWithScript => Boolean(x));
+    await saveStyle(projectId, needStyleName ? newStyleName.trim() : editingStyle?.name || 'Стиль', draftPrompt, draftMeta, examples.length, editingStyle, creatingNewStyle);
+    await onSuccess?.(draftPrompt);
+    onClose();
+    setSelectedIds([]);
+    setTrainStep('select');
+    toast.success('Стиль сохранён без уточнений');
+  };
+
+  const handleVerifyBack = () => {
+    if (trainClarifyIndex > 0) {
+      setTrainClarifyIndex((i) => i - 1);
+    } else {
+      setTrainStep('select');
+      setDraftPrompt('');
+      setTrainClarifyQuestions([]);
+    }
+  };
+
   if (!open) return null;
 
+  const showVerifyStep = trainStep === 'verify' && trainClarifyQuestions.length > 0;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !isAnalyzing && onClose()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !isAnalyzing && !isRefining && onClose()}>
       <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        {showVerifyStep ? (
+          <>
+            <div className="p-4 border-b border-slate-100">
+              <h3 className="font-semibold text-slate-800">Уточнение понимания</h3>
+              <p className="text-slate-500 text-sm mt-1">
+                Нейросеть сформировала промт. Подтвердите или скорректируйте ключевые моменты — это улучшит результат.
+              </p>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <p className="text-slate-600 text-sm mb-4">{trainClarifyQuestions[trainClarifyIndex]}</p>
+              <textarea
+                value={currentAnswer}
+                onChange={(e) => setTrainClarifyAnswers((prev) => ({ ...prev, [trainClarifyIndex]: e.target.value }))}
+                placeholder="Ваш ответ..."
+                className="w-full min-h-[80px] p-3 rounded-xl border border-slate-200 text-sm text-slate-700 focus:ring-2 focus:ring-slate-200 focus:border-slate-400 resize-y"
+                disabled={isRefining}
+              />
+            </div>
+            <div className="p-4 border-t border-slate-100 flex justify-between items-center">
+              <span className="text-xs text-slate-400">
+                {trainClarifyIndex + 1} из {trainClarifyQuestions.length}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleVerifyBack}
+                  disabled={isRefining}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 disabled:opacity-50"
+                >
+                  {trainClarifyIndex > 0 ? 'Назад' : 'Отмена'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleVerifySkipAll}
+                  disabled={isRefining}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Сохранить без уточнений
+                </button>
+                <button
+                  type="button"
+                  onClick={handleVerifySubmit}
+                  disabled={isRefining}
+                  className="px-4 py-1.5 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isRefining ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Уточняю...
+                    </>
+                  ) : isLastQuestion ? (
+                    'Готово'
+                  ) : (
+                    'Далее'
+                  )}
+                </button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
         <div className="p-4 border-b border-slate-100 flex flex-col gap-3">
           {fromCarousel && creatingNewStyle && (
             <div>
@@ -252,6 +430,8 @@ export function StyleTrainModal({
             </button>
           </div>
         </div>
+          </>
+        )}
       </div>
     </div>
   );
