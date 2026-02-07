@@ -287,23 +287,9 @@ export function Workspace(_props?: WorkspaceProps) {
     status: 'active',
   });
 
-  // Получаем видео для ленты
+  // Получаем видео для ленты — хук уже фильтрует по selectedFolderId
   const getVideosForFeed = (): ZoneVideo[] => {
-    // Если выбрана конкретная папка - фильтруем по ней
-    if (selectedFolderId) {
-      return inboxVideos
-        .filter(v => (v as any).folder_id === selectedFolderId)
-        .map(v => transformInboxVideo(v, (v as any).folder_id));
-    }
-    
-    // Иначе показываем только видео БЕЗ папки (folder_id === null)
-    // Видео, которые перемещены в папки, не показываются в ленте "Все видео"
-    return inboxVideos
-      .filter(v => {
-        const folderId = (v as any).folder_id;
-        return folderId === null || folderId === undefined;
-      })
-      .map(v => transformInboxVideo(v, (v as any).folder_id));
+    return inboxVideos.map(v => transformInboxVideo(v, (v as any).folder_id));
   };
   
   // Сортировка видео с применением множителя залётности

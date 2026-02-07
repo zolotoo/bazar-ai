@@ -56,6 +56,8 @@ export type LinkValueByTemplate = { templateId: string; value: string };
 export type ResponsibleValueByTemplate = { templateId: string; value: string };
 
 const PAGE_SIZE = 60;
+/** Для viral/recent — загружаем все в папке (до лимита), чтобы сортировка была по всей папке */
+const FULL_SORT_LIMIT = 2000;
 
 export type InboxSortBy = 'viral' | 'views' | 'likes' | 'date' | 'recent';
 
@@ -276,9 +278,13 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
         ? query.order(orderConfig.column, { ascending: orderConfig.ascending, nullsFirst: orderConfig.nullsFirst })
         : query.order(orderConfig.column, { ascending: orderConfig.ascending });
       
-      const { data, error: fetchError } = await orderQuery.range(0, PAGE_SIZE - 1);
+      // Для viral — загружаем все видео в папке (до лимита), иначе сортировка только по загруженным
+      const needsFullSort = sortBy === 'viral' && filterFolderId !== undefined;
+      const initialLimit = needsFullSort ? FULL_SORT_LIMIT : PAGE_SIZE;
+      
+      const { data, error: fetchError } = await orderQuery.range(0, initialLimit - 1);
 
-      console.log('[InboxVideos] Fetch result:', { count: data?.length, error: fetchError, projectId: currentProjectId });
+      console.log('[InboxVideos] Fetch result:', { count: data?.length, error: fetchError, projectId: currentProjectId, sortBy, needsFullSort });
 
       if (fetchError) {
         console.error('Error fetching saved videos:', fetchError);
@@ -289,7 +295,7 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
         const transformedVideos = data.map(transformVideo);
         setVideos(transformedVideos);
         setIncomingVideos(transformedVideos);
-        setHasMore(data.length === PAGE_SIZE);
+        setHasMore(needsFullSort ? data.length === FULL_SORT_LIMIT : data.length === PAGE_SIZE);
         console.log('[InboxVideos] Loaded', transformedVideos.length, 'videos for project', currentProjectId);
       } else {
         setVideos([]);
