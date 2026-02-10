@@ -61,7 +61,7 @@ function calculateViralCoefficient(views?: number, takenAt?: string | number | D
   return Math.round((views / diffDays / 1000) * 10) / 10;
 }
 
-// Виральность карусели: лайки / (дни * 1000), порог низкий чтобы показывать у большинства
+// Виральность карусели: лайки / (дни * 100) — шкала как у рилсов (1–15 для вирусных)
 function calculateCarouselViralCoefficient(likes?: number, takenAt?: number | string | null): number {
   if (!likes || likes < 100 || takenAt == null) return 0;
   let postDate: Date;
@@ -73,7 +73,20 @@ function calculateCarouselViralCoefficient(likes?: number, takenAt?: number | st
   if (isNaN(postDate.getTime())) return 0;
   const diffDays = Math.floor((Date.now() - postDate.getTime()) / (1000 * 60 * 60 * 24));
   if (diffDays <= 0) return 0;
-  return Math.round((likes / (diffDays * 1000)) * 100) / 100;
+  return Math.round((likes / (diffDays * 100)) * 10) / 10;
+}
+
+// Дата публикации карусели для карточки
+function formatCarouselDate(takenAt?: number | string | null): string {
+  if (takenAt == null) return '';
+  let date: Date;
+  if (typeof takenAt === 'number') {
+    date = takenAt > 1e12 ? new Date(takenAt) : new Date(takenAt * 1000);
+  } else {
+    date = new Date(takenAt);
+  }
+  if (isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 interface FolderConfig {
@@ -1350,7 +1363,7 @@ export function Workspace(_props?: WorkspaceProps) {
                           onClick={() => setSelectedCarousel(c)}
                           className="w-full text-left"
                         >
-                          <div className="aspect-[4/3] min-h-[120px] relative bg-slate-100 overflow-hidden">
+                          <div className="aspect-[3/4] min-h-[140px] relative bg-slate-100 overflow-hidden">
                             <img
                               src={proxyImageUrl(c.thumbnail_url || c.slide_urls?.[0] || undefined)}
                               alt=""
@@ -1390,6 +1403,11 @@ export function Workspace(_props?: WorkspaceProps) {
                               {c.caption && (
                                 <p className="text-white/90 text-[10px] leading-snug line-clamp-2 break-words overflow-hidden">
                                   {c.caption}
+                                </p>
+                              )}
+                              {formatCarouselDate(c.taken_at) && (
+                                <p className="text-white/70 text-[9px] font-medium">
+                                  {formatCarouselDate(c.taken_at)}
                                 </p>
                               )}
                               <div className="flex items-center gap-1.5 flex-wrap">

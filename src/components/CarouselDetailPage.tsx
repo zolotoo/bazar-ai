@@ -51,9 +51,9 @@ function formatNumber(num?: number): string {
   return num.toString();
 }
 
-// Виральность карусели: likes / (days * 1000)
+// Виральность карусели: лайки / (дни * 100) — шкала 1–15 для вирусных
 function calculateCarouselViralCoefficient(likes?: number, takenAt?: number | string | null): number {
-  if (!likes || likes < 30000 || takenAt == null) return 0;
+  if (!likes || likes < 100 || takenAt == null) return 0;
   let postDate: Date;
   if (typeof takenAt === 'number') {
     postDate = takenAt > 1e12 ? new Date(takenAt) : new Date(takenAt * 1000);
@@ -63,7 +63,7 @@ function calculateCarouselViralCoefficient(likes?: number, takenAt?: number | st
   if (isNaN(postDate.getTime())) return 0;
   const diffDays = Math.floor((Date.now() - postDate.getTime()) / (1000 * 60 * 60 * 24));
   if (diffDays <= 0) return 0;
-  return Math.round((likes / (diffDays * 1000)) * 100) / 100;
+  return Math.round((likes / (diffDays * 100)) * 10) / 10;
 }
 
 interface CarouselDetailPageProps {
