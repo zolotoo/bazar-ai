@@ -1111,7 +1111,7 @@ export function Workspace(_props?: WorkspaceProps) {
               </p>
             </div>
           ) : (
-            <div key={reelsGridKey} className="grid grid-cols-3 gap-3 md:gap-4 pb-20 md:pb-6 safe-bottom">
+            <div key={reelsGridKey} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5 pb-20 md:pb-6 safe-bottom">
               {feedVideos.map((video, idx) => {
                 const thumbnailUrl = video.preview_url;
                 const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at || video.created_at);
