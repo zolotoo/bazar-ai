@@ -15,7 +15,7 @@ import { VideoGradientCard } from './ui/VideoGradientCard';
 import { VideoDetailPage } from './VideoDetailPage';
 import { CarouselDetailPage } from './CarouselDetailPage';
 import { useCarousels, type SavedCarousel } from '../hooks/useCarousels';
-import { calculateViralMultiplier, applyViralMultiplierToCoefficient, getProfileStats } from '../services/profileStatsService';
+import { calculateViralMultiplier, applyViralMultiplierToCoefficient, getProfileStats, calculateCarouselViralMultiplier } from '../services/profileStatsService';
 import { dialogScale, backdropFade, iosSpringSoft } from '../utils/motionPresets';
 import { TokenBadge } from './ui/TokenBadge';
 import { GlassFolderIcon } from './ui/GlassFolderIcons';
@@ -61,9 +61,9 @@ function calculateViralCoefficient(views?: number, takenAt?: string | number | D
   return Math.round((views / diffDays / 1000) * 10) / 10;
 }
 
-// Виральность карусели: likes / (days * 1000)
+// Виральность карусели: лайки / (дни * 1000), порог низкий чтобы показывать у большинства
 function calculateCarouselViralCoefficient(likes?: number, takenAt?: number | string | null): number {
-  if (!likes || likes < 30000 || takenAt == null) return 0;
+  if (!likes || likes < 100 || takenAt == null) return 0;
   let postDate: Date;
   if (typeof takenAt === 'number') {
     postDate = takenAt > 1e12 ? new Date(takenAt) : new Date(takenAt * 1000);
@@ -128,7 +128,7 @@ export function Workspace(_props?: WorkspaceProps) {
     try { localStorage.setItem('workspace_sortFilterMinViews', String(sortFilterMinViews)); } catch { /* ignore */ }
   }, [sortFilterMinViews]);
   
-  const { videos: inboxVideos, folderCounts, removeVideo: removeInboxVideo, restoreVideo, updateVideoFolder, loadMore, hasMore, loadingMore, refetch: refetchInboxVideos, refreshThumbnail, saveThumbnailFromUrl } = useInboxVideos({
+  const { videos: inboxVideos, folderCounts, removeVideo: removeInboxVideo, restoreVideo, updateVideoFolder, loadMore, hasMore, loadingMore, refetch: refetchInboxVideos, refreshThumbnail, saveThumbnailFromUrl, addVideoToInbox } = useInboxVideos({
     folderId: selectedFolderId,
     sortBy,
   });
@@ -160,6 +160,8 @@ export function Workspace(_props?: WorkspaceProps) {
   const [selectedCarousel, setSelectedCarousel] = useState<SavedCarousel | null>(null);
   const [carouselLinkUrl, setCarouselLinkUrl] = useState('');
   const [isAddingCarouselByLink, setIsAddingCarouselByLink] = useState(false);
+  const [reelLinkUrl, setReelLinkUrl] = useState('');
+  const [isAddingReelByLink, setIsAddingReelByLink] = useState(false);
   const [descriptionModalText, setDescriptionModalText] = useState<string | null>(null);
   const { carousels, loading: carouselsLoading, addCarousel, refreshCarouselThumbnail, refetch: refetchCarousels } = useCarousels();
 
@@ -451,6 +453,32 @@ export function Workspace(_props?: WorkspaceProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usernamesKey]);
+
+  // Загружаем статистику профилей для авторов каруселей (для «x от мин» по лайкам)
+  const carouselUsernamesKey = useMemo(() => {
+    if (contentSection !== 'carousels' || carousels.length === 0) return '';
+    const usernames = new Set<string>();
+    carousels.forEach(c => {
+      if (c.owner_username) usernames.add(c.owner_username.toLowerCase());
+    });
+    return Array.from(usernames).sort().join(',');
+  }, [contentSection, carousels]);
+  useEffect(() => {
+    if (!carouselUsernamesKey) return;
+    const loadCarouselProfileStats = async () => {
+      const usernames = carouselUsernamesKey.split(',').filter(Boolean);
+      for (const username of usernames) {
+        if (!profileStatsCache.has(username)) {
+          const stats = await getProfileStats(username);
+          if (stats) {
+            setProfileStatsCache(prev => new Map(prev).set(username, stats));
+          }
+        }
+      }
+    };
+    loadCarouselProfileStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [carouselUsernamesKey]);
 
   // Синхронизация выбранного видео с лентой после обновления данных (только при смене ссылки на объект)
   useEffect(() => {
@@ -992,6 +1020,68 @@ export function Workspace(_props?: WorkspaceProps) {
                 </div>
               </div>
             </div>
+            {/* Добавить рилс по ссылке — как во вкладке Карусели */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-4 pt-4 border-t border-slate-200/60">
+                <div className="flex gap-2 flex-1 sm:min-w-[280px]">
+                  <input
+                    type="url"
+                    value={reelLinkUrl}
+                    onChange={e => setReelLinkUrl(e.target.value)}
+                    placeholder="Ссылка на рилс (instagram.com/reel/...)"
+                    className="flex-1 min-w-0 px-4 py-2.5 rounded-xl border border-slate-200/80 bg-white/80 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300"
+                  />
+                  <button
+                    onClick={async () => {
+                      const url = reelLinkUrl.trim();
+                      if (!url || !url.includes('instagram.com')) {
+                        toast.error('Вставь ссылку на рилс Instagram');
+                        return;
+                      }
+                      setIsAddingReelByLink(true);
+                      try {
+                        const res = await fetch('/api/reel-info', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ url }),
+                        });
+                        const data = await res.json();
+                        if (data.success && !data.is_carousel) {
+                          const captionText = typeof data.caption === 'string' ? data.caption.slice(0, 200) : 'Видео из Instagram';
+                          await addVideoToInbox({
+                            title: captionText,
+                            previewUrl: data.thumbnail_url || '',
+                            url: data.url,
+                            viewCount: data.view_count,
+                            likeCount: data.like_count,
+                            commentCount: data.comment_count,
+                            ownerUsername: data.owner?.username,
+                            shortcode: data.shortcode,
+                            projectId: currentProjectId || undefined,
+                            folderId: undefined,
+                            takenAt: data.taken_at,
+                          });
+                          setReelLinkUrl('');
+                          toast.success('Рилс добавлен в раздел');
+                        } else if (data.success && data.is_carousel) {
+                          toast.error('Это карусель. Добавляй во вкладке «Карусели».');
+                        } else {
+                          toast.error(data.error || 'Не удалось загрузить рилс. Проверь ссылку.');
+                        }
+                      } catch (e) {
+                        toast.error('Ошибка при добавлении рилса');
+                      } finally {
+                        setIsAddingReelByLink(false);
+                      }
+                    }}
+                    disabled={isAddingReelByLink || !reelLinkUrl.trim()}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-600 hover:bg-slate-700 disabled:bg-slate-200 disabled:text-slate-400 text-white text-sm font-medium transition-colors shrink-0"
+                  >
+                    {isAddingReelByLink ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
+                    Добавить
+                    <TokenBadge tokens={getTokenCost('link_add')} />
+                  </button>
+                </div>
+              </div>
           </div>
 
           {/* Videos Grid */}
@@ -1004,7 +1094,7 @@ export function Workspace(_props?: WorkspaceProps) {
                 {selectedFolderId ? 'Папка пуста' : 'Нет видео'}
               </h3>
               <p className="text-slate-500 text-sm">
-                {selectedFolderId ? 'Перетащи видео сюда' : 'Добавь видео через поиск или радар'}
+                {selectedFolderId ? 'Перетащи видео сюда' : 'Добавь видео по ссылке выше, через поиск или радар'}
               </p>
             </div>
           ) : (
@@ -1260,7 +1350,7 @@ export function Workspace(_props?: WorkspaceProps) {
                           onClick={() => setSelectedCarousel(c)}
                           className="w-full text-left"
                         >
-                          <div className="aspect-[4/3] min-h-[120px] relative bg-slate-100">
+                          <div className="aspect-[4/3] min-h-[120px] relative bg-slate-100 overflow-hidden">
                             <img
                               src={proxyImageUrl(c.thumbnail_url || c.slide_urls?.[0] || undefined)}
                               alt=""
@@ -1271,45 +1361,72 @@ export function Workspace(_props?: WorkspaceProps) {
                                 }
                               }}
                             />
-                            <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded-md bg-black/60 text-white text-[10px] font-medium flex items-center gap-0.5">
+                            <div
+                              className="absolute inset-0 pointer-events-none z-[1]"
+                              style={{
+                                background: 'linear-gradient(to top, rgba(15,15,18,0.85) 0%, rgba(25,25,30,0.45) 35%, rgba(35,35,42,0.15) 55%, transparent 75%)',
+                              }}
+                            />
+                            <div className="absolute bottom-1.5 right-1.5 z-[2] px-1.5 py-0.5 rounded-lg backdrop-blur-[20px] bg-black/40 border border-white/20 text-white text-[10px] font-medium flex items-center gap-0.5 shadow-[0_2px_8px_rgba(0,0,0,0.2)]">
                               <Images className="w-2.5 h-2.5" />
                               {c.slide_count || 0}
                             </div>
                             {c.transcript_status === 'completed' && (
-                              <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-emerald-500/90 text-white text-[10px] font-medium">
+                              <div className="absolute top-1.5 left-1.5 z-[2] px-1.5 py-0.5 rounded-lg bg-emerald-500/90 text-white text-[10px] font-medium backdrop-blur-sm border border-white/20">
                                 Транскрипт
                               </div>
                             )}
                             <button
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  setDescriptionModalText(c.caption || 'Нет описания');
-                                }}
-                                className="absolute top-1.5 right-1.5 p-1.5 rounded-md bg-black/50 hover:bg-black/70 text-white transition-colors"
-                                title="Описание"
-                              >
-                                <BookOpen className="w-3.5 h-3.5" strokeWidth={2} />
-                              </button>
+                              onClick={e => {
+                                e.stopPropagation();
+                                setDescriptionModalText(c.caption || 'Нет описания');
+                              }}
+                              className="absolute top-1.5 right-1.5 z-[2] p-1.5 rounded-full backdrop-blur-sm bg-black/40 hover:bg-black/60 border border-white/20 text-white transition-colors"
+                              title="Описание"
+                            >
+                              <BookOpen className="w-3.5 h-3.5" strokeWidth={2} />
+                            </button>
+                            <div className="absolute bottom-1.5 left-1.5 right-1.5 z-[2] flex items-center gap-1.5 flex-wrap">
+                              <span className="px-2 py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20 text-white">
+                                <Heart className="w-2.5 h-2.5 flex-shrink-0" strokeWidth={2} />
+                                <span className="text-[10px] font-semibold tabular-nums">{formatNumber(c.like_count)}</span>
+                              </span>
+                              <span className="px-2 py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20 text-white">
+                                <MessageCircle className="w-2.5 h-2.5 flex-shrink-0" strokeWidth={2} />
+                                <span className="text-[10px] font-semibold tabular-nums">{formatNumber(c.comment_count)}</span>
+                              </span>
+                              {(() => {
+                                const viralCoef = calculateCarouselViralCoefficient(c.like_count, c.taken_at);
+                                const profileStats = c.owner_username ? profileStatsCache.get(c.owner_username.toLowerCase()) : null;
+                                const viralMult = calculateCarouselViralMultiplier(c.like_count, profileStats ?? null);
+                                return (
+                                  <>
+                                    {viralCoef > 0 && (
+                                      <span className="px-2 py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20 text-white" title="Виральность (лайки/день)">
+                                        <Sparkles className="w-2.5 h-2.5 flex-shrink-0" strokeWidth={2} />
+                                        <span className="text-[10px] font-semibold tabular-nums">{viralCoef.toFixed(1)}</span>
+                                      </span>
+                                    )}
+                                    {viralMult !== null && viralMult !== undefined && (
+                                      <span
+                                        className={cn(
+                                          'px-2 py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] text-white',
+                                          viralMult >= 5 ? 'bg-amber-500/80' : viralMult >= 3 ? 'bg-emerald-500/80' : viralMult >= 2 ? 'bg-white/30' : 'bg-white/20'
+                                        )}
+                                        title={`В ${Math.round(viralMult)}x раз ${viralMult >= 1 ? 'больше' : 'меньше'} минимума по лайкам у автора`}
+                                      >
+                                        <TrendingUp className="w-2.5 h-2.5 flex-shrink-0" strokeWidth={2} />
+                                        <span className="text-[10px] font-semibold tabular-nums">{Math.round(viralMult)}x</span>
+                                      </span>
+                                    )}
+                                  </>
+                                );
+                              })()}
+                            </div>
                           </div>
                           <div className="px-2 py-1.5">
                             <p className="text-xs font-medium text-slate-800 truncate">{c.caption?.slice(0, 50) || 'Без подписи'}</p>
-                          <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-500">
-                            <span className="flex items-center gap-0.5">
-                              <Heart className="w-2.5 h-2.5" />
-                              {formatNumber(c.like_count)}
-                            </span>
-                            <span className="flex items-center gap-0.5">
-                              <MessageCircle className="w-2.5 h-2.5" />
-                              {formatNumber(c.comment_count)}
-                            </span>
-                            {calculateCarouselViralCoefficient(c.like_count, c.taken_at) > 0 && (
-                              <span className="flex items-center gap-0.5">
-                                <Sparkles className="w-2.5 h-2.5" />
-                                {calculateCarouselViralCoefficient(c.like_count, c.taken_at).toFixed(1)}
-                              </span>
-                            )}
                           </div>
-                        </div>
                         </button>
                       </div>
                     ))}

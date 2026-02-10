@@ -22,6 +22,7 @@ export interface InstagramProfileStats {
   min_views: number;
   max_views: number;
   avg_bottom3_views: number; // Среднее из 3 самых маленьких роликов
+  avg_bottom3_likes?: number; // Среднее из 3 постов с наименьшими лайками (для каруселей)
   avg_likes: number;
   median_likes: number;
   avg_comments: number;
@@ -132,11 +133,17 @@ export async function fetchAndCalculateProfileStats(username: string): Promise<I
     const likes = reels.map(r => r.like_count).filter(v => v > 0);
     const comments = reels.map(r => r.comment_count).filter(v => v > 0);
     
-    // Среднее из 3 самых маленьких роликов (для расчета "залётности")
+    // Среднее из 3 самых маленьких роликов (для расчета "залётности" рилсов)
     const sortedViews = [...views].sort((a, b) => a - b);
     const bottom3Views = sortedViews.slice(0, Math.min(3, sortedViews.length));
     const avgBottom3Views = bottom3Views.length > 0 
       ? Math.floor(bottom3Views.reduce((a, b) => a + b, 0) / bottom3Views.length)
+      : 0;
+    // Среднее из 3 постов с наименьшими лайками (для каруселей — «x от мин» по лайкам)
+    const sortedLikes = [...likes].sort((a, b) => a - b);
+    const bottom3Likes = sortedLikes.slice(0, Math.min(3, sortedLikes.length));
+    const avgBottom3Likes = bottom3Likes.length > 0 
+      ? Math.floor(bottom3Likes.reduce((a, b) => a + b, 0) / bottom3Likes.length)
       : 0;
     
     const stats = {
@@ -145,7 +152,8 @@ export async function fetchAndCalculateProfileStats(username: string): Promise<I
       median_views: calculateMedian(views),
       min_views: views.length > 0 ? Math.min(...views) : 0,
       max_views: views.length > 0 ? Math.max(...views) : 0,
-      avg_bottom3_views: avgBottom3Views, // Среднее из 3 самых маленьких
+      avg_bottom3_views: avgBottom3Views,
+      avg_bottom3_likes: avgBottom3Likes,
       avg_likes: calculateAverage(likes),
       median_likes: calculateMedian(likes),
       avg_comments: calculateAverage(comments),
@@ -199,7 +207,7 @@ export async function getOrUpdateProfileStats(username: string, forceUpdate = fa
 }
 
 /**
- * Рассчитать "залётность" видео относительно профиля автора
+ * Рассчитать "залётность" видео относительно профиля автора (по просмотрам)
  * Возвращает множитель: 1 = среднее, 2 = в 2 раза больше среднего, и т.д.
  * Использует среднее из 3 самых маленьких роликов
  */
@@ -219,6 +227,21 @@ export function calculateViralMultiplier(
   const multiplier = videoViews / baselineViews;
   
   // Округляем до 1 знака
+  return Math.round(multiplier * 10) / 10;
+}
+
+/**
+ * Рассчитать "залётность" карусели относительно профиля автора (по лайкам с последних постов)
+ * Возвращает множитель: во сколько раз лайков больше минимума у этого аккаунта
+ * Использует среднее из 3 постов с наименьшими лайками
+ */
+export function calculateCarouselViralMultiplier(
+  likeCount: number,
+  profileStats: InstagramProfileStats | null
+): number | null {
+  const baseline = profileStats?.avg_bottom3_likes ?? 0;
+  if (!baseline || baseline === 0) return null;
+  const multiplier = likeCount / baseline;
   return Math.round(multiplier * 10) / 10;
 }
 

@@ -133,7 +133,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
   const [showClarifyModal, setShowClarifyModal] = useState(false);
   const [lastRefinedPrompt, setLastRefinedPrompt] = useState('');
 
-  const { currentProject, currentProjectId, updateProject, updateProjectStyle, addProjectStyle, refetch: refetchProjects, selectProject } = useProjectContext();
+  const { currentProject, currentProjectId, updateProject, updateProjectStyle, addProjectStyle, refetch: refetchProjects, selectProject, carouselFoldersList } = useProjectContext();
   const { user } = useAuth();
   const radarUserId = user?.telegram_username ? `tg-${user.telegram_username}` : 'anonymous';
   const { profiles: radarProfiles, addProfile: addRadarProfile } = useRadar(currentProjectId, radarUserId);
@@ -177,8 +177,18 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
     }
   }, [showStylePickerPopover]);
 
-  const folderConfigs = currentProject?.folders?.slice().sort((a, b) => a.order - b.order).map(f => ({ id: f.id, title: f.name, color: f.color })) || [];
-  const currentFolder = currentFolderId ? folderConfigs.find(f => f.id === currentFolderId) : null;
+  // Папки каруселей — отдельные от папок рилсов; для старых каруселей folder_id мог быть из папок рилсов — показываем по нему имя из folders
+  const folderConfigs = (currentProjectId ? carouselFoldersList(currentProjectId) : [])
+    .slice()
+    .sort((a, b) => a.order - b.order)
+    .map(f => ({ id: f.id, title: f.name, color: f.color }));
+  const resolveFolder = (folderId: string) => {
+    const fromCarousel = folderConfigs.find(f => f.id === folderId);
+    if (fromCarousel) return fromCarousel;
+    const fromReels = currentProject?.folders?.find(f => f.id === folderId);
+    return fromReels ? { id: folderId, title: fromReels.name, color: fromReels.color } : null;
+  };
+  const currentFolder = currentFolderId ? resolveFolder(currentFolderId) : null;
 
   const slideUrls = localSlideUrls.length > 0 ? localSlideUrls : (carousel.thumbnail_url ? [carousel.thumbnail_url] : []);
   const displayUrl = slideUrls[slideIndex] || carousel.thumbnail_url || '';

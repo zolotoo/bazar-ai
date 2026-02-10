@@ -37,7 +37,10 @@ export interface Project {
   name: string;
   color: string;
   icon: string;
+  /** Папки для рилсов (saved_videos) */
   folders: ProjectFolder[];
+  /** Папки для каруселей (saved_carousels), независимые от folders */
+  carouselFolders?: ProjectFolder[];
   /** Шаблон пунктов ссылок — общий для всех видео проекта (в т.ч. общие проекты) */
   linksTemplate?: ProjectTemplateItem[];
   /** Шаблон пунктов ответственных — общий для всех видео проекта */
@@ -72,6 +75,14 @@ const DEFAULT_FOLDERS: Omit<ProjectFolder, 'id'>[] = [
   { name: 'Ожидает монтажа', color: '#10b981', icon: 'scissors', order: 4 },
   { name: 'Готовое', color: '#334155', icon: 'check', order: 5 },
   { name: 'Не подходит', color: '#ef4444', icon: 'rejected', order: 6 },
+];
+
+/** Дефолтные папки для каруселей (отдельные от папок рилсов) */
+const DEFAULT_CAROUSEL_FOLDERS: ProjectFolder[] = [
+  { id: 'carousel-0', name: 'Идеи', color: '#f97316', icon: 'lightbulb', order: 0 },
+  { id: 'carousel-1', name: 'В работе', color: '#475569', icon: 'file', order: 1 },
+  { id: 'carousel-2', name: 'Готовое', color: '#334155', icon: 'check', order: 2 },
+  { id: 'carousel-3', name: 'Не подходит', color: '#ef4444', icon: 'rejected', order: 3 },
 ];
 
 const PROJECT_COLORS = [
@@ -198,6 +209,9 @@ export function useProjects() {
             color: p.color || '#f97316',
             icon: p.icon || 'folder',
             folders: p.folders || DEFAULT_FOLDERS.map((f, i) => ({ ...f, id: `folder-${i}` })),
+            carouselFolders: Array.isArray(p.carousel_folders) && p.carousel_folders.length > 0
+              ? p.carousel_folders
+              : DEFAULT_CAROUSEL_FOLDERS,
             linksTemplate: Array.isArray(p.links_template) && p.links_template.length > 0 ? p.links_template : DEFAULT_LINKS_TEMPLATE,
             responsiblesTemplate: Array.isArray(p.responsibles_template) && p.responsibles_template.length > 0 ? p.responsibles_template : DEFAULT_RESPONSIBLES_TEMPLATE,
             stylePrompt: p.style_prompt ?? undefined,
@@ -244,6 +258,7 @@ export function useProjects() {
           color: '#f97316',
           icon: 'folder',
           folders: DEFAULT_FOLDERS.map((f, i) => ({ ...f, id: `folder-${Date.now()}-${i}` })),
+          carouselFolders: DEFAULT_CAROUSEL_FOLDERS,
           linksTemplate: DEFAULT_LINKS_TEMPLATE,
           responsiblesTemplate: DEFAULT_RESPONSIBLES_TEMPLATE,
           createdAt: new Date(),
@@ -259,6 +274,7 @@ export function useProjects() {
             color: defaultProject.color,
             icon: defaultProject.icon,
             folders: defaultProject.folders,
+            carousel_folders: defaultProject.carouselFolders ?? DEFAULT_CAROUSEL_FOLDERS,
             links_template: defaultProject.linksTemplate,
             responsibles_template: defaultProject.responsiblesTemplate,
           });
@@ -278,6 +294,7 @@ export function useProjects() {
         color: '#f97316',
         icon: 'folder',
         folders: DEFAULT_FOLDERS.map((f, i) => ({ ...f, id: `folder-${Date.now()}-${i}` })),
+        carouselFolders: DEFAULT_CAROUSEL_FOLDERS,
         linksTemplate: DEFAULT_LINKS_TEMPLATE,
         responsiblesTemplate: DEFAULT_RESPONSIBLES_TEMPLATE,
         createdAt: new Date(),
@@ -300,6 +317,7 @@ export function useProjects() {
       color,
       icon: 'folder',
       folders: DEFAULT_FOLDERS.map((f, i) => ({ ...f, id: `folder-${Date.now()}-${i}` })),
+      carouselFolders: DEFAULT_CAROUSEL_FOLDERS,
       linksTemplate: DEFAULT_LINKS_TEMPLATE,
       responsiblesTemplate: DEFAULT_RESPONSIBLES_TEMPLATE,
     };
@@ -317,6 +335,7 @@ export function useProjects() {
           color: newProject.color,
           icon: newProject.icon,
           folders: newProject.folders,
+          carousel_folders: newProject.carouselFolders ?? DEFAULT_CAROUSEL_FOLDERS,
           links_template: newProject.linksTemplate,
           responsibles_template: newProject.responsiblesTemplate,
         });
@@ -334,10 +353,11 @@ export function useProjects() {
     return project;
   }, [getUserId, projects.length]);
 
-  // Обновление проекта (в т.ч. шаблоны ссылок, ответственных, стили сценария)
-  const updateProject = useCallback(async (projectId: string, updates: Partial<Pick<Project, 'name' | 'color' | 'icon' | 'folders' | 'linksTemplate' | 'responsiblesTemplate' | 'stylePrompt' | 'styleMeta' | 'styleExamplesCount' | 'projectStyles'>>) => {
+  // Обновление проекта (в т.ч. шаблоны ссылок, ответственных, стили сценария, папки каруселей)
+  const updateProject = useCallback(async (projectId: string, updates: Partial<Pick<Project, 'name' | 'color' | 'icon' | 'folders' | 'carouselFolders' | 'linksTemplate' | 'responsiblesTemplate' | 'stylePrompt' | 'styleMeta' | 'styleExamplesCount' | 'projectStyles'>>) => {
     try {
       const dbUpdates: Record<string, unknown> = { ...updates };
+      if ('carouselFolders' in updates) dbUpdates.carousel_folders = updates.carouselFolders ?? [];
       if ('linksTemplate' in updates) dbUpdates.links_template = updates.linksTemplate;
       if ('responsiblesTemplate' in updates) dbUpdates.responsibles_template = updates.responsiblesTemplate;
       if ('stylePrompt' in updates) dbUpdates.style_prompt = updates.stylePrompt ?? null;
@@ -352,6 +372,7 @@ export function useProjects() {
           examplesCount: s.examplesCount,
         }));
       }
+      delete dbUpdates.carouselFolders;
       delete dbUpdates.linksTemplate;
       delete dbUpdates.responsiblesTemplate;
       delete dbUpdates.stylePrompt;
@@ -495,6 +516,61 @@ export function useProjects() {
     await updateProject(projectId, { folders: reorderedFolders });
   }, [projects, updateProject]);
 
+  // ——— Папки каруселей (отдельно от папок рилсов) ———
+  const carouselFoldersList = useCallback((projectId: string): ProjectFolder[] => {
+    const project = projects.find(p => p.id === projectId);
+    return (project?.carouselFolders && project.carouselFolders.length > 0)
+      ? project.carouselFolders
+      : DEFAULT_CAROUSEL_FOLDERS;
+  }, [projects]);
+
+  const addCarouselFolder = useCallback(async (projectId: string, folderName: string) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    const list = carouselFoldersList(projectId);
+    const newFolder: ProjectFolder = {
+      id: `carousel-folder-${Date.now()}`,
+      name: folderName,
+      color: PROJECT_COLORS[list.length % PROJECT_COLORS.length],
+      icon: 'folder',
+      order: list.length,
+    };
+    const updated = [...list, newFolder];
+    await updateProject(projectId, { carouselFolders: updated });
+  }, [projects, carouselFoldersList, updateProject]);
+
+  const removeCarouselFolder = useCallback(async (projectId: string, folderId: string) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return null;
+    const list = carouselFoldersList(projectId);
+    const folderToDelete = list.find(f => f.id === folderId);
+    const folderData = folderToDelete ? { ...folderToDelete, projectId } : null;
+    const updated = list.filter(f => f.id !== folderId);
+    await updateProject(projectId, { carouselFolders: updated });
+    return folderData;
+  }, [projects, carouselFoldersList, updateProject]);
+
+  const updateCarouselFolder = useCallback(async (
+    projectId: string,
+    folderId: string,
+    updates: Partial<Omit<ProjectFolder, 'id'>>
+  ) => {
+    const list = carouselFoldersList(projectId);
+    const updated = list.map(f => (f.id === folderId ? { ...f, ...updates } : f));
+    await updateProject(projectId, { carouselFolders: updated });
+  }, [carouselFoldersList, updateProject]);
+
+  const reorderCarouselFolders = useCallback(async (projectId: string, newOrder: string[]) => {
+    const list = carouselFoldersList(projectId);
+    const reordered = newOrder
+      .map((id, index) => {
+        const folder = list.find(f => f.id === id);
+        return folder ? { ...folder, order: index } : null;
+      })
+      .filter((f): f is ProjectFolder => f !== null);
+    await updateProject(projectId, { carouselFolders: reordered });
+  }, [carouselFoldersList, updateProject]);
+
   // Стили проекта: добавить, обновить, удалить. Возвращает созданный стиль.
   const addProjectStyle = useCallback(async (projectId: string, style: Omit<ProjectStyle, 'id'>): Promise<ProjectStyle | void> => {
     const project = projects.find(p => p.id === projectId);
@@ -568,6 +644,11 @@ export function useProjects() {
     restoreFolder,
     updateFolder,
     reorderFolders,
+    carouselFoldersList,
+    addCarouselFolder,
+    removeCarouselFolder,
+    updateCarouselFolder,
+    reorderCarouselFolders,
     addProjectStyle,
     updateProjectStyle,
     removeProjectStyle,
