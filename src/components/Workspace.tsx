@@ -183,6 +183,7 @@ export function Workspace(_props?: WorkspaceProps) {
   const { sendChange } = useProjectSync(currentProjectId);
   const { presence, getUsername } = useProjectPresence(currentProjectId);
   const [selectedVideo, setSelectedVideo] = useState<ZoneVideo | null>(null);
+  const restoredOpenDetailRef = useRef(false);
   const [moveMenuVideoId, setMoveMenuVideoId] = useState<string | null>(null);
   const [cardMenuVideoId, setCardMenuVideoId] = useState<string | null>(null);
   const [showFolderSettings, setShowFolderSettings] = useState(false);
@@ -191,8 +192,18 @@ export function Workspace(_props?: WorkspaceProps) {
   const [draggedFolderIndex, setDraggedFolderIndex] = useState<number | null>(null);
   const [isFolderWidgetOpen, setIsFolderWidgetOpen] = useState(true);
   const [profileStatsCache, setProfileStatsCache] = useState<Map<string, any>>(new Map());
-  // Раздел контента в проекте: рилсы или карусели
-  const [contentSection, setContentSection] = useState<'reels' | 'carousels'>('reels');
+  // Раздел контента в проекте: рилсы или карусели (восстанавливаем при обновлении)
+  const [contentSection, setContentSectionState] = useState<'reels' | 'carousels'>(() => {
+    if (typeof window === 'undefined') return 'reels';
+    try {
+      const v = localStorage.getItem('app_workspace_content_section');
+      return v === 'carousels' ? 'carousels' : 'reels';
+    } catch { return 'reels'; }
+  });
+  const setContentSection = useCallback((section: 'reels' | 'carousels') => {
+    setContentSectionState(section);
+    try { localStorage.setItem('app_workspace_content_section', section); } catch { /* ignore */ }
+  }, []);
   const [reelsGridKey, setReelsGridKey] = useState(0);
   const [selectedCarousel, setSelectedCarousel] = useState<SavedCarousel | null>(null);
   const [carouselLinkUrl, setCarouselLinkUrl] = useState('');
@@ -542,6 +553,43 @@ export function Workspace(_props?: WorkspaceProps) {
     const updated = feedVideos.find(v => v.id === selectedVideo.id);
     if (updated && updated !== selectedVideo) setSelectedVideo(updated);
   }, [feedVideos, selectedVideo]);
+
+  // Сохраняем открытую карточку (видео или карусель) для восстановления после обновления страницы
+  useEffect(() => {
+    try {
+      if (selectedVideo) {
+        localStorage.setItem('app_workspace_open_detail', JSON.stringify({ type: 'video', id: selectedVideo.id }));
+      } else if (selectedCarousel) {
+        localStorage.setItem('app_workspace_open_detail', JSON.stringify({ type: 'carousel', id: selectedCarousel.id }));
+      } else {
+        localStorage.removeItem('app_workspace_open_detail');
+      }
+    } catch { /* ignore */ }
+  }, [selectedVideo, selectedCarousel]);
+
+  // Восстанавливаем открытую карточку только после полной перезагрузки страницы (не при переходе Лента → Другое → Лента)
+  useEffect(() => {
+    if (restoredOpenDetailRef.current) return;
+    if (typeof sessionStorage === 'undefined') return;
+    if (sessionStorage.getItem('workspace_restored')) return;
+    try {
+      const raw = localStorage.getItem('app_workspace_open_detail');
+      if (!raw) {
+        sessionStorage.setItem('workspace_restored', '1');
+        return;
+      }
+      const d = JSON.parse(raw);
+      if (d?.type === 'video' && d.id) {
+        const v = feedVideos.find((x: ZoneVideo) => x.id === d.id);
+        if (v) setSelectedVideo(v);
+      } else if (d?.type === 'carousel' && d.id) {
+        const c = carousels.find((x: SavedCarousel) => x.id === d.id);
+        if (c) setSelectedCarousel(c);
+      }
+    } catch { /* ignore */ }
+    restoredOpenDetailRef.current = true;
+    try { sessionStorage.setItem('workspace_restored', '1'); } catch { /* ignore */ }
+  }, [feedVideos, carousels]);
 
   if (loading) {
     return (
