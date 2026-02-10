@@ -1098,7 +1098,7 @@ export function Workspace(_props?: WorkspaceProps) {
               </p>
             </div>
           ) : (
-            <div key={reelsGridKey} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5 pb-20 md:pb-6 safe-bottom">
+            <div key={reelsGridKey} className="grid grid-cols-3 gap-3 md:gap-4 pb-20 md:pb-6 safe-bottom">
               {feedVideos.map((video, idx) => {
                 const thumbnailUrl = video.preview_url;
                 const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at || video.created_at);
@@ -1340,7 +1340,7 @@ export function Workspace(_props?: WorkspaceProps) {
                     </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 pb-20 md:pb-6">
+                  <div className="grid grid-cols-3 gap-3 md:gap-4 pb-20 md:pb-6">
                     {carousels.map(c => (
                       <div
                         key={c.id}
@@ -1386,46 +1386,50 @@ export function Workspace(_props?: WorkspaceProps) {
                             >
                               <BookOpen className="w-3.5 h-3.5" strokeWidth={2} />
                             </button>
-                            <div className="absolute bottom-1.5 left-1.5 right-1.5 z-[2] flex items-center gap-1.5 flex-wrap">
-                              <span className="px-2 py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20 text-white">
-                                <Heart className="w-2.5 h-2.5 flex-shrink-0" strokeWidth={2} />
-                                <span className="text-[10px] font-semibold tabular-nums">{formatNumber(c.like_count)}</span>
-                              </span>
-                              <span className="px-2 py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20 text-white">
-                                <MessageCircle className="w-2.5 h-2.5 flex-shrink-0" strokeWidth={2} />
-                                <span className="text-[10px] font-semibold tabular-nums">{formatNumber(c.comment_count)}</span>
-                              </span>
-                              {(() => {
-                                const viralCoef = calculateCarouselViralCoefficient(c.like_count, c.taken_at);
-                                const profileStats = c.owner_username ? profileStatsCache.get(c.owner_username.toLowerCase()) : null;
-                                const viralMult = calculateCarouselViralMultiplier(c.like_count, profileStats ?? null);
-                                return (
-                                  <>
-                                    {viralCoef > 0 && (
-                                      <span className="px-2 py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20 text-white" title="Виральность (лайки/день)">
-                                        <Sparkles className="w-2.5 h-2.5 flex-shrink-0" strokeWidth={2} />
-                                        <span className="text-[10px] font-semibold tabular-nums">{viralCoef.toFixed(1)}</span>
-                                      </span>
-                                    )}
-                                    {viralMult !== null && viralMult !== undefined && (
-                                      <span
-                                        className={cn(
-                                          'px-2 py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] text-white',
-                                          viralMult >= 5 ? 'bg-amber-500/80' : viralMult >= 3 ? 'bg-emerald-500/80' : viralMult >= 2 ? 'bg-white/30' : 'bg-white/20'
-                                        )}
-                                        title={`В ${Math.round(viralMult)}x раз ${viralMult >= 1 ? 'больше' : 'меньше'} минимума по лайкам у автора`}
-                                      >
-                                        <TrendingUp className="w-2.5 h-2.5 flex-shrink-0" strokeWidth={2} />
-                                        <span className="text-[10px] font-semibold tabular-nums">{Math.round(viralMult)}x</span>
-                                      </span>
-                                    )}
-                                  </>
-                                );
-                              })()}
+                            <div className="absolute bottom-0 left-0 right-0 z-[2] p-2 pt-6 flex flex-col gap-1.5">
+                              {c.caption && (
+                                <p className="text-white/90 text-[10px] leading-snug line-clamp-2 break-words overflow-hidden">
+                                  {c.caption}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="px-2 py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20 text-white">
+                                  <Heart className="w-2.5 h-2.5 flex-shrink-0" strokeWidth={2} />
+                                  <span className="text-[10px] font-semibold tabular-nums">{formatNumber(c.like_count)}</span>
+                                </span>
+                                <span className="px-2 py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20 text-white">
+                                  <MessageCircle className="w-2.5 h-2.5 flex-shrink-0" strokeWidth={2} />
+                                  <span className="text-[10px] font-semibold tabular-nums">{formatNumber(c.comment_count)}</span>
+                                </span>
+                                {(() => {
+                                  const viralCoef = calculateCarouselViralCoefficient(c.like_count, c.taken_at);
+                                  const profileStats = c.owner_username ? profileStatsCache.get(c.owner_username.toLowerCase()) : null;
+                                  const viralMult = calculateCarouselViralMultiplier(c.like_count, profileStats ?? null);
+                                  return (
+                                    <>
+                                      {viralCoef > 0 && (
+                                        <span className="px-2 py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20 text-white" title="Виральность (лайки/день)">
+                                          <Sparkles className="w-2.5 h-2.5 flex-shrink-0" strokeWidth={2} />
+                                          <span className="text-[10px] font-semibold tabular-nums">{viralCoef.toFixed(1)}</span>
+                                        </span>
+                                      )}
+                                      {viralMult !== null && viralMult !== undefined && (
+                                        <span
+                                          className={cn(
+                                            'px-2 py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] text-white',
+                                            viralMult >= 5 ? 'bg-amber-500/80' : viralMult >= 3 ? 'bg-emerald-500/80' : viralMult >= 2 ? 'bg-white/30' : 'bg-white/20'
+                                          )}
+                                          title={`В ${Math.round(viralMult)}x раз ${viralMult >= 1 ? 'больше' : 'меньше'} минимума по лайкам у автора`}
+                                        >
+                                          <TrendingUp className="w-2.5 h-2.5 flex-shrink-0" strokeWidth={2} />
+                                          <span className="text-[10px] font-semibold tabular-nums">{Math.round(viralMult)}x</span>
+                                        </span>
+                                      )}
+                                    </>
+                                  );
+                                })()}
+                              </div>
                             </div>
-                          </div>
-                          <div className="px-2 py-1.5">
-                            <p className="text-xs font-medium text-slate-800 truncate">{c.caption?.slice(0, 50) || 'Без подписи'}</p>
                           </div>
                         </button>
                       </div>
