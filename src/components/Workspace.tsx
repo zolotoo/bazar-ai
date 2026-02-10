@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useWorkspaceZones, ZoneVideo } from '../hooks/useWorkspaceZones';
 import { useInboxVideos } from '../hooks/useInboxVideos';
@@ -152,15 +152,19 @@ export function Workspace(_props?: WorkspaceProps) {
     refetch: refetchProjects,
   } = useProjectContext();
 
-  // Восстановление выбранной папки при смене проекта или загрузке
+  // Восстановление выбранной папки при смене проекта или загрузке (если папка удалена — сбрасываем)
   useEffect(() => {
     if (!currentProjectId) return;
     try {
       const key = `app_last_folder_${currentProjectId}`;
       const saved = localStorage.getItem(key);
-      setSelectedFolderIdState(saved === '' || saved === null ? null : saved);
+      let folderId = saved === '' || saved === null ? null : saved;
+      if (folderId && currentProject?.folders && !currentProject.folders.some(f => f.id === folderId)) {
+        folderId = null;
+      }
+      setSelectedFolderIdState(folderId);
     } catch { /* ignore */ }
-  }, [currentProjectId]);
+  }, [currentProjectId, currentProject]);
 
   const setSelectedFolderId = useCallback((folderId: string | null) => {
     setSelectedFolderIdState(folderId);
@@ -175,16 +179,6 @@ export function Workspace(_props?: WorkspaceProps) {
     folderId: selectedFolderId,
     sortBy,
   });
-  const { 
-    currentProject, 
-    currentProjectId, 
-    addFolder, 
-    removeFolder,
-    restoreFolder, 
-    updateFolder, 
-    reorderFolders,
-    refetch: refetchProjects,
-  } = useProjectContext();
   const { addAction, undoLastAction, canUndo } = useActionHistory();
   const { sendChange } = useProjectSync(currentProjectId);
   const { presence, getUsername } = useProjectPresence(currentProjectId);
