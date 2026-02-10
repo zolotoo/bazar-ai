@@ -61,7 +61,7 @@ function calculateViralCoefficient(views?: number, takenAt?: string | number | D
   return Math.round((views / diffDays / 1000) * 10) / 10;
 }
 
-// Виральность карусели: лайки / (дни * 100) — шкала как у рилсов (1–15 для вирусных)
+// Виральность карусели: лайки / (дни * 10) — х10 сила лайков (20 за 10k/50д, 100 за 10k/10д)
 function calculateCarouselViralCoefficient(likes?: number, takenAt?: number | string | null): number {
   if (!likes || likes < 100 || takenAt == null) return 0;
   let postDate: Date;
@@ -73,7 +73,7 @@ function calculateCarouselViralCoefficient(likes?: number, takenAt?: number | st
   if (isNaN(postDate.getTime())) return 0;
   const diffDays = Math.floor((Date.now() - postDate.getTime()) / (1000 * 60 * 60 * 24));
   if (diffDays <= 0) return 0;
-  return Math.round((likes / (diffDays * 100)) * 10) / 10;
+  return Math.round((likes / (diffDays * 10)) * 10) / 10;
 }
 
 // Дата публикации карусели для карточки
