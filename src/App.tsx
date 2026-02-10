@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Workspace } from './components/Workspace';
 import { LandingPage } from './components/LandingPage';
 import { Dashboard, getDisplayName } from './components/Dashboard';
@@ -369,7 +369,18 @@ function AppContent() {
       setShowOnboarding(false);
     }
   }, [user?.telegram_username]);
-  const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
+  const [viewMode, setViewModeState] = useState<ViewMode>(() => {
+    if (typeof window === 'undefined') return 'dashboard';
+    try {
+      const v = localStorage.getItem('app_view_mode');
+      if (v === 'dashboard' || v === 'workspace' || v === 'canvas' || v === 'history' || v === 'profile') return v;
+    } catch { /* ignore */ }
+    return 'dashboard';
+  });
+  const setViewMode = useCallback((mode: ViewMode) => {
+    setViewModeState(mode);
+    try { localStorage.setItem('app_view_mode', mode); } catch { /* ignore */ }
+  }, []);
   const { videos } = useInboxVideos();
 
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);

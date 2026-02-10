@@ -132,7 +132,7 @@ export function Workspace(_props?: WorkspaceProps) {
       return v ? Math.max(0, parseInt(v, 10) || 0) : 0;
     } catch { return 0; }
   });
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null); // null = все видео (кроме "не подходит")
+  const [selectedFolderId, setSelectedFolderIdState] = useState<string | null>(null); // null = все видео (кроме "не подходит")
   
   useEffect(() => {
     try { localStorage.setItem('workspace_sortFilterMinViral', String(sortFilterMinViral)); } catch { /* ignore */ }
@@ -140,6 +140,36 @@ export function Workspace(_props?: WorkspaceProps) {
   useEffect(() => {
     try { localStorage.setItem('workspace_sortFilterMinViews', String(sortFilterMinViews)); } catch { /* ignore */ }
   }, [sortFilterMinViews]);
+  
+  const { 
+    currentProject, 
+    currentProjectId, 
+    addFolder, 
+    removeFolder,
+    restoreFolder, 
+    updateFolder, 
+    reorderFolders,
+    refetch: refetchProjects,
+  } = useProjectContext();
+
+  // Восстановление выбранной папки при смене проекта или загрузке
+  useEffect(() => {
+    if (!currentProjectId) return;
+    try {
+      const key = `app_last_folder_${currentProjectId}`;
+      const saved = localStorage.getItem(key);
+      setSelectedFolderIdState(saved === '' || saved === null ? null : saved);
+    } catch { /* ignore */ }
+  }, [currentProjectId]);
+
+  const setSelectedFolderId = useCallback((folderId: string | null) => {
+    setSelectedFolderIdState(folderId);
+    if (currentProjectId) {
+      try {
+        localStorage.setItem(`app_last_folder_${currentProjectId}`, folderId ?? '');
+      } catch { /* ignore */ }
+    }
+  }, [currentProjectId]);
   
   const { videos: inboxVideos, folderCounts, removeVideo: removeInboxVideo, restoreVideo, updateVideoFolder, loadMore, hasMore, loadingMore, refetch: refetchInboxVideos, refreshThumbnail, saveThumbnailFromUrl, addVideoToInbox } = useInboxVideos({
     folderId: selectedFolderId,
@@ -173,10 +203,29 @@ export function Workspace(_props?: WorkspaceProps) {
   const [selectedCarousel, setSelectedCarousel] = useState<SavedCarousel | null>(null);
   const [carouselLinkUrl, setCarouselLinkUrl] = useState('');
   const [isAddingCarouselByLink, setIsAddingCarouselByLink] = useState(false);
+  const [carouselSortBy, setCarouselSortBy] = useState<'viral' | 'likes' | 'recent'>('viral');
   const [reelLinkUrl, setReelLinkUrl] = useState('');
   const [isAddingReelByLink, setIsAddingReelByLink] = useState(false);
   const [descriptionModalText, setDescriptionModalText] = useState<string | null>(null);
   const { carousels, loading: carouselsLoading, addCarousel, refreshCarouselThumbnail, refetch: refetchCarousels } = useCarousels();
+
+  // Сортировка каруселей: по виральности, по лайкам, по дате добавления
+  const sortedCarousels = useMemo(() => {
+    if (!carousels.length) return carousels;
+    const copy = [...carousels];
+    if (carouselSortBy === 'viral') {
+      copy.sort((a, b) => {
+        const va = calculateCarouselViralCoefficient(a.like_count, a.taken_at);
+        const vb = calculateCarouselViralCoefficient(b.like_count, b.taken_at);
+        return vb - va;
+      });
+    } else if (carouselSortBy === 'likes') {
+      copy.sort((a, b) => (b.like_count || 0) - (a.like_count || 0));
+    } else {
+      copy.sort((a, b) => String(b.added_at || '').localeCompare(String(a.added_at || '')));
+    }
+    return copy;
+  }, [carousels, carouselSortBy]);
 
   // Форсируем ремаунт релс-сетки при показе — иначе превью не грузятся до смены вкладки
   const prevContentSectionRef = useRef<'reels' | 'carousels' | null>(null);
@@ -1338,6 +1387,31 @@ export function Workspace(_props?: WorkspaceProps) {
                     </div>
                   </div>
                 </div>
+                {/* Сортировка каруселей */}
+                {carousels.length > 0 && (
+                  <div className="flex items-center gap-2 mb-4 flex-wrap">
+                    <span className="text-xs text-slate-500 font-medium">Сортировка:</span>
+                    {[
+                      { value: 'viral' as const, label: 'Виральность', icon: Sparkles },
+                      { value: 'likes' as const, label: 'Лайки', icon: Heart },
+                      { value: 'recent' as const, label: 'Недавно', icon: Inbox },
+                    ].map(({ value, label, icon: Icon }) => (
+                      <button
+                        key={value}
+                        onClick={() => setCarouselSortBy(value)}
+                        className={cn(
+                          'flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all',
+                          carouselSortBy === value
+                            ? 'bg-slate-600 text-white shadow-sm'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        )}
+                      >
+                        <Icon className="w-3.5 h-3.5" strokeWidth={2.5} />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {carouselsLoading ? (
                   <div className="flex items-center justify-center py-20">
                     <Loader2 className="w-10 h-10 text-slate-300 animate-spin" />
@@ -1354,7 +1428,7 @@ export function Workspace(_props?: WorkspaceProps) {
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-3 md:gap-4 pb-20 md:pb-6">
-                    {carousels.map(c => (
+                    {sortedCarousels.map(c => (
                       <div
                         key={c.id}
                         className="group rounded-2xl overflow-hidden bg-white/80 border border-slate-200/80 shadow-sm hover:shadow-lg hover:border-slate-300/80 transition-all relative"
