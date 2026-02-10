@@ -1575,13 +1575,16 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                     </span>
                   )}
                 </div>
-                {(projectStyles.length > 0 || currentProject?.stylePrompt) && transcript?.trim() && (
+                {(projectStyles.length > 0 || currentProject?.stylePrompt) && (
                   <div className="relative" ref={stylePickerRef}>
                     <button
-                      onClick={() => setShowStylePickerPopover(!showStylePickerPopover)}
-                      disabled={isGeneratingScript}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-xs font-medium disabled:opacity-50"
-                      title="Выбрать подчерк и сгенерировать"
+                      onClick={() => !transcript?.trim() ? toast.error('Сначала добавьте транскрипцию') : setShowStylePickerPopover(!showStylePickerPopover)}
+                      disabled={isGeneratingScript || !transcript?.trim()}
+                      className={cn(
+                        'flex items-center gap-2 px-3 py-1.5 rounded-lg text-white text-xs font-medium',
+                        transcript?.trim() ? 'bg-slate-600 hover:bg-slate-700 disabled:opacity-50' : 'bg-slate-400/70 cursor-not-allowed'
+                      )}
+                      title={transcript?.trim() ? 'Выбрать подчерк и сгенерировать' : 'Добавьте транскрипцию для генерации по подчерку'}
                     >
                       {isGeneratingScript ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
