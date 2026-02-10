@@ -16,6 +16,7 @@ import { useInboxVideos } from '../hooks/useInboxVideos';
 import { useAuth } from '../hooks/useAuth';
 import { useRadar } from '../hooks/useRadar';
 import { StyleTrainModal } from './StyleTrainModal';
+import { CopyStylesToProjectModal } from './CopyStylesToProjectModal';
 import { useProjectContext } from '../contexts/ProjectContext';
 import type { ProjectTemplateItem, ProjectStyle } from '../hooks/useProjects';
 import { calculateViralMultiplier, getOrUpdateProfileStats, applyViralMultiplierToCoefficient } from '../services/profileStatsService';
@@ -224,6 +225,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   const [lastGeneratedStyleId, setLastGeneratedStyleId] = useState<string | null>(null);
   const [isRenamingStyle, setIsRenamingStyle] = useState(false);
   const [renamingStyleName, setRenamingStyleName] = useState('');
+  const [showCopyStylesModal, setShowCopyStylesModal] = useState(false);
 
   const projectStyles = currentProject?.projectStyles || [];
   const currentPromptStyle = editingStyle || (projectStyles.length === 1 ? projectStyles[0] : null);
@@ -651,7 +653,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   // Генерация сценария по выбранному стилю (Gemini). При отсутствии перевода — авто-перевод (если транскрипт не на русском).
   const handleGenerateByStyle = async (style: ProjectStyle) => {
     if (!style?.prompt?.trim() || !transcript?.trim()) {
-      toast.error('Нужен стиль с промтом и транскрипция');
+      toast.error('Нужен подчерк с промтом и транскрипция');
       return;
     }
     setShowStylePickerPopover(false);
@@ -677,7 +679,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
               toast.success('Перевод сохранён');
             }
           } catch (e) {
-            console.error('Auto translate on По стилю:', e);
+            console.error('Auto translate on По подчерку:', e);
             toast.error('Не удалось перевести');
           }
         }
@@ -696,7 +698,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
         setScript(data.script);
         setScriptGeneratedByStyle(true);
         setLastGeneratedStyleId(style.id);
-        toast.success(`Сценарий сгенерирован по стилю «${style.name}»`);
+        toast.success(`Сценарий сгенерирован по подчерку «${style.name}»`);
       } else {
         toast.error(data.error || 'Ошибка генерации');
       }
@@ -1552,7 +1554,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
           <div className="flex-1 flex flex-col min-w-0 min-h-[280px] md:min-h-0 rounded-card-xl shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] overflow-hidden">
             {/* Script header — 2 ряда как в каруселях */}
             <div className="flex flex-col gap-3 p-4 border-b border-slate-100">
-              {/* Ряд 1: заголовок + стиль · Промт + сохранён + По стилю */}
+              {/* Ряд 1: заголовок + подчерк · Промт + сохранён + По подчерку */}
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2 flex-wrap">
                   <FileText className="w-5 h-5 text-slate-600 flex-shrink-0" />
@@ -1562,9 +1564,9 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                       type="button"
                       onClick={() => openPromptModal(projectStyles[0] || null)}
                       className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-medium hover:bg-slate-200 transition-colors"
-                      title="Промт стиля"
+                      title="Промт подчерка"
                     >
-                      {projectStyles.length || 1} стил{projectStyles.length === 1 || !projectStyles.length ? 'ь' : 'я'} · Промт
+                      {projectStyles.length || 1} подчерк{projectStyles.length === 1 || !projectStyles.length ? '' : projectStyles.length < 5 ? 'а' : 'ов'} · Промт
                     </button>
                   )}
                   {video.script_text && (
@@ -1579,14 +1581,14 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                       onClick={() => setShowStylePickerPopover(!showStylePickerPopover)}
                       disabled={isGeneratingScript}
                       className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-xs font-medium disabled:opacity-50"
-                      title="Выбрать стиль и сгенерировать"
+                      title="Выбрать подчерк и сгенерировать"
                     >
                       {isGeneratingScript ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       ) : (
                         <Wand2 className="w-3.5 h-3.5" />
                       )}
-                      По стилю
+                      По подчерку
                       <TokenBadge tokens={getTokenCost('generate_script')} variant="dark" />
                       <ChevronDown className="w-3 h-3" />
                     </button>
@@ -1626,14 +1628,14 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                               type="button"
                               onClick={() => handleGenerateByStyle({
                                 id: 'legacy',
-                                name: 'Стиль по умолчанию',
+                                name: 'Подчерк по умолчанию',
                                 prompt: currentProject.stylePrompt!,
                                 meta: currentProject.styleMeta,
                                 examplesCount: currentProject.styleExamplesCount,
                               })}
                               className="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
                             >
-                              Стиль по умолчанию
+                              Подчерк по умолчанию
                             </button>
                           )}
                           <div className="h-px bg-slate-100 my-1" />
@@ -1648,7 +1650,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                             className="w-full px-3 py-2 text-left text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-2"
                           >
                             <Plus className="w-4 h-4" />
-                            Создать новый стиль
+                            Создать новый подчерк
                           </button>
                         </div>
                       </>
@@ -1656,17 +1658,28 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                   </div>
                 )}
               </div>
-              {/* Ряд 2: Обучить стиль, Сохранить, Копировать, Что не так сделал? */}
+              {/* Ряд 2: Обучить подчерк, Сохранить, Копировать, Что не так сделал? */}
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => { setCreatingNewStyle(true); setEditingStyle(null); setNewStyleName(''); setShowStyleTrainModal(true); }}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium"
-                  title="Создать новый стиль по 1–5 примерам"
+                  title="Создать новый подчерк по 1–5 примерам"
                 >
                   <BookOpen className="w-3.5 h-3.5" />
-                  Обучить стиль
+                  Обучить подчерк
                 </button>
+                {(projectStyles.length > 0 || currentProject?.stylePrompt) && (
+                  <button
+                    type="button"
+                    onClick={() => setShowCopyStylesModal(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium"
+                    title="Скопировать все подчерки в другой проект"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    В другой проект
+                  </button>
+                )}
                 {scriptGeneratedByStyle && script?.trim() && (
                   <button
                     type="button"
@@ -1725,6 +1738,11 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
         </div>
       </div>
 
+      <CopyStylesToProjectModal
+        open={showCopyStylesModal}
+        onClose={() => setShowCopyStylesModal(false)}
+        sourceProject={currentProject}
+      />
       <StyleTrainModal
         open={showStyleTrainModal}
         onClose={() => {
@@ -1740,7 +1758,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
         onSuccess={async (prompt) => { setEditedPromptText(prompt); await refetchProjects(); }}
       />
 
-      {/* Модальное окно: просмотр и редактирование промта стиля */}
+      {/* Модальное окно: просмотр и редактирование промта подчерка */}
       {showPromptModal && (currentPromptStyle || currentProject?.stylePrompt) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => { if (!isSavingPrompt && !isPromptChatLoading) { setShowPromptModal(false); setShowPromptChat(false); } }}>
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-2xl w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -1785,7 +1803,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                               await updateProjectStyle(currentProject.id, currentPromptStyle.id, { name: newName });
                               setEditingStyle({ ...currentPromptStyle, name: newName });
                             }
-                            toast.success('Стиль переименован');
+                            toast.success('Подчерк переименован');
                             setIsRenamingStyle(false);
                           }}
                           onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
@@ -1797,7 +1815,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                           type="button"
                           onClick={() => { setIsRenamingStyle(true); setRenamingStyleName(currentPromptStyle.name); }}
                           className="px-2 py-1 rounded-lg hover:bg-slate-100 text-slate-500 text-xs font-medium flex items-center gap-1"
-                          title="Переименовать стиль"
+                          title="Переименовать подчерк"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                           Переименовать
@@ -1808,7 +1826,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                 ) : (
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-slate-800">
-                      {currentPromptStyle ? `Промт: ${currentPromptStyle.name}` : 'Промт стиля проекта'}
+                      {currentPromptStyle ? `Промт: ${currentPromptStyle.name}` : 'Промт подчерка проекта'}
                     </h3>
                     {currentPromptStyle && (
                       isRenamingStyle ? (
@@ -1835,7 +1853,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                               await updateProjectStyle(currentProject.id, currentPromptStyle.id, { name: newName });
                               setEditingStyle({ ...currentPromptStyle, name: newName });
                             }
-                            toast.success('Стиль переименован');
+                            toast.success('Подчерк переименован');
                             setIsRenamingStyle(false);
                           }}
                           onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
@@ -1847,7 +1865,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                           type="button"
                           onClick={() => { setIsRenamingStyle(true); setRenamingStyleName(currentPromptStyle.name); }}
                           className="px-2 py-1 rounded-lg hover:bg-slate-100 text-slate-500 text-xs font-medium flex items-center gap-1"
-                          title="Переименовать стиль"
+                          title="Переименовать подчерк"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                           Переименовать
@@ -1930,7 +1948,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
             ) : (
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Текст промта (используется при генерации «По стилю»)</label>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Текст промта (используется при генерации «По подчерку»)</label>
                 {isEditingPrompt ? (
                   <textarea
                     value={editedPromptText}
@@ -1979,6 +1997,14 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                     className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 flex items-center gap-1.5"
                   >
                     <Copy className="w-4 h-4" /> Копировать промт
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowCopyStylesModal(true)}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 flex items-center gap-1.5"
+                    title="Скопировать все подчерки в другой проект"
+                  >
+                    <Copy className="w-4 h-4" /> В другой проект
                   </button>
               {isEditingPrompt ? (
                 <>

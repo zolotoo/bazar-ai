@@ -80,7 +80,7 @@ const GRADIENT_CARDS = [
 
 const WHITE_CARDS = [
   { id: 'feed', title: 'Лента', accent: null, subtitle: 'Твои сохранённые видео по папкам', icon: LayoutGrid, onAction: (fn: () => void) => fn() },
-  { id: 'script', title: 'ИИ-сценарист', accent: 'ИИ', subtitle: 'Сценарии по стилю и примерам', icon: FileText, onAction: (fn: () => void) => fn() },
+  { id: 'script', title: 'ИИ-сценарист', accent: 'ИИ', subtitle: 'Сценарии по подчерку и примерам', icon: FileText, onAction: (fn: () => void) => fn() },
   { id: 'team', title: 'Команда', accent: null, subtitle: 'Участники проекта и приглашения', icon: Users, onAction: (fn: () => void) => fn() },
 ];
 

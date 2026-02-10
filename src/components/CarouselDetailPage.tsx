@@ -15,6 +15,7 @@ import type { ProjectTemplateItem, ProjectStyle } from '../hooks/useProjects';
 import { transcribeCarouselByUrls } from '../services/carouselTranscriptionService';
 import { isRussian } from '../utils/language';
 import { StyleTrainModal } from './StyleTrainModal';
+import { CopyStylesToProjectModal } from './CopyStylesToProjectModal';
 import { TokenBadge } from './ui/TokenBadge';
 import { getTokenCost } from '../constants/tokenCosts';
 
@@ -132,6 +133,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
   const [clarifyAnswer, setClarifyAnswer] = useState('');
   const [showClarifyModal, setShowClarifyModal] = useState(false);
   const [lastRefinedPrompt, setLastRefinedPrompt] = useState('');
+  const [showCopyStylesModal, setShowCopyStylesModal] = useState(false);
 
   const { currentProject, currentProjectId, updateProject, updateProjectStyle, addProjectStyle, refetch: refetchProjects, selectProject, carouselFoldersList } = useProjectContext();
   const { user } = useAuth();
@@ -276,7 +278,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
 
   const handleGenerateByStyle = async (style: ProjectStyle) => {
     if (!style?.prompt?.trim() || !transcript?.trim()) {
-      toast.error('Нужен стиль и транскрипция');
+      toast.error('Нужен подчерк и транскрипция');
       return;
     }
     setShowStylePickerPopover(false);
@@ -312,7 +314,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
       if (data.success && data.script) {
         setScript(data.script);
         setLastGeneratedStyleId(style.id);
-        toast.success(`Сценарий по стилю «${style.name}»`);
+        toast.success(`Сценарий по подчерку «${style.name}»`);
       } else {
         toast.error(data.error || 'Ошибка генерации');
       }
@@ -958,20 +960,31 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                   type="button"
                   onClick={() => openPromptModal(projectStyles[0] || null)}
                   className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-medium hover:bg-slate-200 transition-colors"
-                  title="Промт стиля"
+                  title="Промт подчерка"
                 >
-                  {projectStyles.length || 1} стил{projectStyles.length === 1 || !projectStyles.length ? 'ь' : 'я'} · Промт
+                  {projectStyles.length || 1} подчерк{projectStyles.length === 1 || !projectStyles.length ? '' : projectStyles.length < 5 ? 'а' : 'ов'} · Промт
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => { setCreatingNewStyle(true); setEditingStyle(null); setNewStyleName(''); setShowStyleTrainModal(true); }}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium whitespace-nowrap"
-                title="Обучить стиль по 1–5 примерам (рилсы или карусели)"
+                title="Обучить подчерк по 1–5 примерам (рилсы или карусели)"
               >
                 <BookOpen className="w-3.5 h-3.5" />
-                Обучить стиль
+                Обучить подчерк
               </button>
+              {(projectStyles.length > 0 || currentProject?.stylePrompt) && (
+                <button
+                  type="button"
+                  onClick={() => setShowCopyStylesModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium whitespace-nowrap"
+                  title="Скопировать все подчерки в другой проект"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  В другой проект
+                </button>
+              )}
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               {script?.trim() && (projectStyles.length > 0 || currentProject?.stylePrompt) && (
@@ -989,7 +1002,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                   ref={stylePickerButtonRef}
                   onClick={() => {
                     if (!(projectStyles.length > 0 || currentProject?.stylePrompt)) {
-                      toast.error('Нажмите «Обучить стиль» слева или задайте промт в настройках проекта');
+                      toast.error('Нажмите «Обучить подчерк» слева или задайте промт в настройках проекта');
                       return;
                     }
                     setShowStylePickerPopover(!showStylePickerPopover);
@@ -1001,10 +1014,10 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                       ? 'bg-slate-600 hover:bg-slate-700 disabled:opacity-50'
                       : 'bg-slate-400/70 cursor-not-allowed'
                   )}
-                  title={!(projectStyles.length > 0 || currentProject?.stylePrompt) ? 'Нажмите «Обучить стиль» рядом или задайте промт в настройках проекта' : undefined}
+                  title={!(projectStyles.length > 0 || currentProject?.stylePrompt) ? 'Нажмите «Обучить подчерк» рядом или задайте промт в настройках проекта' : undefined}
                 >
                   {isGeneratingScript ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
-                  По стилю
+                  По подчерку
                   <TokenBadge tokens={getTokenCost('generate_script')} variant="dark" />
                   <ChevronDown className="w-3 h-3" />
                 </button>
@@ -1047,14 +1060,14 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                           type="button"
                           onClick={() => handleGenerateByStyle({
                             id: 'legacy',
-                            name: 'Стиль по умолчанию',
+                            name: 'Подчерк по умолчанию',
                             prompt: currentProject.stylePrompt!,
                             meta: currentProject.styleMeta,
                             examplesCount: currentProject.styleExamplesCount,
                           })}
                           className="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
                         >
-                          Стиль по умолчанию
+                          Подчерк по умолчанию
                         </button>
                       )}
                       <div className="h-px bg-slate-100 my-1" />
@@ -1064,7 +1077,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                         className="w-full px-3 py-2 text-left text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-2"
                       >
                         <Plus className="w-4 h-4" />
-                        Создать новый стиль
+                        Создать новый подчерк
                       </button>
                     </div>
                   </>,
@@ -1092,12 +1105,17 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
               value={script}
               onChange={e => setScript(e.target.value)}
               className="w-full flex-1 min-h-[120px] p-3 rounded-xl border border-slate-200 text-sm text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-slate-200"
-              placeholder="Сгенерируйте сценарий по стилю или напишите вручную."
+              placeholder="Сгенерируйте сценарий по подчерку или напишите вручную."
             />
           </div>
         </div>
       </div>
 
+      <CopyStylesToProjectModal
+        open={showCopyStylesModal}
+        onClose={() => setShowCopyStylesModal(false)}
+        sourceProject={currentProject}
+      />
       <StyleTrainModal
         open={showStyleTrainModal}
         onClose={() => { setShowStyleTrainModal(false); setCreatingNewStyle(false); setEditingStyle(null); setNewStyleName(''); }}
@@ -1115,7 +1133,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
         targetProjectId={carousel.project_id ?? currentProjectId}
       />
 
-      {/* Модальное окно: просмотр и редактирование промта стиля */}
+      {/* Модальное окно: просмотр и редактирование промта подчерка */}
       {showPromptModal && (currentPromptStyle || currentProject?.stylePrompt) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => { if (!isSavingPrompt && !isPromptChatLoading) { setShowPromptModal(false); setShowPromptChat(false); } }}>
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-2xl w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -1160,7 +1178,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                               await updateProjectStyle(currentProject.id, currentPromptStyle.id, { name: newName });
                               setEditingStyle({ ...currentPromptStyle, name: newName });
                             }
-                            toast.success('Стиль переименован');
+                            toast.success('Подчерк переименован');
                             setIsRenamingStyle(false);
                           }}
                           onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
@@ -1172,7 +1190,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                           type="button"
                           onClick={() => { setIsRenamingStyle(true); setRenamingStyleName(currentPromptStyle.name); }}
                           className="px-2 py-1 rounded-lg hover:bg-slate-100 text-slate-500 text-xs font-medium flex items-center gap-1"
-                          title="Переименовать стиль"
+                          title="Переименовать подчерк"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                           Переименовать
@@ -1183,7 +1201,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                 ) : (
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-slate-800">
-                      {currentPromptStyle ? `Промт: ${currentPromptStyle.name}` : 'Промт стиля проекта'}
+                      {currentPromptStyle ? `Промт: ${currentPromptStyle.name}` : 'Промт подчерка проекта'}
                     </h3>
                     {currentPromptStyle && (
                       isRenamingStyle ? (
@@ -1210,7 +1228,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                               await updateProjectStyle(currentProject.id, currentPromptStyle.id, { name: newName });
                               setEditingStyle({ ...currentPromptStyle, name: newName });
                             }
-                            toast.success('Стиль переименован');
+                            toast.success('Подчерк переименован');
                             setIsRenamingStyle(false);
                           }}
                           onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
@@ -1222,7 +1240,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                           type="button"
                           onClick={() => { setIsRenamingStyle(true); setRenamingStyleName(currentPromptStyle.name); }}
                           className="px-2 py-1 rounded-lg hover:bg-slate-100 text-slate-500 text-xs font-medium flex items-center gap-1"
-                          title="Переименовать стиль"
+                          title="Переименовать подчерк"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                           Переименовать
@@ -1304,7 +1322,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
             ) : (
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Текст промта (используется при генерации «По стилю»)</label>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Текст промта (используется при генерации «По подчерку»)</label>
                 {isEditingPrompt ? (
                   <textarea
                     value={editedPromptText}
@@ -1353,6 +1371,14 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                     className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 flex items-center gap-1.5"
                   >
                     <Copy className="w-4 h-4" /> Копировать промт
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowCopyStylesModal(true)}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 flex items-center gap-1.5"
+                    title="Скопировать все подчерки в другой проект"
+                  >
+                    <Copy className="w-4 h-4" /> В другой проект
                   </button>
               {isEditingPrompt ? (
                 <>

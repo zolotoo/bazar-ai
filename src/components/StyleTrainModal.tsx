@@ -28,7 +28,7 @@ interface StyleTrainModalProps {
   onSuccess?: (prompt: string) => void | Promise<void>;
   /** При true — спрашиваем название стиля сразу (для каруселей) */
   fromCarousel?: boolean;
-  /** Явный projectId — когда открыто из карусели, чтобы сохранить стиль в проект карусели */
+  /** Явный projectId — когда открыто из карусели, чтобы сохранить подчерк в проект карусели */
   targetProjectId?: string | null;
 }
 
@@ -101,24 +101,24 @@ export function StyleTrainModal({
     creating?: boolean
   ) => {
     if (creating || editing?.id === 'legacy') {
-      const finalName = editing?.id === 'legacy' ? (styleName || editing.name || 'Стиль по умолчанию') : styleName;
+      const finalName = editing?.id === 'legacy' ? (styleName || editing.name || 'Подчерк по умолчанию') : styleName;
       await addProjectStyle(pid, { name: finalName, prompt, meta, examplesCount });
-      toast.success(`Стиль «${finalName}» создан по ${examplesCount} пример${examplesCount === 1 ? 'у' : examplesCount < 5 ? 'ам' : 'ам'}`);
+      toast.success(`Подчерк «${finalName}» создан по ${examplesCount} пример${examplesCount === 1 ? 'у' : examplesCount < 5 ? 'ам' : 'ам'}`);
     } else if (editing) {
       await updateProjectStyle(pid, editing.id, { prompt, meta, examplesCount });
-      toast.success(`Стиль «${editing.name}» обновлён`);
+      toast.success(`Подчерк «${editing.name}» обновлён`);
     } else {
-      await addProjectStyle(pid, { name: 'Стиль по умолчанию', prompt, meta, examplesCount });
+      await addProjectStyle(pid, { name: 'Подчерк по умолчанию', prompt, meta, examplesCount });
       await updateProject(pid, { stylePrompt: undefined, styleMeta: undefined, styleExamplesCount: 0 });
-      toast.success(`Стиль обучен по ${examplesCount} пример${examplesCount === 1 ? 'у' : examplesCount < 5 ? 'ам' : 'ам'}`);
+      toast.success(`Подчерк обучен по ${examplesCount} пример${examplesCount === 1 ? 'у' : examplesCount < 5 ? 'ам' : 'ам'}`);
     }
   };
 
   const handleTrain = async () => {
     if (!projectId || selectedIds.length === 0) return;
-    const name = needStyleName ? newStyleName.trim() : editingStyle?.name || 'Стиль';
+    const name = needStyleName ? newStyleName.trim() : editingStyle?.name || 'Подчерк';
     if (needStyleName && !name) {
-      toast.error('Введите название стиля');
+      toast.error('Введите название подчерка');
       return;
     }
     const examples = selectedIds
@@ -154,12 +154,12 @@ export function StyleTrainModal({
         onClose();
         setSelectedIds([]);
       } else {
-        toast.error(data.error || 'Ошибка анализа стиля');
+        toast.error(data.error || 'Ошибка анализа подчерка');
       }
     } catch (err) {
       console.error('Train style error:', err);
       const msg = err instanceof Error ? err.message : '';
-      toast.error(msg?.includes('сохранить') ? msg : 'Ошибка обучения стиля');
+      toast.error(msg?.includes('сохранить') ? msg : 'Ошибка обучения подчерка');
     } finally {
       setIsAnalyzing(false);
     }
@@ -193,7 +193,7 @@ export function StyleTrainModal({
       }));
     const firstEx = examples[0];
     if (!firstEx?.transcript_text || !firstEx?.script_text) {
-      await saveStyle(projectId, needStyleName ? newStyleName.trim() : editingStyle?.name || 'Стиль', draftPrompt, draftMeta, examples.length, editingStyle, creatingNewStyle);
+      await saveStyle(projectId, needStyleName ? newStyleName.trim() : editingStyle?.name || 'Подчерк', draftPrompt, draftMeta, examples.length, editingStyle, creatingNewStyle);
       await onSuccess?.(draftPrompt);
       onClose();
       setSelectedIds([]);
@@ -222,7 +222,7 @@ export function StyleTrainModal({
       });
       const data = await res.json();
       if (data.success && data.prompt) {
-        await saveStyle(projectId, needStyleName ? newStyleName.trim() : editingStyle?.name || 'Стиль', data.prompt, data.meta || draftMeta, examples.length, editingStyle, creatingNewStyle);
+        await saveStyle(projectId, needStyleName ? newStyleName.trim() : editingStyle?.name || 'Подчерк', data.prompt, data.meta || draftMeta, examples.length, editingStyle, creatingNewStyle);
         await onSuccess?.(data.prompt);
         onClose();
         setSelectedIds([]);
@@ -243,12 +243,12 @@ export function StyleTrainModal({
     const examples = selectedIds
       .map((id) => candidates.find((x) => x.id === id))
       .filter((x): x is ExampleWithScript => Boolean(x));
-    await saveStyle(projectId, needStyleName ? newStyleName.trim() : editingStyle?.name || 'Стиль', draftPrompt, draftMeta, examples.length, editingStyle, creatingNewStyle);
+    await saveStyle(projectId, needStyleName ? newStyleName.trim() : editingStyle?.name || 'Подчерк', draftPrompt, draftMeta, examples.length, editingStyle, creatingNewStyle);
     await onSuccess?.(draftPrompt);
     onClose();
     setSelectedIds([]);
     setTrainStep('select');
-    toast.success('Стиль сохранён без уточнений');
+    toast.success('Подчерк сохранён без уточнений');
   };
 
   const handleVerifyBack = () => {
@@ -332,7 +332,7 @@ export function StyleTrainModal({
         <div className="p-4 border-b border-slate-100 flex flex-col gap-3">
           {fromCarousel && creatingNewStyle && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Как назвать этот стиль?</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Как назвать этот подчерк?</label>
               <input
                 type="text"
                 value={newStyleName}
@@ -345,15 +345,15 @@ export function StyleTrainModal({
           )}
           <div>
             <h3 className="font-semibold text-slate-800">
-              {creatingNewStyle ? 'Создать новый стиль' : editingStyle ? `Переобучить «${editingStyle.name}»` : 'Обучить стиль по примерам'}
+              {creatingNewStyle ? 'Создать новый подчерк' : editingStyle ? `Переобучить «${editingStyle.name}»` : 'Обучить подчерк по примерам'}
             </h3>
             <p className="text-slate-500 text-sm mt-1">
               {creatingNewStyle
                 ? fromCarousel
                   ? 'Выберите 1–5 каруселей или рилсов с транскриптом и сценарием. Нейросеть создаст промт.'
-                  : 'Выберите 1–5 рилсов или каруселей с транскриптом и вашим сценарием. Нейросеть создаст промт и вы назовёте этот стиль.'
+                  : 'Выберите 1–5 рилсов или каруселей с транскриптом и вашим сценарием. Нейросеть создаст промт и вы назовёте этот подчерк.'
                 : editingStyle
-                ? 'Выберите примеры заново. Промт стиля будет заменён.'
+                ? 'Выберите примеры заново. Промт подчерка будет заменён.'
                 : currentProject?.stylePrompt
                 ? 'Выберите примеры заново (можно добавить новые). Текущий промт будет заменён.'
                 : 'Выберите 1–5 рилсов или каруселей с транскриптом и сценарием. Нейросеть выявит закономерности.'}
@@ -361,7 +361,7 @@ export function StyleTrainModal({
           </div>
           {needStyleName && !(fromCarousel && creatingNewStyle) && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Название стиля</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Название подчерка</label>
               <input
                 type="text"
                 value={newStyleName}
