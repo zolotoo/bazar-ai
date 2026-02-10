@@ -165,7 +165,7 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
     };
   }, []);
 
-  // Сортировка на уровне БД (viral — только на клиенте)
+  // Сортировка на уровне БД (viral — через view saved_videos_with_viral и viral_coef)
   const getOrderConfig = useCallback(() => {
     switch (sortBy) {
       case 'views':
@@ -176,6 +176,7 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
       case 'date':
         return { column: 'taken_at' as const, ascending: false, nullsFirst: false };
       case 'viral':
+        return { column: 'viral_coef' as const, ascending: false, nullsFirst: false };
       case 'recent':
       default:
         return { column: 'added_at' as const, ascending: false };
@@ -221,6 +222,9 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
     }
   }, [currentProjectId, getUserId]);
 
+  // Таблица/view: для viral — view с viral_coef, иначе saved_videos
+  const tableOrView = sortBy === 'viral' ? 'saved_videos_with_viral' : 'saved_videos';
+
   // Загрузка видео пользователя
   const fetchVideos = useCallback(async () => {
     const userId = getUserId();
@@ -228,7 +232,7 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
     
     try {
       let query = supabase
-        .from('saved_videos')
+        .from(tableOrView as 'saved_videos')
         .select('*');
       
       // Фильтр по папке: при выборе папки загружаем только видео из неё
@@ -279,13 +283,13 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
         ? query.order(orderConfig.column, { ascending: orderConfig.ascending, nullsFirst: orderConfig.nullsFirst })
         : query.order(orderConfig.column, { ascending: orderConfig.ascending });
       
-      // Для viral и views_from_avg — загружаем все видео в папке (до лимита)
-      const needsFullSort = (sortBy === 'viral' || sortBy === 'views_from_avg') && filterFolderId !== undefined;
+      // Для views_from_avg — загружаем все в папке (сортировка по отклонению на клиенте); viral уже в БД — пагинация как обычно
+      const needsFullSort = sortBy === 'views_from_avg' && filterFolderId !== undefined;
       const initialLimit = needsFullSort ? FULL_SORT_LIMIT : PAGE_SIZE;
       
       const { data, error: fetchError } = await orderQuery.range(0, initialLimit - 1);
 
-      console.log('[InboxVideos] Fetch result:', { count: data?.length, error: fetchError, projectId: currentProjectId, sortBy, needsFullSort });
+      console.log('[InboxVideos] Fetch result:', { count: data?.length, error: fetchError, projectId: currentProjectId, sortBy, needsFullSort, table: tableOrView });
 
       if (fetchError) {
         console.error('Error fetching saved videos:', fetchError);
@@ -310,7 +314,7 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
     } finally {
       setLoading(false);
     }
-  }, [setIncomingVideos, transformVideo, getUserId, currentProjectId, filterFolderId, sortBy, getOrderConfig, fetchFolderCounts]);
+  }, [setIncomingVideos, transformVideo, getUserId, currentProjectId, filterFolderId, sortBy, getOrderConfig, fetchFolderCounts, tableOrView]);
 
   // Подгрузить следующую страницу (для проектов с большим количеством видео)
   // Пагинация учитывает folderId — подгружаем следующие страницы только из выбранной папки
@@ -319,7 +323,7 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
     const userId = getUserId();
     setLoadingMore(true);
     try {
-      let query = supabase.from('saved_videos').select('*');
+      let query = supabase.from(tableOrView as 'saved_videos').select('*');
       
       // Тот же фильтр по папке, что и при первой загрузке
       if (filterFolderId !== undefined) {
@@ -375,7 +379,7 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
     } finally {
       setLoadingMore(false);
     }
-  }, [hasMore, loadingMore, loading, getUserId, currentProjectId, videos.length, transformVideo, setIncomingVideos, filterFolderId, getOrderConfig]);
+  }, [hasMore, loadingMore, loading, getUserId, currentProjectId, videos.length, transformVideo, setIncomingVideos, filterFolderId, getOrderConfig, tableOrView]);
 
   // Перезагружаем видео при смене пользователя, проекта, папки или сортировки
   useEffect(() => {
