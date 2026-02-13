@@ -44,6 +44,7 @@ interface VideoData {
   translation_text?: string;
   script_text?: string;
   download_url?: string;
+  storage_video_url?: string;
   folder_id?: string;
   draft_link?: string;
   final_link?: string;
@@ -166,7 +167,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   const [isTranslating, setIsTranslating] = useState(false);
   const [copiedTranscript, setCopiedTranscript] = useState(false);
   const [copiedScript, setCopiedScript] = useState(false);
-  const [showVideo, setShowVideo] = useState(!!(video.download_url));
+  const [showVideo, setShowVideo] = useState(!!(video.storage_video_url || video.download_url));
   const [showFolderMenu, setShowFolderMenu] = useState(false);
   const [currentFolderId, setCurrentFolderId] = useState(video.folder_id || null);
   const [isMobile, setIsMobile] = useState(false);
@@ -178,7 +179,9 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   }, []);
   const [isStartingTranscription, setIsStartingTranscription] = useState(false);
   const [localTranscriptId, setLocalTranscriptId] = useState(video.transcript_id);
-  const [directVideoUrl, setDirectVideoUrl] = useState<string | null>(video.download_url || null);
+  const [directVideoUrl, setDirectVideoUrl] = useState<string | null>(
+    video.storage_video_url || video.download_url || null
+  );
   const [isLoadingVideo, setIsLoadingVideo] = useState(false);
   const [videoLoadError, setVideoLoadError] = useState(false);
   const [isSavingScript, setIsSavingScript] = useState(false);
@@ -263,11 +266,12 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   // Синхронизация видео при обновлении данных (refresh)
   useEffect(() => {
     setVideoLoadError(false);
-    if (video.download_url) {
-      setDirectVideoUrl(video.download_url);
+    const url = video.storage_video_url || video.download_url;
+    if (url) {
+      setDirectVideoUrl(url);
       setShowVideo(true);
     }
-  }, [video.id, video.download_url]);
+  }, [video.id, video.storage_video_url, video.download_url]);
 
   const { updateVideoFolder, updateVideoScript, updateVideoTranscript, updateVideoTranslation, updateVideoResponsible, updateVideoLinks } = useInboxVideos();
 
@@ -392,6 +396,21 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
         .from('saved_videos')
         .update({ download_url: videoUrl, transcript_status: 'downloading' })
         .eq('id', video.id);
+
+      // Сохраняем видео в Supabase в фоне — следующий просмотр без Vercel proxy
+      const shortcode = extractShortcode(video.url || '');
+      if (shortcode) {
+        fetch('/api/save-video', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ shortcode, url: videoUrl }),
+        })
+          .then((r) => r.json())
+          .then((d) => {
+            if (d.success && onRefreshData) onRefreshData();
+          })
+          .catch(() => {});
+      }
 
       await runTranscription(videoUrl);
     } catch (err) {

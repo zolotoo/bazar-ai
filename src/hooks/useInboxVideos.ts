@@ -27,6 +27,7 @@ interface SavedVideo {
   added_at: string;
   // Транскрибация и перевод
   download_url?: string;
+  storage_video_url?: string;
   transcript_id?: string;
   transcript_status?: string;
   transcript_text?: string;
@@ -108,6 +109,7 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
     translation_text?: string;
     script_text?: string;
     download_url?: string;
+    storage_video_url?: string;
     taken_at?: number;
     draft_link?: string;
     final_link?: string;
@@ -155,6 +157,7 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
       translation_text: video.translation_text,
       script_text: video.script_text,
       download_url: video.download_url,
+      storage_video_url: video.storage_video_url,
       taken_at: video.taken_at,
       draft_link: video.draft_link,
       final_link: video.final_link,
@@ -459,6 +462,7 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
     // Пытаемся сохранить превью в Supabase Storage (постоянный URL вместо истекающего Instagram)
     let thumbnailToSave = video.previewUrl;
     // Если превью пустое — пробуем получить через reel-info (API мог вернуть другой формат)
+    let reelInfoVideoUrl: string | undefined;
     if (!thumbnailToSave && shortcode) {
       try {
         const infoRes = await fetch('/api/reel-info', {
@@ -468,6 +472,7 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
         });
         const infoData = await infoRes.json();
         thumbnailToSave = infoData?.thumbnail_url || infoData?.carousel_slides?.[0] || '';
+        if (infoData?.is_video && infoData?.video_url) reelInfoVideoUrl = infoData.video_url;
       } catch {
         /* ignore */
       }
@@ -486,6 +491,19 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
       } catch {
         // Используем оригинальный URL при ошибке
       }
+    }
+    // Сохраняем видео в Supabase Storage в фоне (снижает Fast Origin Transfer при просмотре)
+    if (shortcode && reelInfoVideoUrl) {
+      fetch('/api/save-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shortcode, url: reelInfoVideoUrl }),
+      })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success) fetchVideos();
+        })
+        .catch(() => {});
     }
 
     // Создаём локальное видео сразу для быстрого UI
@@ -678,7 +696,7 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
       console.error('Error saving video:', err);
       return localVideo;
     }
-  }, [setIncomingVideos, transformVideo, getUserId, fetchFolderCounts]);
+  }, [setIncomingVideos, transformVideo, getUserId, fetchFolderCounts, fetchVideos]);
 
   /**
    * Ручной запуск транскрибации (для кнопки "Транскрибировать")
