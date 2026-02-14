@@ -101,14 +101,11 @@ export function History() {
   const { addVideoToInbox, removeVideo, refreshThumbnail, saveThumbnailFromUrl } = useInboxVideos();
 
   const handleAddToInbox = async (reel: InstagramSearchResult) => {
-    let captionText = typeof reel.caption === 'string' ? reel.caption : '';
-    if (captionText.length > 200) {
-      captionText = captionText.substring(0, 200) + '...';
-    }
+    const captionText = typeof reel.caption === 'string' ? reel.caption : 'Видео из Instagram';
     
     try {
       await addVideoToInbox({
-        title: captionText || 'Видео из Instagram',
+        title: captionText,
         previewUrl: reel.thumbnail_url || reel.display_url || '',
         url: reel.url,
         viewCount: reel.view_count,

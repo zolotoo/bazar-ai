@@ -595,16 +595,13 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
   };
 
   const handleAddToCanvas = async (result: InstagramSearchResult, folderId: string = 'ideas') => {
-    let captionText = typeof result.caption === 'string' ? result.caption : '';
-    if (captionText.length > 200) {
-      captionText = captionText.substring(0, 200) + '...';
-    }
+    const captionText = typeof result.caption === 'string' ? result.caption : 'Видео из Instagram';
     
     const folderName = folderConfigs.find(f => f.id === folderId)?.title || 'Идеи';
     
     try {
       await addVideoToInbox({
-        title: captionText || 'Видео из Instagram',
+        title: captionText,
         previewUrl: result.thumbnail_url || result.display_url || '',
         url: result.url,
         viewCount: result.view_count,
@@ -737,7 +734,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
           }
         } else {
           // Рилс — сохраняем в "Все видео"
-          const captionText = typeof data.caption === 'string' ? data.caption.slice(0, 200) : 'Видео из Instagram';
+          const captionText = typeof data.caption === 'string' ? data.caption : 'Видео из Instagram';
           await addVideoToInbox({
             title: captionText,
             previewUrl: data.thumbnail_url || '',
@@ -800,7 +797,7 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
       try {
         // Обновляем папку видео через addVideoToInbox (он сделает update если видео уже есть)
         await addVideoToInbox({
-          title: typeof linkPreview.caption === 'string' ? linkPreview.caption.slice(0, 200) : 'Видео из Instagram',
+          title: typeof linkPreview.caption === 'string' ? linkPreview.caption : 'Видео из Instagram',
           previewUrl: linkPreview.thumbnail_url || linkPreview.display_url || '',
           url: linkPreview.url,
           viewCount: linkPreview.view_count,
@@ -836,7 +833,7 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
       return;
     }
     
-    const captionText = typeof result.caption === 'string' ? result.caption.slice(0, 500) : 'Видео из Instagram';
+    const captionText = typeof result.caption === 'string' ? result.caption : 'Видео из Instagram';
     const folderName = folderConfigs.find(f => f.id === folderId)?.title || 'папку';
     
     // Извлекаем shortcode из URL если его нет
@@ -875,15 +872,12 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
   };
 
   const handleDragStart = async (e: React.DragEvent, result: InstagramSearchResult) => {
-    let captionText = typeof result.caption === 'string' ? result.caption : '';
-    if (captionText.length > 200) {
-      captionText = captionText.substring(0, 200) + '...';
-    }
+    const captionText = typeof result.caption === 'string' ? result.caption : 'Видео из Instagram';
     
     // Сначала сохраняем в Supabase
     try {
       const savedVideo = await addVideoToInbox({
-        title: captionText || 'Видео из Instagram',
+        title: captionText,
         previewUrl: result.thumbnail_url || result.display_url || '',
         url: result.url,
         viewCount: result.view_count,

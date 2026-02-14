@@ -1246,7 +1246,7 @@ export function Workspace(_props?: WorkspaceProps) {
                         });
                         const data = await res.json();
                         if (data.success && !data.is_carousel) {
-                          const captionText = typeof data.caption === 'string' ? data.caption.slice(0, 200) : 'Видео из Instagram';
+                          const captionText = typeof data.caption === 'string' ? data.caption : 'Видео из Instagram';
                           await addVideoToInbox({
                             title: captionText,
                             previewUrl: data.thumbnail_url || '',
