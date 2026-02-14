@@ -1592,8 +1592,8 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
           </div>
         </div>
       )}
-      {/* Description Modal — полное описание из детального просмотра */}
-      {showDescriptionModal && (
+      {/* Description Modal — портал в body, чтобы скролл не обрезался */}
+      {showDescriptionModal && createPortal(
         <div
           className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
           onClick={() => setShowDescriptionModal(false)}
@@ -1614,13 +1614,16 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                 <X className="w-5 h-5 text-slate-400" />
               </button>
             </div>
-            <div className="p-5 overflow-y-auto max-h-[calc(85vh-5.5rem)] scrollbar-visible">
-              <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap break-words">
-                {carousel.caption || 'Нет описания'}
-              </p>
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+              <div className="p-5 overflow-y-auto overflow-x-hidden min-h-0 scrollbar-visible overflow-scroll-touch" style={{ maxHeight: 'calc(85vh - 5.5rem)' }}>
+                <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap break-words">
+                  {carousel.caption || 'Нет описания'}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

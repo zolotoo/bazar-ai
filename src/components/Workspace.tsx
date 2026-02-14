@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useWorkspaceZones, ZoneVideo } from '../hooks/useWorkspaceZones';
 import { useInboxVideos } from '../hooks/useInboxVideos';
@@ -1834,8 +1835,8 @@ export function Workspace(_props?: WorkspaceProps) {
           </div>
         </div>
       )}
-      {/* Description Modal — полное описание, прокручиваемое */}
-      {descriptionModalText !== null && (
+      {/* Description Modal — портал в body, прокручиваемое */}
+      {descriptionModalText !== null && createPortal(
         <div
           className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
           onClick={() => setDescriptionModalText(null)}
@@ -1856,13 +1857,16 @@ export function Workspace(_props?: WorkspaceProps) {
                 <X className="w-5 h-5 text-slate-400" />
               </button>
             </div>
-            <div className="p-5 overflow-y-auto max-h-[calc(85vh-5.5rem)] scrollbar-visible">
-              <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap break-words">
-                {descriptionModalText || 'Нет описания'}
-              </p>
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+              <div className="p-5 overflow-y-auto overflow-x-hidden min-h-0 scrollbar-visible overflow-scroll-touch" style={{ maxHeight: 'calc(85vh - 5.5rem)' }}>
+                <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap break-words">
+                  {descriptionModalText || 'Нет описания'}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       {/* Presence Indicator */}
       <PresenceIndicator presence={presence} getUsername={getUsername} />
