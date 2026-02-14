@@ -103,7 +103,7 @@ export async function getOrCreateGlobalVideo(data: VideoData): Promise<GlobalVid
         instagram_id: data.instagramId,
         url: data.url,
         thumbnail_url: data.thumbnailUrl || '',
-        caption: data.caption?.slice(0, 500) || '',
+        caption: data.caption ?? '',
         owner_username: data.ownerUsername,
         view_count: data.viewCount || 0,
         like_count: data.likeCount || 0,
