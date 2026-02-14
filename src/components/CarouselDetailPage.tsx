@@ -1614,7 +1614,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                 <X className="w-5 h-5 text-slate-400" />
               </button>
             </div>
-            <div className="p-5 overflow-y-auto min-h-0 flex-1 custom-scrollbar-light">
+            <div className="p-5 overflow-y-auto max-h-[calc(85vh-5.5rem)] scrollbar-visible">
               <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap break-words">
                 {carousel.caption || 'Нет описания'}
               </p>

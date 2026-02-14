@@ -31,6 +31,8 @@ type VideoResponsibleRow = { templateId?: string; label?: string; value: string 
 interface VideoData {
   id: string;
   title?: string;
+  /** Полное описание поста (часто совпадает с title, но может приходить отдельно из API) */
+  caption?: string;
   preview_url?: string;
   url?: string;
   view_count?: number;
@@ -2262,9 +2264,9 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                 <X className="w-5 h-5 text-slate-400" />
               </button>
             </div>
-            <div className="p-5 overflow-y-auto min-h-0 flex-1 custom-scrollbar-light">
+            <div className="p-5 overflow-y-auto max-h-[calc(85vh-5.5rem)] scrollbar-visible">
               <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap break-words">
-                {video.title || 'Нет описания'}
+                {(video.caption ?? video.title) || 'Нет описания'}
               </p>
             </div>
           </div>
