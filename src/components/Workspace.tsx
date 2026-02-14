@@ -149,6 +149,7 @@ export function Workspace(_props?: WorkspaceProps) {
     restoreFolder, 
     updateFolder, 
     reorderFolders,
+    carouselFoldersList,
     refetch: refetchProjects,
   } = useProjectContext();
 
@@ -209,6 +210,7 @@ export function Workspace(_props?: WorkspaceProps) {
   const [carouselLinkUrl, setCarouselLinkUrl] = useState('');
   const [isAddingCarouselByLink, setIsAddingCarouselByLink] = useState(false);
   const [carouselSortBy, setCarouselSortBy] = useState<'viral' | 'likes' | 'recent'>('viral');
+  const [selectedCarouselFolderId, setSelectedCarouselFolderId] = useState<string | null>(null);
   const [reelLinkUrl, setReelLinkUrl] = useState('');
   const [isAddingReelByLink, setIsAddingReelByLink] = useState(false);
   const [descriptionModalText, setDescriptionModalText] = useState<string | null>(null);
@@ -231,6 +233,12 @@ export function Workspace(_props?: WorkspaceProps) {
     }
     return copy;
   }, [carousels, carouselSortBy]);
+
+  // Карусели с учётом выбранной папки (во вкладке «Карусели»)
+  const carouselsForFeed = useMemo(() => {
+    if (!selectedCarouselFolderId) return sortedCarousels;
+    return sortedCarousels.filter(c => c.folder_id === selectedCarouselFolderId);
+  }, [sortedCarousels, selectedCarouselFolderId]);
 
   // Форсируем ремаунт релс-сетки при показе — иначе превью не грузятся до смены вкладки
   const prevContentSectionRef = useRef<'reels' | 'carousels' | null>(null);
@@ -288,8 +296,20 @@ export function Workspace(_props?: WorkspaceProps) {
       iconType: f.icon,
     })) || [];
   
-  // Папки для фильтрации
+  // Папки для фильтрации (рилсы)
   const folderConfigs: FolderConfig[] = projectFolders.length > 0 ? projectFolders : defaultFolderConfigs;
+  
+  // Папки каруселей — отдельный список для вкладки «Карусели»
+  const carouselFolderConfigs: FolderConfig[] = (currentProjectId ? carouselFoldersList(currentProjectId) : [])
+    .slice()
+    .sort((a, b) => a.order - b.order)
+    .map(f => ({ id: f.id, title: f.name, color: f.color, iconType: f.icon }));
+  
+  // Подсчёт каруселей в папке
+  const getCarouselCountInFolder = useCallback((folderId: string | null): number => {
+    if (folderId === null) return carousels.filter(c => !c.folder_id).length;
+    return carousels.filter(c => c.folder_id === folderId).length;
+  }, [carousels]);
   
   // ID папки "Не подходит"
   const rejectedFolderId = folderConfigs.find(f => f.iconType === 'rejected')?.id;
@@ -821,65 +841,100 @@ export function Workspace(_props?: WorkspaceProps) {
         {/* Widget Content */}
         {isFolderWidgetOpen && (
           <div className="px-2 pb-3 flex flex-col max-h-[min(60vh,400px)] min-h-0">
-            {/* Все видео (лента) */}
-            <button
-              onClick={() => setSelectedFolderId(null)}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-card transition-all text-left mb-2 shrink-0",
-                selectedFolderId === null 
-                  ? "bg-slate-200/40 text-slate-800 shadow-glass-sm" 
-                  : "hover:bg-glass-white/60 text-slate-600"
-              )}
-            >
-              <GlassFolderIcon iconType="inbox" color="#64748b" size={22} simple />
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-medium block truncate">Все видео</span>
-                <span className="text-xs text-slate-400 tabular-nums">{totalVideos} видео</span>
-              </div>
-            </button>
-            
-            <div className="my-3 shrink-0" aria-hidden />
-            
-            {/* Папки — скролл при большом количестве */}
-            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar-light -mx-1 px-1">
-            {folderConfigs.map(folder => {
-              const count = getVideoCountInFolder(folder.id);
-              const isSelected = selectedFolderId === folder.id;
-              const isRejected = folder.iconType === 'rejected';
-              
-              return (
+            {contentSection === 'carousels' ? (
+              <>
+                {/* Все карусели */}
                 <button
-                  key={folder.id}
-                  onClick={() => setSelectedFolderId(folder.id)}
+                  onClick={() => setSelectedCarouselFolderId(null)}
                   className={cn(
-                    "w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-left",
-                    isSelected 
-                      ? "bg-slate-100" 
-                      : "hover:bg-slate-50 text-slate-600",
-                    isRejected && "opacity-70"
+                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-card transition-all text-left mb-2 shrink-0",
+                    selectedCarouselFolderId === null 
+                      ? "bg-slate-200/40 text-slate-800 shadow-glass-sm" 
+                      : "hover:bg-glass-white/60 text-slate-600"
                   )}
                 >
-                  <GlassFolderIcon iconType={folder.iconType} color={folder.color} size={22} simple />
+                  <GlassFolderIcon iconType="inbox" color="#64748b" size={22} simple />
                   <div className="flex-1 min-w-0">
-                    <span className={cn(
-                      "text-sm font-medium block truncate",
-                      isSelected && "text-slate-800"
-                    )}>{folder.title}</span>
-                    <span className="text-xs text-slate-400 tabular-nums">{count} видео</span>
+                    <span className="text-sm font-medium block truncate">Все карусели</span>
+                    <span className="text-xs text-slate-400 tabular-nums">{carousels.length} каруселей</span>
                   </div>
                 </button>
-              );
-            })}
-            </div>
-            
-            {/* Settings button */}
+                <div className="my-3 shrink-0" aria-hidden />
+                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar-light -mx-1 px-1">
+                  {carouselFolderConfigs.map(folder => {
+                    const count = getCarouselCountInFolder(folder.id);
+                    const isSelected = selectedCarouselFolderId === folder.id;
+                    return (
+                      <button
+                        key={folder.id}
+                        onClick={() => setSelectedCarouselFolderId(folder.id)}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-left",
+                          isSelected ? "bg-slate-100" : "hover:bg-slate-50 text-slate-600"
+                        )}
+                      >
+                        <GlassFolderIcon iconType={folder.iconType} color={folder.color} size={22} simple />
+                        <div className="flex-1 min-w-0">
+                          <span className={cn("text-sm font-medium block truncate", isSelected && "text-slate-800")}>{folder.title}</span>
+                          <span className="text-xs text-slate-400 tabular-nums">{count} каруселей</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Все видео (лента рилсов) */}
+                <button
+                  onClick={() => setSelectedFolderId(null)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-card transition-all text-left mb-2 shrink-0",
+                    selectedFolderId === null 
+                      ? "bg-slate-200/40 text-slate-800 shadow-glass-sm" 
+                      : "hover:bg-glass-white/60 text-slate-600"
+                  )}
+                >
+                  <GlassFolderIcon iconType="inbox" color="#64748b" size={22} simple />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium block truncate">Все видео</span>
+                    <span className="text-xs text-slate-400 tabular-nums">{totalVideos} видео</span>
+                  </div>
+                </button>
+                <div className="my-3 shrink-0" aria-hidden />
+                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar-light -mx-1 px-1">
+                  {folderConfigs.map(folder => {
+                    const count = getVideoCountInFolder(folder.id);
+                    const isSelected = selectedFolderId === folder.id;
+                    const isRejected = folder.iconType === 'rejected';
+                    return (
+                      <button
+                        key={folder.id}
+                        onClick={() => setSelectedFolderId(folder.id)}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-left",
+                          isSelected ? "bg-slate-100" : "hover:bg-slate-50 text-slate-600",
+                          isRejected && "opacity-70"
+                        )}
+                      >
+                        <GlassFolderIcon iconType={folder.iconType} color={folder.color} size={22} simple />
+                        <div className="flex-1 min-w-0">
+                          <span className={cn("text-sm font-medium block truncate", isSelected && "text-slate-800")}>{folder.title}</span>
+                          <span className="text-xs text-slate-400 tabular-nums">{count} видео</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
             <div className="my-3 shrink-0" aria-hidden />
             <button
               onClick={() => setShowFolderSettings(true)}
               className="w-full flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-xl hover:bg-slate-50 active:bg-slate-100 text-slate-500 text-sm transition-colors touch-manipulation shrink-0"
             >
               <Settings className="w-4 h-4" />
-              Настроить папки
+              {contentSection === 'carousels' ? 'Настроить папки каруселей' : 'Настроить папки'}
             </button>
           </div>
         )}
@@ -923,43 +978,81 @@ export function Workspace(_props?: WorkspaceProps) {
             </div>
             <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-6 safe-bottom">
               <div className="grid grid-cols-2 gap-3">
-                {/* Карточка «Все видео» */}
-                <button
-                  onClick={() => { setSelectedFolderId(null); closeMobileFolderPanel(); }}
-                  className={cn(
-                    "flex flex-col items-center rounded-2xl p-4 min-h-[120px] transition-all active:scale-[0.97] touch-manipulation",
-                    "bg-white/50 backdrop-blur-md border border-white/60",
-                    "shadow-[0_2px_12px_rgba(0,0,0,0.06)]",
-                    selectedFolderId === null && "ring-2 ring-slate-300/40 bg-white/70"
-                  )}
-                >
-                  <GlassFolderIcon iconType="inbox" color="#64748b" size={28} simple className="mb-2" />
-                  <span className={cn("text-sm font-semibold truncate w-full text-center", selectedFolderId === null ? "text-slate-700" : "text-slate-700")}>Все видео</span>
-                  <span className="text-xs text-slate-400 mt-0.5">{totalVideos}</span>
-                </button>
-
-                {folderConfigs.map(folder => {
-                  const count = getVideoCountInFolder(folder.id);
-                  const isSelected = selectedFolderId === folder.id;
-                  const isRejected = folder.iconType === 'rejected';
-                  return (
+                {contentSection === 'carousels' ? (
+                  <>
                     <button
-                      key={folder.id}
-                      onClick={() => { setSelectedFolderId(folder.id); closeMobileFolderPanel(); }}
+                      onClick={() => { setSelectedCarouselFolderId(null); closeMobileFolderPanel(); }}
                       className={cn(
                         "flex flex-col items-center rounded-2xl p-4 min-h-[120px] transition-all active:scale-[0.97] touch-manipulation",
                         "bg-white/50 backdrop-blur-md border border-white/60",
                         "shadow-[0_2px_12px_rgba(0,0,0,0.06)]",
-                        isSelected && "ring-2 ring-slate-300/50 bg-white/70",
-                        isRejected && "opacity-70"
+                        selectedCarouselFolderId === null && "ring-2 ring-slate-300/40 bg-white/70"
                       )}
                     >
-                      <GlassFolderIcon iconType={folder.iconType} color={folder.color} size={28} simple className="mb-2" />
-                      <span className={cn("text-sm font-semibold truncate w-full text-center", isSelected && "text-slate-800")}>{folder.title}</span>
-                      <span className="text-xs text-slate-400 mt-0.5">{count}</span>
+                      <GlassFolderIcon iconType="inbox" color="#64748b" size={28} simple className="mb-2" />
+                      <span className="text-sm font-semibold truncate w-full text-center text-slate-700">Все карусели</span>
+                      <span className="text-xs text-slate-400 mt-0.5">{carousels.length}</span>
                     </button>
-                  );
-                })}
+                    {carouselFolderConfigs.map(folder => {
+                      const count = getCarouselCountInFolder(folder.id);
+                      const isSelected = selectedCarouselFolderId === folder.id;
+                      return (
+                        <button
+                          key={folder.id}
+                          onClick={() => { setSelectedCarouselFolderId(folder.id); closeMobileFolderPanel(); }}
+                          className={cn(
+                            "flex flex-col items-center rounded-2xl p-4 min-h-[120px] transition-all active:scale-[0.97] touch-manipulation",
+                            "bg-white/50 backdrop-blur-md border border-white/60",
+                            "shadow-[0_2px_12px_rgba(0,0,0,0.06)]",
+                            isSelected && "ring-2 ring-slate-300/50 bg-white/70"
+                          )}
+                        >
+                          <GlassFolderIcon iconType={folder.iconType} color={folder.color} size={28} simple className="mb-2" />
+                          <span className={cn("text-sm font-semibold truncate w-full text-center", isSelected && "text-slate-800")}>{folder.title}</span>
+                          <span className="text-xs text-slate-400 mt-0.5">{count}</span>
+                        </button>
+                      );
+                    })}
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => { setSelectedFolderId(null); closeMobileFolderPanel(); }}
+                      className={cn(
+                        "flex flex-col items-center rounded-2xl p-4 min-h-[120px] transition-all active:scale-[0.97] touch-manipulation",
+                        "bg-white/50 backdrop-blur-md border border-white/60",
+                        "shadow-[0_2px_12px_rgba(0,0,0,0.06)]",
+                        selectedFolderId === null && "ring-2 ring-slate-300/40 bg-white/70"
+                      )}
+                    >
+                      <GlassFolderIcon iconType="inbox" color="#64748b" size={28} simple className="mb-2" />
+                      <span className={cn("text-sm font-semibold truncate w-full text-center", selectedFolderId === null ? "text-slate-700" : "text-slate-700")}>Все видео</span>
+                      <span className="text-xs text-slate-400 mt-0.5">{totalVideos}</span>
+                    </button>
+                    {folderConfigs.map(folder => {
+                      const count = getVideoCountInFolder(folder.id);
+                      const isSelected = selectedFolderId === folder.id;
+                      const isRejected = folder.iconType === 'rejected';
+                      return (
+                        <button
+                          key={folder.id}
+                          onClick={() => { setSelectedFolderId(folder.id); closeMobileFolderPanel(); }}
+                          className={cn(
+                            "flex flex-col items-center rounded-2xl p-4 min-h-[120px] transition-all active:scale-[0.97] touch-manipulation",
+                            "bg-white/50 backdrop-blur-md border border-white/60",
+                            "shadow-[0_2px_12px_rgba(0,0,0,0.06)]",
+                            isSelected && "ring-2 ring-slate-300/50 bg-white/70",
+                            isRejected && "opacity-70"
+                          )}
+                        >
+                          <GlassFolderIcon iconType={folder.iconType} color={folder.color} size={28} simple className="mb-2" />
+                          <span className={cn("text-sm font-semibold truncate w-full text-center", isSelected && "text-slate-800")}>{folder.title}</span>
+                          <span className="text-xs text-slate-400 mt-0.5">{count}</span>
+                        </button>
+                      );
+                    })}
+                  </>
+                )}
 
                 {/* Карточка «Настроить папки» — на всю ширину */}
                 <button
@@ -971,7 +1064,7 @@ export function Workspace(_props?: WorkspaceProps) {
                   )}
                 >
                   <Settings className="w-5 h-5" strokeWidth={2.5} />
-                  <span className="text-sm font-medium">Настроить папки</span>
+                  <span className="text-sm font-medium">{contentSection === 'carousels' ? 'Настроить папки каруселей' : 'Настроить папки'}</span>
                 </button>
               </div>
             </div>
@@ -1470,9 +1563,17 @@ export function Workspace(_props?: WorkspaceProps) {
                       Вставь ссылку на пост с каруселью (несколько фото) выше и нажми «Добавить». Транскрипт по слайдам — через Gemini.
                     </p>
                   </div>
+                ) : carouselsForFeed.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <div className="w-20 h-20 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+                      <FolderOpen className="w-10 h-10 text-slate-300" />
+                    </div>
+                    <h3 className="text-lg font-medium text-slate-800 mb-1">В этой папке пока нет каруселей</h3>
+                    <p className="text-slate-500 text-sm max-w-sm">Выбери другую папку или «Все карусели».</p>
+                  </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-3 md:gap-4 pb-20 md:pb-6">
-                    {sortedCarousels.map(c => (
+                    {carouselsForFeed.map(c => (
                       <div
                         key={c.id}
                         className="group rounded-2xl overflow-hidden bg-white/80 border border-slate-200/80 shadow-sm hover:shadow-lg hover:border-slate-300/80 transition-all relative"
