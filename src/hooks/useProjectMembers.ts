@@ -101,10 +101,11 @@ export function useProjectMembers(projectId: string | null) {
       throw new Error('Project ID or user ID is missing');
     }
 
-    const response = await fetch('/api/project/invite', {
+    const response = await fetch('/api/project', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        action: 'invite',
         projectId,
         username,
         userId,
@@ -127,10 +128,11 @@ export function useProjectMembers(projectId: string | null) {
       throw new Error('Project ID or user ID is missing');
     }
 
-    const response = await fetch('/api/project/remove', {
+    const response = await fetch('/api/project', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        action: 'remove',
         projectId,
         memberId,
         userId,
@@ -154,10 +156,11 @@ export function useProjectMembers(projectId: string | null) {
       throw new Error('Project ID or user ID is missing');
     }
 
-    const response = await fetch('/api/project/role', {
+    const response = await fetch('/api/project', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        action: 'role',
         projectId,
         memberId,
         role: newRole,

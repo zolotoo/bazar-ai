@@ -479,10 +479,10 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
     }
     if (shortcode && thumbnailToSave && !thumbnailToSave.includes('supabase')) {
       try {
-        const res = await fetch('/api/save-thumbnail', {
+        const res = await fetch('/api/save-media', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: thumbnailToSave, shortcode }),
+          body: JSON.stringify({ type: 'thumbnail', url: thumbnailToSave, shortcode }),
         });
         const data = await res.json();
         if (data.success && data.storageUrl) {
@@ -494,10 +494,10 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
     }
     // Сохраняем видео в Supabase Storage в фоне (снижает Fast Origin Transfer при просмотре)
     if (shortcode && reelInfoVideoUrl) {
-      fetch('/api/save-video', {
+      fetch('/api/save-media', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shortcode, url: reelInfoVideoUrl }),
+        body: JSON.stringify({ type: 'video', shortcode, url: reelInfoVideoUrl }),
       })
         .then((r) => r.json())
         .then((d) => {
@@ -755,10 +755,10 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
   const saveThumbnailFromUrl = useCallback(async (videoId: string, shortcode: string, url: string) => {
     if (!url || url.includes('supabase.co')) return;
     try {
-      const saveRes = await fetch('/api/save-thumbnail', {
+      const saveRes = await fetch('/api/save-media', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, shortcode }),
+        body: JSON.stringify({ type: 'thumbnail', url, shortcode }),
       });
       const data = await saveRes.json();
       if (data.success && data.storageUrl) {
@@ -772,7 +772,7 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
   }, [fetchVideos]);
 
   /**
-   * Обновляет превью: reel-info → save-thumbnail → update DB.
+   * Обновляет превью: reel-info → save-media (type=thumbnail) → update DB.
    * Вызывать при onError загрузки картинки (истёкший Instagram URL).
    */
   const refreshThumbnail = useCallback(async (videoId: string, shortcode: string, silent = false) => {
@@ -788,10 +788,10 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
         if (!silent) toast.error('Не удалось получить превью');
         return;
       }
-      const saveRes = await fetch('/api/save-thumbnail', {
+      const saveRes = await fetch('/api/save-media', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: thumbUrl, shortcode }),
+        body: JSON.stringify({ type: 'thumbnail', url: thumbUrl, shortcode }),
       });
       const saveData = await saveRes.json();
       if (!saveData.success || !saveData.storageUrl) {

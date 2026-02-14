@@ -400,10 +400,10 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
       // Сохраняем видео в Supabase в фоне — следующий просмотр без Vercel proxy
       const shortcode = extractShortcode(video.url || '');
       if (shortcode) {
-        fetch('/api/save-video', {
+        fetch('/api/save-media', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ shortcode, url: videoUrl }),
+          body: JSON.stringify({ type: 'video', shortcode, url: videoUrl }),
         })
           .then((r) => r.json())
           .then((d) => {
