@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   ChevronLeft, FileText, Copy, ExternalLink, Loader2, Check,
-  Languages, ChevronDown, Save, Plus, Trash2, Wand2, Images, Heart, MessageCircle, RefreshCw, BookOpen, Pencil, Sparkles, Radar
+  Languages, ChevronDown, Save, Plus, Trash2, Wand2, Images, Heart, MessageCircle, RefreshCw, BookOpen, Pencil, Sparkles, Radar, X
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { proxyImageUrl } from '../utils/imagePlaceholder';
@@ -84,6 +84,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
   const [copiedTranscript, setCopiedTranscript] = useState(false);
   const [copiedScript, setCopiedScript] = useState(false);
   const [showFolderMenu, setShowFolderMenu] = useState(false);
+  const [showDescriptionModal, setShowDescriptionModal] = useState(false);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(carousel.folder_id);
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -669,6 +670,15 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => setShowDescriptionModal(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium"
+            title="Описание поста"
+          >
+            <BookOpen className="w-4 h-4" />
+            Описание
+          </button>
           {onRefreshData && (
             <button onClick={handleRefreshData} className="p-2 rounded-xl hover:bg-slate-100 text-slate-600">
               Обновить
@@ -1578,6 +1588,36 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                   Отправить
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Description Modal — полное описание из детального просмотра */}
+      {showDescriptionModal && (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          onClick={() => setShowDescriptionModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[85vh] flex flex-col border border-slate-200 overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
+              <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-slate-600" />
+                Описание
+              </h3>
+              <button
+                onClick={() => setShowDescriptionModal(false)}
+                className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            <div className="p-5 overflow-y-auto min-h-0 flex-1 custom-scrollbar-light">
+              <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap break-words">
+                {carousel.caption || 'Нет описания'}
+              </p>
             </div>
           </div>
         </div>

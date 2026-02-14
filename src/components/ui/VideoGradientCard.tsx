@@ -3,7 +3,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { cn } from "../../utils/cn";
 import { proxyImageUrl, PLACEHOLDER_270x360 } from "../../utils/imagePlaceholder";
-import { Sparkles, MoreVertical, ArrowRight, Eye, Heart, Loader2, FileText, AlertCircle, MessageCircle, TrendingUp, Calendar } from "lucide-react";
+import { Sparkles, MoreVertical, ArrowRight, Eye, Heart, Loader2, FileText, AlertCircle, MessageCircle, TrendingUp, Calendar, BookOpen } from "lucide-react";
 
 export interface VideoGradientCardProps {
   thumbnailUrl?: string;
@@ -23,6 +23,8 @@ export interface VideoGradientCardProps {
   showFolderMenu?: boolean;
   onFolderMenuToggle?: () => void;
   folderMenu?: React.ReactNode;
+  /** Мини-кнопка «Описание» — открыть полное описание поста */
+  onDescriptionClick?: () => void;
   /** При ошибке загрузки превью — обновить через reel-info + Storage. silent=true — без тоста (проактивная подгрузка) */
   onThumbnailError?: (videoId: string, shortcode: string, silent?: boolean) => void | Promise<void>;
   /** При успешной загрузке — сохранить в Storage (если URL не из Storage) */
@@ -59,6 +61,7 @@ export const VideoGradientCard = ({
   showFolderMenu,
   onFolderMenuToggle,
   folderMenu,
+  onDescriptionClick,
   onThumbnailError,
   onThumbnailLoad,
   videoId,
@@ -246,6 +249,25 @@ export const VideoGradientCard = ({
                 </motion.div>
               )}
             </div>
+            
+            {/* Мини-кнопка «Описание» — полный текст поста */}
+            {onDescriptionClick && (
+              <motion.button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onDescriptionClick(); }}
+                title="Описание"
+                className={cn(
+                  "p-2 rounded-full backdrop-blur-[20px] border border-white/20 shadow-[0_2px_8px_rgba(0,0,0,0.08)] flex items-center justify-center",
+                  "bg-black/30 text-white hover:bg-white/20 transition-colors touch-manipulation",
+                  "max-md:!opacity-100"
+                )}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: isMobile || isHovered ? 1 : 0 }}
+                transition={{ duration: 0.15 }}
+              >
+                <BookOpen className="w-4 h-4" strokeWidth={2} />
+              </motion.button>
+            )}
             
             {/* Menu button — на мобильных всегда виден, на десктопе при наведении */}
             {onFolderMenuToggle && (

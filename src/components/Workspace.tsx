@@ -1340,6 +1340,10 @@ export function Workspace(_props?: WorkspaceProps) {
                       setCardMenuVideoId(cardMenuVideoId === video.id ? null : video.id);
                       setMoveMenuVideoId(null);
                     }}
+                    onDescriptionClick={() => {
+                      setDescriptionModalText(video.title || 'Нет описания');
+                      setCardMenuVideoId(null);
+                    }}
                     folderMenu={
                       <div className="bg-glass-white/90 backdrop-blur-glass-xl rounded-card-xl shadow-glass border border-white/[0.35] p-1.5 min-w-[140px] animate-in fade-in slide-in-from-top-2 duration-200">
                         <button
@@ -1609,14 +1613,15 @@ export function Workspace(_props?: WorkspaceProps) {
                               </div>
                             )}
                             <button
+                              type="button"
                               onClick={e => {
                                 e.stopPropagation();
-                                setDescriptionModalText(c.caption || 'Нет описания');
+                                setDescriptionModalText(c.caption ?? 'Нет описания');
                               }}
-                              className="absolute top-1.5 right-1.5 z-[2] p-1.5 rounded-full backdrop-blur-sm bg-black/40 hover:bg-black/60 border border-white/20 text-white transition-colors"
-                              title="Описание"
+                              className="absolute top-1.5 right-1.5 z-[2] p-2 rounded-full backdrop-blur-[20px] bg-black/40 hover:bg-black/60 border border-white/20 text-white transition-colors touch-manipulation"
+                              title="Описание поста"
                             >
-                              <BookOpen className="w-3.5 h-3.5" strokeWidth={2} />
+                              <BookOpen className="w-4 h-4" strokeWidth={2} />
                             </button>
                             <div className="absolute bottom-0 left-0 right-0 z-[2] p-2 pt-6 flex flex-col gap-1.5">
                               {c.caption && (
@@ -1829,17 +1834,17 @@ export function Workspace(_props?: WorkspaceProps) {
           </div>
         </div>
       )}
-      {/* Description Modal */}
+      {/* Description Modal — полное описание, прокручиваемое */}
       {descriptionModalText !== null && (
         <div
           className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
           onClick={() => setDescriptionModalText(null)}
         >
           <div
-            className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[80vh] overflow-hidden border border-slate-200"
+            className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[85vh] flex flex-col border border-slate-200 overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
               <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
                 <BookOpen className="w-5 h-5 text-slate-600" />
                 Описание
@@ -1851,9 +1856,9 @@ export function Workspace(_props?: WorkspaceProps) {
                 <X className="w-5 h-5 text-slate-400" />
               </button>
             </div>
-            <div className="p-5 overflow-y-auto max-h-[60vh]">
+            <div className="p-5 overflow-y-auto min-h-0 flex-1 custom-scrollbar-light">
               <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap break-words">
-                {descriptionModalText}
+                {descriptionModalText || 'Нет описания'}
               </p>
             </div>
           </div>

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { 
   ChevronLeft, Play, Eye, Heart, MessageCircle, Calendar, 
   Sparkles, FileText, Copy, ExternalLink, Loader2, Check,
-  Languages, ChevronDown, Mic, Save, RefreshCw, Plus, Trash2, Wand2, BookOpen, Pencil, Radar
+  Languages, ChevronDown, Mic, Save, RefreshCw, Plus, Trash2, Wand2, BookOpen, Pencil, Radar, X
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { proxyImageUrl, PLACEHOLDER_400x600 } from '../utils/imagePlaceholder';
@@ -169,6 +169,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   const [copiedScript, setCopiedScript] = useState(false);
   const [showVideo, setShowVideo] = useState(!!(video.storage_video_url || video.download_url));
   const [showFolderMenu, setShowFolderMenu] = useState(false);
+  const [showDescriptionModal, setShowDescriptionModal] = useState(false);
   const [currentFolderId, setCurrentFolderId] = useState(video.folder_id || null);
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -1033,8 +1034,17 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
             </div>
           </div>
 
-          {/* Actions: Refresh data + Status badge */}
+          {/* Actions: Описание, Refresh data + Status badge */}
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowDescriptionModal(true)}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-700 text-sm font-medium transition-colors"
+              title="Описание поста"
+            >
+              <BookOpen className="w-4 h-4" />
+              Описание
+            </button>
             {onRefreshData && (
               <button
                 onClick={handleRefreshData}
@@ -2226,6 +2236,36 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                   Отправить
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Description Modal — полное описание из детального просмотра */}
+      {showDescriptionModal && (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          onClick={() => setShowDescriptionModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[85vh] flex flex-col border border-slate-200 overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
+              <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-slate-600" />
+                Описание
+              </h3>
+              <button
+                onClick={() => setShowDescriptionModal(false)}
+                className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            <div className="p-5 overflow-y-auto min-h-0 flex-1 custom-scrollbar-light">
+              <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap break-words">
+                {video.title || 'Нет описания'}
+              </p>
             </div>
           </div>
         </div>
