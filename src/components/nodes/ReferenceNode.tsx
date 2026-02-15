@@ -4,7 +4,7 @@ import { ExternalLink, TrendingUp, Heart, MessageCircle, Sparkles, ChevronDown, 
 import { ReferenceNodeData } from '../../types';
 import { analyzeVideoMeaning } from '../../services/videoService';
 import { cn } from '../../utils/cn';
-import { proxyImageUrl, PLACEHOLDER_320x420 } from '../../utils/imagePlaceholder';
+нimport { proxyImageUrl, PLACEHOLDER_320x420 } from '../../utils/imagePlaceholder';
 import { useFlowStore } from '../../stores/flowStore';
 
 export function ReferenceNode({ id, data, selected }: NodeProps<ReferenceNodeData>) {

@@ -235,9 +235,9 @@ export function Workspace(_props?: WorkspaceProps) {
     return copy;
   }, [carousels, carouselSortBy]);
 
-  // Карусели с учётом выбранной папки (во вкладке «Карусели»)
+  // Карусели с учётом выбранной папки (во вкладке «Карусели»). «Все карусели» = только без папки.
   const carouselsForFeed = useMemo(() => {
-    if (!selectedCarouselFolderId) return sortedCarousels;
+    if (!selectedCarouselFolderId) return sortedCarousels.filter(c => !c.folder_id);
     return sortedCarousels.filter(c => c.folder_id === selectedCarouselFolderId);
   }, [sortedCarousels, selectedCarouselFolderId]);
 
