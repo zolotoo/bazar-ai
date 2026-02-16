@@ -88,21 +88,6 @@ export const VideoGradientCard = ({
     setImgLoaded(false);
   }, [thumbnailUrl]);
 
-  // Таймаут: если превью не загрузилось за 4 с (CORS/сеть) — показываем плейсхолдер и триггерим refresh
-  useEffect(() => {
-    if (!thumbnailUrl?.trim() || thumbnailUrl.startsWith('data:')) return;
-    if (imgLoaded || imgError) return;
-    const t = setTimeout(() => {
-      setImgError(true);
-      setImgLoaded(true);
-      if (onThumbnailError && videoId && shortcode && !isRefreshingThumb) {
-        setIsRefreshingThumb(true);
-        Promise.resolve(onThumbnailError(videoId, shortcode, true)).finally(() => setIsRefreshingThumb(false));
-      }
-    }, 4000);
-    return () => clearTimeout(t);
-  }, [thumbnailUrl, imgLoaded, imgError, onThumbnailError, videoId, shortcode, isRefreshingThumb]);
-
   // Если в БД сохранился битый wsrv.nl URL — сразу триггерим refresh
   const hasWsrv = thumbnailUrl?.includes('wsrv.nl');
   useEffect(() => {
