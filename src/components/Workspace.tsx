@@ -503,15 +503,15 @@ export function Workspace(_props?: WorkspaceProps) {
     return getSortedVideos(videosForFeed);
   }, [videosForFeed, sortBy, sortFilterMinViral, sortFilterMinViews, profileStatsCache]);
 
-  // При первой загрузке данных в ленту (0 → N) ремаунтим сетку, чтобы превью начали грузиться
+  // При росте списка (6→19→60 после нескольких fetch) ремаунтим сетку — иначе превью не грузятся у новых карточек
   useEffect(() => {
     if (contentSection !== 'reels') return;
     const n = feedVideos.length;
-    if (n > 0 && prevReelsCountRef.current === 0) {
-      const t = setTimeout(() => setReelsGridKey(k => k + 1), 150);
+    if (n > prevReelsCountRef.current) {
+      prevReelsCountRef.current = n;
+      const t = setTimeout(() => setReelsGridKey(k => k + 1), 120);
       return () => clearTimeout(t);
     }
-    prevReelsCountRef.current = n;
   }, [contentSection, feedVideos.length]);
 
   // При смене папки или сортировки ремаунтим сетку — превью тогда стабильно подгружаются
