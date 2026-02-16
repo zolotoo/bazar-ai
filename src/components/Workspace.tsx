@@ -207,6 +207,7 @@ export function Workspace(_props?: WorkspaceProps) {
     try { localStorage.setItem('app_workspace_content_section', section); } catch { /* ignore */ }
   }, []);
   const [reelsGridKey, setReelsGridKey] = useState(0);
+  const [carouselsGridKey, setCarouselsGridKey] = useState(0);
   const [selectedCarousel, setSelectedCarousel] = useState<SavedCarousel | null>(null);
   const [carouselLinkUrl, setCarouselLinkUrl] = useState('');
   const [isAddingCarouselByLink, setIsAddingCarouselByLink] = useState(false);
@@ -241,12 +242,18 @@ export function Workspace(_props?: WorkspaceProps) {
     return sortedCarousels.filter(c => c.folder_id === selectedCarouselFolderId);
   }, [sortedCarousels, selectedCarouselFolderId]);
 
-  // Форсируем ремаунт релс-сетки при показе — иначе превью не грузятся до смены вкладки
+  // Форсируем ремаунт релс/карусель-сетки при показе — иначе превью не грузятся до смены вкладки
   const prevContentSectionRef = useRef<'reels' | 'carousels' | null>(null);
   const prevReelsCountRef = useRef(0);
+  const prevCarouselsCountRef = useRef(0);
   useEffect(() => {
     if (contentSection === 'reels' && prevContentSectionRef.current !== 'reels') {
       const id = requestAnimationFrame(() => setReelsGridKey(k => k + 1));
+      prevContentSectionRef.current = contentSection;
+      return () => cancelAnimationFrame(id);
+    }
+    if (contentSection === 'carousels' && prevContentSectionRef.current !== 'carousels') {
+      const id = requestAnimationFrame(() => setCarouselsGridKey(k => k + 1));
       prevContentSectionRef.current = contentSection;
       return () => cancelAnimationFrame(id);
     }
@@ -258,9 +265,34 @@ export function Workspace(_props?: WorkspaceProps) {
     if (contentSection !== 'carousels' || !refreshCarouselThumbnail) return;
     const needRefresh = carousels.filter(
       c => !c.thumbnail_url?.trim() && (!c.slide_urls?.length || c.slide_urls.length === 0) && c.shortcode
-    ).slice(0, 3);
+    ).slice(0, 8);
     needRefresh.forEach(c => refreshCarouselThumbnail(c.id, c.shortcode));
   }, [contentSection, carousels, refreshCarouselThumbnail]);
+
+  // Рост списка каруселей — ремаунтим сетку (как для рилсов), чтобы превью грузились
+  useEffect(() => {
+    if (contentSection !== 'carousels') return;
+    const n = carouselsForFeed.length;
+    if (n > prevCarouselsCountRef.current) {
+      prevCarouselsCountRef.current = n;
+      const t = setTimeout(() => setCarouselsGridKey(k => k + 1), 120);
+      return () => clearTimeout(t);
+    }
+  }, [contentSection, carouselsForFeed.length]);
+
+  // Смена папки/сортировки каруселей — ремаунтим сетку
+  const prevCarouselSortRef = useRef<string | null>(null);
+  const prevCarouselFolderRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (contentSection !== 'carousels') return;
+    const sortKey = carouselSortBy;
+    const folderKey = selectedCarouselFolderId ?? '__all__';
+    if (prevCarouselSortRef.current !== null && (prevCarouselSortRef.current !== sortKey || prevCarouselFolderRef.current !== folderKey)) {
+      setCarouselsGridKey(k => k + 1);
+    }
+    prevCarouselSortRef.current = sortKey;
+    prevCarouselFolderRef.current = folderKey;
+  }, [contentSection, carouselSortBy, selectedCarouselFolderId]);
 
   // Проактивная подгрузка превью для рилсов — как у каруселей: пустое или битое превью (добавлено другим юзером)
   useEffect(() => {
@@ -1604,7 +1636,7 @@ export function Workspace(_props?: WorkspaceProps) {
                     <p className="text-slate-500 text-sm max-w-sm">Выбери другую папку или «Все карусели».</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-3 gap-3 md:gap-4 pb-20 md:pb-6">
+                  <div key={carouselsGridKey} className="grid grid-cols-3 gap-3 md:gap-4 pb-20 md:pb-6">
                     {carouselsForFeed.map(c => (
                       <div
                         key={c.id}
