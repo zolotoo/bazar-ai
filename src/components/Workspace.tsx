@@ -273,7 +273,7 @@ export function Workspace(_props?: WorkspaceProps) {
       const broken = empty || url?.includes('instagram.com') || url?.includes('wsrv.nl') || url?.includes('cdninstagram') || url?.includes('fbcdn.net');
       const hasStorage = url?.includes('supabase.co');
       return broken && !hasStorage;
-    }).slice(0, 5);
+    }).slice(0, 12);
     needRefresh.forEach((v: any) => {
       const shortcode = v.shortcode ?? v.url?.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/)?.[1];
       if (shortcode) refreshThumbnail(v.id, shortcode, true);
@@ -508,11 +508,25 @@ export function Workspace(_props?: WorkspaceProps) {
     if (contentSection !== 'reels') return;
     const n = feedVideos.length;
     if (n > 0 && prevReelsCountRef.current === 0) {
-      const t = setTimeout(() => setReelsGridKey(k => k + 1), 50);
+      const t = setTimeout(() => setReelsGridKey(k => k + 1), 150);
       return () => clearTimeout(t);
     }
     prevReelsCountRef.current = n;
   }, [contentSection, feedVideos.length]);
+
+  // При смене папки или сортировки ремаунтим сетку — превью тогда стабильно подгружаются
+  const prevSortRef = useRef<string | null>(null);
+  const prevFolderRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (contentSection !== 'reels') return;
+    const sortKey = sortBy;
+    const folderKey = selectedFolderId ?? '__all__';
+    if (prevSortRef.current !== null && (prevSortRef.current !== sortKey || prevFolderRef.current !== folderKey)) {
+      setReelsGridKey(k => k + 1);
+    }
+    prevSortRef.current = sortKey;
+    prevFolderRef.current = folderKey;
+  }, [contentSection, sortBy, selectedFolderId]);
 
   const totalVideos = Object.entries(folderCounts).reduce(
     (sum, [key, count]) => (key === rejectedFolderId ? sum : sum + count),
@@ -1334,7 +1348,7 @@ export function Workspace(_props?: WorkspaceProps) {
                   <VideoGradientCard
                     key={`feed-${video.id}-${idx}`}
                     thumbnailUrl={thumbnailUrl}
-                    priority={idx < 12}
+                    priority={idx < 24}
                     username={video.owner_username || 'instagram'}
                     caption={video.title}
                     viewCount={video.view_count}
