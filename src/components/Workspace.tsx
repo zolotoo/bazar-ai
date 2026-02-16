@@ -243,6 +243,7 @@ export function Workspace(_props?: WorkspaceProps) {
 
   // Форсируем ремаунт релс-сетки при показе — иначе превью не грузятся до смены вкладки
   const prevContentSectionRef = useRef<'reels' | 'carousels' | null>(null);
+  const prevReelsCountRef = useRef(0);
   useEffect(() => {
     if (contentSection === 'reels' && prevContentSectionRef.current !== 'reels') {
       const id = requestAnimationFrame(() => setReelsGridKey(k => k + 1));
@@ -501,6 +502,18 @@ export function Workspace(_props?: WorkspaceProps) {
   const feedVideos = useMemo(() => {
     return getSortedVideos(videosForFeed);
   }, [videosForFeed, sortBy, sortFilterMinViral, sortFilterMinViews, profileStatsCache]);
+
+  // При первой загрузке данных в ленту (0 → N) ремаунтим сетку, чтобы превью начали грузиться
+  useEffect(() => {
+    if (contentSection !== 'reels') return;
+    const n = feedVideos.length;
+    if (n > 0 && prevReelsCountRef.current === 0) {
+      const t = setTimeout(() => setReelsGridKey(k => k + 1), 50);
+      return () => clearTimeout(t);
+    }
+    prevReelsCountRef.current = n;
+  }, [contentSection, feedVideos.length]);
+
   const totalVideos = Object.entries(folderCounts).reduce(
     (sum, [key, count]) => (key === rejectedFolderId ? sum : sum + count),
     0
@@ -1321,7 +1334,7 @@ export function Workspace(_props?: WorkspaceProps) {
                   <VideoGradientCard
                     key={`feed-${video.id}-${idx}`}
                     thumbnailUrl={thumbnailUrl}
-                    priority={idx < 4}
+                    priority={idx < 12}
                     username={video.owner_username || 'instagram'}
                     caption={video.title}
                     viewCount={video.view_count}
