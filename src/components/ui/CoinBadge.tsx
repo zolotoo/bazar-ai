@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { cn } from '../../utils/cn';
+import { iosSpring } from '../../utils/motionPresets';
 
 interface CoinBadgeProps {
   coins: number;
@@ -12,8 +14,8 @@ interface CoinBadgeProps {
 }
 
 /**
- * Бейдж коинов — iOS 26 / glass стиль.
- * Монетка с логотипом Riri: 3D, мультяшная, милая.
+ * Бейдж коинов — iOS 26 / glass стиль приложения.
+ * Стеклянный фон, монетка Riri, анимация при смене числа.
  */
 export function CoinBadge({ coins, className, size = 'sm', variant = 'default' }: CoinBadgeProps) {
   const [imgError, setImgError] = useState(false);
@@ -21,7 +23,7 @@ export function CoinBadge({ coins, className, size = 'sm', variant = 'default' }
   if (coins < 0) return null;
 
   const sizeClasses = {
-    sm: 'px-2 py-1 gap-1 rounded-lg',
+    sm: 'px-2 py-1 gap-1 rounded-xl',
     md: 'px-2.5 py-1.5 gap-1.5 rounded-xl',
   };
 
@@ -31,22 +33,26 @@ export function CoinBadge({ coins, className, size = 'sm', variant = 'default' }
   };
 
   return (
-    <span
+    <motion.span
+      layout
       className={cn(
         'inline-flex items-center font-semibold tabular-nums',
+        'backdrop-blur-[20px] backdrop-saturate-[180%]',
+        'border shadow-[0_2px_8px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.35)]',
         sizeClasses[size],
         variant === 'default' && [
-          'bg-glass-white/80 backdrop-blur-glass border border-white/[0.35]',
-          'text-slate-700 shadow-glass-sm',
+          'bg-glass-white/80 border-white/[0.35]',
+          'text-slate-700',
         ],
         variant === 'dark' && [
-          'bg-white/20 backdrop-blur-glass border border-white/30',
-          'text-slate-200 shadow-glass-sm',
+          'bg-white/20 border-white/30',
+          'text-slate-200',
         ],
         className
       )}
+      initial={false}
+      transition={iosSpring}
     >
-      {/* Иконка коина в стиле логотипа Riri — серый/серебристый тон под общий UI */}
       <span
         className={cn(
           'flex items-center justify-center rounded-full overflow-hidden flex-shrink-0',
@@ -62,11 +68,7 @@ export function CoinBadge({ coins, className, size = 'sm', variant = 'default' }
             alt="Riri"
             loading="lazy"
             decoding="async"
-            className={cn(
-              'w-full h-full object-cover rounded-full',
-              'grayscale contrast-110 brightness-95',
-              iconSizes[size]
-            )}
+            className={cn('w-full h-full object-cover rounded-full grayscale contrast-110 brightness-95', iconSizes[size])}
             onError={() => setImgError(true)}
           />
         ) : (
@@ -81,7 +83,14 @@ export function CoinBadge({ coins, className, size = 'sm', variant = 'default' }
           </span>
         )}
       </span>
-      <span>{coins}</span>
-    </span>
+      <motion.span
+        key={coins}
+        initial={{ opacity: 0.85, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={iosSpring}
+      >
+        {coins}
+      </motion.span>
+    </motion.span>
   );
 }

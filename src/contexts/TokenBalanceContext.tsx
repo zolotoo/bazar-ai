@@ -7,6 +7,8 @@ interface TokenBalanceContextType {
   deduct: (amount: number) => Promise<boolean>;
   canAfford: (cost: number) => boolean;
   refetch: () => Promise<void>;
+  /** Последнее списание для анимации (сбрасывается через ~1.8s) */
+  lastDeduct: number;
 }
 
 const TokenBalanceContext = createContext<TokenBalanceContextType | null>(null);
@@ -29,6 +31,7 @@ export function useTokenBalance() {
       deduct: async () => false,
       canAfford: () => false,
       refetch: async () => {},
+      lastDeduct: 0,
     };
   }
   return ctx;

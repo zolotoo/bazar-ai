@@ -1,13 +1,16 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '../utils/supabase';
 import { useAuth } from './useAuth';
 
 const DEFAULT_BALANCE = 20;
+const DEDUCT_ANIMATION_MS = 1800;
 
 export function useUserBalance() {
   const { user } = useAuth();
   const [balance, setBalance] = useState<number>(DEFAULT_BALANCE);
   const [loading, setLoading] = useState(true);
+  const [lastDeduct, setLastDeduct] = useState<number>(0);
+  const deductTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchBalance = useCallback(async () => {
     if (!user?.telegram_username) {
@@ -60,6 +63,12 @@ export function useUserBalance() {
         .gte('token_balance', amount);
       if (updateError) return false;
       setBalance(newBalance);
+      setLastDeduct(amount);
+      if (deductTimeoutRef.current) clearTimeout(deductTimeoutRef.current);
+      deductTimeoutRef.current = setTimeout(() => {
+        setLastDeduct(0);
+        deductTimeoutRef.current = null;
+      }, DEDUCT_ANIMATION_MS);
       return true;
     } catch (e) {
       console.error('useUserBalance deduct:', e);
@@ -69,5 +78,5 @@ export function useUserBalance() {
 
   const canAfford = useCallback((cost: number) => balance >= cost && cost >= 0, [balance]);
 
-  return { balance, loading, deduct, canAfford, refetch: fetchBalance };
+  return { balance, loading, deduct, canAfford, refetch: fetchBalance, lastDeduct };
 }

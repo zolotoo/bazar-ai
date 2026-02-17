@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { useTokenBalance } from '../contexts/TokenBalanceContext';
 import { getDisplayName, getEffectiveDisplayName, setDisplayName } from './Dashboard';
-import { CoinBadge } from './ui/CoinBadge';
+import { TokenBalanceDisplay } from './ui/TokenBalanceDisplay';
 import { useSearchHistory } from '../hooks/useSearchHistory';
 import { useFlowStore } from '../stores/flowStore';
 import { useTrackedAccounts } from '../hooks/useTrackedAccounts';
@@ -27,7 +26,6 @@ import { cn } from '../utils/cn';
 
 export function ProfilePage() {
   const { user, logout } = useAuth();
-  const { balance } = useTokenBalance();
   const { historyEntries } = useSearchHistory();
   const { incomingVideos } = useFlowStore();
   const { 
@@ -115,9 +113,9 @@ export function ProfilePage() {
               <span className="text-sm text-emerald-600">Подключен к Telegram</span>
             </div>
             <span className="text-slate-300">·</span>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <span className="text-sm text-slate-500">Баланс</span>
-              <CoinBadge coins={balance} size="md" />
+              <TokenBalanceDisplay variant="card" />
             </div>
           </div>
         </div>
