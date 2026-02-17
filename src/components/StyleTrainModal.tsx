@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useInboxVideos } from '../hooks/useInboxVideos';
 import { useCarousels } from '../hooks/useCarousels';
 import { useProjectContext } from '../contexts/ProjectContext';
+import { useTokenBalance } from '../contexts/TokenBalanceContext';
 import { isRussian } from '../utils/language';
 import { TokenBadge } from './ui/TokenBadge';
 import { getTokenCost } from '../constants/tokenCosts';
@@ -46,6 +47,7 @@ export function StyleTrainModal({
   const { videos: projectVideos } = useInboxVideos();
   const { carousels: projectCarousels } = useCarousels();
   const { currentProject, updateProject, addProjectStyle, updateProjectStyle } = useProjectContext();
+  const { canAfford, deduct } = useTokenBalance();
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -116,6 +118,11 @@ export function StyleTrainModal({
 
   const handleTrain = async () => {
     if (!projectId || selectedIds.length === 0) return;
+    const cost = getTokenCost('train_style');
+    if (!canAfford(cost)) {
+      toast.error('Недостаточно коинов');
+      return;
+    }
     const name = needStyleName ? newStyleName.trim() : editingStyle?.name || 'Подчерк';
     if (needStyleName && !name) {
       toast.error('Введите название подчерка');
@@ -149,6 +156,7 @@ export function StyleTrainModal({
           setTrainStep('verify');
           return;
         }
+        await deduct(cost);
         await saveStyle(projectId, name, data.prompt, data.meta, examples.length, editingStyle, creatingNewStyle);
         await onSuccess?.(data.prompt);
         onClose();
@@ -192,7 +200,9 @@ export function StyleTrainModal({
         script_text: x.script_text,
       }));
     const firstEx = examples[0];
+    const cost = getTokenCost('train_style');
     if (!firstEx?.transcript_text || !firstEx?.script_text) {
+      await deduct(cost);
       await saveStyle(projectId, needStyleName ? newStyleName.trim() : editingStyle?.name || 'Подчерк', draftPrompt, draftMeta, examples.length, editingStyle, creatingNewStyle);
       await onSuccess?.(draftPrompt);
       onClose();
@@ -222,6 +232,7 @@ export function StyleTrainModal({
       });
       const data = await res.json();
       if (data.success && data.prompt) {
+        await deduct(cost);
         await saveStyle(projectId, needStyleName ? newStyleName.trim() : editingStyle?.name || 'Подчерк', data.prompt, data.meta || draftMeta, examples.length, editingStyle, creatingNewStyle);
         await onSuccess?.(data.prompt);
         onClose();
@@ -412,7 +423,7 @@ export function StyleTrainModal({
             <button
               type="button"
               onClick={handleTrain}
-              disabled={isAnalyzing || selectedIds.length === 0 || (needStyleName && !newStyleName.trim())}
+              disabled={isAnalyzing || selectedIds.length === 0 || (needStyleName && !newStyleName.trim()) || !canAfford(getTokenCost('train_style'))}
               className="px-4 py-1.5 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50"
             >
               {isAnalyzing ? (

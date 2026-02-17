@@ -15,6 +15,8 @@ import {
 import { useProjectMembers } from './hooks/useProjectMembers';
 import { supabase, setUserContext } from './utils/supabase';
 import { useAuth } from './hooks/useAuth';
+import { TokenBalanceProvider, useTokenBalance } from './contexts/TokenBalanceContext';
+import { CoinBadge } from './components/ui/CoinBadge';
 import { useInboxVideos } from './hooks/useInboxVideos';
 import { ProjectProvider, useProjectContext } from './contexts/ProjectContext';
 import type { Project } from './hooks/useProjects';
@@ -362,6 +364,7 @@ function AppContent() {
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => !getDisplayName());
   const { logout, user } = useAuth();
+  const { balance } = useTokenBalance();
 
   // Если пользователь залогинен по нику — не спрашиваем имя, используем username
   useEffect(() => {
@@ -747,6 +750,7 @@ function AppContent() {
               label="Профиль"
               onClick={() => setViewMode('profile')}
               isActive={viewMode === 'profile'}
+              rightElement={<CoinBadge coins={balance} size="sm" />}
             />
             <SidebarLink
               icon={<Settings className="w-4 h-4" strokeWidth={2.5} />}
@@ -876,7 +880,9 @@ function App() {
 
   return (
     <ProjectProvider>
-      <AppContent />
+      <TokenBalanceProvider>
+        <AppContent />
+      </TokenBalanceProvider>
     </ProjectProvider>
   );
 }

@@ -18,7 +18,7 @@ interface CoinBadgeProps {
 export function CoinBadge({ coins, className, size = 'sm', variant = 'default' }: CoinBadgeProps) {
   const [imgError, setImgError] = useState(false);
 
-  if (coins <= 0) return null;
+  if (coins < 0) return null;
 
   const sizeClasses = {
     sm: 'px-2 py-1 gap-1 rounded-lg',

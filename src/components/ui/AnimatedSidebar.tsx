@@ -170,6 +170,8 @@ interface SidebarLinkProps {
   onClick?: () => void;
   isActive?: boolean;
   badge?: number;
+  /** Кастомный элемент справа (например, баланс коинов) */
+  rightElement?: ReactNode;
   variant?: 'default' | 'danger';
   className?: string;
 }
@@ -180,6 +182,7 @@ export const SidebarLink = ({
   onClick,
   isActive,
   badge,
+  rightElement,
   variant = 'default',
   className,
 }: SidebarLinkProps) => {
@@ -223,7 +226,18 @@ export const SidebarLink = ({
       >
         {label}
       </motion.span>
-      {badge !== undefined && badge > 0 && (
+      {rightElement != null && (
+        <motion.span
+          animate={{
+            display: animate ? (open ? "flex" : "none") : "flex",
+            opacity: animate ? (open ? 1 : 0) : 1,
+          }}
+          className="ml-auto flex-shrink-0"
+        >
+          {rightElement}
+        </motion.span>
+      )}
+      {rightElement == null && badge !== undefined && badge > 0 && (
         <motion.span
           animate={{
             display: animate ? (open ? "flex" : "none") : "flex",

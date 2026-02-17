@@ -1,0 +1,73 @@
+import { useState, useCallback, useEffect } from 'react';
+import { supabase } from '../utils/supabase';
+import { useAuth } from './useAuth';
+
+const DEFAULT_BALANCE = 20;
+
+export function useUserBalance() {
+  const { user } = useAuth();
+  const [balance, setBalance] = useState<number>(DEFAULT_BALANCE);
+  const [loading, setLoading] = useState(true);
+
+  const fetchBalance = useCallback(async () => {
+    if (!user?.telegram_username) {
+      setBalance(0);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('token_balance')
+        .eq('telegram_username', user.telegram_username)
+        .maybeSingle();
+      if (error) {
+        console.error('useUserBalance fetch:', error);
+        setBalance(DEFAULT_BALANCE);
+      } else {
+        const val = data?.token_balance;
+        setBalance(typeof val === 'number' ? val : DEFAULT_BALANCE);
+      }
+    } catch (e) {
+      console.error('useUserBalance:', e);
+      setBalance(DEFAULT_BALANCE);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.telegram_username]);
+
+  useEffect(() => {
+    fetchBalance();
+  }, [fetchBalance]);
+
+  const deduct = useCallback(async (amount: number): Promise<boolean> => {
+    if (!user?.telegram_username || amount <= 0) return false;
+    try {
+      const { data: row, error } = await supabase
+        .from('users')
+        .select('token_balance')
+        .eq('telegram_username', user.telegram_username)
+        .single();
+      if (error || !row) return false;
+      const current = (row as { token_balance: number }).token_balance ?? 0;
+      if (current < amount) return false;
+      const newBalance = current - amount;
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ token_balance: newBalance })
+        .eq('telegram_username', user.telegram_username)
+        .gte('token_balance', amount);
+      if (updateError) return false;
+      setBalance(newBalance);
+      return true;
+    } catch (e) {
+      console.error('useUserBalance deduct:', e);
+      return false;
+    }
+  }, [user?.telegram_username]);
+
+  const canAfford = useCallback((cost: number) => balance >= cost && cost >= 0, [balance]);
+
+  return { balance, loading, deduct, canAfford, refetch: fetchBalance };
+}

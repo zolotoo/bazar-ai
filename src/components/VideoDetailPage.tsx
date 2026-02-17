@@ -18,6 +18,7 @@ import { useRadar } from '../hooks/useRadar';
 import { StyleTrainModal } from './StyleTrainModal';
 import { CopyStylesToProjectModal } from './CopyStylesToProjectModal';
 import { useProjectContext } from '../contexts/ProjectContext';
+import { useTokenBalance } from '../contexts/TokenBalanceContext';
 import type { ProjectTemplateItem, ProjectStyle } from '../hooks/useProjects';
 import { calculateViralMultiplier, getOrUpdateProfileStats, applyViralMultiplierToCoefficient } from '../services/profileStatsService';
 import { isRussian } from '../utils/language';
@@ -277,6 +278,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   }, [video.id, video.storage_video_url, video.download_url]);
 
   const { updateVideoFolder, updateVideoScript, updateVideoTranscript, updateVideoTranslation, updateVideoResponsible, updateVideoLinks } = useInboxVideos();
+  const { canAfford, deduct } = useTokenBalance();
 
   const addLinkRow = () => setLinks(prev => [...prev, { id: `link-${Date.now()}`, label: '', value: '' }]);
   const removeLinkRow = (id: string) => setLinks(prev => prev.length > 1 ? prev.filter(r => r.id !== id) : prev);
@@ -374,11 +376,22 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
       setShowVideo(true);
       const needsTranscription = !transcript && transcriptStatus !== 'completed' && transcriptStatus !== 'processing';
       if (needsTranscription) {
-        await runTranscription(directVideoUrl);
+        const cost = getTokenCost('transcribe_video');
+        if (!canAfford(cost)) {
+          toast.error('Недостаточно коинов');
+          return;
+        }
+        await runTranscription(directVideoUrl, cost);
       }
       return;
     }
 
+    const loadCost = getTokenCost('load_video');
+    const transcribeCost = getTokenCost('transcribe_video');
+    if (!canAfford(loadCost + transcribeCost)) {
+      toast.error('Недостаточно коинов');
+      return;
+    }
     setIsLoadingVideo(true);
     setTranscriptStatus('downloading');
     toast.info('Загружаю видео...', { description: 'Одновременно запускаю транскрибацию' });
@@ -415,7 +428,8 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
           .catch(() => {});
       }
 
-      await runTranscription(videoUrl);
+      await deduct(loadCost);
+      await runTranscription(videoUrl, transcribeCost);
     } catch (err) {
       console.error('Load/transcribe error:', err);
       setTranscriptStatus('error');
@@ -426,7 +440,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   };
 
   /** Запускает транскрибацию в фоне — polling продолжается даже если пользователь ушёл */
-  const runTranscription = async (videoUrl: string) => {
+  const runTranscription = async (videoUrl: string, transcribeCost?: number) => {
     setIsStartingTranscription(true);
     try {
       const shortcode = extractShortcode(video.url || '');
@@ -436,6 +450,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
         video.id, globalVideo?.id ?? undefined, shortcode, videoUrl
       );
       if (transcriptId) {
+        if (transcribeCost != null) await deduct(transcribeCost);
         setLocalTranscriptId(transcriptId);
         setTranscriptStatus('processing');
         toast.success('Транскрибация запущена', { description: 'Можно уйти — результат подгрузится сам' });
@@ -525,11 +540,16 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
       toast.error('Нет информации об авторе видео');
       return;
     }
-    
+    const cost = getTokenCost('calculate_viral');
+    if (!canAfford(cost)) {
+      toast.error('Недостаточно коинов');
+      return;
+    }
     setIsCalculatingViral(true);
     try {
       const stats = await getOrUpdateProfileStats(video.owner_username, true);
       if (stats) {
+        await deduct(cost);
         const mult = calculateViralMultiplier(video.view_count || 0, stats);
         setViralMultiplier(mult);
         toast.success('Виральность рассчитана', {
@@ -612,6 +632,11 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
       return;
     }
     
+    const cost = getTokenCost('translate');
+    if (!canAfford(cost)) {
+      toast.error('Недостаточно коинов');
+      return;
+    }
     setIsTranslating(true);
     toast.info('Перевожу текст...', { description: 'Это займёт несколько секунд' });
     
@@ -628,6 +653,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
       const data = await response.json();
       
       if (data.success && data.translated) {
+        await deduct(cost);
         setTranslation(data.translated);
         setTranscriptTab('translation');
 
@@ -678,6 +704,11 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
       toast.error('Нужен подчерк с промтом и транскрипция');
       return;
     }
+    const cost = getTokenCost('generate_script');
+    if (!canAfford(cost)) {
+      toast.error('Недостаточно коинов');
+      return;
+    }
     setShowStylePickerPopover(false);
     setIsGeneratingScript(true);
     try {
@@ -717,6 +748,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
       });
       const data = await res.json();
       if (data.success && data.script) {
+        await deduct(cost);
         setScript(data.script);
         setScriptGeneratedByStyle(true);
         setLastGeneratedStyleId(style.id);
@@ -747,6 +779,11 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   // Дообучение промта по обратной связи (текст)
   const handleRefinePrompt = async () => {
     if (!currentProject?.id || !feedbackText.trim() || !script?.trim() || !promptForRefine) return;
+    const cost = getTokenCost('refine_prompt');
+    if (!canAfford(cost)) {
+      toast.error('Недостаточно коинов');
+      return;
+    }
     setIsRefiningPrompt(true);
     try {
       const res = await fetch('/api/script', {
@@ -762,6 +799,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
       });
       const data = await res.json();
       if (data.success && data.prompt) {
+        await deduct(cost);
         if (styleForRefine) {
           await updateProjectStyle(currentProject.id, styleForRefine.id, { prompt: data.prompt, meta: data.meta });
         } else {
@@ -792,6 +830,11 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   // Дообучение по diff: сценарий ИИ vs ваш идеальный
   const handleRefineByDiff = async () => {
     if (!currentProject?.id || scriptAiForRefine.trim() === '' || scriptHumanForRefine.trim() === '') return;
+    const cost = getTokenCost('refine_prompt');
+    if (!canAfford(cost)) {
+      toast.error('Недостаточно коинов');
+      return;
+    }
     setIsRefiningPrompt(true);
     try {
       const res = await fetch('/api/script', {
@@ -808,6 +851,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
       });
       const data = await res.json();
       if (data.success && data.prompt) {
+        await deduct(cost);
         if (styleForRefine) {
           await updateProjectStyle(currentProject.id, styleForRefine.id, { prompt: data.prompt, meta: data.meta });
         } else {
@@ -842,6 +886,11 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   const handleClarifySubmit = async () => {
     const question = clarifyingQuestions[clarifyingIndex];
     if (!currentProject?.id || !question || !clarifyAnswer.trim() || !lastRefinedPrompt) return;
+    const cost = getTokenCost('refine_prompt');
+    if (!canAfford(cost)) {
+      toast.error('Недостаточно коинов');
+      return;
+    }
     setIsRefiningPrompt(true);
     try {
       const res = await fetch('/api/script', {
@@ -857,6 +906,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
       });
       const data = await res.json();
       if (data.success && data.prompt) {
+        await deduct(cost);
         if (styleForRefine) {
           await updateProjectStyle(currentProject.id, styleForRefine.id, { prompt: data.prompt, meta: data.meta });
         } else {
@@ -909,6 +959,11 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
     const text = promptChatInput.trim();
     const promptToUse = editingStyle?.prompt || currentProject?.stylePrompt;
     if (!text || !promptToUse || isPromptChatLoading) return;
+    const cost = getTokenCost('chat_with_prompt');
+    if (!canAfford(cost)) {
+      toast.error('Недостаточно коинов');
+      return;
+    }
     const userMsg = { role: 'user' as const, content: text };
     const newMessages = [...promptChatMessages, userMsg];
     setPromptChatMessages(newMessages);
@@ -930,6 +985,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
       });
       const data = await res.json();
       if (data.success && data.reply) {
+        await deduct(cost);
         setPromptChatMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
         if (data.suggested_prompt) setPendingSuggestedPrompt(data.suggested_prompt);
       } else {
@@ -1111,7 +1167,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                 <button
                   type="button"
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleLoadAndTranscribe(); }}
-                  disabled={isLoadingVideo || isStartingTranscription}
+                  disabled={isLoadingVideo || isStartingTranscription || !canAfford(directVideoUrl ? getTokenCost('transcribe_video') : getTokenCost('load_video') + getTokenCost('transcribe_video'))}
                   title={videoLoadError ? 'Повторить загрузку' : `Загрузить и транскрибировать (${getTokenCost('load_video')} коинов)`}
                   className="absolute inset-0 w-full h-full flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors group cursor-pointer z-10 touch-manipulation"
                 >
@@ -1287,7 +1343,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                 {video.owner_username && (
                   <button
                     onClick={handleCalculateViral}
-                    disabled={isCalculatingViral}
+                    disabled={isCalculatingViral || !canAfford(getTokenCost('calculate_viral'))}
                     className={cn(
                       "w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
                       "bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60",
@@ -1466,7 +1522,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                   </div>
                   <button
                     onClick={handleTranslate}
-                    disabled={!transcript || isTranslating}
+                    disabled={!transcript || isTranslating || !canAfford(getTokenCost('translate'))}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium disabled:opacity-50"
                     title="Перевести"
                   >
@@ -1560,7 +1616,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                   </p>
                   <button
                     onClick={handleLoadAndTranscribe}
-                    disabled={isStartingTranscription || isLoadingVideo}
+                    disabled={isStartingTranscription || isLoadingVideo || !canAfford(getTokenCost('load_video') + getTokenCost('transcribe_video'))}
                     className="px-4 py-2.5 rounded-card-xl bg-slate-600 hover:bg-slate-700 text-white font-medium transition-all shadow-glass flex items-center gap-2 disabled:opacity-50"
                   >
                     {isStartingTranscription ? (
@@ -1610,7 +1666,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                   <div className="relative" ref={stylePickerRef}>
                     <button
                       onClick={() => !transcript?.trim() ? toast.error('Сначала добавьте транскрипцию') : setShowStylePickerPopover(!showStylePickerPopover)}
-                      disabled={isGeneratingScript || !transcript?.trim()}
+                      disabled={isGeneratingScript || !transcript?.trim() || !canAfford(getTokenCost('generate_script'))}
                       className={cn(
                         'flex items-center gap-2 px-3 py-1.5 rounded-lg text-white text-xs font-medium',
                         transcript?.trim() ? 'bg-slate-600 hover:bg-slate-700 disabled:opacity-50' : 'bg-slate-400/70 cursor-not-allowed'
@@ -1969,7 +2025,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                     <button
                       type="button"
                       onClick={handlePromptChatSend}
-                      disabled={isPromptChatLoading || !promptChatInput.trim()}
+                      disabled={isPromptChatLoading || !promptChatInput.trim() || !canAfford(getTokenCost('chat_with_prompt'))}
                       className="self-end px-4 py-2 rounded-xl bg-slate-600 hover:bg-slate-700 text-white text-sm font-medium disabled:opacity-50 flex items-center gap-2"
                     >
                       {isPromptChatLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
@@ -2123,7 +2179,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
               <button type="button" onClick={() => setShowFeedbackModal(false)} disabled={isRefiningPrompt} className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 disabled:opacity-50">
                 Отмена
               </button>
-              <button type="button" onClick={handleRefinePrompt} disabled={isRefiningPrompt || !feedbackText.trim()} className="px-4 py-1.5 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50">
+              <button type="button" onClick={handleRefinePrompt} disabled={isRefiningPrompt || !feedbackText.trim() || !canAfford(getTokenCost('refine_prompt'))} className="px-4 py-1.5 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50">
                 {isRefiningPrompt ? <><Loader2 className="w-4 h-4 animate-spin" /> Дообучение...</> : <>Отправить и дообучить промт <TokenBadge tokens={getTokenCost('refine_prompt')} variant="dark" /></>}
               </button>
             </div>
@@ -2197,7 +2253,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
               <button
                 type="button"
                 onClick={handleRefineByDiff}
-                disabled={isRefiningPrompt || scriptHumanForRefine.trim() === scriptAiForRefine.trim()}
+                disabled={isRefiningPrompt || scriptHumanForRefine.trim() === scriptAiForRefine.trim() || !canAfford(getTokenCost('refine_prompt'))}
                 className="px-4 py-1.5 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50"
               >
                 {isRefiningPrompt ? <><Loader2 className="w-4 h-4 animate-spin" /> Дообучение...</> : <>Дообучить промт на этом примере <TokenBadge tokens={getTokenCost('refine_prompt')} variant="dark" /></>}

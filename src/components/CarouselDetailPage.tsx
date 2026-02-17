@@ -9,6 +9,7 @@ import { proxyImageUrl } from '../utils/imagePlaceholder';
 import { toast } from 'sonner';
 import { useCarousels, type SavedCarousel } from '../hooks/useCarousels';
 import { useProjectContext } from '../contexts/ProjectContext';
+import { useTokenBalance } from '../contexts/TokenBalanceContext';
 import { useAuth } from '../hooks/useAuth';
 import { useRadar } from '../hooks/useRadar';
 import type { ProjectTemplateItem, ProjectStyle } from '../hooks/useProjects';
@@ -138,6 +139,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
 
   const { currentProject, currentProjectId, updateProject, updateProjectStyle, addProjectStyle, refetch: refetchProjects, selectProject, carouselFoldersList } = useProjectContext();
   const { user } = useAuth();
+  const { canAfford, deduct } = useTokenBalance();
   const radarUserId = user?.telegram_username ? `tg-${user.telegram_username}` : 'anonymous';
   const { profiles: radarProfiles, addProfile: addRadarProfile } = useRadar(currentProjectId, radarUserId);
   const {
@@ -227,11 +229,17 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
       toast.error('Нет URL слайдов для транскрибации. Добавьте карусель по ссылке с поста.');
       return;
     }
+    const cost = getTokenCost('transcribe_carousel');
+    if (!canAfford(cost)) {
+      toast.error('Недостаточно коинов');
+      return;
+    }
     setIsTranscribing(true);
     setTranscriptStatus('processing');
     try {
       const result = await transcribeCarouselByUrls(slideUrls);
       if (result?.success && result.transcript_text) {
+        await deduct(cost);
         setTranscript(result.transcript_text);
         setTranscriptTab('original');
         setTranscriptStatus('completed');
@@ -254,6 +262,11 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
       toast.error('Сначала получите транскрипт по слайдам');
       return;
     }
+    const cost = getTokenCost('translate');
+    if (!canAfford(cost)) {
+      toast.error('Недостаточно коинов');
+      return;
+    }
     setIsTranslating(true);
     try {
       const res = await fetch('/api/translate', {
@@ -263,6 +276,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
       });
       const data = await res.json();
       if (data.success && data.translated) {
+        await deduct(cost);
         setTranslation(data.translated);
         setTranscriptTab('translation');
         await updateCarouselTranslation(carousel.id, data.translated);
@@ -280,6 +294,11 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
   const handleGenerateByStyle = async (style: ProjectStyle) => {
     if (!style?.prompt?.trim() || !transcript?.trim()) {
       toast.error('Нужен подчерк и транскрипция');
+      return;
+    }
+    const cost = getTokenCost('generate_script');
+    if (!canAfford(cost)) {
+      toast.error('Недостаточно коинов');
       return;
     }
     setShowStylePickerPopover(false);
@@ -313,6 +332,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
       });
       const data = await res.json();
       if (data.success && data.script) {
+        await deduct(cost);
         setScript(data.script);
         setLastGeneratedStyleId(style.id);
         toast.success(`Сценарий по подчерку «${style.name}»`);
@@ -335,6 +355,11 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
 
   const handleRefinePrompt = async () => {
     if (!currentProject?.id || !feedbackText.trim() || !script?.trim() || !promptForRefine) return;
+    const cost = getTokenCost('refine_prompt');
+    if (!canAfford(cost)) {
+      toast.error('Недостаточно коинов');
+      return;
+    }
     setIsRefiningPrompt(true);
     try {
       const res = await fetch('/api/script', {
@@ -350,6 +375,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
       });
       const data = await res.json();
       if (data.success && data.prompt) {
+        await deduct(cost);
         if (styleForRefine) {
           await updateProjectStyle(currentProject.id, styleForRefine.id, { prompt: data.prompt, meta: data.meta });
         } else {
@@ -378,6 +404,11 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
 
   const handleRefineByDiff = async () => {
     if (!currentProject?.id || scriptAiForRefine.trim() === '' || scriptHumanForRefine.trim() === '') return;
+    const cost = getTokenCost('refine_prompt');
+    if (!canAfford(cost)) {
+      toast.error('Недостаточно коинов');
+      return;
+    }
     setIsRefiningPrompt(true);
     try {
       const res = await fetch('/api/script', {
@@ -394,6 +425,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
       });
       const data = await res.json();
       if (data.success && data.prompt) {
+        await deduct(cost);
         if (styleForRefine) {
           await updateProjectStyle(currentProject.id, styleForRefine.id, { prompt: data.prompt, meta: data.meta });
         } else {
@@ -426,6 +458,11 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
   const handleClarifySubmit = async () => {
     const question = clarifyingQuestions[clarifyingIndex];
     if (!currentProject?.id || !question || !clarifyAnswer.trim() || !lastRefinedPrompt) return;
+    const cost = getTokenCost('refine_prompt');
+    if (!canAfford(cost)) {
+      toast.error('Недостаточно коинов');
+      return;
+    }
     setIsRefiningPrompt(true);
     try {
       const res = await fetch('/api/script', {
@@ -441,6 +478,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
       });
       const data = await res.json();
       if (data.success && data.prompt) {
+        await deduct(cost);
         if (styleForRefine) {
           await updateProjectStyle(currentProject.id, styleForRefine.id, { prompt: data.prompt, meta: data.meta });
         } else {
@@ -898,7 +936,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
               </div>
               <button
                 onClick={handleTranslate}
-                disabled={!transcript.trim() || isTranslating}
+                disabled={!transcript.trim() || isTranslating || !canAfford(getTokenCost('translate'))}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium disabled:opacity-50"
               >
                 {isTranslating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Languages className="w-3.5 h-3.5" />}
@@ -907,10 +945,10 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
               </button>
               <button
                 onClick={handleTranscribe}
-                disabled={slideUrls.length === 0 || isTranscribing}
+                disabled={slideUrls.length === 0 || isTranscribing || !canAfford(getTokenCost('transcribe_carousel'))}
                 className={cn(
                   'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium transition-colors',
-                  slideUrls.length === 0 || isTranscribing
+                  slideUrls.length === 0 || isTranscribing || !canAfford(getTokenCost('transcribe_carousel'))
                     ? 'bg-slate-400 cursor-not-allowed'
                     : 'bg-slate-600 hover:bg-slate-700'
                 )}
@@ -1017,7 +1055,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                     }
                     setShowStylePickerPopover(!showStylePickerPopover);
                   }}
-                  disabled={Boolean(isGeneratingScript || ((projectStyles.length > 0 || currentProject?.stylePrompt) && !transcript.trim()))}
+                  disabled={Boolean(isGeneratingScript || ((projectStyles.length > 0 || currentProject?.stylePrompt) && !transcript.trim()) || !canAfford(getTokenCost('generate_script')))}
                   className={cn(
                     'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium transition-colors whitespace-nowrap',
                     projectStyles.length > 0 || currentProject?.stylePrompt
@@ -1473,7 +1511,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
               <button type="button" onClick={() => setShowFeedbackModal(false)} disabled={isRefiningPrompt} className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 disabled:opacity-50">
                 Отмена
               </button>
-              <button type="button" onClick={handleRefinePrompt} disabled={isRefiningPrompt || !feedbackText.trim()} className="px-4 py-1.5 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50">
+              <button type="button" onClick={handleRefinePrompt} disabled={isRefiningPrompt || !feedbackText.trim() || !canAfford(getTokenCost('refine_prompt'))} className="px-4 py-1.5 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50">
                 {isRefiningPrompt ? <><Loader2 className="w-4 h-4 animate-spin" /> Дообучение...</> : <>Отправить и дообучить промт <TokenBadge tokens={getTokenCost('refine_prompt')} variant="dark" /></>}
               </button>
             </div>
@@ -1547,7 +1585,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
               <button
                 type="button"
                 onClick={handleRefineByDiff}
-                disabled={isRefiningPrompt || scriptHumanForRefine.trim() === scriptAiForRefine.trim()}
+                disabled={isRefiningPrompt || scriptHumanForRefine.trim() === scriptAiForRefine.trim() || !canAfford(getTokenCost('refine_prompt'))}
                 className="px-4 py-1.5 rounded-lg bg-slate-600 hover:bg-slate-700 text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50"
               >
                 {isRefiningPrompt ? <><Loader2 className="w-4 h-4 animate-spin" /> Дообучение...</> : <>Дообучить промт на этом примере <TokenBadge tokens={getTokenCost('refine_prompt')} variant="dark" /></>}

@@ -16,6 +16,7 @@ import { useCarousels } from '../../hooks/useCarousels';
 import { useSearchHistory } from '../../hooks/useSearchHistory';
 import { useWorkspaceZones } from '../../hooks/useWorkspaceZones';
 import { useProjectContext } from '../../contexts/ProjectContext';
+import { useTokenBalance } from '../../contexts/TokenBalanceContext';
 import { useRadar } from '../../hooks/useRadar';
 import { useAuth } from '../../hooks/useAuth';
 import { IncomingVideo } from '../../types';
@@ -186,6 +187,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
   useWorkspaceZones(); // keep hook for potential future use
   const { projects, currentProject } = useProjectContext();
   const { user } = useAuth();
+  const { balance, canAfford, deduct } = useTokenBalance();
   
   // Получаем userId для radar (формат должен совпадать с useInboxVideos)
   const radarUserId = user?.telegram_username ? `tg-${user.telegram_username}` : 'anonymous';
@@ -622,9 +624,14 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
     }
   };
 
+  const radarAddCost = getTokenCost('radar_add_profile');
   // Обработка добавления профиля в радар (по username или ссылке)
   const handleAddRadarProfile = useCallback(async (input: string) => {
     if (!input.trim() || !currentProjectId) return;
+    if (!canAfford(radarAddCost)) {
+      toast.error('Недостаточно коинов', { description: `Нужно ${radarAddCost}. Баланс: ${balance}` });
+      return;
+    }
     
     let username = input.trim();
     
@@ -644,6 +651,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
     
     const added = await addRadarProfile(username, currentProjectId, radarAddFrequencyDays);
     if (added) {
+      await deduct(radarAddCost);
       toast.success(`@${username} добавлен в радар`, {
         description: `Проект: ${currentProjectName}. Обновление каждые ${radarAddFrequencyDays} дн. Загружаем видео...`,
       });
@@ -651,7 +659,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
     } else {
       toast.error('Профиль уже отслеживается в этом проекте');
     }
-  }, [addRadarProfile, currentProjectId, currentProjectName, radarAddFrequencyDays]);
+  }, [addRadarProfile, currentProjectId, currentProjectName, radarAddFrequencyDays, canAfford, deduct, balance, radarAddCost]);
 
   // Обработка ссылки на рилс/карусель - сохраняем в "Все видео" или "Карусели" в зависимости от типа
   // Операция продолжается в фоне даже если панель закрыли — данные сохранятся в БД
@@ -663,19 +671,25 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
       return;
     }
     
+    const profileMatch = linkUrl.match(/instagram\.com\/([^\/\?]+)\/?$/);
+    const reelMatch = linkUrl.match(/instagram\.com\/(reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
+    const isProfileLink = !!profileMatch && !reelMatch;
+    const linkCost = isProfileLink ? getTokenCost('radar_add_profile') : getTokenCost('link_add');
+    if (!canAfford(linkCost)) {
+      toast.error('Недостаточно коинов', { description: `Нужно ${linkCost}. Баланс: ${balance}` });
+      return;
+    }
+    
     setLinkLoading(true);
     setLinkPreview(null);
     toast.info('Добавляю...', { description: 'Можно закрыть — сохранится в фоне' });
     try {
-      // Проверяем тип ссылки: профиль или пост (reel/p)
-      const profileMatch = linkUrl.match(/instagram\.com\/([^\/\?]+)\/?$/);
-      const reelMatch = linkUrl.match(/instagram\.com\/(reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
-      
-      // Если это профиль (без /reel/ или /p/)
-      if (profileMatch && !reelMatch) {
+      // Если это профиль (без /reel/ или /p/) — уже определили isProfileLink и profileMatch выше
+      if (isProfileLink && profileMatch) {
         const username = profileMatch[1].replace('@', '').toLowerCase();
         const added = await addRadarProfile(username, currentProjectId, radarAddFrequencyDays);
         if (added) {
+          await deduct(linkCost);
           toast.success(`@${username} добавлен в радар`, {
             description: `Проект: ${currentProjectName}. Обновление каждые ${radarAddFrequencyDays} дн. Загружаем видео...`,
           });
@@ -701,7 +715,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
         const isCarousel = data.is_carousel && Array.isArray(data.carousel_slides) && data.carousel_slides.length > 0;
         
         if (isCarousel) {
-          // Карусель — сохраняем в раздел Карусели
+          const cost = getTokenCost('add_carousel');
           const added = await addCarousel({
             shortcode,
             url: data.url,
@@ -715,6 +729,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
             slide_urls: data.carousel_slides,
           });
           if (added && mountedRef.current) {
+            await deduct(cost);
             setLinkPreview({
               id: shortcode,
               shortcode,
@@ -733,6 +748,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
             setLinkUrl('');
           }
         } else {
+          const cost = getTokenCost('link_add');
           // Рилс — сохраняем в "Все видео"
           const captionText = typeof data.caption === 'string' ? data.caption : 'Видео из Instagram';
           await addVideoToInbox({
@@ -749,6 +765,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
             takenAt: data.taken_at,
           });
           if (mountedRef.current) {
+            await deduct(cost);
             setLinkPreview({
               id: shortcode,
               shortcode,
@@ -1125,7 +1142,7 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button
                       onClick={handleParseLink}
-                      disabled={!linkUrl.trim() || linkLoading}
+                      disabled={!linkUrl.trim() || linkLoading || !canAfford(getTokenCost('link_add'))}
                       className={cn(
                         "px-5 py-3 rounded-card-xl font-medium text-sm transition-all active:scale-95 flex items-center justify-center gap-2",
                         "bg-slate-600 hover:bg-slate-700 text-white shadow-glass hover:shadow-glass-hover",
@@ -1261,13 +1278,19 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
                           </span>
                         )}
                         <button
-                          onClick={() => {
-                            refreshRadar();
+                          onClick={async () => {
+                            const cost = getTokenCost('radar_refresh_all', radarProfiles.length);
+                            if (!canAfford(cost)) {
+                              toast.error('Недостаточно коинов', { description: `Нужно ${cost}. Баланс: ${balance}` });
+                              return;
+                            }
+                            await refreshRadar();
+                            await deduct(cost);
                             toast.info('Обновляем все профили...', {
                               description: 'Видео автоматически добавятся в "Все видео"',
                             });
                           }}
-                          disabled={radarLoading}
+                          disabled={radarLoading || !canAfford(getTokenCost('radar_refresh_all', radarProfiles.length))}
                           className={cn(
                             "px-3 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5",
                             "bg-glass-white/80 backdrop-blur-glass border border-white/[0.35] text-slate-600 hover:bg-slate-100/80 shadow-glass-sm",
@@ -1320,7 +1343,7 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
                           handleAddRadarProfile(radarUsername);
                         }
                       }}
-                      disabled={!radarUsername.trim() || !currentProjectId}
+                      disabled={!radarUsername.trim() || !currentProjectId || !canAfford(radarAddCost)}
                       className={cn(
                         "px-5 py-3 rounded-card-xl font-medium text-sm transition-all active:scale-95 flex items-center gap-2",
                         "bg-slate-600 hover:bg-slate-700 text-white",

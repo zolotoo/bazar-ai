@@ -16,6 +16,7 @@ import { VideoGradientCard } from './ui/VideoGradientCard';
 import { VideoDetailPage } from './VideoDetailPage';
 import { CarouselDetailPage } from './CarouselDetailPage';
 import { useCarousels, type SavedCarousel } from '../hooks/useCarousels';
+import { useTokenBalance } from '../contexts/TokenBalanceContext';
 import { calculateViralMultiplier, applyViralMultiplierToCoefficient, getProfileStats, calculateCarouselViralMultiplier } from '../services/profileStatsService';
 import { dialogScale, backdropFade, iosSpringSoft } from '../utils/motionPresets';
 import { TokenBadge } from './ui/TokenBadge';
@@ -151,6 +152,10 @@ export function Workspace(_props?: WorkspaceProps) {
     updateFolder, 
     reorderFolders,
     carouselFoldersList,
+    addCarouselFolder,
+    removeCarouselFolder,
+    updateCarouselFolder,
+    reorderCarouselFolders,
     refetch: refetchProjects,
   } = useProjectContext();
 
@@ -217,6 +222,7 @@ export function Workspace(_props?: WorkspaceProps) {
   const [isAddingReelByLink, setIsAddingReelByLink] = useState(false);
   const [descriptionModalText, setDescriptionModalText] = useState<string | null>(null);
   const { carousels, loading: carouselsLoading, addCarousel, refreshCarouselThumbnail, refetch: refetchCarousels } = useCarousels();
+  const { canAfford, deduct } = useTokenBalance();
 
   // Сортировка каруселей: по виральности, по лайкам, по дате добавления
   const sortedCarousels = useMemo(() => {
@@ -710,16 +716,14 @@ export function Workspace(_props?: WorkspaceProps) {
     onRefreshData: async () => { await refetchInboxVideos(); },
   } : null;
 
-  // Обработчик создания папки
+  // Обработчик создания папки (рилсы или карусели — в зависимости от вкладки)
   const handleCreateFolder = async () => {
     if (!currentProjectId || !newFolderName.trim()) return;
     const folderName = newFolderName.trim();
-    await addFolder(currentProjectId, folderName);
-    setNewFolderName('');
-    await refetchProjects();
-    
-    // Отправляем изменение для синхронизации после обновления проектов
-    if (currentProjectId) {
+    if (contentSection === 'carousels') {
+      await addCarouselFolder(currentProjectId, folderName);
+    } else {
+      await addFolder(currentProjectId, folderName);
       const updatedProject = currentProject;
       const newFolder = updatedProject?.folders?.find(f => f.name === folderName);
       if (newFolder) {
@@ -732,18 +736,20 @@ export function Workspace(_props?: WorkspaceProps) {
         );
       }
     }
-    
+    setNewFolderName('');
+    await refetchProjects();
     toast.success('Папка создана');
   };
   
-  // Обработчик удаления папки
+  // Обработчик удаления папки (рилсы или карусели)
   const handleDeleteFolder = async (folderId: string) => {
     if (!currentProjectId) return;
-    const folderData = await removeFolder(currentProjectId, folderId);
+    const folderData = contentSection === 'carousels'
+      ? await removeCarouselFolder(currentProjectId, folderId)
+      : await removeFolder(currentProjectId, folderId);
     
     if (folderData) {
-      // Отправляем изменение для синхронизации
-      if (currentProjectId) {
+      if (contentSection !== 'carousels' && currentProjectId) {
         await sendChange(
           'folder_deleted',
           'folder',
@@ -752,38 +758,36 @@ export function Workspace(_props?: WorkspaceProps) {
           null
         );
       }
-      
-      addAction('delete_folder', folderData);
+      if (contentSection !== 'carousels') {
+        addAction('delete_folder', folderData);
+      }
       toast.success('Папка удалена', {
-        action: {
-          label: 'Отменить',
-          onClick: handleUndo,
-        },
-        duration: 5000,
+        ...(contentSection !== 'carousels' ? {
+          action: { label: 'Отменить', onClick: handleUndo },
+          duration: 5000,
+        } : {}),
       });
     }
   };
   
-  // Обработчик обновления папки
+  // Обработчик обновления папки (рилсы или карусели)
   const handleUpdateFolder = async (folderId: string, updates: Partial<Omit<ProjectFolder, 'id'>>) => {
     if (!currentProjectId) return;
-    const folder = currentProject?.folders?.find(f => f.id === folderId);
+    const list = contentSection === 'carousels'
+      ? carouselFoldersList(currentProjectId)
+      : (currentProject?.folders ?? []);
+    const folder = list.find(f => f.id === folderId);
     const oldData = folder ? { name: folder.name, color: folder.color, icon: folder.icon } : null;
     
-    await updateFolder(currentProjectId, folderId, updates);
-    
-    // Синхронизация — не блокируем UI при ошибке
-    if (currentProjectId && oldData) {
-      const changeType = updates.name ? 'folder_renamed' : 'project_updated';
-      sendChange(
-        changeType,
-        'folder',
-        folderId,
-        oldData,
-        { ...oldData, ...updates }
-      ).catch(() => { /* toast уже показан в sendChange */ });
+    if (contentSection === 'carousels') {
+      await updateCarouselFolder(currentProjectId, folderId, updates);
+    } else {
+      await updateFolder(currentProjectId, folderId, updates);
+      if (currentProjectId && oldData) {
+        const changeType = updates.name ? 'folder_renamed' : 'project_updated';
+        sendChange(changeType, 'folder', folderId, oldData, { ...oldData, ...updates }).catch(() => {});
+      }
     }
-    
     setEditingFolder(null);
   };
   
@@ -800,17 +804,23 @@ export function Workspace(_props?: WorkspaceProps) {
   const handleFolderDrop = async (targetIndex: number) => {
     if (!currentProjectId || draggedFolderIndex === null) return;
     
-    const projectFoldersList = currentProject?.folders?.slice().sort((a, b) => a.order - b.order) || [];
+    const list = contentSection === 'carousels'
+      ? carouselFoldersList(currentProjectId).slice().sort((a, b) => a.order - b.order)
+      : (currentProject?.folders?.slice().sort((a, b) => a.order - b.order) || []);
     if (draggedFolderIndex === targetIndex) {
       setDraggedFolderIndex(null);
       return;
     }
     
-    const newOrder = [...projectFoldersList];
+    const newOrder = [...list];
     const [moved] = newOrder.splice(draggedFolderIndex, 1);
     newOrder.splice(targetIndex, 0, moved);
     
-    await reorderFolders(currentProjectId, newOrder.map(f => f.id));
+    if (contentSection === 'carousels') {
+      await reorderCarouselFolders(currentProjectId, newOrder.map(f => f.id));
+    } else {
+      await reorderFolders(currentProjectId, newOrder.map(f => f.id));
+    }
     setDraggedFolderIndex(null);
     toast.success('Порядок папок изменён');
   };
@@ -1542,6 +1552,11 @@ export function Workspace(_props?: WorkspaceProps) {
                             toast.error('Вставь ссылку на пост Instagram');
                             return;
                           }
+                          const cost = getTokenCost('add_carousel');
+                          if (!canAfford(cost)) {
+                            toast.error('Недостаточно коинов');
+                            return;
+                          }
                           setIsAddingCarouselByLink(true);
                           try {
                             const res = await fetch('/api/reel-info', {
@@ -1564,6 +1579,7 @@ export function Workspace(_props?: WorkspaceProps) {
                                 slide_urls: data.carousel_slides,
                               });
                               if (added) {
+                                await deduct(cost);
                                 setCarouselLinkUrl('');
                                 toast.success('Карусель добавлена');
                               }
@@ -1578,7 +1594,7 @@ export function Workspace(_props?: WorkspaceProps) {
                             setIsAddingCarouselByLink(false);
                           }
                         }}
-                        disabled={isAddingCarouselByLink || !carouselLinkUrl.trim()}
+                        disabled={isAddingCarouselByLink || !carouselLinkUrl.trim() || !canAfford(getTokenCost('add_carousel'))}
                         className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-600 hover:bg-slate-700 disabled:bg-slate-200 disabled:text-slate-400 text-white text-sm font-medium transition-colors shrink-0"
                       >
                         {isAddingCarouselByLink ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
@@ -1750,7 +1766,7 @@ export function Workspace(_props?: WorkspaceProps) {
           <div className="bg-white rounded-t-3xl md:rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] md:max-h-[85vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200 safe-bottom">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-slate-100">
-              <h2 className="text-xl font-semibold text-slate-800">Настройка папок</h2>
+              <h2 className="text-xl font-semibold text-slate-800">{contentSection === 'carousels' ? 'Настройка папок каруселей' : 'Настройка папок'}</h2>
               <button
                 onClick={() => {
                   setShowFolderSettings(false);
@@ -1795,7 +1811,10 @@ export function Workspace(_props?: WorkspaceProps) {
                 </label>
                 
                 <div className="max-h-[40vh] overflow-y-auto overflow-x-hidden pr-1 -mr-1 space-y-2">
-                {(currentProject?.folders?.slice().sort((a, b) => a.order - b.order) || []).map((folder, index) => (
+                {(contentSection === 'carousels'
+                  ? (currentProjectId ? carouselFoldersList(currentProjectId).slice().sort((a, b) => a.order - b.order) : [])
+                  : (currentProject?.folders?.slice().sort((a, b) => a.order - b.order) || [])
+                ).map((folder, index) => (
                   <div
                     key={folder.id}
                     draggable

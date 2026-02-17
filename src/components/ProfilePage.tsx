@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useTokenBalance } from '../contexts/TokenBalanceContext';
 import { getDisplayName, getEffectiveDisplayName, setDisplayName } from './Dashboard';
+import { CoinBadge } from './ui/CoinBadge';
 import { useSearchHistory } from '../hooks/useSearchHistory';
 import { useFlowStore } from '../stores/flowStore';
 import { useTrackedAccounts } from '../hooks/useTrackedAccounts';
@@ -25,6 +27,7 @@ import { cn } from '../utils/cn';
 
 export function ProfilePage() {
   const { user, logout } = useAuth();
+  const { balance } = useTokenBalance();
   const { historyEntries } = useSearchHistory();
   const { incomingVideos } = useFlowStore();
   const { 
@@ -106,9 +109,16 @@ export function ProfilePage() {
               <p className="text-sm text-slate-500 mt-0.5">@{user?.telegram_username}</p>
             </button>
           )}
-          <div className="flex items-center gap-1 mt-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span className="text-sm text-emerald-600">Подключен к Telegram</span>
+          <div className="flex items-center gap-3 mt-2 flex-wrap justify-center">
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className="text-sm text-emerald-600">Подключен к Telegram</span>
+            </div>
+            <span className="text-slate-300">·</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm text-slate-500">Баланс</span>
+              <CoinBadge coins={balance} size="md" />
+            </div>
           </div>
         </div>
 
