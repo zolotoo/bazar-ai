@@ -13,7 +13,7 @@ interface TokenBalanceDisplayProps {
 }
 
 /**
- * Баланс токенов в стиле приложения: glass, анимация списания.
+ * Баланс токенов в стиле iOS 26: frosted glass, liquid glass pill, анимация списания.
  */
 export function TokenBalanceDisplay({ variant = 'compact', className }: TokenBalanceDisplayProps) {
   const { balance, loading, lastDeduct } = useTokenBalance();
@@ -27,11 +27,11 @@ export function TokenBalanceDisplay({ variant = 'compact', className }: TokenBal
         layout
         className={cn(
           'inline-flex items-center font-semibold tabular-nums',
-          'backdrop-blur-[20px] backdrop-saturate-[180%]',
-          'border border-white/[0.35] shadow-[0_2px_8px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.4)]',
+          'bg-white/70 backdrop-blur-glass-xl backdrop-saturate-[180%]',
+          'border border-white/50 shadow-glass',
           isCompact
-            ? 'px-2.5 py-1.5 gap-1.5 rounded-xl bg-glass-white/80 text-slate-700'
-            : 'px-4 py-2.5 gap-2 rounded-2xl bg-glass-white/80 text-slate-800'
+            ? 'px-3 py-2 gap-2 rounded-pill text-slate-700 min-h-[40px]'
+            : 'px-5 py-3 gap-2.5 rounded-[1.25rem] text-slate-800 min-h-[52px]'
         )}
         initial={false}
         animate={{
@@ -39,12 +39,12 @@ export function TokenBalanceDisplay({ variant = 'compact', className }: TokenBal
           transition: lastDeduct ? { duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] } : undefined,
         }}
       >
-        {/* Иконка коина */}
+        {/* Иконка коина — стеклянный круг */}
         <span
           className={cn(
             'flex items-center justify-center rounded-full overflow-hidden flex-shrink-0',
             'bg-gradient-to-br from-slate-400 via-slate-500 to-slate-600',
-            'shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_1px_3px_rgba(0,0,0,0.15)] border border-slate-400/50',
+            'shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_1px_4px_rgba(0,0,0,0.12)] border border-white/30',
             isCompact ? 'w-5 h-5' : 'w-7 h-7'
           )}
         >
@@ -88,7 +88,7 @@ export function TokenBalanceDisplay({ variant = 'compact', className }: TokenBal
         )}
       </motion.div>
 
-      {/* Анимация списания: "-N" улетает вверх */}
+      {/* Анимация списания: "-N" в стиле iOS 26 glass */}
       <AnimatePresence>
         {lastDeduct > 0 && (
           <motion.span
@@ -99,10 +99,10 @@ export function TokenBalanceDisplay({ variant = 'compact', className }: TokenBal
             transition={{ type: 'spring', stiffness: 400, damping: 28, mass: 0.6 }}
             className={cn(
               'absolute bottom-full left-1/2 -translate-x-1/2 mb-1 whitespace-nowrap',
-              'px-2 py-0.5 rounded-lg font-bold tabular-nums text-xs',
-              'bg-accent-negative/95 text-white',
-              'backdrop-blur-sm border border-white/25',
-              'shadow-[0_2px_8px_rgba(0,0,0,0.25)]'
+              'px-2.5 py-1 rounded-pill font-bold tabular-nums text-xs',
+              'bg-accent-negative/90 text-white',
+              'backdrop-blur-glass border border-white/30',
+              'shadow-[0_4px_16px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.2)]'
             )}
           >
             −{lastDeduct}

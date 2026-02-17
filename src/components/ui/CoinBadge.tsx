@@ -14,8 +14,7 @@ interface CoinBadgeProps {
 }
 
 /**
- * Бейдж коинов — iOS 26 / glass стиль приложения.
- * Стеклянный фон, монетка Riri, анимация при смене числа.
+ * Бейдж коинов — iOS 26 liquid glass: frosted glass, pill, shadow-glass.
  */
 export function CoinBadge({ coins, className, size = 'sm', variant = 'default' }: CoinBadgeProps) {
   const [imgError, setImgError] = useState(false);
@@ -23,8 +22,8 @@ export function CoinBadge({ coins, className, size = 'sm', variant = 'default' }
   if (coins < 0) return null;
 
   const sizeClasses = {
-    sm: 'px-2 py-1 gap-1 rounded-xl',
-    md: 'px-2.5 py-1.5 gap-1.5 rounded-xl',
+    sm: 'px-2.5 py-1.5 gap-1.5 rounded-pill min-h-[32px]',
+    md: 'px-3 py-2 gap-2 rounded-pill min-h-[40px]',
   };
 
   const iconSizes = {
@@ -37,11 +36,11 @@ export function CoinBadge({ coins, className, size = 'sm', variant = 'default' }
       layout
       className={cn(
         'inline-flex items-center font-semibold tabular-nums',
-        'backdrop-blur-[20px] backdrop-saturate-[180%]',
-        'border shadow-[0_2px_8px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.35)]',
+        'backdrop-blur-glass backdrop-saturate-[180%]',
+        'border shadow-glass',
         sizeClasses[size],
         variant === 'default' && [
-          'bg-glass-white/80 border-white/[0.35]',
+          'bg-white/70 border-white/50',
           'text-slate-700',
         ],
         variant === 'dark' && [
@@ -57,8 +56,8 @@ export function CoinBadge({ coins, className, size = 'sm', variant = 'default' }
         className={cn(
           'flex items-center justify-center rounded-full overflow-hidden flex-shrink-0',
           variant === 'dark'
-            ? 'bg-white/20'
-            : 'bg-gradient-to-br from-slate-400 via-slate-500 to-slate-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_1px_3px_rgba(0,0,0,0.15)] border border-slate-400/50',
+            ? 'bg-white/25 border border-white/20'
+            : 'bg-gradient-to-br from-slate-400 via-slate-500 to-slate-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_1px_4px_rgba(0,0,0,0.12)] border border-white/30',
           iconSizes[size]
         )}
       >
