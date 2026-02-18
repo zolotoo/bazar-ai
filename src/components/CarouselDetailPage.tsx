@@ -616,21 +616,27 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
   };
 
   const handleSaveLinks = async () => {
-    if (!currentProject?.id) return;
+    if (!currentProject?.id) {
+      toast.error('Выберите проект для сохранения ссылок');
+      return;
+    }
     setIsSavingLinks(true);
     await updateProject(currentProject.id, { linksTemplate: links.map(({ id, label }) => ({ id, label })) });
     const ok = await updateCarouselLinks(carousel.id, links.map(({ id, value }) => ({ templateId: id, value })));
     setIsSavingLinks(false);
-    if (ok) toast.success('Ссылки сохранены'); else toast.error('Ошибка');
+    if (ok) toast.success('Ссылки сохранены'); else toast.error('Ошибка сохранения ссылок');
   };
 
   const handleSaveResponsible = async () => {
-    if (!currentProject?.id) return;
+    if (!currentProject?.id) {
+      toast.error('Выберите проект для сохранения ответственных');
+      return;
+    }
     setIsSavingResponsible(true);
     await updateProject(currentProject.id, { responsiblesTemplate: responsibles.map(({ id, label }) => ({ id, label })) });
     const ok = await updateCarouselResponsibles(carousel.id, responsibles.map(({ id, value }) => ({ templateId: id, value })));
     setIsSavingResponsible(false);
-    if (ok) toast.success('Ответственные сохранены'); else toast.error('Ошибка');
+    if (ok) toast.success('Ответственные сохранены'); else toast.error('Ошибка сохранения ответственных');
   };
 
   const addLinkRow = () => setLinks(prev => [...prev, { id: `link-${Date.now()}`, label: '', value: '' }]);

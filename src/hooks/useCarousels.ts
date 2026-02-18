@@ -279,28 +279,36 @@ export function useCarousels() {
   const updateCarouselLinks = useCallback(async (id: string, items: { templateId: string; value: string }[]) => {
     try {
       const payload = items.map(({ templateId, value }) => ({ templateId, value: value || '' }));
-      const { error } = await supabase.from('saved_carousels').update({ links: payload }).eq('id', id).select('id').maybeSingle();
+      let query = supabase.from('saved_carousels').update({ links: payload }).eq('id', id);
+      if (currentProjectId) query = query.eq('project_id', currentProjectId);
+      else query = query.eq('user_id', getUserId());
+      const { data, error } = await query.select('id').maybeSingle();
       if (error) return false;
+      if (!data) return false;
       setCarousels(prev => prev.map(c => c.id === id ? { ...c, links: payload } : c));
       return true;
     } catch (err) {
       console.error('updateCarouselLinks:', err);
       return false;
     }
-  }, []);
+  }, [currentProjectId, getUserId]);
 
   const updateCarouselResponsibles = useCallback(async (id: string, items: { templateId: string; value: string }[]) => {
     try {
       const payload = items.map(({ templateId, value }) => ({ templateId, value: value || '' }));
-      const { error } = await supabase.from('saved_carousels').update({ responsibles: payload }).eq('id', id).select('id').maybeSingle();
+      let query = supabase.from('saved_carousels').update({ responsibles: payload }).eq('id', id);
+      if (currentProjectId) query = query.eq('project_id', currentProjectId);
+      else query = query.eq('user_id', getUserId());
+      const { data, error } = await query.select('id').maybeSingle();
       if (error) return false;
+      if (!data) return false;
       setCarousels(prev => prev.map(c => c.id === id ? { ...c, responsibles: payload } : c));
       return true;
     } catch (err) {
       console.error('updateCarouselResponsibles:', err);
       return false;
     }
-  }, []);
+  }, [currentProjectId, getUserId]);
 
   const updateCarouselSlideUrls = useCallback(async (id: string, slideUrls: string[], thumbnailUrl?: string) => {
     try {
