@@ -405,31 +405,39 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
         return;
       }
 
-      setDirectVideoUrl(videoUrl);
+      let finalVideoUrl = videoUrl;
+      const shortcode = extractShortcode(video.url || '');
+      if (shortcode) {
+        try {
+          const saveRes = await fetch('/api/save-media', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'video', shortcode, url: videoUrl }),
+          });
+          const saveData = await saveRes.json();
+          if (saveData.success && saveData.storageUrl) {
+            finalVideoUrl = saveData.storageUrl;
+            if (onRefreshData) onRefreshData();
+          }
+        } catch {
+          // Supabase upload failed — fall back to CDN URL with proxy
+        }
+      }
+
+      setDirectVideoUrl(finalVideoUrl);
       setShowVideo(true);
 
       await supabase
         .from('saved_videos')
-        .update({ download_url: videoUrl, transcript_status: 'downloading' })
+        .update({
+          download_url: videoUrl,
+          ...(finalVideoUrl !== videoUrl && { storage_video_url: finalVideoUrl }),
+          transcript_status: 'downloading',
+        })
         .eq('id', video.id);
 
-      // Сохраняем видео в Supabase в фоне — следующий просмотр без Vercel proxy
-      const shortcode = extractShortcode(video.url || '');
-      if (shortcode) {
-        fetch('/api/save-media', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'video', shortcode, url: videoUrl }),
-        })
-          .then((r) => r.json())
-          .then((d) => {
-            if (d.success && onRefreshData) onRefreshData();
-          })
-          .catch(() => {});
-      }
-
       await deduct(loadCost);
-      await runTranscription(videoUrl, transcribeCost);
+      await runTranscription(finalVideoUrl, transcribeCost);
     } catch (err) {
       console.error('Load/transcribe error:', err);
       setTranscriptStatus('error');

@@ -9,7 +9,7 @@
  */
 
 import { supabase } from '../utils/supabase';
-import { downloadAndTranscribe, checkTranscriptionStatus, startTranscription } from './transcriptionService';
+import { getVideoDownloadUrl, checkTranscriptionStatus, startTranscription } from './transcriptionService';
 import { toast } from 'sonner';
 
 export interface GlobalVideo {
@@ -194,23 +194,45 @@ export async function startGlobalTranscription(
     
     await updateStatus('downloading');
     
-    // 2. Скачиваем и запускаем транскрибацию
-    const result = await downloadAndTranscribe(instagramUrl);
-    
-    if (!result.success) {
-      console.error('[GlobalVideo] Download failed:', result.error);
+    const videoUrl = await getVideoDownloadUrl(instagramUrl);
+    if (!videoUrl) {
+      console.error('[GlobalVideo] Download failed for:', instagramUrl);
       await updateStatus('error');
-      toast.error('Ошибка транскрибации', { description: result.error || 'Не удалось скачать видео' });
+      toast.error('Ошибка транскрибации', { description: 'Не удалось скачать видео' });
       return;
     }
-    
-    // 3. Сохраняем данные о скачивании
+
+    let finalVideoUrl = videoUrl;
+    if (shortcode) {
+      try {
+        const saveRes = await fetch('/api/save-media', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'video', shortcode, url: videoUrl }),
+        });
+        const saveData = await saveRes.json();
+        if (saveData.success && saveData.storageUrl) {
+          finalVideoUrl = saveData.storageUrl;
+        }
+      } catch {
+        // Supabase upload failed — transcribe.js will proxy as fallback
+      }
+    }
+
+    const transcriptionResult = await startTranscription(finalVideoUrl);
+    if (!transcriptionResult) {
+      await updateStatus('error');
+      toast.error('Ошибка транскрибации', { description: 'Не удалось запустить транскрибацию' });
+      return;
+    }
+
     if (globalVideoId) {
       await supabase
         .from('videos')
         .update({
-          download_url: result.videoUrl,
-          transcript_id: result.transcriptId,
+          download_url: videoUrl,
+          ...(finalVideoUrl !== videoUrl && { storage_video_url: finalVideoUrl }),
+          transcript_id: transcriptionResult.transcriptId,
           transcript_status: 'processing',
         })
         .eq('id', globalVideoId);
@@ -219,17 +241,17 @@ export async function startGlobalTranscription(
     await supabase
       .from('saved_videos')
       .update({
-        download_url: result.videoUrl,
-        transcript_id: result.transcriptId,
+        download_url: videoUrl,
+        ...(finalVideoUrl !== videoUrl && { storage_video_url: finalVideoUrl }),
+        transcript_id: transcriptionResult.transcriptId,
         transcript_status: 'processing',
       })
       .eq('id', userVideoId);
     
-    console.log('[GlobalVideo] Transcription started, id:', result.transcriptId);
+    console.log('[GlobalVideo] Transcription started, id:', transcriptionResult.transcriptId);
     
-    // 4. Запускаем polling для проверки статуса
-    if (result.transcriptId) {
-      pollGlobalTranscriptionStatus(userVideoId, globalVideoId, shortcode, result.transcriptId);
+    if (transcriptionResult.transcriptId) {
+      pollGlobalTranscriptionStatus(userVideoId, globalVideoId, shortcode, transcriptionResult.transcriptId);
     }
     
   } catch (err) {
