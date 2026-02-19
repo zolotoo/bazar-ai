@@ -665,7 +665,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={onBack}
-            className="p-2 -m-2 rounded-xl hover:bg-slate-100 text-slate-600 touch-manipulation"
+            className="p-2 -m-2 min-w-[44px] min-h-[44px] rounded-xl hover:bg-slate-100 text-slate-600 touch-manipulation flex items-center justify-center active:scale-95"
             aria-label="Назад"
           >
             <ChevronLeft className="w-6 h-6" />
@@ -698,7 +698,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                       }}
                       disabled={isInRadar}
                       className={cn(
-                        "flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-medium transition-colors",
+                        "flex items-center gap-1.5 px-2.5 py-1 min-h-[32px] rounded-lg text-[10px] font-medium transition-colors touch-manipulation",
                         isInRadar
                           ? "bg-emerald-100 text-emerald-700 cursor-default"
                           : "bg-slate-100 hover:bg-slate-200 text-slate-700"
@@ -717,14 +717,14 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
           <button
             type="button"
             onClick={() => setShowDescriptionModal(true)}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium"
+            className="flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium touch-manipulation"
             title="Описание поста"
           >
             <BookOpen className="w-4 h-4" />
             Описание
           </button>
           {onRefreshData && (
-            <button onClick={handleRefreshData} className="p-2 rounded-xl hover:bg-slate-100 text-slate-600">
+            <button onClick={handleRefreshData} className="p-2 min-w-[44px] min-h-[44px] rounded-xl hover:bg-slate-100 text-slate-600 touch-manipulation flex items-center justify-center">
               Обновить
             </button>
           )}
@@ -732,7 +732,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
             href={carousel.url || `https://www.instagram.com/p/${carousel.shortcode}/`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium"
+            className="flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium touch-manipulation"
           >
             <ExternalLink className="w-4 h-4" />
             Instagram
@@ -883,8 +883,8 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-400">Ссылки</span>
               <div className="flex gap-1">
-                <button type="button" onClick={addLinkRow} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"><Plus className="w-3.5 h-3.5" /></button>
-                <button onClick={handleSaveLinks} disabled={isSavingLinks} className="px-2 py-1 rounded-lg bg-emerald-500 text-white text-xs disabled:opacity-50">
+                <button type="button" onClick={addLinkRow} className="p-2 min-w-[44px] min-h-[44px] rounded-lg hover:bg-slate-100 text-slate-500 flex items-center justify-center touch-manipulation"><Plus className="w-4 h-4" /></button>
+                <button onClick={handleSaveLinks} disabled={isSavingLinks} className="px-3 py-2 min-h-[44px] rounded-lg bg-emerald-500 text-white text-xs disabled:opacity-50 flex items-center justify-center touch-manipulation">
                   {isSavingLinks ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                 </button>
               </div>
@@ -893,7 +893,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
               <div key={row.id} className="flex gap-2 items-center">
                 <input value={row.label} onChange={e => updateLinkRow(row.id, 'label', e.target.value)} placeholder="Название" className="w-20 px-2 py-1 rounded border text-xs" />
                 <input value={row.value} onChange={e => updateLinkRow(row.id, 'value', e.target.value)} placeholder="URL" className="flex-1 min-w-0 px-2 py-1 rounded border text-xs" />
-                <button type="button" onClick={() => removeLinkRow(row.id)} disabled={links.length <= 1} className="p-1 rounded hover:bg-red-100 text-slate-400"><Trash2 className="w-3.5 h-3.5" /></button>
+                <button type="button" onClick={() => removeLinkRow(row.id)} disabled={links.length <= 1} className="p-2 min-w-[44px] min-h-[44px] rounded-lg hover:bg-red-100 text-slate-400 flex items-center justify-center touch-manipulation"><Trash2 className="w-4 h-4" /></button>
               </div>
             ))}
           </div>
@@ -902,8 +902,8 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-400">Ответственные</span>
               <div className="flex gap-1">
-                <button type="button" onClick={addResponsibleRow} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"><Plus className="w-3.5 h-3.5" /></button>
-                <button onClick={handleSaveResponsible} disabled={isSavingResponsible} className="px-2 py-1 rounded-lg bg-emerald-500 text-white text-xs disabled:opacity-50">
+                <button type="button" onClick={addResponsibleRow} className="p-2 min-w-[44px] min-h-[44px] rounded-lg hover:bg-slate-100 text-slate-500 flex items-center justify-center touch-manipulation"><Plus className="w-4 h-4" /></button>
+                <button onClick={handleSaveResponsible} disabled={isSavingResponsible} className="px-3 py-2 min-h-[44px] rounded-lg bg-emerald-500 text-white text-xs disabled:opacity-50 flex items-center justify-center touch-manipulation">
                   {isSavingResponsible ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                 </button>
               </div>
@@ -912,7 +912,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
               <div key={row.id} className="flex gap-2 items-center">
                 <input value={row.label} onChange={e => updateResponsibleRow(row.id, 'label', e.target.value)} placeholder="Роль" className="w-24 px-2 py-1 rounded border text-xs" />
                 <input value={row.value} onChange={e => updateResponsibleRow(row.id, 'value', e.target.value)} placeholder="Имя" className="flex-1 min-w-0 px-2 py-1 rounded border text-xs" />
-                <button type="button" onClick={() => removeResponsibleRow(row.id)} disabled={responsibles.length <= 1} className="p-1 rounded hover:bg-red-100 text-slate-400"><Trash2 className="w-3.5 h-3.5" /></button>
+                <button type="button" onClick={() => removeResponsibleRow(row.id)} disabled={responsibles.length <= 1} className="p-2 min-w-[44px] min-h-[44px] rounded-lg hover:bg-red-100 text-slate-400 flex items-center justify-center touch-manipulation"><Trash2 className="w-4 h-4" /></button>
               </div>
             ))}
           </div>

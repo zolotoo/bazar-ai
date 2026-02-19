@@ -128,10 +128,10 @@ function CreateProjectModal({ onSave, onClose }: CreateProjectModalProps) {
                   type="button"
                   onClick={() => setColor(c)}
                   className={cn(
-                    "w-10 h-10 rounded-xl transition-all",
+                    "w-11 h-11 rounded-xl transition-all touch-manipulation",
                     color === c 
                       ? "ring-2 ring-offset-2 ring-slate-400 scale-110" 
-                      : "hover:scale-105"
+                      : "hover:scale-105 active:scale-95"
                   )}
                   style={{ backgroundColor: c }}
                 />
@@ -269,10 +269,10 @@ function EditProjectModal({ project, onSave, onDelete, onClose }: EditProjectMod
                   type="button"
                   onClick={() => setColor(c)}
                   className={cn(
-                    "w-10 h-10 rounded-xl transition-all",
+                    "w-11 h-11 rounded-xl transition-all touch-manipulation",
                     color === c 
                       ? "ring-2 ring-offset-2 ring-slate-400 scale-110" 
-                      : "hover:scale-105"
+                      : "hover:scale-105 active:scale-95"
                   )}
                   style={{ backgroundColor: c }}
                 />
