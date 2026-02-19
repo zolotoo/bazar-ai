@@ -1386,15 +1386,15 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                   <button
                     type="button"
                     onClick={addLinkRow}
-                    className="p-1.5 rounded-lg hover:bg-slate-200/80 text-slate-500 hover:text-slate-700 transition-colors"
+                    className="p-2 min-w-[44px] min-h-[44px] rounded-lg hover:bg-slate-200/80 text-slate-500 hover:text-slate-700 transition-colors flex items-center justify-center touch-manipulation"
                     title="Добавить пункт"
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    <Plus className="w-4 h-4" />
                   </button>
                   <button
                     onClick={handleSaveLinks}
                     disabled={isSavingLinks}
-                    className="px-2 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium transition-all flex items-center gap-1 disabled:opacity-50"
+                    className="px-3 py-2 min-h-[44px] rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium transition-all flex items-center gap-1 disabled:opacity-50 touch-manipulation"
                   >
                     {isSavingLinks ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                   </button>
@@ -1421,10 +1421,10 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                       type="button"
                       onClick={() => removeLinkRow(row.id)}
                       disabled={links.length <= 1}
-                      className="p-1.5 rounded-lg hover:bg-red-100 text-slate-400 hover:text-red-600 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                      className="p-2 min-w-[44px] min-h-[44px] rounded-lg hover:bg-red-100 text-slate-400 hover:text-red-600 transition-colors disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center touch-manipulation"
                       title="Удалить пункт"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 ))}
@@ -1439,15 +1439,15 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                   <button
                     type="button"
                     onClick={addResponsibleRow}
-                    className="p-1.5 rounded-lg hover:bg-slate-200/80 text-slate-500 hover:text-slate-700 transition-colors"
+                    className="p-2 min-w-[44px] min-h-[44px] rounded-lg hover:bg-slate-200/80 text-slate-500 hover:text-slate-700 transition-colors flex items-center justify-center touch-manipulation"
                     title="Добавить пункт"
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    <Plus className="w-4 h-4" />
                   </button>
                   <button
                     onClick={handleSaveResponsible}
                     disabled={isSavingResponsible}
-                    className="px-2 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium transition-all flex items-center gap-1 disabled:opacity-50"
+                    className="px-3 py-2 min-h-[44px] rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium transition-all flex items-center gap-1 disabled:opacity-50 touch-manipulation"
                   >
                     {isSavingResponsible ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                   </button>
@@ -1474,10 +1474,10 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                       type="button"
                       onClick={() => removeResponsibleRow(row.id)}
                       disabled={responsibles.length <= 1}
-                      className="p-1.5 rounded-lg hover:bg-red-100 text-slate-400 hover:text-red-600 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                      className="p-2 min-w-[44px] min-h-[44px] rounded-lg hover:bg-red-100 text-slate-400 hover:text-red-600 transition-colors disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center touch-manipulation"
                       title="Удалить пункт"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 ))}

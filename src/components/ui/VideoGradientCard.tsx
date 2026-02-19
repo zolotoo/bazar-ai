@@ -88,23 +88,14 @@ export const VideoGradientCard = ({
     setImgLoaded(false);
   }, [thumbnailUrl]);
 
-  // Если в БД сохранился битый wsrv.nl URL — сразу триггерим refresh
+  // Если в БД сохранился битый wsrv.nl URL — сразу триггерим refresh (без тоста)
   const hasWsrv = thumbnailUrl?.includes('wsrv.nl');
   useEffect(() => {
     if (hasWsrv && onThumbnailError && videoId && shortcode) {
       setIsRefreshingThumb(true);
-      Promise.resolve(onThumbnailError(videoId, shortcode)).finally(() => setIsRefreshingThumb(false));
-    }
-  }, [hasWsrv, onThumbnailError, videoId, shortcode]);
-
-  // Старые видео с пустым thumbnail_url — проактивно подгружаем (onError не сработает для placeholder)
-  const hasEmptyThumb = !thumbnailUrl?.trim();
-  useEffect(() => {
-    if (hasEmptyThumb && onThumbnailError && videoId && shortcode) {
-      setIsRefreshingThumb(true);
       Promise.resolve(onThumbnailError(videoId, shortcode, true)).finally(() => setIsRefreshingThumb(false));
     }
-  }, [hasEmptyThumb, onThumbnailError, videoId, shortcode]);
+  }, [hasWsrv, onThumbnailError, videoId, shortcode]);
 
   return (
     <div
@@ -209,13 +200,12 @@ export const VideoGradientCard = ({
               {/* Viral badge */}
               <motion.div
                 className={cn(
-                  "px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 md:gap-1.5",
+                  "px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-pill md:backdrop-blur-[20px] md:backdrop-saturate-[180%] flex items-center gap-1 md:gap-1.5",
                   "border border-white/20",
-                  "shadow-[0_2px_8px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.25)]",
-                  viralCoef > 10 ? "bg-accent-positive/90 text-white" : 
-                  viralCoef > 5 ? "bg-amber-400/80 text-slate-800" :
-                  viralCoef > 0 ? "bg-white/80 text-slate-700" :
-                  "bg-black/40 text-white/80"
+                  viralCoef > 10 ? "bg-accent-positive text-white" : 
+                  viralCoef > 5 ? "bg-amber-500 text-white" :
+                  viralCoef > 0 ? "bg-white/90 text-slate-700" :
+                  "bg-black/50 text-white/90"
                 )}
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -229,10 +219,9 @@ export const VideoGradientCard = ({
               {viralMultiplier !== null && viralMultiplier !== undefined && (
                 <motion.div
                   className={cn(
-                    "px-1.5 md:px-2 py-0.5 md:py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-0.5 md:gap-1",
+                    "px-1.5 md:px-2 py-0.5 md:py-1 rounded-pill md:backdrop-blur-[20px] md:backdrop-saturate-[180%] flex items-center gap-0.5 md:gap-1",
                     "border border-white/20",
-                    "shadow-[0_2px_8px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.25)]",
-                    viralMultiplier >= 10 ? "bg-accent-negative/90 text-white" :
+                    viralMultiplier >= 10 ? "bg-accent-negative text-white" :
                     viralMultiplier >= 5 ? "bg-amber-400/80 text-slate-800" :
                     viralMultiplier >= 3 ? "bg-accent-positive/80 text-white" :
                     viralMultiplier >= 2 ? "bg-accent-positive/70 text-white" :
@@ -257,8 +246,8 @@ export const VideoGradientCard = ({
                 onClick={(e) => { e.stopPropagation(); onDescriptionClick(); }}
                 title="Описание"
                 className={cn(
-                  "p-2 rounded-full backdrop-blur-[20px] border border-white/20 shadow-[0_2px_8px_rgba(0,0,0,0.08)] flex items-center justify-center",
-                  "bg-black/30 text-white hover:bg-white/20 transition-colors touch-manipulation",
+                  "p-2 rounded-full md:backdrop-blur-[20px] border border-white/20 flex items-center justify-center",
+                  "bg-black/50 md:bg-black/30 text-white hover:bg-white/20 transition-colors touch-manipulation",
                   "max-md:!opacity-100"
                 )}
                 initial={{ opacity: 0 }}
@@ -309,7 +298,7 @@ export const VideoGradientCard = ({
           <div>
             {/* Username as iOS 26 button - маленький и белый */}
             <motion.div
-              className="px-2 py-0.5 md:px-2.5 md:py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20 mb-2 inline-flex max-w-full"
+              className="px-2 py-0.5 md:px-2.5 md:py-1 rounded-pill md:backdrop-blur-[20px] md:backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 bg-black/40 md:bg-white/20 mb-2 inline-flex max-w-full"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.15 }}
@@ -328,7 +317,7 @@ export const VideoGradientCard = ({
             <div className="flex items-center gap-1.5 md:gap-2 mb-2 flex-wrap">
               {viewCount !== undefined && (
                 <motion.div
-                  className="px-2 py-1 md:px-2.5 md:py-1.5 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
+                  className="px-2 py-1 md:px-2.5 md:py-1.5 rounded-pill md:backdrop-blur-[20px] md:backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 bg-black/40 md:bg-white/20"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.2 }}
@@ -339,7 +328,7 @@ export const VideoGradientCard = ({
               )}
               {likeCount !== undefined && (
                 <motion.div
-                  className="px-2 py-1 md:px-2.5 md:py-1.5 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
+                  className="px-2 py-1 md:px-2.5 md:py-1.5 rounded-pill md:backdrop-blur-[20px] md:backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 bg-black/40 md:bg-white/20"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.25 }}
@@ -350,7 +339,7 @@ export const VideoGradientCard = ({
               )}
               {commentCount !== undefined && (
                 <motion.div
-                  className="px-2 py-1 md:px-2.5 md:py-1.5 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
+                  className="px-2 py-1 md:px-2.5 md:py-1.5 rounded-pill md:backdrop-blur-[20px] md:backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 bg-black/40 md:bg-white/20"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.3 }}
@@ -361,7 +350,7 @@ export const VideoGradientCard = ({
               )}
               {date && (
                 <motion.div
-                  className="px-2.5 py-1.5 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1.5 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20"
+                  className="px-2.5 py-1.5 rounded-pill md:backdrop-blur-[20px] md:backdrop-saturate-[180%] flex items-center gap-1.5 border border-white/30 bg-black/40 md:bg-white/20"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.35 }}
@@ -457,7 +446,7 @@ export const VideoGradientCard = ({
                   e.stopPropagation();
                   onAdd();
                 }}
-                className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 hover:border-white/30 transition-all"
+                className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-white/10 md:backdrop-blur-md border border-white/20 hover:bg-white/20 hover:border-white/30 transition-all min-h-[44px] touch-manipulation"
                 whileTap={{ scale: 0.98 }}
               >
                 <span className="text-sm font-semibold">Добавить</span>
