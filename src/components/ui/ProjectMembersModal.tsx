@@ -17,7 +17,7 @@ export function ProjectMembersModal({ projectId, isOpen, onClose }: ProjectMembe
   const { members, loading, inviteMember, removeMember, updateMemberRole } = useProjectMembers(projectId);
   const { user } = useAuth();
   const { refetch: refetchProjects, projects, selectProject } = useProjectContext();
-  const userId = user?.telegram_username ? `tg-${user.telegram_username}` : null;
+  const userId = user?.id || null;
   const currentProject = projects.find((p: any) => p.id === projectId);
   const isOwner = currentProject && userId && (currentProject.owner_id === userId || (currentProject as any).user_id === userId);
   const [inviteUsername, setInviteUsername] = useState('');

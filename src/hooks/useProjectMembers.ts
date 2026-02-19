@@ -47,7 +47,7 @@ export function useProjectMembers(projectId: string | null) {
   const [error, setError] = useState<Error | null>(null);
   const { user } = useAuth();
 
-  const userId = user?.telegram_username ? `tg-${user.telegram_username}` : null;
+  const userId = user?.id || null;
 
   // Загрузка участников проекта
   const fetchMembers = useCallback(async () => {

@@ -103,10 +103,7 @@ export function useProjects() {
   const { user } = useAuth();
 
   const getUserId = useCallback((): string => {
-    if (user?.telegram_username) {
-      return `tg-${user.telegram_username}`;
-    }
-    return 'anonymous';
+    return user?.id || 'anonymous';
   }, [user]);
 
   // Загрузка проектов (включая общие)

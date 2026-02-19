@@ -190,7 +190,7 @@ export function SearchPanel({ isOpen, onClose, initialTab = DEFAULT_TAB, current
   const { balance, canAfford, deduct } = useTokenBalance();
   
   // Получаем userId для radar (формат должен совпадать с useInboxVideos)
-  const radarUserId = user?.telegram_username ? `tg-${user.telegram_username}` : 'anonymous';
+  const radarUserId = user?.id || 'anonymous';
   
   const { 
     profiles: radarProfiles, 
@@ -994,7 +994,7 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
             {/* Close button — iOS 26 glass */}
             <motion.button
               onClick={handleClose}
-              className="absolute top-4 right-4 p-2.5 rounded-card-xl bg-glass-white/80 backdrop-blur-glass border border-white/[0.35] text-slate-500 hover:text-slate-700 hover:bg-slate-100/80 transition-all z-20 shadow-glass-sm"
+              className="absolute top-4 right-4 p-2.5 min-w-[44px] min-h-[44px] rounded-card-xl bg-glass-white/80 backdrop-blur-glass border border-white/[0.35] text-slate-500 hover:text-slate-700 hover:bg-slate-100/80 transition-all z-20 shadow-glass-sm flex items-center justify-center touch-manipulation"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -1005,7 +1005,7 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
             {viewMode === 'results' && (
               <motion.button
                 onClick={backToCarousel}
-                className="absolute top-4 left-4 px-4 py-2 rounded-card-xl bg-glass-white/80 backdrop-blur-glass border border-white/[0.35] text-slate-600 hover:text-slate-800 hover:bg-slate-100/80 transition-all z-20 flex items-center gap-2 text-sm font-medium shadow-glass-sm"
+                className="absolute top-4 left-4 px-4 py-2 min-h-[44px] rounded-card-xl bg-glass-white/80 backdrop-blur-glass border border-white/[0.35] text-slate-600 hover:text-slate-800 hover:bg-slate-100/80 transition-all z-20 flex items-center gap-2 text-sm font-medium shadow-glass-sm touch-manipulation"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >

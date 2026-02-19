@@ -194,7 +194,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   const [isCalculatingViral, setIsCalculatingViral] = useState(false);
   const { currentProject, currentProjectId, updateProject, updateProjectStyle, addProjectStyle, refetch: refetchProjects } = useProjectContext();
   const { user } = useAuth();
-  const radarUserId = user?.telegram_username ? `tg-${user.telegram_username}` : 'anonymous';
+  const radarUserId = user?.id || 'anonymous';
   const { profiles: radarProfiles, addProfile: addRadarProfile } = useRadar(currentProjectId, radarUserId);
 
   // Стиль сценария проекта: обучение по примерам + генерация по стилю + просмотр/редактирование промта

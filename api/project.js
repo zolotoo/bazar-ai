@@ -11,13 +11,34 @@ async function sendInviteTelegramNotification(supabase, projectName, inviteeUser
 
   const username = inviteeUserId.replace(/^tg-/, '');
   try {
-    const updatesRes = await fetch(`https://api.telegram.org/bot${botToken}/getUpdates?limit=100`);
-    const updatesData = await updatesRes.json();
-    let chatId = null;
-    if (updatesData.ok && updatesData.result) {
-      for (const u of updatesData.result) {
-        const from = u.message?.from;
-        if (from?.username?.toLowerCase() === username) { chatId = from.id; break; }
+    // Use persistent telegram_chats table instead of ephemeral getUpdates
+    const { data: chatRow } = await supabase
+      .from('telegram_chats')
+      .select('chat_id')
+      .eq('username', username)
+      .maybeSingle();
+
+    let chatId = chatRow?.chat_id || null;
+
+    // Fallback to getUpdates if not in DB yet
+    if (!chatId) {
+      const updatesRes = await fetch(`https://api.telegram.org/bot${botToken}/getUpdates?limit=100`);
+      const updatesData = await updatesRes.json();
+      if (updatesData.ok && updatesData.result) {
+        for (const u of updatesData.result) {
+          const from = u.message?.from;
+          if (from?.username?.toLowerCase() === username) {
+            chatId = from.id;
+            // Persist for future use
+            await supabase.from('telegram_chats').upsert({
+              username, chat_id: chatId,
+              first_name: from.first_name || null,
+              last_name: from.last_name || null,
+              updated_at: new Date().toISOString(),
+            }, { onConflict: 'username' });
+            break;
+          }
+        }
       }
     }
     if (!chatId) return;

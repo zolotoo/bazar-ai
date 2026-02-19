@@ -26,7 +26,7 @@ export function useProjectSync(projectId: string | null) {
   const channelRef = useRef<any>(null);
   const lastChangeIdRef = useRef<string | null>(null);
 
-  const userId = user?.telegram_username ? `tg-${user.telegram_username}` : null;
+  const userId = user?.id || null;
 
   // Генерация Vector Clock
   const generateVectorClock = useCallback((currentClock?: Record<string, number>): Record<string, number> => {

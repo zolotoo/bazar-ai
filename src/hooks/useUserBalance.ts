@@ -13,18 +13,36 @@ export function useUserBalance() {
   const deductTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchBalance = useCallback(async () => {
-    if (!user?.telegram_username) {
+    if (!user?.id) {
       setBalance(0);
       setLoading(false);
       return;
     }
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Try user_id column first (new schema), fall back to telegram_username (old schema)
+      let data: { token_balance?: number } | null = null;
+      let error: unknown = null;
+
+      const res1 = await supabase
         .from('users')
         .select('token_balance')
-        .eq('telegram_username', user.telegram_username)
+        .eq('user_id', user.id)
         .maybeSingle();
+
+      data = res1.data;
+      error = res1.error;
+
+      if (!data && user.telegram_username) {
+        const res2 = await supabase
+          .from('users')
+          .select('token_balance')
+          .eq('telegram_username', user.telegram_username)
+          .maybeSingle();
+        data = res2.data;
+        error = res2.error;
+      }
+
       if (error) {
         console.error('useUserBalance fetch:', error);
         setBalance(DEFAULT_BALANCE);
@@ -38,19 +56,23 @@ export function useUserBalance() {
     } finally {
       setLoading(false);
     }
-  }, [user?.telegram_username]);
+  }, [user?.id, user?.telegram_username]);
 
   useEffect(() => {
     fetchBalance();
   }, [fetchBalance]);
 
   const deduct = useCallback(async (amount: number): Promise<boolean> => {
-    if (!user?.telegram_username || amount <= 0) return false;
+    if (!user?.id || amount <= 0) return false;
     try {
+      // Find the row by user_id or telegram_username
+      const eqCol = user.telegram_username ? 'telegram_username' : 'user_id';
+      const eqVal = user.telegram_username || user.id;
+
       const { data: row, error } = await supabase
         .from('users')
         .select('token_balance')
-        .eq('telegram_username', user.telegram_username)
+        .eq(eqCol, eqVal)
         .single();
       if (error || !row) return false;
       const current = (row as { token_balance: number }).token_balance ?? 0;
@@ -59,7 +81,7 @@ export function useUserBalance() {
       const { error: updateError } = await supabase
         .from('users')
         .update({ token_balance: newBalance })
-        .eq('telegram_username', user.telegram_username)
+        .eq(eqCol, eqVal)
         .gte('token_balance', amount);
       if (updateError) return false;
       setBalance(newBalance);
@@ -74,7 +96,7 @@ export function useUserBalance() {
       console.error('useUserBalance deduct:', e);
       return false;
     }
-  }, [user?.telegram_username]);
+  }, [user?.id, user?.telegram_username]);
 
   const canAfford = useCallback((cost: number) => balance >= cost && cost >= 0, [balance]);
 

@@ -77,7 +77,7 @@ export function ProfilePage() {
   };
 
   return (
-    <div className="h-full overflow-y-auto custom-scrollbar-light">
+    <div className="h-full overflow-y-auto custom-scrollbar-light" style={{ WebkitOverflowScrolling: 'touch' }}>
       <div className="max-w-lg mx-auto w-full p-6 pt-8 pb-24 md:pb-6">
         {/* User Info */}
         <div className="flex flex-col items-center mb-8">
@@ -157,7 +157,7 @@ export function ProfilePage() {
                 <h4 className="font-medium text-slate-800">Добавить аккаунт</h4>
                 <button
                   onClick={() => setShowAddAccount(false)}
-                  className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 active:scale-95"
+                  className="p-2 min-w-[44px] min-h-[44px] rounded-lg hover:bg-slate-100 text-slate-400 active:scale-95 flex items-center justify-center touch-manipulation"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -258,7 +258,7 @@ export function ProfilePage() {
                       onClick={() => checkAccountReels(account)}
                       disabled={checking === account.id}
                       className={cn(
-                        "p-2 rounded-xl transition-all active:scale-95",
+                        "p-2 min-w-[44px] min-h-[44px] rounded-xl transition-all active:scale-95 flex items-center justify-center touch-manipulation",
                         checking === account.id 
                           ? "bg-orange-100 text-orange-500" 
                           : "bg-slate-100 text-slate-500 hover:bg-orange-100 hover:text-orange-500"
@@ -268,7 +268,7 @@ export function ProfilePage() {
                     </button>
                     <button
                       onClick={() => removeAccount(account.id)}
-                      className="p-2 rounded-xl bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-500 transition-all active:scale-95"
+                      className="p-2 min-w-[44px] min-h-[44px] rounded-xl bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-500 transition-all active:scale-95 flex items-center justify-center touch-manipulation"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -281,21 +281,21 @@ export function ProfilePage() {
 
         {/* Settings Menu */}
         <div className="bg-white rounded-2xl overflow-hidden mb-8">
-          <button className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 transition-colors border-b border-slate-100 active:scale-[0.98]">
+          <button className="w-full flex items-center gap-3 p-4 min-h-[56px] hover:bg-slate-50 transition-colors border-b border-slate-100 active:scale-[0.98] touch-manipulation">
             <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
               <Bell className="w-5 h-5 text-slate-500" />
             </div>
             <span className="flex-1 text-left font-medium text-slate-800">Уведомления</span>
             <ChevronRight className="w-5 h-5 text-slate-400" />
           </button>
-          <button className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 transition-colors border-b border-slate-100 active:scale-[0.98]">
+          <button className="w-full flex items-center gap-3 p-4 min-h-[56px] hover:bg-slate-50 transition-colors border-b border-slate-100 active:scale-[0.98] touch-manipulation">
             <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
               <Settings className="w-5 h-5 text-slate-500" />
             </div>
             <span className="flex-1 text-left font-medium text-slate-800">Настройки</span>
             <ChevronRight className="w-5 h-5 text-slate-400" />
           </button>
-          <button className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 transition-colors active:scale-[0.98]">
+          <button className="w-full flex items-center gap-3 p-4 min-h-[56px] hover:bg-slate-50 transition-colors active:scale-[0.98] touch-manipulation">
             <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
               <HelpCircle className="w-5 h-5 text-slate-500" />
             </div>
@@ -307,7 +307,7 @@ export function ProfilePage() {
         {/* Logout */}
         <button
           onClick={logout}
-          className="w-full flex items-center justify-center gap-2 p-4 rounded-2xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors active:scale-95"
+          className="w-full flex items-center justify-center gap-2 p-4 min-h-[56px] rounded-2xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors active:scale-95 touch-manipulation"
         >
           <LogOut className="w-5 h-5" />
           <span className="font-medium">Выйти</span>

@@ -438,9 +438,9 @@ function AppContent() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const memberId = params.get('m');
-    if (!memberId || !user?.telegram_username || inviteProcessedRef.current === memberId) return;
+    if (!memberId || !user?.id || inviteProcessedRef.current === memberId) return;
 
-    const userId = `tg-${user.telegram_username}`;
+    const userId = user.id;
     inviteProcessedRef.current = memberId;
 
     (async () => {
@@ -525,7 +525,7 @@ function AppContent() {
   const handleProjectClick = async (project: any) => {
     if (project.membershipStatus === 'pending') {
       // Загружаем membership для этого проекта
-      const userId = user?.telegram_username ? `tg-${user.telegram_username}` : null;
+      const userId = user?.id || null;
       if (!userId) return;
       
       try {

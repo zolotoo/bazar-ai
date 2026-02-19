@@ -192,7 +192,7 @@ export const SidebarLink = ({
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-2 py-1.5 rounded-xl transition-all w-full text-left group/sidebar",
+        "flex items-center gap-2 py-1.5 min-h-[44px] rounded-xl transition-all w-full text-left group/sidebar touch-manipulation",
         "font-medium",
         open ? "px-2.5" : "px-2 justify-center",
         isActive 
@@ -277,7 +277,7 @@ export const SidebarSection = ({ title, children, onAdd }: SidebarSectionProps) 
         {onAdd && (
           <button
             onClick={onAdd}
-            className="p-1.5 rounded-pill hover:bg-glass-white/60 backdrop-blur-glass text-slate-400 hover:text-slate-700 transition-all"
+            className="p-2 min-w-[44px] min-h-[44px] rounded-pill hover:bg-glass-white/60 backdrop-blur-glass text-slate-400 hover:text-slate-700 transition-all flex items-center justify-center touch-manipulation"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />

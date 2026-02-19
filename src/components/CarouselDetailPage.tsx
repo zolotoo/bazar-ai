@@ -140,7 +140,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
   const { currentProject, currentProjectId, updateProject, updateProjectStyle, addProjectStyle, refetch: refetchProjects, selectProject, carouselFoldersList } = useProjectContext();
   const { user } = useAuth();
   const { canAfford, deduct } = useTokenBalance();
-  const radarUserId = user?.telegram_username ? `tg-${user.telegram_username}` : 'anonymous';
+  const radarUserId = user?.id || 'anonymous';
   const { profiles: radarProfiles, addProfile: addRadarProfile } = useRadar(currentProjectId, radarUserId);
   const {
     updateCarouselTranscript,

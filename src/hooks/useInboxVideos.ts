@@ -88,10 +88,7 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
   
   // Получаем user_id из контекста авторизации
   const getUserId = useCallback((): string => {
-    if (user?.telegram_username) {
-      return `tg-${user.telegram_username}`;
-    }
-    return 'anonymous';
+    return user?.id || 'anonymous';
   }, [user]);
 
   // Преобразование из БД в IncomingVideo
