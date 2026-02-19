@@ -86,7 +86,7 @@ export const sidebarSlideVariants: Variants = {
   exit: { x: '-100%', transition: iosSpringCalm },
 };
 
-/** Dialog / overlay — soft scale-in */
+/** Dialog / overlay — soft scale-in (desktop) */
 export const dialogScale: Variants = {
   hidden: { opacity: 0, scale: 0.96 },
   visible: {
@@ -98,6 +98,21 @@ export const dialogScale: Variants = {
     opacity: 0,
     scale: 0.96,
     transition: { type: 'spring', stiffness: 400, damping: 32 },
+  },
+};
+
+/** Mobile dialog — slide up from bottom like iOS sheet */
+export const dialogSlideUp: Variants = {
+  hidden: { opacity: 0, y: '8%' },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { type: 'spring', stiffness: 380, damping: 32, mass: 0.9 },
+  },
+  exit: {
+    opacity: 0,
+    y: '6%',
+    transition: { type: 'tween', duration: 0.2, ease: [0.32, 0, 0.67, 0] },
   },
 };
 

@@ -18,7 +18,7 @@ import { CarouselDetailPage } from './CarouselDetailPage';
 import { useCarousels, type SavedCarousel } from '../hooks/useCarousels';
 import { useTokenBalance } from '../contexts/TokenBalanceContext';
 import { calculateViralMultiplier, applyViralMultiplierToCoefficient, getProfileStats, calculateCarouselViralMultiplier } from '../services/profileStatsService';
-import { dialogScale, backdropFade, iosSpringSoft } from '../utils/motionPresets';
+import { dialogScale, dialogSlideUp, backdropFade, iosSpringSoft } from '../utils/motionPresets';
 import { TokenBadge } from './ui/TokenBadge';
 import { GlassFolderIcon } from './ui/GlassFolderIcons';
 import { getTokenCost } from '../constants/tokenCosts';
@@ -319,6 +319,13 @@ export function Workspace(_props?: WorkspaceProps) {
   }, [contentSection, inboxVideos, refreshThumbnail]);
 
   const [isMobileFolderPanelOpen, setIsMobileFolderPanelOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const h = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', h);
+    return () => mq.removeEventListener('change', h);
+  }, []);
 
   const closeMobileFolderPanel = () => {
     setIsMobileFolderPanelOpen(false);
@@ -836,7 +843,11 @@ export function Workspace(_props?: WorkspaceProps) {
         {selectedCarousel && (
           <motion.div
             key="carousel-detail-overlay"
-            className="fixed inset-0 z-[100] flex overflow-y-auto justify-center items-start md:items-center p-4 md:p-6 py-6 md:py-6"
+            className={cn(
+              "fixed inset-0 z-[100] flex overflow-y-auto",
+              "justify-center items-end md:items-center",
+              "p-0 md:p-6"
+            )}
             initial="hidden"
             animate="visible"
             exit="exit"
@@ -844,8 +855,15 @@ export function Workspace(_props?: WorkspaceProps) {
           >
             <div className="absolute inset-0 bg-black/25 backdrop-blur-glass-2xl" onClick={() => setSelectedCarousel(null)} aria-hidden />
             <motion.div
-              className="relative w-full max-w-[95vw] md:max-w-6xl h-[90vh] max-h-[900px] min-h-0 rounded-card-2xl overflow-hidden shadow-float-lg bg-base-alt border border-white/[0.35] flex-shrink-0 my-auto md:my-0"
-              variants={dialogScale}
+              className={cn(
+                "relative w-full min-h-0 overflow-hidden shadow-float-lg bg-base-alt flex-shrink-0",
+                "max-w-full md:max-w-6xl",
+                "h-[95vh] md:h-[90vh] max-h-[900px]",
+                "rounded-t-[20px] md:rounded-card-2xl",
+                "border-0 md:border border-white/[0.35]",
+                "my-0"
+              )}
+              variants={isMobile ? dialogSlideUp : dialogScale}
               transition={iosSpringSoft}
               onClick={e => e.stopPropagation()}
             >
@@ -860,7 +878,11 @@ export function Workspace(_props?: WorkspaceProps) {
         {selectedVideo && videoDetailProps && (
           <motion.div
             key="video-detail-overlay"
-            className="fixed inset-0 z-[100] flex overflow-y-auto justify-center items-start md:items-center p-4 md:p-6 py-6 md:py-6"
+            className={cn(
+              "fixed inset-0 z-[100] flex overflow-y-auto",
+              "justify-center items-end md:items-center",
+              "p-0 md:p-6"
+            )}
             initial="hidden"
             animate="visible"
             exit="exit"
@@ -872,8 +894,15 @@ export function Workspace(_props?: WorkspaceProps) {
               aria-hidden
             />
             <motion.div
-              className="relative w-full max-w-[95vw] md:max-w-6xl h-[90vh] max-h-[900px] min-h-0 rounded-card-2xl overflow-hidden shadow-float-lg bg-base-alt border border-white/[0.35] flex-shrink-0 my-auto md:my-0"
-              variants={dialogScale}
+              className={cn(
+                "relative w-full min-h-0 overflow-hidden shadow-float-lg bg-base-alt flex-shrink-0",
+                "max-w-full md:max-w-6xl",
+                "h-[95vh] md:h-[90vh] max-h-[900px]",
+                "rounded-t-[20px] md:rounded-card-2xl",
+                "border-0 md:border border-white/[0.35]",
+                "my-0"
+              )}
+              variants={isMobile ? dialogSlideUp : dialogScale}
               transition={iosSpringSoft}
               onClick={e => e.stopPropagation()}
             >
@@ -1018,8 +1047,8 @@ export function Workspace(_props?: WorkspaceProps) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="md:hidden fixed inset-0 z-[200] bg-black/20 touch-manipulation"
+              transition={{ duration: 0.25 }}
+              className="md:hidden fixed inset-0 z-[200] bg-black/20 backdrop-blur-[2px] touch-manipulation"
               onClick={closeMobileFolderPanel}
               aria-hidden
             />
@@ -1027,11 +1056,12 @@ export function Workspace(_props?: WorkspaceProps) {
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
-              transition={{ type: 'tween', duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+              transition={{ type: 'spring', stiffness: 380, damping: 34, mass: 0.9 }}
               className={cn(
                 "md:hidden fixed top-0 right-0 bottom-0 z-[201] w-[min(320px,85vw)] flex flex-col",
-                "bg-white/95 backdrop-blur-2xl",
-                "border-l border-slate-200/80 shadow-[-8px_0_32px_rgba(0,0,0,0.08)]",
+                "bg-white/95 backdrop-blur-2xl backdrop-saturate-[180%]",
+                "border-l border-slate-200/60 shadow-[-8px_0_32px_rgba(0,0,0,0.1)]",
+                "rounded-l-[20px]",
                 "safe-top safe-bottom safe-right overflow-hidden"
               )}
               style={{ willChange: 'transform' }}
@@ -1761,9 +1791,22 @@ export function Workspace(_props?: WorkspaceProps) {
       </div>
       
       {/* Folder Settings Modal */}
+      <AnimatePresence>
       {showFolderSettings && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4 safe-top safe-bottom safe-left safe-right">
-          <div className="bg-white rounded-t-3xl md:rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] md:max-h-[85vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200 safe-bottom">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 bg-black/40 backdrop-blur-[3px] flex items-end md:items-center justify-center z-50 p-0 md:p-4 safe-top safe-bottom safe-left safe-right"
+        >
+          <motion.div
+            initial={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.96 }}
+            animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1 }}
+            exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.96 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 34, mass: 0.9 }}
+            className="bg-white rounded-t-[20px] md:rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] md:max-h-[85vh] overflow-hidden safe-bottom"
+          >
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-slate-100">
               <h2 className="text-xl font-semibold text-slate-800">{contentSection === 'carousels' ? 'Настройка папок каруселей' : 'Настройка папок'}</h2>
@@ -1797,7 +1840,7 @@ export function Workspace(_props?: WorkspaceProps) {
                   <button
                     onClick={handleCreateFolder}
                     disabled={!newFolderName.trim()}
-                    className="px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 disabled:bg-slate-200 text-white disabled:text-slate-400 font-medium transition-colors"
+                    className="px-4 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-800 disabled:bg-slate-200 text-white disabled:text-slate-400 font-medium transition-colors"
                   >
                     <Plus className="w-5 h-5" />
                   </button>
@@ -1905,14 +1948,15 @@ export function Workspace(_props?: WorkspaceProps) {
                   setShowFolderSettings(false);
                   setEditingFolder(null);
                 }}
-                className="w-full py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-medium transition-colors"
+                className="w-full py-3 rounded-xl bg-slate-700 hover:bg-slate-800 text-white font-medium transition-colors"
               >
                 Готово
               </button>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
+      </AnimatePresence>
       {/* Description Modal — портал в body, прокручиваемое */}
       {descriptionModalText !== null && createPortal(
         <div

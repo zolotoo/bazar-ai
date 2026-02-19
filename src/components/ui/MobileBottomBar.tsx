@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "../../utils/cn";
 import type { LucideIcon } from "lucide-react";
 
@@ -19,7 +20,8 @@ interface MobileBottomBarProps extends React.HTMLAttributes<HTMLElement> {
   onTabClick: (id: MobileTabId) => void;
 }
 
-/** iOS 26 style tab bar — glass morphism, frosted glass, labels only when active */
+const springTab = { type: "spring" as const, stiffness: 500, damping: 32, mass: 0.8 };
+
 export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProps>(
   ({ className, items, activeId, onTabClick, ...props }, ref) => {
     return (
@@ -27,57 +29,86 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
         ref={ref}
         role="tablist"
         className={cn(
-          "mobile-tab-bar",
           "md:hidden fixed left-0 right-0 bottom-0 z-[9998]",
-          "touch-manipulation",
-          "pointer-events-none [&_ul]:pointer-events-auto",
+          "pointer-events-none",
           className
         )}
         style={{
-          paddingBottom: "max(16px, env(safe-area-inset-bottom, 16px))",
-          paddingLeft: "max(12px, env(safe-area-inset-left, 12px))",
-          paddingRight: "max(12px, env(safe-area-inset-right, 12px))",
-          paddingTop: 12,
+          paddingBottom: "max(10px, env(safe-area-inset-bottom, 10px))",
+          paddingLeft: "max(16px, env(safe-area-inset-left, 16px))",
+          paddingRight: "max(16px, env(safe-area-inset-right, 16px))",
+          paddingTop: 8,
         }}
         {...props}
       >
-        <ul className="flex items-center justify-around gap-0">
-          {items.map((item) => {
-            const Icon = item.icon;
-            const isActive = item.id === activeId;
+        <div
+          className={cn(
+            "pointer-events-auto mx-auto",
+            "rounded-[22px]",
+            "bg-white/60 backdrop-blur-2xl backdrop-saturate-[180%]",
+            "border border-white/70",
+            "shadow-[0_4px_24px_rgba(0,0,0,0.08),0_1px_4px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.7)]",
+          )}
+          style={{ maxWidth: 320 }}
+        >
+          <ul className="flex items-center justify-around px-2 py-1.5 gap-1">
+            {items.map((item) => {
+              const Icon = item.icon;
+              const isActive = item.id === activeId;
 
-            return (
-              <li key={item.id} className="flex-1 flex justify-center min-w-0">
-                <button
-                  type="button"
-                  role="tab"
-                  onClick={() => onTabClick(item.id)}
-                  className={cn(
-                    "flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[48px] py-2.5 px-5 rounded-2xl flex-1 max-w-[80px]",
-                    "transition-all duration-200 touch-manipulation active:scale-95",
-                    isActive
-                      ? "bg-slate-600 text-white shadow-sm"
-                      : "bg-transparent text-slate-800"
-                  )}
-                  aria-label={item.label}
-                  aria-selected={isActive}
-                  title={item.label}
-                >
-                  <Icon
-                    className="w-5 h-5 flex-shrink-0"
-                    strokeWidth={isActive ? 2.5 : 1.5}
-                  />
-                  <span className={cn(
-                    "text-[11px] font-medium font-heading tracking-[-0.01em] truncate w-full text-center",
-                    isActive ? "text-white" : "text-slate-800"
-                  )}>
-                    {item.label}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+              return (
+                <li key={item.id} className="flex-1 flex justify-center min-w-0">
+                  <motion.button
+                    type="button"
+                    role="tab"
+                    onClick={() => onTabClick(item.id)}
+                    className={cn(
+                      "relative flex items-center justify-center gap-1.5 touch-manipulation",
+                      "rounded-2xl transition-colors duration-150",
+                      "min-h-[40px]",
+                      isActive
+                        ? "px-4 py-2"
+                        : "px-3 py-2 active:scale-90"
+                    )}
+                    layout
+                    transition={springTab}
+                    aria-label={item.label}
+                    aria-selected={isActive}
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="tab-pill"
+                        className="absolute inset-0 rounded-2xl bg-slate-700 shadow-sm"
+                        transition={springTab}
+                      />
+                    )}
+                    <Icon
+                      className={cn(
+                        "relative z-10 w-[20px] h-[20px] flex-shrink-0 transition-colors duration-150",
+                        isActive ? "text-white" : "text-slate-500"
+                      )}
+                      strokeWidth={isActive ? 2.2 : 1.8}
+                    />
+                    <AnimatePresence mode="wait">
+                      {isActive && (
+                        <motion.span
+                          key={item.id}
+                          initial={{ opacity: 0, width: 0 }}
+                          animate={{ opacity: 1, width: "auto" }}
+                          exit={{ opacity: 0, width: 0 }}
+                          transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+                          className="relative z-10 text-[12px] font-semibold text-white whitespace-nowrap overflow-hidden"
+                        >
+                          {item.label}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </motion.button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       </nav>
     );
   }

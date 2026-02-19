@@ -109,33 +109,31 @@ export const MobileSidebar = ({
   const { open, setOpen } = useSidebar();
   return (
     <>
-      {/* Оверлей — стекло iOS 26 */}
       <AnimatePresence>
         {open && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
-            className="md:hidden fixed inset-0 z-[9999] bg-black/25 backdrop-blur-sm touch-none safe-top safe-bottom safe-left safe-right"
+            transition={{ duration: 0.25 }}
+            className="md:hidden fixed inset-0 z-[9999] bg-black/20 backdrop-blur-[2px] touch-none safe-top safe-bottom safe-left safe-right"
             onClick={() => setOpen(false)}
             aria-hidden
           />
         )}
       </AnimatePresence>
-      {/* Панель Меню — плавное выезжание без рывков */}
       <AnimatePresence>
         {open && (
           <motion.div
             initial={{ x: "-100%" }}
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
-            transition={{ type: "tween", duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+            transition={{ type: "spring", stiffness: 380, damping: 34, mass: 0.9 }}
             className={cn(
               "md:hidden fixed inset-y-0 left-0 z-[9999] w-[min(320px,92vw)] flex flex-col",
-              "bg-white/95 backdrop-blur-2xl",
-              "rounded-r-2xl border-r border-slate-200/80",
-              "shadow-[8px_0_32px_rgba(0,0,0,0.12)]",
+              "bg-white/95 backdrop-blur-2xl backdrop-saturate-[180%]",
+              "rounded-r-[20px] border-r border-slate-200/60",
+              "shadow-[8px_0_32px_rgba(0,0,0,0.1)]",
               "safe-top safe-bottom safe-left safe-right overflow-hidden"
             )}
             style={{ willChange: "transform", WebkitOverflowScrolling: "touch" }}
