@@ -85,6 +85,7 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
                       paddingBottom: 6,
                       background: "transparent",
                       border: "none",
+                      willChange: "transform",
                       minHeight: "unset",
                       minWidth: "unset",
                       padding: 0,

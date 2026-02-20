@@ -281,7 +281,6 @@ body {
   /* iOS 26 Scroll Behavior */
   * {
     -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
   }
 
   /* iOS 26 Text Selection */
@@ -393,21 +392,10 @@ body {
     margin-top: 20px;
   }
 
-  /* iOS 26 Animation Improvements */
-  @media (prefers-reduced-motion: no-preference) {
-    * {
-      transition-duration: 0.2s;
-      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    }
-  }
-
-  /* iOS 26 Haptic Feedback Simulation */
-  @media (hover: none) and (pointer: coarse) {
-    button:active, a:active, [role="button"]:active {
-      transform: scale(0.97);
-      opacity: 0.8;
-    }
-  }
+  /* Убраны глобальные правила:
+     1. * { transition-duration: 0.2s } — конфликтовал с Framer Motion (двойная анимация)
+     2. button:active { transform: scale(0.97) } — конфликтовал с whileTap от Framer Motion
+  */
 }
 
 /* Tablet adjustments */
