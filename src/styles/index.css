@@ -187,7 +187,6 @@ body {
   body {
     min-height: 100dvh;
     min-height: -webkit-fill-available;
-    padding-bottom: env(safe-area-inset-bottom);
   }
 }
 

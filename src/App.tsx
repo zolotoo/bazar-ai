@@ -592,7 +592,7 @@ function AppContent() {
 
   return (
     <div className={cn(
-        "w-full h-[100dvh] md:h-screen text-foreground overflow-hidden flex flex-col md:flex-row safe-top safe-bottom",
+        "w-full h-[100dvh] md:h-screen text-foreground overflow-hidden flex flex-col md:flex-row safe-top",
         viewMode === 'dashboard' ? "bg-[#fafafa]" : "bg-base"
       )}>
       {/* Background: clean for dashboard, subtle blobs for other views */}

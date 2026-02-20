@@ -20,7 +20,7 @@ interface MobileBottomBarProps extends React.HTMLAttributes<HTMLElement> {
   onTabClick: (id: MobileTabId) => void;
 }
 
-const spring = { type: "spring" as const, stiffness: 480, damping: 36, mass: 0.8 };
+const spring = { type: "spring" as const, stiffness: 500, damping: 38, mass: 0.7 };
 
 export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProps>(
   ({ className, items, activeId, onTabClick, ...props }, ref) => {
@@ -34,89 +34,89 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
           className
         )}
         style={{
-          paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))",
-          paddingLeft: 20,
-          paddingRight: 20,
-          paddingTop: 8,
+          paddingBottom: "max(10px, env(safe-area-inset-bottom, 10px))",
+          paddingLeft: 24,
+          paddingRight: 24,
+          paddingTop: 6,
         }}
         {...props}
       >
-        {/* iOS-style frosted glass pill */}
+        {/* iOS frosted glass pill — compact */}
         <div
-          className="pointer-events-auto relative"
+          className="pointer-events-auto"
           style={{
-            background: "rgba(255, 255, 255, 0.82)",
-            backdropFilter: "blur(40px) saturate(200%)",
-            WebkitBackdropFilter: "blur(40px) saturate(200%)",
-            borderRadius: 26,
-            border: "1px solid rgba(255, 255, 255, 0.75)",
+            background: "rgba(255, 255, 255, 0.78)",
+            backdropFilter: "blur(36px) saturate(200%)",
+            WebkitBackdropFilter: "blur(36px) saturate(200%)",
+            borderRadius: 32,
+            border: "1px solid rgba(255, 255, 255, 0.72)",
             boxShadow:
-              "0 2px 20px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)",
-            padding: "5px 6px",
+              "0 2px 16px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.88)",
+            padding: "4px 4px",
           }}
         >
-          <ul className="flex items-center">
+          <ul className="flex items-center gap-0.5">
             {items.map((item) => {
               const Icon = item.icon;
               const isActive = item.id === activeId;
 
               return (
-                <li key={item.id} className="flex justify-center">
+                <li key={item.id}>
                   <motion.button
                     type="button"
                     role="tab"
                     onClick={() => onTabClick(item.id)}
                     className="relative flex flex-col items-center justify-center touch-manipulation"
-                    style={{ minWidth: 64, paddingTop: 6, paddingBottom: 6, paddingLeft: 4, paddingRight: 4 }}
-                    whileTap={{ scale: 0.9 }}
+                    style={{ width: 58, paddingTop: 7, paddingBottom: 7 }}
+                    whileTap={{ scale: 0.88 }}
                     transition={spring}
                     aria-label={item.label}
                     aria-selected={isActive}
                   >
-                    {/* Active pill background */}
+                    {/* Active pill */}
                     <AnimatePresence>
                       {isActive && (
                         <motion.div
-                          layoutId="ios-active-bg"
+                          layoutId="ios-pill"
                           className="absolute inset-0"
-                          style={{ borderRadius: 18 }}
-                          initial={{ opacity: 0, scale: 0.85 }}
+                          style={{ borderRadius: 22 }}
+                          initial={{ opacity: 0, scale: 0.8 }}
                           animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.85 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
                           transition={spring}
                         >
                           <div
                             style={{
                               position: "absolute",
                               inset: 0,
-                              borderRadius: 18,
-                              background: "rgba(30, 30, 40, 0.08)",
+                              borderRadius: 22,
+                              background: "rgba(15, 15, 20, 0.07)",
                             }}
                           />
                         </motion.div>
                       )}
                     </AnimatePresence>
 
-                    {/* Icon */}
                     <Icon
-                      className="relative z-10 transition-colors duration-200"
+                      className="relative z-10"
                       style={{
-                        width: 22,
-                        height: 22,
-                        color: isActive ? "#1c1c28" : "#a1a1aa",
-                        strokeWidth: isActive ? 2.2 : 1.7,
+                        width: 20,
+                        height: 20,
+                        color: isActive ? "#18181b" : "#9ca3af",
+                        strokeWidth: isActive ? 2.1 : 1.6,
+                        transition: "color 0.18s ease",
                       }}
                     />
 
-                    {/* Label */}
                     <span
-                      className="relative z-10 transition-colors duration-200 mt-0.5"
+                      className="relative z-10 mt-0.5"
                       style={{
-                        fontSize: 10,
+                        fontSize: 9.5,
                         fontWeight: isActive ? 600 : 400,
                         letterSpacing: "-0.01em",
-                        color: isActive ? "#1c1c28" : "#a1a1aa",
+                        color: isActive ? "#18181b" : "#9ca3af",
                         lineHeight: 1.2,
+                        transition: "color 0.18s ease",
                       }}
                     >
                       {item.label}
