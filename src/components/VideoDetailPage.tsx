@@ -1148,9 +1148,9 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
         </div>
 
         {/* Main content — на мобильных колонка, на десктопе 3 колонки */}
-        <div className="flex-1 flex flex-col md:flex-row gap-4 min-h-0 overflow-y-auto md:overflow-hidden">
-          {/* Left: видео 9:16 + папка + статистика — колонка со скроллом (как было раньше по ширине) */}
-          <div className="flex-shrink-0 flex flex-col gap-3 overflow-y-auto custom-scrollbar-light w-full md:w-auto md:min-w-[256px] md:max-w-[min(256px,28vw)]">
+        <div className="flex flex-col md:flex-row md:flex-1 gap-4 md:min-h-0 md:overflow-hidden">
+          {/* Left: видео 9:16 + папка + статистика */}
+          <div className="flex-shrink-0 flex flex-col gap-3 md:overflow-y-auto custom-scrollbar-light w-full md:w-auto md:min-w-[256px] md:max-w-[min(256px,28vw)]">
             {/* Видео 9:16 — выше по центру колонки. Заглушка: клик → загрузка через API (стоит кредитов) */}
             <div className="flex justify-center flex-shrink-0">
               <div 
@@ -1646,7 +1646,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
           </div>
 
           {/* Right: Script — на мобильных с мин. высотой */}
-          <div className="flex-1 flex flex-col min-w-0 min-h-[280px] md:min-h-0 rounded-card-xl shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] overflow-hidden">
+          <div className="flex-1 flex flex-col min-w-0 min-h-[320px] md:min-h-0 rounded-card-xl shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] md:overflow-hidden">
             {/* Script header — 2 ряда как в каруселях */}
             <div className="flex flex-col gap-3 p-4 border-b border-slate-100">
               {/* Ряд 1: заголовок + подчерк · Промт + сохранён + По подчерку */}
@@ -1815,11 +1815,11 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
             </div>
             
             {/* Script content - всегда textarea */}
-            <div className="flex-1 overflow-hidden p-4">
+            <div className="flex-1 md:overflow-hidden p-4">
               <textarea
                 value={script}
                 onChange={(e) => { setScript(e.target.value); setScriptGeneratedByStyle(false); }}
-                className="w-full h-full resize-none text-slate-700 text-sm leading-relaxed focus:outline-none border border-slate-200 rounded-xl p-4 focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition-all"
+                className="w-full h-full min-h-[240px] resize-none text-slate-700 text-sm leading-relaxed focus:outline-none border border-slate-200 rounded-xl p-4 focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition-all"
                 placeholder="Напишите ваш сценарий здесь...
 
 # Хук (0-3 сек)

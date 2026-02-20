@@ -1293,7 +1293,7 @@ export function Workspace(_props?: WorkspaceProps) {
                     <span className="hidden sm:inline">Отменить</span>
                   </button>
                 )}
-                <div className="flex items-center gap-1.5 md:gap-2 bg-white/80 md:bg-glass-white/60 backdrop-blur-sm md:backdrop-blur-glass rounded-full p-1.5 md:p-2 shadow-sm md:shadow-glass-sm border border-slate-200/60 md:border-white/[0.35] overflow-x-auto overflow-y-hidden flex-1 min-w-0 scrollbar-hide">
+                <div className="sort-pill flex items-center gap-1 md:gap-2 bg-white/80 md:bg-glass-white/60 backdrop-blur-sm md:backdrop-blur-glass rounded-full p-1 md:p-2 shadow-sm md:shadow-glass-sm border border-slate-200/60 md:border-white/[0.35] overflow-x-auto overflow-y-hidden flex-1 min-w-0 scrollbar-hide">
                 {[
                   { value: 'viral', label: 'Виральность', icon: Sparkles, title: 'По коэффициенту виральности' },
                   { value: 'views', label: 'Просмотры', icon: Eye, title: 'По количеству просмотров' },
@@ -1306,13 +1306,13 @@ export function Workspace(_props?: WorkspaceProps) {
                     onClick={() => setSortBy(value as typeof sortBy)}
                     title={title}
                     className={cn(
-                      "flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 min-h-[44px] rounded-pill text-[10px] md:text-xs font-semibold transition-all active:scale-95 touch-manipulation whitespace-nowrap",
+                      "flex items-center gap-1 md:gap-1.5 px-2.5 md:px-4 py-1.5 md:py-2 rounded-full text-[10px] md:text-xs font-semibold transition-all active:scale-95 touch-manipulation whitespace-nowrap",
                       sortBy === value 
-                        ? "bg-slate-200/50 text-slate-800 shadow-glass-sm border border-slate-300/40" 
-                        : "text-slate-600 hover:text-slate-800 hover:bg-glass-white/60"
+                        ? "bg-slate-700 text-white shadow-sm" 
+                        : "text-slate-500 hover:text-slate-700 hover:bg-slate-100/80"
                     )}
                   >
-                    <Icon className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" strokeWidth={2.5} />
+                    <Icon className="w-3 h-3 md:w-3.5 md:h-3.5 flex-shrink-0" strokeWidth={2.5} />
                     <span>{label}</span>
                   </button>
                 ))}
@@ -1557,14 +1557,24 @@ export function Workspace(_props?: WorkspaceProps) {
             <>
               <div className="mb-6 md:mb-8 rounded-card-xl bg-glass-white/80 backdrop-blur-glass-xl shadow-glass border border-white/[0.35] px-5 py-4 md:px-6 md:py-5">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-slate-200/40 flex items-center justify-center">
-                      <Images className="w-6 h-6 text-slate-600" strokeWidth={2.5} />
+                  <div className="flex items-center justify-between sm:justify-start gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-200/40 flex items-center justify-center flex-shrink-0">
+                        <Images className="w-6 h-6 text-slate-600" strokeWidth={2.5} />
+                      </div>
+                      <div>
+                        <h1 className="text-xl md:text-2xl font-bold text-slate-800">Карусели</h1>
+                        <p className="text-slate-500 text-xs md:text-sm">Посты с несколькими фото — транскрипт по слайдам (Gemini)</p>
+                      </div>
                     </div>
-                    <div>
-                      <h1 className="text-xl md:text-2xl font-bold text-slate-800">Карусели</h1>
-                      <p className="text-slate-500 text-xs md:text-sm">Посты с несколькими фото — транскрипт по слайдам (Gemini)</p>
-                    </div>
+                    {/* Папки — только мобильные */}
+                    <button
+                      onClick={() => setIsMobileFolderPanelOpen(true)}
+                      className="md:hidden p-2.5 flex items-center justify-center rounded-xl bg-white/80 backdrop-blur-sm border border-slate-200/60 text-slate-600 active:bg-slate-100 transition-colors touch-manipulation flex-shrink-0"
+                      aria-label="Папки"
+                    >
+                      <FolderOpen className="w-5 h-5" strokeWidth={2.5} />
+                    </button>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                     <div className="flex gap-2 flex-1 sm:min-w-[280px]">

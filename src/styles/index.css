@@ -359,6 +359,15 @@ body {
     font-size: inherit !important;
   }
 
+  /* Sort pill — compact sort buttons, reset global mobile button styles */
+  .sort-pill button {
+    min-height: unset !important;
+    min-width: unset !important;
+    padding: unset !important;
+    border-radius: 9999px !important;
+    font-size: inherit !important;
+  }
+
   /* iOS 26 List Styles */
   ul, ol {
     padding-left: 0;
