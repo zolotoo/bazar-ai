@@ -88,9 +88,6 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
                       willChange: "transform",
                       minHeight: "unset",
                       minWidth: "unset",
-                      padding: 0,
-                      paddingTop: 6,
-                      paddingBottom: 6,
                       cursor: "pointer",
                     }}
                     whileTap={{ scale: 0.88 }}
