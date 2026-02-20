@@ -126,30 +126,30 @@ export const MobileSidebar = ({
           key="sidebar-panel"
           initial={{ x: "-100%" }}
           animate={{ x: 0 }}
-          exit={{ x: "-100%", transition: { type: "tween", duration: 0.22, ease: [0.4, 0, 1, 1] } }}
-          transition={{ type: "spring", stiffness: 600, damping: 52, mass: 0.85 }}
-          className={cn(
-            "md:hidden fixed inset-y-0 left-0 z-[9999] w-[min(320px,92vw)] flex flex-col",
-            "bg-white/95 backdrop-blur-2xl backdrop-saturate-[180%]",
-            "rounded-r-[20px] border-r border-slate-200/60",
-            "shadow-[8px_0_32px_rgba(0,0,0,0.1)]",
-            "overflow-hidden"
-          )}
-          style={{ willChange: "transform", paddingTop: "env(safe-area-inset-top, 0px)" }}
+          exit={{ x: "-100%", transition: { type: "tween", duration: 0.24, ease: [0.4, 0, 1, 1] } }}
+          transition={{ type: "tween", duration: 0.36, ease: [0.2, 0, 0, 1] }}
+          className="md:hidden fixed inset-y-0 left-0 z-[10000] w-[min(320px,92vw)] flex flex-col rounded-r-[20px] shadow-[8px_0_32px_rgba(0,0,0,0.12)]"
+          style={{ willChange: "transform", backgroundColor: "#f7f7f9" }}
         >
-          <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0 border-b border-slate-100">
-            <span className="text-[15px] font-semibold text-slate-700 font-heading tracking-[-0.01em]">Меню</span>
-            <button
-              onClick={() => setOpen(false)}
-              className="p-2.5 -m-2 flex items-center justify-center rounded-full bg-slate-100 text-slate-600 touch-manipulation"
-              style={{ width: 44, height: 44 }}
-              aria-label="Закрыть"
-            >
-              <X className="w-5 h-5" strokeWidth={2.5} />
-            </button>
-          </div>
-          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain p-4 pt-3 space-y-1">
-            {children}
+          {/* inner clip — отдельно от motion-элемента, чтобы не конфликтовать с GPU compositing */}
+          <div
+            className="flex flex-col flex-1 min-h-0 overflow-hidden rounded-r-[20px]"
+            style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+          >
+            <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0 border-b border-slate-200/70" style={{ backgroundColor: "#f7f7f9" }}>
+              <span className="text-[15px] font-semibold text-slate-700 font-heading tracking-[-0.01em]">Меню</span>
+              <button
+                onClick={() => setOpen(false)}
+                className="flex items-center justify-center rounded-full bg-slate-200/80 text-slate-600 touch-manipulation"
+                style={{ width: 36, height: 36 }}
+                aria-label="Закрыть"
+              >
+                <X className="w-4 h-4" strokeWidth={2.5} />
+              </button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain p-4 pt-3 space-y-1">
+              {children}
+            </div>
           </div>
         </motion.div>
       )}

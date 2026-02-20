@@ -1058,28 +1058,28 @@ export function Workspace(_props?: WorkspaceProps) {
             key="folder-panel"
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
-            exit={{ x: '100%', transition: { type: 'tween', duration: 0.22, ease: [0.4, 0, 1, 1] } }}
-            transition={{ type: 'spring', stiffness: 600, damping: 52, mass: 0.85 }}
-            className={cn(
-              "md:hidden fixed top-0 right-0 bottom-0 z-[201] w-[min(320px,85vw)] flex flex-col",
-              "bg-white/95 backdrop-blur-2xl backdrop-saturate-[180%]",
-              "border-l border-slate-200/60 shadow-[-8px_0_32px_rgba(0,0,0,0.1)]",
-              "rounded-l-[20px]",
-              "overflow-hidden"
-            )}
-            style={{ willChange: 'transform', paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+            exit={{ x: '100%', transition: { type: 'tween', duration: 0.24, ease: [0.4, 0, 1, 1] } }}
+            transition={{ type: 'tween', duration: 0.36, ease: [0.2, 0, 0, 1] }}
+            className="md:hidden fixed top-0 right-0 bottom-0 z-[201] w-[min(320px,85vw)] flex flex-col rounded-l-[20px] shadow-[-8px_0_32px_rgba(0,0,0,0.12)]"
+            style={{ willChange: 'transform', backgroundColor: '#f7f7f9' }}
           >
-            <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0 safe-top">
+            {/* inner clip */}
+            <div
+              className="flex flex-col flex-1 min-h-0 overflow-hidden rounded-l-[20px]"
+              style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+            >
+            <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0 border-b border-slate-200/70" style={{ backgroundColor: '#f7f7f9' }}>
               <span className="text-[15px] font-semibold text-slate-700">Папки</span>
               <button
                 onClick={closeMobileFolderPanel}
-                className="p-2.5 -m-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-slate-100 text-slate-500 active:bg-slate-200 transition-colors touch-manipulation"
+                className="flex items-center justify-center rounded-full bg-slate-200/80 text-slate-500 touch-manipulation"
+                style={{ width: 36, height: 36 }}
                 aria-label="Закрыть"
               >
-                <X className="w-5 h-5" strokeWidth={2.5} />
+                <X className="w-4 h-4" strokeWidth={2.5} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-6 safe-bottom">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-6" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
               <div className="grid grid-cols-2 gap-3">
                 {contentSection === 'carousels' ? (
                   <>
@@ -1170,6 +1170,7 @@ export function Workspace(_props?: WorkspaceProps) {
                   <span className="text-sm font-medium">{contentSection === 'carousels' ? 'Настроить папки каруселей' : 'Настроить папки'}</span>
                 </button>
               </div>
+            </div>
             </div>
           </motion.div>
         )}
