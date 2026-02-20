@@ -2,7 +2,7 @@
 
 import { cn } from "../../utils/cn";
 import React, { useState, createContext, useContext, ReactNode } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { X } from "lucide-react";
 import { GlassFolderIcon } from "./GlassFolderIcons";
 
@@ -108,52 +108,55 @@ export const MobileSidebar = ({
 }: { className?: string; children?: React.ReactNode }) => {
   const { open, setOpen } = useSidebar();
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          key="sidebar-backdrop"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.22, ease: "easeOut" }}
-          className="md:hidden fixed inset-0 z-[9999] bg-black/20 backdrop-blur-[2px] touch-none"
-          onClick={() => setOpen(false)}
-          aria-hidden
-        />
-      )}
-      {open && (
-        <motion.div
-          key="sidebar-panel"
-          initial={{ x: "-100%" }}
-          animate={{ x: 0 }}
-          exit={{ x: "-100%", transition: { type: "tween", duration: 0.24, ease: [0.4, 0, 1, 1] } }}
-          transition={{ type: "tween", duration: 0.36, ease: [0.2, 0, 0, 1] }}
-          className="md:hidden fixed inset-y-0 left-0 z-[10000] w-[min(320px,92vw)] flex flex-col rounded-r-[20px] shadow-[8px_0_32px_rgba(0,0,0,0.12)]"
-          style={{ willChange: "transform", backgroundColor: "#f7f7f9" }}
+    <>
+      {/* Backdrop — всегда в DOM, pointer-events только когда открыто */}
+      <motion.div
+        initial={false}
+        animate={{ opacity: open ? 1 : 0 }}
+        transition={{ duration: open ? 0.22 : 0.18, ease: "linear" }}
+        className="md:hidden fixed inset-0 z-[9999] bg-black/25 touch-none"
+        style={{ pointerEvents: open ? "auto" : "none" }}
+        onClick={() => setOpen(false)}
+        aria-hidden
+      />
+      {/* Panel — всегда в DOM, слайдится off-screen */}
+      <motion.div
+        initial={false}
+        animate={{ x: open ? "0%" : "-100%" }}
+        transition={{
+          type: "tween",
+          duration: open ? 0.34 : 0.22,
+          ease: open ? [0.25, 0.46, 0.45, 0.94] : [0.55, 0, 1, 0.45],
+        }}
+        className="md:hidden fixed inset-y-0 left-0 z-[10000] w-[min(320px,92vw)] flex flex-col"
+        style={{
+          willChange: "transform",
+          backgroundColor: "#f8f8fa",
+          borderTopRightRadius: 20,
+          borderBottomRightRadius: 20,
+          boxShadow: "8px 0 40px rgba(0,0,0,0.13)",
+          paddingTop: "env(safe-area-inset-top, 0px)",
+        }}
+      >
+        <div
+          className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0"
+          style={{ borderBottom: "1px solid rgba(0,0,0,0.08)", backgroundColor: "#f8f8fa" }}
         >
-          {/* inner clip — отдельно от motion-элемента, чтобы не конфликтовать с GPU compositing */}
-          <div
-            className="flex flex-col flex-1 min-h-0 overflow-hidden rounded-r-[20px]"
-            style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+          <span className="text-[15px] font-semibold text-slate-800 font-heading tracking-[-0.01em]">Меню</span>
+          <button
+            onClick={() => setOpen(false)}
+            className="flex items-center justify-center rounded-full touch-manipulation"
+            style={{ width: 32, height: 32, backgroundColor: "rgba(0,0,0,0.07)" }}
+            aria-label="Закрыть"
           >
-            <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0 border-b border-slate-200/70" style={{ backgroundColor: "#f7f7f9" }}>
-              <span className="text-[15px] font-semibold text-slate-700 font-heading tracking-[-0.01em]">Меню</span>
-              <button
-                onClick={() => setOpen(false)}
-                className="flex items-center justify-center rounded-full bg-slate-200/80 text-slate-600 touch-manipulation"
-                style={{ width: 36, height: 36 }}
-                aria-label="Закрыть"
-              >
-                <X className="w-4 h-4" strokeWidth={2.5} />
-              </button>
-            </div>
-            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain p-4 pt-3 space-y-1">
-              {children}
-            </div>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+            <X className="w-4 h-4 text-slate-600" strokeWidth={2.5} />
+          </button>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain p-4 pt-3 space-y-1">
+          {children}
+        </div>
+      </motion.div>
+    </>
   );
 };
 

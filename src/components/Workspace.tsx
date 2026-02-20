@@ -1040,46 +1040,52 @@ export function Workspace(_props?: WorkspaceProps) {
       </div>
 
       {/* Панель Папки на мобильных — выдвигается справа */}
-      <AnimatePresence>
-        {isMobileFolderPanelOpen && (
-          <motion.div
-            key="folder-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.22, ease: 'easeOut' }}
-            className="md:hidden fixed inset-0 z-[200] bg-black/20 backdrop-blur-[2px] touch-manipulation"
-            onClick={closeMobileFolderPanel}
-            aria-hidden
-          />
-        )}
-        {isMobileFolderPanelOpen && (
-          <motion.div
-            key="folder-panel"
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%', transition: { type: 'tween', duration: 0.24, ease: [0.4, 0, 1, 1] } }}
-            transition={{ type: 'tween', duration: 0.36, ease: [0.2, 0, 0, 1] }}
-            className="md:hidden fixed top-0 right-0 bottom-0 z-[201] w-[min(320px,85vw)] flex flex-col rounded-l-[20px] shadow-[-8px_0_32px_rgba(0,0,0,0.12)]"
-            style={{ willChange: 'transform', backgroundColor: '#f7f7f9' }}
-          >
-            {/* inner clip */}
+      <>
+        {/* Backdrop — всегда в DOM */}
+        <motion.div
+          initial={false}
+          animate={{ opacity: isMobileFolderPanelOpen ? 1 : 0 }}
+          transition={{ duration: isMobileFolderPanelOpen ? 0.22 : 0.18, ease: 'linear' }}
+          className="md:hidden fixed inset-0 z-[200] bg-black/25 touch-none"
+          style={{ pointerEvents: isMobileFolderPanelOpen ? 'auto' : 'none' }}
+          onClick={closeMobileFolderPanel}
+          aria-hidden
+        />
+        {/* Panel — всегда в DOM */}
+        <motion.div
+          initial={false}
+          animate={{ x: isMobileFolderPanelOpen ? '0%' : '100%' }}
+          transition={{
+            type: 'tween',
+            duration: isMobileFolderPanelOpen ? 0.34 : 0.22,
+            ease: isMobileFolderPanelOpen ? [0.25, 0.46, 0.45, 0.94] : [0.55, 0, 1, 0.45],
+          }}
+          className="md:hidden fixed top-0 right-0 bottom-0 z-[201] w-[min(320px,85vw)] flex flex-col"
+          style={{
+            willChange: 'transform',
+            backgroundColor: '#f8f8fa',
+            borderTopLeftRadius: 20,
+            borderBottomLeftRadius: 20,
+            boxShadow: '-8px 0 40px rgba(0,0,0,0.13)',
+            paddingTop: 'env(safe-area-inset-top, 0px)',
+            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          }}
+        >
             <div
-              className="flex flex-col flex-1 min-h-0 overflow-hidden rounded-l-[20px]"
-              style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+              className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0"
+              style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', backgroundColor: '#f8f8fa' }}
             >
-            <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0 border-b border-slate-200/70" style={{ backgroundColor: '#f7f7f9' }}>
-              <span className="text-[15px] font-semibold text-slate-700">Папки</span>
+              <span className="text-[15px] font-semibold text-slate-800">Папки</span>
               <button
                 onClick={closeMobileFolderPanel}
-                className="flex items-center justify-center rounded-full bg-slate-200/80 text-slate-500 touch-manipulation"
-                style={{ width: 36, height: 36 }}
+                className="flex items-center justify-center rounded-full touch-manipulation"
+                style={{ width: 32, height: 32, backgroundColor: 'rgba(0,0,0,0.07)' }}
                 aria-label="Закрыть"
               >
-                <X className="w-4 h-4" strokeWidth={2.5} />
+                <X className="w-4 h-4 text-slate-600" strokeWidth={2.5} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-6" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
+            <div className="flex-1 overflow-y-auto overflow-x-hidden px-4" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
               <div className="grid grid-cols-2 gap-3">
                 {contentSection === 'carousels' ? (
                   <>
@@ -1171,10 +1177,8 @@ export function Workspace(_props?: WorkspaceProps) {
                 </button>
               </div>
             </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        </motion.div>
+      </>
 
       {/* Main Content - Video Feed or Carousels. overflow-scroll-touch для листания на мобильных */}
       <div 
