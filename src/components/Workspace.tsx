@@ -1042,32 +1042,33 @@ export function Workspace(_props?: WorkspaceProps) {
       {/* Панель Папки на мобильных — выдвигается справа */}
       <AnimatePresence>
         {isMobileFolderPanelOpen && (
-          <>
-            <motion.div
-              key="folder-backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.22, ease: 'easeOut' }}
-              className="md:hidden fixed inset-0 z-[200] bg-black/20 backdrop-blur-[2px] touch-manipulation"
-              onClick={closeMobileFolderPanel}
-              aria-hidden
-            />
-            <motion.div
-              key="folder-panel"
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%', transition: { type: 'tween', duration: 0.2, ease: [0.4, 0, 1, 1] } }}
-              transition={{ type: 'spring', stiffness: 600, damping: 52, mass: 0.85 }}
-              className={cn(
-                "md:hidden fixed top-0 right-0 bottom-0 z-[201] w-[min(320px,85vw)] flex flex-col",
-                "bg-white/95 backdrop-blur-2xl backdrop-saturate-[180%]",
-                "border-l border-slate-200/60 shadow-[-8px_0_32px_rgba(0,0,0,0.1)]",
-                "rounded-l-[20px]",
-                "safe-top safe-bottom safe-right overflow-hidden"
-              )}
-              style={{ willChange: 'transform' }}
-            >
+          <motion.div
+            key="folder-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+            className="md:hidden fixed inset-0 z-[200] bg-black/20 backdrop-blur-[2px] touch-manipulation"
+            onClick={closeMobileFolderPanel}
+            aria-hidden
+          />
+        )}
+        {isMobileFolderPanelOpen && (
+          <motion.div
+            key="folder-panel"
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%', transition: { type: 'tween', duration: 0.22, ease: [0.4, 0, 1, 1] } }}
+            transition={{ type: 'spring', stiffness: 600, damping: 52, mass: 0.85 }}
+            className={cn(
+              "md:hidden fixed top-0 right-0 bottom-0 z-[201] w-[min(320px,85vw)] flex flex-col",
+              "bg-white/95 backdrop-blur-2xl backdrop-saturate-[180%]",
+              "border-l border-slate-200/60 shadow-[-8px_0_32px_rgba(0,0,0,0.1)]",
+              "rounded-l-[20px]",
+              "overflow-hidden"
+            )}
+            style={{ willChange: 'transform', paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+          >
             <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0 safe-top">
               <span className="text-[15px] font-semibold text-slate-700">Папки</span>
               <button
@@ -1170,8 +1171,7 @@ export function Workspace(_props?: WorkspaceProps) {
                 </button>
               </div>
             </div>
-            </motion.div>
-          </>
+          </motion.div>
         )}
       </AnimatePresence>
 
