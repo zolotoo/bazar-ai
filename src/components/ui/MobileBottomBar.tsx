@@ -20,7 +20,7 @@ interface MobileBottomBarProps extends React.HTMLAttributes<HTMLElement> {
   onTabClick: (id: MobileTabId) => void;
 }
 
-const spring = { type: "spring" as const, stiffness: 520, damping: 34, mass: 0.75 };
+const spring = { type: "spring" as const, stiffness: 480, damping: 36, mass: 0.8 };
 
 export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProps>(
   ({ className, items, activeId, onTabClick, ...props }, ref) => {
@@ -34,36 +34,28 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
           className
         )}
         style={{
-          paddingBottom: "max(16px, env(safe-area-inset-bottom, 16px))",
+          paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))",
           paddingLeft: 20,
           paddingRight: 20,
           paddingTop: 8,
         }}
         {...props}
       >
-        {/* Dark glass pill */}
+        {/* iOS-style frosted glass pill */}
         <div
           className="pointer-events-auto relative"
           style={{
-            background: "rgba(22, 22, 30, 0.72)",
-            backdropFilter: "blur(32px) saturate(180%)",
-            WebkitBackdropFilter: "blur(32px) saturate(180%)",
-            borderRadius: 28,
-            border: "1px solid rgba(255,255,255,0.10)",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.07)",
-            padding: "6px 8px",
+            background: "rgba(255, 255, 255, 0.82)",
+            backdropFilter: "blur(40px) saturate(200%)",
+            WebkitBackdropFilter: "blur(40px) saturate(200%)",
+            borderRadius: 26,
+            border: "1px solid rgba(255, 255, 255, 0.75)",
+            boxShadow:
+              "0 2px 20px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)",
+            padding: "5px 6px",
           }}
         >
-          {/* Top shine line */}
-          <div
-            className="absolute top-0 left-4 right-4 h-px pointer-events-none"
-            style={{
-              background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.12) 40%, rgba(255,255,255,0.12) 60%, transparent)",
-              borderRadius: 1,
-            }}
-          />
-
-          <ul className="flex items-center gap-1">
+          <ul className="flex items-center">
             {items.map((item) => {
               const Icon = item.icon;
               const isActive = item.id === activeId;
@@ -74,47 +66,61 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
                     type="button"
                     role="tab"
                     onClick={() => onTabClick(item.id)}
-                    className="relative flex items-center justify-center touch-manipulation"
-                    style={{ width: 56, height: 52 }}
-                    whileTap={{ scale: 0.88 }}
+                    className="relative flex flex-col items-center justify-center touch-manipulation"
+                    style={{ minWidth: 64, paddingTop: 6, paddingBottom: 6, paddingLeft: 4, paddingRight: 4 }}
+                    whileTap={{ scale: 0.9 }}
                     transition={spring}
                     aria-label={item.label}
                     aria-selected={isActive}
                   >
-                    {/* Active circular background */}
+                    {/* Active pill background */}
                     <AnimatePresence>
                       {isActive && (
                         <motion.div
-                          layoutId="active-bg"
-                          className="absolute inset-0 m-auto"
-                          style={{
-                            width: 44,
-                            height: 44,
-                            borderRadius: 16,
-                            background: "linear-gradient(145deg, #4a7cf7 0%, #3563e9 100%)",
-                            boxShadow: "0 4px 16px rgba(59,99,247,0.45), inset 0 1px 0 rgba(255,255,255,0.20)",
-                          }}
-                          initial={{ scale: 0.6, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          exit={{ scale: 0.6, opacity: 0 }}
+                          layoutId="ios-active-bg"
+                          className="absolute inset-0"
+                          style={{ borderRadius: 18 }}
+                          initial={{ opacity: 0, scale: 0.85 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.85 }}
                           transition={spring}
-                        />
+                        >
+                          <div
+                            style={{
+                              position: "absolute",
+                              inset: 0,
+                              borderRadius: 18,
+                              background: "rgba(30, 30, 40, 0.08)",
+                            }}
+                          />
+                        </motion.div>
                       )}
                     </AnimatePresence>
 
                     {/* Icon */}
                     <Icon
-                      className="relative z-10 transition-all duration-200"
+                      className="relative z-10 transition-colors duration-200"
                       style={{
-                        width: 21,
-                        height: 21,
-                        color: isActive ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.45)",
-                        strokeWidth: isActive ? 2.2 : 1.8,
-                        filter: isActive
-                          ? "drop-shadow(0 1px 4px rgba(255,255,255,0.25))"
-                          : "none",
+                        width: 22,
+                        height: 22,
+                        color: isActive ? "#1c1c28" : "#a1a1aa",
+                        strokeWidth: isActive ? 2.2 : 1.7,
                       }}
                     />
+
+                    {/* Label */}
+                    <span
+                      className="relative z-10 transition-colors duration-200 mt-0.5"
+                      style={{
+                        fontSize: 10,
+                        fontWeight: isActive ? 600 : 400,
+                        letterSpacing: "-0.01em",
+                        color: isActive ? "#1c1c28" : "#a1a1aa",
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {item.label}
+                    </span>
                   </motion.button>
                 </li>
               );
