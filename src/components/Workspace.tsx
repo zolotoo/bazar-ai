@@ -1044,19 +1044,21 @@ export function Workspace(_props?: WorkspaceProps) {
         {isMobileFolderPanelOpen && (
           <>
             <motion.div
+              key="folder-backdrop"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
               className="md:hidden fixed inset-0 z-[200] bg-black/20 backdrop-blur-[2px] touch-manipulation"
               onClick={closeMobileFolderPanel}
               aria-hidden
             />
             <motion.div
+              key="folder-panel"
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', stiffness: 380, damping: 34, mass: 0.9 }}
+              exit={{ x: '100%', transition: { type: 'tween', duration: 0.2, ease: [0.4, 0, 1, 1] } }}
+              transition={{ type: 'spring', stiffness: 600, damping: 52, mass: 0.85 }}
               className={cn(
                 "md:hidden fixed top-0 right-0 bottom-0 z-[201] w-[min(320px,85vw)] flex flex-col",
                 "bg-white/95 backdrop-blur-2xl backdrop-saturate-[180%]",
@@ -1083,7 +1085,7 @@ export function Workspace(_props?: WorkspaceProps) {
                     <button
                       onClick={() => { setSelectedCarouselFolderId(null); closeMobileFolderPanel(); }}
                       className={cn(
-                        "flex flex-col items-center rounded-2xl p-4 min-h-[120px] transition-all active:scale-[0.97] touch-manipulation",
+                        "flex flex-col items-center rounded-2xl p-4 min-h-[120px] touch-manipulation",
                         "bg-white/50 backdrop-blur-md border border-white/60",
                         "shadow-[0_2px_12px_rgba(0,0,0,0.06)]",
                         selectedCarouselFolderId === null && "ring-2 ring-slate-300/40 bg-white/70"
@@ -1101,7 +1103,7 @@ export function Workspace(_props?: WorkspaceProps) {
                           key={folder.id}
                           onClick={() => { setSelectedCarouselFolderId(folder.id); closeMobileFolderPanel(); }}
                           className={cn(
-                            "flex flex-col items-center rounded-2xl p-4 min-h-[120px] transition-all active:scale-[0.97] touch-manipulation",
+                            "flex flex-col items-center rounded-2xl p-4 min-h-[120px] touch-manipulation",
                             "bg-white/50 backdrop-blur-md border border-white/60",
                             "shadow-[0_2px_12px_rgba(0,0,0,0.06)]",
                             isSelected && "ring-2 ring-slate-300/50 bg-white/70"
@@ -1119,7 +1121,7 @@ export function Workspace(_props?: WorkspaceProps) {
                     <button
                       onClick={() => { setSelectedFolderId(null); closeMobileFolderPanel(); }}
                       className={cn(
-                        "flex flex-col items-center rounded-2xl p-4 min-h-[120px] transition-all active:scale-[0.97] touch-manipulation",
+                        "flex flex-col items-center rounded-2xl p-4 min-h-[120px] touch-manipulation",
                         "bg-white/50 backdrop-blur-md border border-white/60",
                         "shadow-[0_2px_12px_rgba(0,0,0,0.06)]",
                         selectedFolderId === null && "ring-2 ring-slate-300/40 bg-white/70"
@@ -1138,7 +1140,7 @@ export function Workspace(_props?: WorkspaceProps) {
                           key={folder.id}
                           onClick={() => { setSelectedFolderId(folder.id); closeMobileFolderPanel(); }}
                           className={cn(
-                            "flex flex-col items-center rounded-2xl p-4 min-h-[120px] transition-all active:scale-[0.97] touch-manipulation",
+                            "flex flex-col items-center rounded-2xl p-4 min-h-[120px] touch-manipulation",
                             "bg-white/50 backdrop-blur-md border border-white/60",
                             "shadow-[0_2px_12px_rgba(0,0,0,0.06)]",
                             isSelected && "ring-2 ring-slate-300/50 bg-white/70",
@@ -1158,7 +1160,7 @@ export function Workspace(_props?: WorkspaceProps) {
                 <button
                   onClick={() => { setShowFolderSettings(true); closeMobileFolderPanel(); }}
                   className={cn(
-                    "col-span-2 flex items-center justify-center gap-2 rounded-2xl py-3 px-4 mt-1 transition-all active:scale-[0.99] touch-manipulation",
+                    "col-span-2 flex items-center justify-center gap-2 rounded-2xl py-3 px-4 mt-1 touch-manipulation",
                     "bg-white/40 backdrop-blur-md border border-white/50 text-slate-500",
                     "hover:bg-white/50 active:bg-white/60"
                   )}

@@ -108,27 +108,27 @@ export const MobileSidebar = ({
 }: { className?: string; children?: React.ReactNode }) => {
   const { open, setOpen } = useSidebar();
   return (
-    <>
-      <AnimatePresence>
-        {open && (
+    <AnimatePresence>
+      {open && (
+        <>
+          {/* Backdrop */}
           <motion.div
+            key="sidebar-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="md:hidden fixed inset-0 z-[9999] bg-black/20 backdrop-blur-[2px] touch-none safe-top safe-bottom safe-left safe-right"
+            transition={{ duration: 0.22, ease: "easeOut" }}
+            className="md:hidden fixed inset-0 z-[9999] bg-black/20 backdrop-blur-[2px] touch-none"
             onClick={() => setOpen(false)}
             aria-hidden
           />
-        )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {open && (
+          {/* Panel */}
           <motion.div
+            key="sidebar-panel"
             initial={{ x: "-100%" }}
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
-            transition={{ type: "spring", stiffness: 380, damping: 34, mass: 0.9 }}
+            transition={{ type: "spring", stiffness: 600, damping: 52, mass: 0.85 }}
             className={cn(
               "md:hidden fixed inset-y-0 left-0 z-[9999] w-[min(320px,92vw)] flex flex-col",
               "bg-white/95 backdrop-blur-2xl backdrop-saturate-[180%]",
@@ -136,7 +136,7 @@ export const MobileSidebar = ({
               "shadow-[8px_0_32px_rgba(0,0,0,0.1)]",
               "safe-top safe-bottom safe-left safe-right overflow-hidden"
             )}
-            style={{ willChange: "transform", WebkitOverflowScrolling: "touch" }}
+            style={{ willChange: "transform" }}
           >
             <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0 safe-top border-b border-slate-100">
               <span className="text-[15px] font-semibold text-slate-700 font-heading tracking-[-0.01em]">Меню</span>
@@ -152,13 +152,13 @@ export const MobileSidebar = ({
               "flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain p-4 pt-3 space-y-1",
               "[&_button]:min-h-[44px] [&_button]:touch-manipulation",
               "[&_[role='button']]:min-h-[44px]"
-            )} style={{ WebkitOverflowScrolling: 'touch' }}>
+            )}>
               {children}
             </div>
           </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+        </>
+      )}
+    </AnimatePresence>
   );
 };
 

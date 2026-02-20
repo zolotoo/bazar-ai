@@ -1,129 +1,133 @@
 /**
- * Framer Motion presets — iOS 26 / visionOS feel.
- * No sharp easings; spring-based, slight overshoot, fast settle.
+ * Framer Motion presets — iOS 17 feel.
+ *
+ * Правило для боковых панелей / шитов:
+ *   критическое демпфирование = 2 * sqrt(stiffness * mass)
+ *   чтобы не было рингования — damping > критического
+ *
+ * panelSpring: crit ≈ 2*sqrt(600*0.85) ≈ 45.2 → damping 52 → overdamped ✓
+ * dialogSpring: crit ≈ 2*sqrt(520*0.9) ≈ 43.2 → damping 48 → overdamped ✓
  */
 
 import type { Transition, Variants } from 'framer-motion';
 
-/** Spring: calm, slight overshoot, fast settle */
-export const iosSpring: Transition = {
+// ---------------------------------------------------------------------------
+// Base springs
+// ---------------------------------------------------------------------------
+
+/** Боковая панель — overdamped, нет рингования, быстрый сетл */
+export const panelSpring: Transition = {
   type: 'spring',
-  stiffness: 400,
-  damping: 30,
-  mass: 0.8,
+  stiffness: 600,
+  damping: 52,
+  mass: 0.85,
 };
 
-/** Softer spring for heavier/larger elements */
-export const iosSpringSoft: Transition = {
-  type: 'spring',
-  stiffness: 300,
-  damping: 28,
-  mass: 1,
+/** Выход панели — быстрый ease-in, пропадает моментально */
+export const panelExit: Transition = {
+  type: 'tween',
+  duration: 0.2,
+  ease: [0.4, 0, 1, 1],
 };
 
-/** Snappier spring for small UI feedback */
+/** iOS-шит снизу */
+export const dialogSpring: Transition = {
+  type: 'spring',
+  stiffness: 520,
+  damping: 48,
+  mass: 0.9,
+};
+
+/** Мелкий UI-фидбек (кнопки, тапы) */
 export const iosSpringSnap: Transition = {
   type: 'spring',
   stiffness: 500,
-  damping: 35,
-  mass: 0.6,
+  damping: 38,
+  mass: 0.65,
 };
 
-/** Slow, calm spring for panels/sidebars */
-export const iosSpringCalm: Transition = {
-  type: 'spring',
-  stiffness: 260,
-  damping: 30,
-  mass: 1,
+// legacy aliases — не ломаем старые импорты
+export const iosSpring = panelSpring;
+export const iosSpringSoft = dialogSpring;
+export const iosSpringCalm = panelSpring;
+
+// ---------------------------------------------------------------------------
+// Backdrop
+// ---------------------------------------------------------------------------
+
+export const backdropFade: Variants = {
+  hidden:  { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: 0.22, ease: 'easeOut' } },
+  exit:    { opacity: 0, transition: { duration: 0.18, ease: 'easeIn' } },
 };
 
-/** Hover elevation — slight lift, subtle shadow feel. Use with transition={iosSpring}. */
+// ---------------------------------------------------------------------------
+// Side panels (sidebar left, folder panel right)
+// ---------------------------------------------------------------------------
+
+export const sidebarSlideVariants: Variants = {
+  hidden:  { x: '-100%' },
+  visible: { x: 0,      transition: panelSpring },
+  exit:    { x: '-100%', transition: panelExit },
+};
+
+export const folderPanelVariants: Variants = {
+  hidden:  { x: '100%' },
+  visible: { x: 0,      transition: panelSpring },
+  exit:    { x: '100%', transition: panelExit },
+};
+
+// legacy alias
+export const sidebarSlide = sidebarSlideVariants;
+
+// ---------------------------------------------------------------------------
+// Dialogs / sheets
+// ---------------------------------------------------------------------------
+
+export const dialogSlideUp: Variants = {
+  hidden:  { opacity: 0, y: '6%' },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: dialogSpring,
+  },
+  exit: {
+    opacity: 0,
+    y: '4%',
+    transition: { type: 'tween', duration: 0.2, ease: [0.4, 0, 1, 1] },
+  },
+};
+
+export const dialogScale: Variants = {
+  hidden:  { opacity: 0, scale: 0.97 },
+  visible: { opacity: 1, scale: 1, transition: dialogSpring },
+  exit:    { opacity: 0, scale: 0.97, transition: { type: 'tween', duration: 0.18, ease: [0.4, 0, 1, 1] } },
+};
+
+// ---------------------------------------------------------------------------
+// Cards / lists
+// ---------------------------------------------------------------------------
+
+export const panelEnter: Variants = {
+  hidden:  { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0,  transition: panelSpring },
+  exit:    { opacity: 0, y: 6,  transition: panelExit },
+};
+
 export const hoverLiftVariants: Variants = {
-  rest: { y: 0 },
+  rest:  { y: 0 },
   hover: { y: -6 },
-  tap: { y: -2 },
+  tap:   { y: -2 },
 };
-
-/** Legacy alias */
 export const hoverLift = hoverLiftVariants;
 
-/** Glass card hover — lift + scale. Use with transition={iosSpring}. */
 export const glassHoverVariants: Variants = {
-  rest: { y: 0, scale: 1 },
+  rest:  { y: 0, scale: 1 },
   hover: { y: -6, scale: 1.01 },
-  tap: { y: -2, scale: 0.99 },
+  tap:   { y: -2, scale: 0.99 },
 };
-
-/** Legacy alias */
 export const glassHover = glassHoverVariants;
 
-/** Panel enter — fade + rise on mount */
-export const panelEnter: Variants = {
-  hidden: { opacity: 0, y: 12 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: iosSpring,
-  },
-  exit: {
-    opacity: 0,
-    y: 8,
-    transition: { type: 'spring', stiffness: 400, damping: 35 },
-  },
-};
-
-/** Sidebar slide — open/close with spring */
-export const sidebarSlide = {
-  open: { x: 0 },
-  closed: { x: '-100%' },
-  transition: iosSpringCalm,
-} as const;
-
-/** Sidebar slide variants for AnimatePresence */
-export const sidebarSlideVariants: Variants = {
-  hidden: { x: '-100%' },
-  visible: { x: 0, transition: iosSpringCalm },
-  exit: { x: '-100%', transition: iosSpringCalm },
-};
-
-/** Dialog / overlay — soft scale-in (desktop) */
-export const dialogScale: Variants = {
-  hidden: { opacity: 0, scale: 0.96 },
-  visible: {
-    opacity: 1,
-    scale: 1,
-    transition: iosSpringSoft,
-  },
-  exit: {
-    opacity: 0,
-    scale: 0.96,
-    transition: { type: 'spring', stiffness: 400, damping: 32 },
-  },
-};
-
-/** Mobile dialog — slide up from bottom like iOS sheet */
-export const dialogSlideUp: Variants = {
-  hidden: { opacity: 0, y: '8%' },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { type: 'spring', stiffness: 380, damping: 32, mass: 0.9 },
-  },
-  exit: {
-    opacity: 0,
-    y: '6%',
-    transition: { type: 'tween', duration: 0.2, ease: [0.32, 0, 0.67, 0] },
-  },
-};
-
-/** Backdrop fade for overlays */
-export const backdropFade: Variants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.2 } },
-  exit: { opacity: 0, transition: { duration: 0.15 } },
-};
-
-/** Stagger children — for lists / cards */
 export const staggerContainer = {
   visible: {
     transition: {
@@ -134,6 +138,6 @@ export const staggerContainer = {
 } as const;
 
 export const staggerItem = {
-  hidden: { opacity: 0, y: 8 },
-  visible: { opacity: 1, y: 0, transition: iosSpring },
+  hidden:  { opacity: 0, y: 8 },
+  visible: { opacity: 1, y: 0, transition: panelSpring },
 } as const;
