@@ -362,7 +362,6 @@ body {
   .sort-pill button {
     min-height: unset !important;
     min-width: unset !important;
-    padding: unset !important;
     border-radius: 9999px !important;
     font-size: inherit !important;
   }

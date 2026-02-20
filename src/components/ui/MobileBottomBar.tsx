@@ -20,14 +20,13 @@ interface MobileBottomBarProps extends React.HTMLAttributes<HTMLElement> {
   onTabClick: (id: MobileTabId) => void;
 }
 
-const spring = { type: "spring" as const, stiffness: 500, damping: 38, mass: 0.7 };
+const spring = { type: "spring" as const, stiffness: 420, damping: 34, mass: 0.85 };
 
 export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProps>(
   ({ className, items, activeId, onTabClick, ...props }, ref) => {
     return (
       <nav
         ref={ref}
-        // data-floating сбрасывает глобальные nav/tablist CSS-правила
         data-floating="true"
         role="tablist"
         className={cn(
@@ -38,31 +37,30 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
         style={{
           background: "transparent",
           border: "none",
-          paddingBottom: "max(10px, env(safe-area-inset-bottom, 10px))",
-          paddingLeft: 24,
-          paddingRight: 24,
-          paddingTop: 6,
+          paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))",
+          paddingLeft: 20,
+          paddingRight: 20,
+          paddingTop: 8,
         }}
         {...props}
       >
-        {/* Floating frosted-glass pill */}
+        {/* iOS 17 frosted glass pill */}
         <div
           className="pointer-events-auto"
           style={{
-            background: "rgba(255, 255, 255, 0.76)",
-            backdropFilter: "blur(40px) saturate(210%)",
-            WebkitBackdropFilter: "blur(40px) saturate(210%)",
-            borderRadius: 36,
-            border: "1px solid rgba(255, 255, 255, 0.70)",
+            background: "rgba(248, 248, 252, 0.84)",
+            backdropFilter: "blur(44px) saturate(200%)",
+            WebkitBackdropFilter: "blur(44px) saturate(200%)",
+            borderRadius: 34,
+            border: "1px solid rgba(255,255,255,0.72)",
             boxShadow:
-              "0 2px 14px rgba(0,0,0,0.055), 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.85)",
-            padding: "5px 2px",
+              "0 4px 24px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)",
+            padding: "6px 4px",
           }}
         >
           <ul
             role="presentation"
-            className="flex items-center"
-            style={{ background: "transparent", border: "none", padding: 0 }}
+            style={{ display: "flex", alignItems: "center", background: "transparent", border: "none", padding: 0, margin: 0, listStyle: "none" }}
           >
             {items.map((item) => {
               const Icon = item.icon;
@@ -71,63 +69,57 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
               return (
                 <li
                   key={item.id}
-                  style={{ padding: 0, minHeight: "unset", borderRadius: 0 }}
+                  style={{ padding: 0, minHeight: "unset", borderRadius: 0, listStyle: "none" }}
                 >
                   <motion.button
                     type="button"
                     aria-label={item.label}
                     aria-selected={isActive}
                     onClick={() => onTabClick(item.id)}
-                    className="flex flex-col items-center justify-center touch-manipulation"
                     style={{
-                      width: 60,
-                      paddingTop: 6,
-                      paddingBottom: 6,
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 72,
+                      paddingTop: 9,
+                      paddingBottom: 9,
                       background: "transparent",
                       border: "none",
                       willChange: "transform",
                       minHeight: "unset",
                       minWidth: "unset",
                       cursor: "pointer",
+                      WebkitTapHighlightColor: "transparent",
+                      gap: 3,
                     }}
-                    whileTap={{ scale: 0.88 }}
+                    whileTap={{ scale: 0.87 }}
                     transition={spring}
                   >
                     <Icon
                       style={{
-                        width: 21,
-                        height: 21,
-                        color: isActive ? "#18181b" : "#a1a1aa",
-                        strokeWidth: isActive ? 2.2 : 1.6,
-                        transition: "color 0.15s ease, stroke-width 0.15s ease",
+                        width: 24,
+                        height: 24,
+                        color: isActive ? "#18181b" : "#a8a8b0",
+                        strokeWidth: isActive ? 2.1 : 1.65,
+                        transition: "color 0.18s ease",
+                        flexShrink: 0,
                       }}
                     />
 
                     <span
                       style={{
-                        fontSize: 10,
+                        fontSize: 10.5,
                         fontWeight: isActive ? 600 : 400,
                         letterSpacing: "-0.01em",
-                        color: isActive ? "#18181b" : "#a1a1aa",
-                        lineHeight: 1.2,
-                        marginTop: 2,
-                        transition: "color 0.15s ease",
+                        color: isActive ? "#18181b" : "#a8a8b0",
+                        lineHeight: 1,
+                        transition: "color 0.18s ease, font-weight 0.18s ease",
+                        whiteSpace: "nowrap",
                       }}
                     >
                       {item.label}
                     </span>
-
-                    {/* Dot indicator under active tab */}
-                    <div
-                      style={{
-                        marginTop: 3,
-                        width: 4,
-                        height: 4,
-                        borderRadius: "50%",
-                        background: isActive ? "#18181b" : "transparent",
-                        transition: "background 0.15s ease",
-                      }}
-                    />
                   </motion.button>
                 </li>
               );
