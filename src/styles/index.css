@@ -321,33 +321,42 @@ body {
     letter-spacing: -0.01em;
   }
 
-  /* iOS 26 Navigation Bar Style */
-  nav, [role="navigation"] {
+  /* iOS 26 Navigation Bar Style — только для обычных nav, не для floating */
+  nav:not([data-floating]):not([role="tablist"]), [role="navigation"]:not([data-floating]) {
     backdrop-filter: var(--ios-blur);
     -webkit-backdrop-filter: var(--ios-blur);
     background: rgba(255, 255, 255, 0.8);
     border-bottom: 0.5px solid rgba(0, 0, 0, 0.1);
   }
 
-  /* iOS 26 Tab Bar Style — общий, переопределяется .mobile-tab-bar */
-  [role="tablist"] {
-    backdrop-filter: var(--ios-blur);
-    -webkit-backdrop-filter: var(--ios-blur);
-    background: rgba(255, 255, 255, 0.85);
-    border-top: 0.5px solid rgba(0, 0, 0, 0.1);
-    padding-bottom: max(8px, var(--safe-area-inset-bottom));
+  /* Floating nav — полностью прозрачный */
+  nav[data-floating] {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: none !important;
   }
 
-  /* Наш таб-бар — как в референсе: чутка прозрачно, liquid glass */
-  nav.mobile-tab-bar[role="tablist"] {
-    background: rgba(255, 255, 255, 0.5) !important;
-    backdrop-filter: blur(32px) saturate(180%);
-    -webkit-backdrop-filter: blur(32px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    border-bottom: none;
-    border-radius: 24px 24px 0 0;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6);
-    margin: 0 12px;
+  nav[data-floating] [role="tablist"] {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+
+  nav[data-floating] li {
+    padding: 0 !important;
+    min-height: unset !important;
+    border-radius: 0 !important;
+  }
+
+  nav[data-floating] button {
+    min-height: unset !important;
+    min-width: unset !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    font-size: inherit !important;
   }
 
   /* iOS 26 List Styles */
