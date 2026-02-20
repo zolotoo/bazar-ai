@@ -20,7 +20,7 @@ interface MobileBottomBarProps extends React.HTMLAttributes<HTMLElement> {
   onTabClick: (id: MobileTabId) => void;
 }
 
-const springTab = { type: "spring" as const, stiffness: 500, damping: 32, mass: 0.8 };
+const spring = { type: "spring" as const, stiffness: 520, damping: 34, mass: 0.75 };
 
 export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProps>(
   ({ className, items, activeId, onTabClick, ...props }, ref) => {
@@ -30,79 +30,91 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
         role="tablist"
         className={cn(
           "md:hidden fixed left-0 right-0 bottom-0 z-[9998]",
-          "pointer-events-none",
+          "pointer-events-none flex justify-center",
           className
         )}
         style={{
-          paddingBottom: "max(10px, env(safe-area-inset-bottom, 10px))",
-          paddingLeft: "max(16px, env(safe-area-inset-left, 16px))",
-          paddingRight: "max(16px, env(safe-area-inset-right, 16px))",
+          paddingBottom: "max(16px, env(safe-area-inset-bottom, 16px))",
+          paddingLeft: 20,
+          paddingRight: 20,
           paddingTop: 8,
         }}
         {...props}
       >
+        {/* Dark glass pill */}
         <div
-          className={cn(
-            "pointer-events-auto mx-auto",
-            "rounded-[22px]",
-            "bg-white/60 backdrop-blur-2xl backdrop-saturate-[180%]",
-            "border border-white/70",
-            "shadow-[0_4px_24px_rgba(0,0,0,0.08),0_1px_4px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.7)]",
-          )}
-          style={{ maxWidth: 320 }}
+          className="pointer-events-auto relative"
+          style={{
+            background: "rgba(22, 22, 30, 0.72)",
+            backdropFilter: "blur(32px) saturate(180%)",
+            WebkitBackdropFilter: "blur(32px) saturate(180%)",
+            borderRadius: 28,
+            border: "1px solid rgba(255,255,255,0.10)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.07)",
+            padding: "6px 8px",
+          }}
         >
-          <ul className="flex items-center justify-around px-2 py-1.5 gap-1">
+          {/* Top shine line */}
+          <div
+            className="absolute top-0 left-4 right-4 h-px pointer-events-none"
+            style={{
+              background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.12) 40%, rgba(255,255,255,0.12) 60%, transparent)",
+              borderRadius: 1,
+            }}
+          />
+
+          <ul className="flex items-center gap-1">
             {items.map((item) => {
               const Icon = item.icon;
               const isActive = item.id === activeId;
 
               return (
-                <li key={item.id} className="flex-1 flex justify-center min-w-0">
+                <li key={item.id} className="flex justify-center">
                   <motion.button
                     type="button"
                     role="tab"
                     onClick={() => onTabClick(item.id)}
-                    className={cn(
-                      "relative flex items-center justify-center gap-1.5 touch-manipulation",
-                      "rounded-2xl transition-colors duration-150",
-                      "min-h-[40px]",
-                      isActive
-                        ? "px-4 py-2"
-                        : "px-3 py-2 active:scale-90"
-                    )}
-                    layout
-                    transition={springTab}
+                    className="relative flex items-center justify-center touch-manipulation"
+                    style={{ width: 56, height: 52 }}
+                    whileTap={{ scale: 0.88 }}
+                    transition={spring}
                     aria-label={item.label}
                     aria-selected={isActive}
                   >
-                    {isActive && (
-                      <motion.div
-                        layoutId="tab-pill"
-                        className="absolute inset-0 rounded-2xl bg-slate-700 shadow-sm"
-                        transition={springTab}
-                      />
-                    )}
-                    <Icon
-                      className={cn(
-                        "relative z-10 w-[20px] h-[20px] flex-shrink-0 transition-colors duration-150",
-                        isActive ? "text-white" : "text-slate-500"
-                      )}
-                      strokeWidth={isActive ? 2.2 : 1.8}
-                    />
-                    <AnimatePresence mode="wait">
+                    {/* Active circular background */}
+                    <AnimatePresence>
                       {isActive && (
-                        <motion.span
-                          key={item.id}
-                          initial={{ opacity: 0, width: 0 }}
-                          animate={{ opacity: 1, width: "auto" }}
-                          exit={{ opacity: 0, width: 0 }}
-                          transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
-                          className="relative z-10 text-[12px] font-semibold text-white whitespace-nowrap overflow-hidden"
-                        >
-                          {item.label}
-                        </motion.span>
+                        <motion.div
+                          layoutId="active-bg"
+                          className="absolute inset-0 m-auto"
+                          style={{
+                            width: 44,
+                            height: 44,
+                            borderRadius: 16,
+                            background: "linear-gradient(145deg, #4a7cf7 0%, #3563e9 100%)",
+                            boxShadow: "0 4px 16px rgba(59,99,247,0.45), inset 0 1px 0 rgba(255,255,255,0.20)",
+                          }}
+                          initial={{ scale: 0.6, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0.6, opacity: 0 }}
+                          transition={spring}
+                        />
                       )}
                     </AnimatePresence>
+
+                    {/* Icon */}
+                    <Icon
+                      className="relative z-10 transition-all duration-200"
+                      style={{
+                        width: 21,
+                        height: 21,
+                        color: isActive ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.45)",
+                        strokeWidth: isActive ? 2.2 : 1.8,
+                        filter: isActive
+                          ? "drop-shadow(0 1px 4px rgba(255,255,255,0.25))"
+                          : "none",
+                      }}
+                    />
                   </motion.button>
                 </li>
               );
