@@ -1,8 +1,10 @@
 // Vercel Serverless Function — invite, remove, role в один endpoint (лимит 12 на Hobby)
 // POST { action: 'invite', projectId, username, userId, role? }
+// POST { action: 'invite', projectId, email, userId, role? }
 // POST { action: 'remove', projectId, memberId, userId }
 // POST { action: 'role', projectId, memberId, role, userId }
 import { createClient } from '@supabase/supabase-js';
+import { Resend } from 'resend';
 
 async function sendInviteTelegramNotification(supabase, projectName, inviteeUserId, memberId) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -76,10 +78,46 @@ export default async function handler(req, res) {
   return res.status(400).json({ error: 'Unknown action', expected: ['invite', 'remove', 'role'] });
 }
 
+async function sendInviteEmailNotification(projectName, email, memberId) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const emailFrom = process.env.EMAIL_FROM || 'noreply@resend.dev';
+  let appUrl = process.env.APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
+  if (!apiKey || !appUrl) return;
+
+  const resend = new Resend(apiKey);
+  const inviteLink = `${appUrl}/invite?m=${memberId}`;
+
+  try {
+    await resend.emails.send({
+      from: emailFrom,
+      to: email,
+      subject: `Вас пригласили в проект «${projectName || 'Без названия'}»`,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; background: #fff;">
+          <h2 style="font-size: 22px; font-weight: 700; color: #1e293b; margin: 0 0 12px;">Вас пригласили в проект</h2>
+          <p style="font-size: 16px; color: #475569; margin: 0 0 24px;">
+            Вы получили приглашение в проект <strong style="color: #1e293b;">«${projectName || 'Без названия'}»</strong>.
+          </p>
+          <a href="${inviteLink}" style="display: inline-block; padding: 14px 28px; background: #475569; color: #fff; text-decoration: none; border-radius: 12px; font-size: 15px; font-weight: 600;">
+            Открыть проект
+          </a>
+          <p style="font-size: 13px; color: #94a3b8; margin: 24px 0 0;">
+            Или перейдите по ссылке: <a href="${inviteLink}" style="color: #475569;">${inviteLink}</a>
+          </p>
+        </div>
+      `,
+    });
+  } catch (err) {
+    console.error('[Email invite]', err);
+  }
+}
+
 async function handleInvite(req, res, supabase) {
-  const { projectId, username, userId, role = 'write' } = req.body || {};
-  if (!projectId || !username || !userId) {
-    return res.status(400).json({ error: 'Missing projectId, username, userId' });
+  const { projectId, username, email, userId, role = 'write' } = req.body || {};
+  const isEmailInvite = !!email && !username;
+
+  if (!projectId || (!username && !email) || !userId) {
+    return res.status(400).json({ error: 'Missing projectId, (username or email), userId' });
   }
 
   try {
@@ -91,7 +129,9 @@ async function handleInvite(req, res, supabase) {
       if (!member || member.role !== 'admin') return res.status(403).json({ error: 'Insufficient permissions' });
     }
 
-    const normalizedInviteeId = `tg-${(username.startsWith('@') ? username.slice(1) : username).trim().toLowerCase()}`;
+    const normalizedInviteeId = isEmailInvite
+      ? `email-${email.trim().toLowerCase()}`
+      : `tg-${(username.startsWith('@') ? username.slice(1) : username).trim().toLowerCase()}`;
     const validRole = ['read', 'write', 'admin'].includes(role) ? role : 'write';
 
     const { data: existing } = await supabase.from('project_members').select('id, status').eq('project_id', projectId).eq('user_id', normalizedInviteeId).maybeSingle();
@@ -99,7 +139,11 @@ async function handleInvite(req, res, supabase) {
     if (existing) {
       if (existing.status === 'active') return res.status(400).json({ error: 'User is already a member' });
       await supabase.from('project_members').update({ status: 'active', role: validRole, user_id: normalizedInviteeId, joined_at: new Date().toISOString() }).eq('id', existing.id);
-      await sendInviteTelegramNotification(supabase, project.name, normalizedInviteeId, existing.id);
+      if (isEmailInvite) {
+        await sendInviteEmailNotification(project.name, email.trim().toLowerCase(), existing.id);
+      } else {
+        await sendInviteTelegramNotification(supabase, project.name, normalizedInviteeId, existing.id);
+      }
       return res.status(200).json({ success: true, message: 'Member reactivated', memberId: existing.id });
     }
 
@@ -116,9 +160,15 @@ async function handleInvite(req, res, supabase) {
       });
     } catch (_) {}
     await supabase.from('projects').update({ is_shared: true, shared_at: new Date().toISOString() }).eq('id', projectId);
-    await sendInviteTelegramNotification(supabase, project.name, normalizedInviteeId, member.id);
 
-    return res.status(200).json({ success: true, member, message: `Invitation sent to ${username}` });
+    if (isEmailInvite) {
+      await sendInviteEmailNotification(project.name, email.trim().toLowerCase(), member.id);
+    } else {
+      await sendInviteTelegramNotification(supabase, project.name, normalizedInviteeId, member.id);
+    }
+
+    const identifier = isEmailInvite ? email : username;
+    return res.status(200).json({ success: true, member, message: `Invitation sent to ${identifier}` });
   } catch (err) {
     console.error('[Project invite]', err);
     return res.status(500).json({ error: err.message });

@@ -92,25 +92,24 @@ export function useProjectMembers(projectId: string | null) {
     }
   }, [projectId, userId]);
 
-  // Приглашение участника через API
+  // Приглашение участника через API (по Telegram username или email)
   const inviteMember = useCallback(async (
-    username: string,
+    usernameOrEmail: string,
     role: 'read' | 'write' | 'admin' = 'write'
   ) => {
     if (!projectId || !userId) {
       throw new Error('Project ID or user ID is missing');
     }
 
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(usernameOrEmail.trim());
+    const body = isEmail
+      ? { action: 'invite', projectId, email: usernameOrEmail.trim().toLowerCase(), userId, role }
+      : { action: 'invite', projectId, username: usernameOrEmail.trim(), userId, role };
+
     const response = await fetch('/api/project', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'invite',
-        projectId,
-        username,
-        userId,
-        role,
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {

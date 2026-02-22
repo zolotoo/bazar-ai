@@ -456,7 +456,11 @@ function AppContent() {
           toast.error('Приглашение не найдено или истекло');
           return;
         }
-        if (member.user_id !== userId) {
+        const isEmailInvite = member.user_id.startsWith('email-');
+        const emailFromInvite = isEmailInvite ? member.user_id.replace('email-', '') : null;
+        const userEmail = user.email?.toLowerCase();
+        const idMatches = member.user_id === userId || (isEmailInvite && !!userEmail && emailFromInvite === userEmail);
+        if (!idMatches) {
           toast.error('Это приглашение предназначено другому пользователю');
           return;
         }
@@ -475,7 +479,7 @@ function AppContent() {
           .from('project_members')
           .update({ status: 'active', joined_at: new Date().toISOString() })
           .eq('id', memberId)
-          .eq('user_id', userId);
+          .eq('user_id', member.user_id);
 
         if (updateErr) throw updateErr;
 
