@@ -1049,7 +1049,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
 
   return (
     <div className="h-full overflow-hidden flex flex-col bg-base">
-      <div className="w-full h-full p-4 md:p-6 pb-28 md:pb-6 flex flex-col overflow-y-auto min-h-0">
+      <div className="w-full h-full p-4 md:p-6 pb-[calc(7rem+env(safe-area-inset-bottom,0px))] md:pb-6 flex flex-col overflow-y-auto min-h-0">
         {/* Header — на мобильных компактнее */}
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-shrink-0">
           <div className="flex items-center gap-4">
@@ -1150,7 +1150,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
         {/* Main content — на мобильных колонка, на десктопе 3 колонки */}
         <div className="flex flex-col md:flex-row md:flex-1 gap-4 md:min-h-0 md:overflow-hidden">
           {/* Left: видео 9:16 + папка + статистика */}
-          <div className="flex-shrink-0 flex flex-col gap-3 md:overflow-y-auto custom-scrollbar-light w-full md:w-auto md:min-w-[256px] md:max-w-[min(256px,28vw)]">
+          <div className="order-3 md:order-none flex-shrink-0 flex flex-col gap-3 md:overflow-y-auto custom-scrollbar-light w-full md:w-auto md:min-w-[256px] md:max-w-[min(256px,28vw)]">
             {/* Видео 9:16 — выше по центру колонки. Заглушка: клик → загрузка через API (стоит кредитов) */}
             <div className="flex justify-center flex-shrink-0">
               <div 
@@ -1494,7 +1494,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
           </div>
 
           {/* Middle: Transcript — на мобильных с мин. высотой для скролла */}
-          <div className="flex-1 flex flex-col min-w-0 min-h-[320px] md:min-h-0 rounded-card-xl shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] overflow-hidden">
+          <div className="order-2 md:order-none flex-1 flex flex-col min-w-0 min-h-[320px] md:min-h-0 rounded-card-xl shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] overflow-hidden">
             {/* Transcript header — 2 ряда как в каруселях */}
             <div className="flex flex-col gap-3 p-4 border-b border-slate-100">
               {/* Ряд 1: заголовок + табы + Перевести */}
@@ -1646,7 +1646,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
           </div>
 
           {/* Right: Script — на мобильных с мин. высотой */}
-          <div className="flex-1 flex flex-col min-w-0 min-h-[320px] md:min-h-0 rounded-card-xl shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] md:overflow-hidden">
+          <div className="order-1 md:order-none flex-1 flex flex-col min-w-0 min-h-[320px] md:min-h-0 rounded-card-xl shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] md:overflow-hidden">
             {/* Script header — 2 ряда как в каруселях */}
             <div className="flex flex-col gap-3 p-4 border-b border-slate-100">
               {/* Ряд 1: заголовок + подчерк · Промт + сохранён + По подчерку */}
@@ -1757,11 +1757,11 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                 )}
               </div>
               {/* Ряд 2: Обучить подчерк, Сохранить, Копировать, Что не так сделал? */}
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2 overflow-x-auto overflow-y-hidden pb-1 -mb-1 whitespace-nowrap custom-scrollbar-light">
                 <button
                   type="button"
                   onClick={() => { setCreatingNewStyle(true); setEditingStyle(null); setNewStyleName(''); setShowStyleTrainModal(true); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium shrink-0"
                   title="Создать новый подчерк по 1–5 примерам"
                 >
                   <BookOpen className="w-3.5 h-3.5" />
@@ -1771,7 +1771,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                   <button
                     type="button"
                     onClick={() => setShowCopyStylesModal(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium shrink-0"
                     title="Скопировать все подчерки в другой проект"
                   >
                     <Copy className="w-3.5 h-3.5" />
@@ -1782,7 +1782,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                   <button
                     type="button"
                     onClick={() => setShowChoiceModal(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-medium"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-medium shrink-0"
                     title="Дать обратную связь — промт дообучится"
                   >
                     Что не так сделал?
@@ -1793,7 +1793,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                     <button
                       onClick={handleSaveScript}
                       disabled={isSavingScript}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-600 text-white text-xs font-medium hover:bg-slate-700 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-600 text-white text-xs font-medium hover:bg-slate-700 disabled:opacity-50 shrink-0"
                     >
                       {isSavingScript ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1804,7 +1804,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                     </button>
                     <button
                       onClick={handleCopyScript}
-                      className="flex items-center justify-center p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-700"
+                      className="flex items-center justify-center p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-700 shrink-0"
                       title="Копировать"
                     >
                       {copiedScript ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
@@ -1815,11 +1815,11 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
             </div>
             
             {/* Script content - всегда textarea */}
-            <div className="flex-1 md:overflow-hidden p-4">
+            <div className="flex-1 min-h-0 p-4 overflow-y-auto">
               <textarea
                 value={script}
                 onChange={(e) => { setScript(e.target.value); setScriptGeneratedByStyle(false); }}
-                className="w-full h-full min-h-[240px] resize-none text-slate-700 text-sm leading-relaxed focus:outline-none border border-slate-200 rounded-xl p-4 focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition-all"
+                className="w-full h-full min-h-[42dvh] md:min-h-[240px] resize-y md:resize-none text-slate-700 text-sm leading-relaxed focus:outline-none border border-slate-200 rounded-xl p-4 focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition-all"
                 placeholder="Напишите ваш сценарий здесь...
 
 # Хук (0-3 сек)
