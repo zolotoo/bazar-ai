@@ -81,23 +81,25 @@ export function ProfilePage() {
       <div className="max-w-lg mx-auto w-full p-6 pt-8 pb-24 md:pb-6">
         {/* User Info */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center mb-4 shadow-xl shadow-orange-500/30">
-            <span className="text-3xl font-bold text-white">
+          <div className="w-24 h-24 rounded-full bg-white/72 backdrop-blur-glass-xl border border-white/60 flex items-center justify-center mb-4 shadow-glass">
+            <div className="w-[84px] h-[84px] rounded-full bg-gradient-to-br from-slate-500 via-slate-600 to-slate-700 flex items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_10px_22px_rgba(15,23,42,0.18)]">
+            <span className="text-3xl font-bold text-white font-heading">
               {user?.telegram_username?.[0]?.toUpperCase() || 'U'}
             </span>
+            </div>
           </div>
           {editingName ? (
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-2 mt-2 rounded-2xl bg-white/72 backdrop-blur-glass border border-white/60 p-2 shadow-glass-sm">
               <input
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayNameState(e.target.value)}
                 placeholder="Твоё имя"
-                className="px-3 py-2 rounded-xl border border-slate-200 text-slate-800 text-sm"
+                className="px-3 py-2 rounded-xl border border-white/60 bg-white/75 text-slate-800 text-sm outline-none focus:ring-2 focus:ring-slate-200/70"
                 autoFocus
               />
-              <button onClick={handleSaveDisplayName} className="px-3 py-2 rounded-xl bg-slate-600 text-white text-sm">Сохранить</button>
-              <button onClick={() => { setEditingName(false); setDisplayNameState(getDisplayName() || user?.telegram_username || ''); }} className="px-3 py-2 rounded-xl bg-slate-100 text-slate-600 text-sm">Отмена</button>
+              <button onClick={handleSaveDisplayName} className="px-3 py-2 rounded-xl bg-slate-700 text-white text-sm shadow-glass-sm">Сохранить</button>
+              <button onClick={() => { setEditingName(false); setDisplayNameState(getDisplayName() || user?.telegram_username || ''); }} className="px-3 py-2 rounded-xl bg-white/80 border border-white/60 text-slate-600 text-sm">Отмена</button>
             </div>
           ) : (
             <button onClick={() => setEditingName(true)} className="text-left">
@@ -107,13 +109,12 @@ export function ProfilePage() {
               <p className="text-sm text-slate-500 mt-0.5">@{user?.telegram_username}</p>
             </button>
           )}
-          <div className="flex items-center gap-3 mt-2 flex-wrap justify-center">
-            <div className="flex items-center gap-1">
+          <div className="flex items-center gap-3 mt-3 flex-wrap justify-center">
+            <div className="flex items-center gap-1.5 rounded-pill bg-white/58 border border-white/55 backdrop-blur-glass px-3 py-1.5 shadow-glass-sm">
               <div className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span className="text-sm text-emerald-600">Подключен к Telegram</span>
+              <span className="text-sm text-emerald-700">Подключен к Telegram</span>
             </div>
-            <span className="text-slate-300">·</span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 rounded-pill bg-white/58 border border-white/55 backdrop-blur-glass px-3 py-1.5 shadow-glass-sm">
               <span className="text-sm text-slate-500">Баланс</span>
               <TokenBalanceDisplay variant="card" />
             </div>
@@ -122,15 +123,15 @@ export function ProfilePage() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 gap-4 mb-8">
-          <div className="bg-white rounded-2xl p-4 text-center active:scale-95 transition-transform">
-            <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center mx-auto mb-2">
-              <Search className="w-5 h-5 text-orange-500" />
+          <div className="bg-white/68 backdrop-blur-glass border border-white/60 rounded-3xl p-4 text-center active:scale-95 transition-transform shadow-glass">
+            <div className="w-10 h-10 rounded-2xl bg-white/80 border border-white/60 flex items-center justify-center mx-auto mb-2 shadow-glass-sm">
+              <Search className="w-5 h-5 text-slate-600" />
             </div>
             <p className="text-2xl font-bold text-slate-800">{historyEntries.length}</p>
             <p className="text-xs text-slate-500">Поисковых запросов</p>
           </div>
-          <div className="bg-white rounded-2xl p-4 text-center active:scale-95 transition-transform">
-            <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-2">
+          <div className="bg-white/68 backdrop-blur-glass border border-white/60 rounded-3xl p-4 text-center active:scale-95 transition-transform shadow-glass">
+            <div className="w-10 h-10 rounded-2xl bg-white/80 border border-white/60 flex items-center justify-center mx-auto mb-2 shadow-glass-sm">
               <Video className="w-5 h-5 text-slate-600" />
             </div>
             <p className="text-2xl font-bold text-slate-800">{incomingVideos.length}</p>
@@ -141,10 +142,10 @@ export function ProfilePage() {
         {/* Tracked Accounts Section */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-medium text-slate-800">Отслеживаемые аккаунты</h3>
+            <h3 className="text-lg font-semibold text-slate-800 font-heading tracking-[-0.01em]">Отслеживаемые аккаунты</h3>
             <button
               onClick={() => setShowAddAccount(true)}
-              className="p-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:from-orange-400 hover:to-amber-400 transition-all active:scale-95 shadow-lg shadow-orange-500/30"
+              className="p-2 rounded-2xl bg-white/72 backdrop-blur-glass border border-white/60 text-slate-700 hover:bg-white/82 transition-all active:scale-95 shadow-glass"
             >
               <UserPlus className="w-5 h-5" />
             </button>
@@ -152,7 +153,7 @@ export function ProfilePage() {
 
           {/* Add Account Modal */}
           {showAddAccount && (
-            <div className="bg-white rounded-2xl p-4 mb-4 shadow-lg border border-orange-100">
+            <div className="bg-white/72 backdrop-blur-glass-xl rounded-3xl p-4 mb-4 shadow-glass border border-white/60">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="font-medium text-slate-800">Добавить аккаунт</h4>
                 <button
@@ -167,13 +168,13 @@ export function ProfilePage() {
                 <div>
                   <label className="text-sm text-slate-500 mb-1 block">Instagram username</label>
                   <div className="flex items-center gap-2">
-                    <Instagram className="w-5 h-5 text-pink-500" />
+                    <Instagram className="w-5 h-5 text-slate-500" />
                     <input
                       type="text"
                       value={newUsername}
                       onChange={(e) => setNewUsername(e.target.value)}
                       placeholder="username"
-                      className="flex-1 px-3 py-2 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500/30 text-sm"
+                      className="flex-1 px-3 py-2 rounded-xl border border-white/60 bg-white/80 outline-none focus:ring-2 focus:ring-slate-300/40 text-sm"
                     />
                   </div>
                 </div>
@@ -183,7 +184,7 @@ export function ProfilePage() {
                   <select
                     value={newFrequency}
                     onChange={(e) => setNewFrequency(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-orange-500/30 text-sm"
+                    className="w-full px-3 py-2 rounded-xl border border-white/60 bg-white/80 outline-none focus:ring-2 focus:ring-slate-300/40 text-sm"
                   >
                     <option value={1}>Каждый час</option>
                     <option value={6}>Каждые 6 часов</option>
@@ -198,8 +199,8 @@ export function ProfilePage() {
                   disabled={!newUsername.trim() || adding}
                   className={cn(
                     "w-full py-2.5 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-2",
-                    "bg-gradient-to-r from-orange-500 to-amber-500 text-white",
-                    "hover:from-orange-400 hover:to-amber-400 active:scale-95",
+                    "bg-slate-700 text-white shadow-glass-sm",
+                    "hover:bg-slate-800 active:scale-95",
                     "disabled:opacity-50 disabled:cursor-not-allowed"
                   )}
                 >
@@ -216,13 +217,13 @@ export function ProfilePage() {
 
           {/* Accounts List */}
           {accountsLoading ? (
-            <div className="bg-white rounded-2xl p-8 flex items-center justify-center">
-              <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
+            <div className="bg-white/68 backdrop-blur-glass border border-white/60 rounded-3xl p-8 flex items-center justify-center shadow-glass">
+              <Loader2 className="w-6 h-6 animate-spin text-slate-500" />
             </div>
           ) : accounts.length === 0 ? (
-            <div className="bg-white rounded-2xl p-6 text-center">
-              <div className="w-12 h-12 rounded-xl bg-pink-100 flex items-center justify-center mx-auto mb-3">
-                <Instagram className="w-6 h-6 text-pink-500" />
+            <div className="bg-white/68 backdrop-blur-glass border border-white/60 rounded-3xl p-6 text-center shadow-glass">
+              <div className="w-12 h-12 rounded-2xl bg-white/80 border border-white/60 flex items-center justify-center mx-auto mb-3 shadow-glass-sm">
+                <Instagram className="w-6 h-6 text-slate-500" />
               </div>
               <p className="text-slate-500 text-sm">
                 Добавь Instagram аккаунты — я буду автоматически отслеживать новые рилсы
@@ -233,11 +234,11 @@ export function ProfilePage() {
               {accounts.map((account) => (
                 <div 
                   key={account.id}
-                  className="bg-white rounded-2xl p-4 flex items-center gap-3"
+                  className="bg-white/68 backdrop-blur-glass border border-white/60 rounded-3xl p-4 flex items-center gap-3 shadow-glass"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-slate-600 flex items-center justify-center flex-shrink-0">
+                  <div className="w-12 h-12 rounded-2xl bg-white/80 border border-white/60 flex items-center justify-center flex-shrink-0 shadow-glass-sm">
                     <span className="text-white font-bold text-lg">
-                      {account.instagram_username[0].toUpperCase()}
+                      <span className="text-slate-700">{account.instagram_username[0].toUpperCase()}</span>
                     </span>
                   </div>
                   
@@ -260,15 +261,15 @@ export function ProfilePage() {
                       className={cn(
                         "p-2 min-w-[44px] min-h-[44px] rounded-xl transition-all active:scale-95 flex items-center justify-center touch-manipulation",
                         checking === account.id 
-                          ? "bg-orange-100 text-orange-500" 
-                          : "bg-slate-100 text-slate-500 hover:bg-orange-100 hover:text-orange-500"
+                          ? "bg-white/90 border border-white/60 text-slate-700 shadow-glass-sm" 
+                          : "bg-white/80 border border-white/60 text-slate-500 hover:bg-white/90 hover:text-slate-700"
                       )}
                     >
                       <RefreshCw className={cn("w-4 h-4", checking === account.id && "animate-spin")} />
                     </button>
                     <button
                       onClick={() => removeAccount(account.id)}
-                      className="p-2 min-w-[44px] min-h-[44px] rounded-xl bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-500 transition-all active:scale-95 flex items-center justify-center touch-manipulation"
+                      className="p-2 min-w-[44px] min-h-[44px] rounded-xl bg-white/80 border border-white/60 text-slate-500 hover:bg-red-50 hover:text-red-500 transition-all active:scale-95 flex items-center justify-center touch-manipulation"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -280,23 +281,23 @@ export function ProfilePage() {
         </div>
 
         {/* Settings Menu */}
-        <div className="bg-white rounded-2xl overflow-hidden mb-8">
-          <button className="w-full flex items-center gap-3 p-4 min-h-[56px] hover:bg-slate-50 transition-colors border-b border-slate-100 active:scale-[0.98] touch-manipulation">
-            <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+        <div className="bg-white/68 backdrop-blur-glass border border-white/60 rounded-3xl overflow-hidden mb-8 shadow-glass">
+          <button className="w-full flex items-center gap-3 p-4 min-h-[56px] hover:bg-white/70 transition-colors border-b border-white/55 active:scale-[0.98] touch-manipulation">
+            <div className="w-10 h-10 rounded-2xl bg-white/82 border border-white/60 flex items-center justify-center shadow-glass-sm">
               <Bell className="w-5 h-5 text-slate-500" />
             </div>
             <span className="flex-1 text-left font-medium text-slate-800">Уведомления</span>
             <ChevronRight className="w-5 h-5 text-slate-400" />
           </button>
-          <button className="w-full flex items-center gap-3 p-4 min-h-[56px] hover:bg-slate-50 transition-colors border-b border-slate-100 active:scale-[0.98] touch-manipulation">
-            <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+          <button className="w-full flex items-center gap-3 p-4 min-h-[56px] hover:bg-white/70 transition-colors border-b border-white/55 active:scale-[0.98] touch-manipulation">
+            <div className="w-10 h-10 rounded-2xl bg-white/82 border border-white/60 flex items-center justify-center shadow-glass-sm">
               <Settings className="w-5 h-5 text-slate-500" />
             </div>
             <span className="flex-1 text-left font-medium text-slate-800">Настройки</span>
             <ChevronRight className="w-5 h-5 text-slate-400" />
           </button>
-          <button className="w-full flex items-center gap-3 p-4 min-h-[56px] hover:bg-slate-50 transition-colors active:scale-[0.98] touch-manipulation">
-            <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+          <button className="w-full flex items-center gap-3 p-4 min-h-[56px] hover:bg-white/70 transition-colors active:scale-[0.98] touch-manipulation">
+            <div className="w-10 h-10 rounded-2xl bg-white/82 border border-white/60 flex items-center justify-center shadow-glass-sm">
               <HelpCircle className="w-5 h-5 text-slate-500" />
             </div>
             <span className="flex-1 text-left font-medium text-slate-800">Помощь</span>
@@ -307,7 +308,7 @@ export function ProfilePage() {
         {/* Logout */}
         <button
           onClick={logout}
-          className="w-full flex items-center justify-center gap-2 p-4 min-h-[56px] rounded-2xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors active:scale-95 touch-manipulation"
+          className="w-full flex items-center justify-center gap-2 p-4 min-h-[56px] rounded-3xl bg-white/68 backdrop-blur-glass border border-white/60 text-red-600 hover:bg-red-50 transition-colors active:scale-95 touch-manipulation shadow-glass"
         >
           <LogOut className="w-5 h-5" />
           <span className="font-medium">Выйти</span>

@@ -90,7 +90,7 @@ export const DesktopSidebar = ({
         "h-full px-4 py-4 hidden md:flex md:flex-col flex-shrink-0",
         variant === 'minimal'
           ? "bg-slate-50/95 border-r border-slate-200/60"
-          : "bg-glass-white/80 backdrop-blur-glass-xl backdrop-saturate-[180%] border-r border-white/[0.35] shadow-glass",
+          : "bg-white/72 backdrop-blur-glass-xl backdrop-saturate-[180%] border-r border-white/50 shadow-glass",
         className
       )}
       animate={{
@@ -114,7 +114,7 @@ export const MobileSidebar = ({
         initial={false}
         animate={{ opacity: open ? 1 : 0 }}
         transition={{ duration: open ? 0.22 : 0.18, ease: "linear" }}
-        className="md:hidden fixed inset-0 z-[9999] bg-black/25 touch-none"
+        className="md:hidden fixed inset-0 z-[9999] bg-black/20 backdrop-blur-sm touch-none"
         style={{ pointerEvents: open ? "auto" : "none" }}
         onClick={() => setOpen(false)}
         aria-hidden
@@ -131,16 +131,18 @@ export const MobileSidebar = ({
         className="md:hidden fixed inset-y-0 left-0 z-[10000] w-[min(320px,92vw)] flex flex-col"
         style={{
           willChange: "transform",
-          backgroundColor: "#f8f8fa",
+          backgroundColor: "rgba(248,248,250,0.84)",
           borderTopRightRadius: 20,
           borderBottomRightRadius: 20,
-          boxShadow: "8px 0 40px rgba(0,0,0,0.13)",
+          boxShadow: "8px 0 40px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.7)",
+          backdropFilter: "blur(28px) saturate(180%)",
+          WebkitBackdropFilter: "blur(28px) saturate(180%)",
           paddingTop: "env(safe-area-inset-top, 0px)",
         }}
       >
         <div
           className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0"
-          style={{ borderBottom: "1px solid rgba(0,0,0,0.08)", backgroundColor: "#f8f8fa" }}
+          style={{ borderBottom: "1px solid rgba(255,255,255,0.55)", backgroundColor: "rgba(248,248,250,0.7)" }}
         >
           <span className="text-[15px] font-semibold text-slate-800 font-heading tracking-[-0.01em]">Меню</span>
           <button
@@ -188,21 +190,21 @@ export const SidebarLink = ({
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-2 py-1.5 min-h-[44px] rounded-xl transition-all w-full text-left group/sidebar touch-manipulation",
+        "flex items-center gap-2 py-1.5 min-h-[44px] rounded-2xl transition-all w-full text-left group/sidebar touch-manipulation",
         "font-medium",
         open ? "px-2.5" : "px-2 justify-center",
         isActive 
-          ? "bg-slate-200/40 backdrop-blur-glass text-slate-800 shadow-glass-sm" 
+          ? "bg-white/78 backdrop-blur-glass text-slate-800 border border-white/55 shadow-glass-sm" 
           : variant === 'danger'
-            ? "text-accent-negative hover:bg-glass-white/60 hover:backdrop-blur-glass"
-            : "text-slate-700 hover:bg-glass-white/60 hover:backdrop-blur-glass",
+            ? "text-accent-negative hover:bg-white/55 hover:backdrop-blur-glass"
+            : "text-slate-700 hover:bg-white/55 hover:backdrop-blur-glass hover:text-slate-800",
         className
       )}
     >
       <div className={cn(
         "flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-xl transition-all",
-        isActive && "bg-slate-200/30",
-        !open && isActive && "bg-slate-200/40"
+        isActive && "bg-white/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]",
+        !open && isActive && "bg-white/70"
       )}>
         {React.cloneElement(icon as React.ReactElement, { 
           className: "w-3.5 h-3.5",
@@ -239,7 +241,7 @@ export const SidebarLink = ({
             display: animate ? (open ? "flex" : "none") : "flex",
             opacity: animate ? (open ? 1 : 0) : 1,
           }}
-          className="ml-auto px-2.5 py-1 rounded-pill bg-accent-negative/15 text-accent-negative text-xs font-semibold shadow-glass-sm"
+          className="ml-auto px-2.5 py-1 rounded-pill bg-white/72 backdrop-blur-glass border border-white/50 text-accent-negative text-xs font-semibold shadow-glass-sm"
         >
           {badge}
         </motion.span>
@@ -273,7 +275,7 @@ export const SidebarSection = ({ title, children, onAdd }: SidebarSectionProps) 
         {onAdd && (
           <button
             onClick={onAdd}
-            className="p-2 min-w-[44px] min-h-[44px] rounded-pill hover:bg-glass-white/60 backdrop-blur-glass text-slate-400 hover:text-slate-700 transition-all flex items-center justify-center touch-manipulation"
+            className="p-2 min-w-[44px] min-h-[44px] rounded-pill hover:bg-white/65 backdrop-blur-glass text-slate-400 hover:text-slate-700 transition-all flex items-center justify-center touch-manipulation"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -319,11 +321,11 @@ export const SidebarProject = ({
     <div
       onClick={onClick}
       className={cn(
-        "group flex items-center gap-3 py-2 rounded-xl transition-all cursor-pointer relative",
+        "group flex items-center gap-3 py-2 rounded-2xl transition-all cursor-pointer relative border border-transparent",
         open ? "px-4 pl-3" : "px-3 justify-center",
         isActive 
-          ? "bg-glass-white/80 backdrop-blur-glass shadow-glass-sm" 
-          : "hover:bg-glass-white/50 hover:backdrop-blur-glass"
+          ? "bg-white/78 backdrop-blur-glass border-white/55 shadow-glass-sm" 
+          : "hover:bg-white/55 hover:backdrop-blur-glass"
       )}
     >
       {open && (
@@ -366,6 +368,7 @@ export const SidebarProject = ({
             opacity: animate ? (open ? 1 : 0) : 1,
           }}
           className="px-2 py-0.5 rounded-full bg-slate-200/40 text-slate-700 text-xs font-semibold font-heading tracking-[-0.01em]"
+          
         >
           {badge}
         </motion.span>
@@ -376,7 +379,7 @@ export const SidebarProject = ({
             e.stopPropagation();
             onEdit();
           }}
-          className="p-1.5 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-white/60 backdrop-blur-sm text-slate-400 hover:text-slate-700 transition-all"
+          className="p-1.5 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-white/70 backdrop-blur-sm text-slate-400 hover:text-slate-700 transition-all"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -398,7 +401,7 @@ export const SidebarLogo = () => {
       "flex items-center gap-3 py-2 mb-6 transition-all",
       open ? "px-3" : "px-2 justify-center"
     )}>
-      <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center shadow-glass-sm flex-shrink-0 bg-slate-100">
+      <div className="w-9 h-9 rounded-2xl overflow-hidden flex items-center justify-center shadow-glass-sm flex-shrink-0 bg-white/72 border border-white/55 backdrop-blur-glass">
         <img src="/riri-logo.png" alt="Riri AI" className="w-full h-full object-contain p-0.5" />
       </div>
       <motion.div
@@ -419,7 +422,7 @@ export const SidebarDivider = () => {
   const { open } = useSidebar();
   return (
     <div className={cn(
-      "h-px bg-gradient-to-r from-transparent via-slate-200/80 to-transparent my-4 transition-all",
+      "h-px bg-gradient-to-r from-transparent via-slate-200/55 to-transparent my-4 transition-all",
       open ? "mx-4" : "mx-3"
     )} />
   );

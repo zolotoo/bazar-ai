@@ -62,7 +62,7 @@ const GRADIENT_CARDS = [
     accent: 'по ссылке',
     subtitle: 'Вставь ссылку на Instagram — получи данные и сохрани',
     icon: Link,
-    gradient: 'from-blue-400 via-blue-500 to-blue-600',
+    gradient: 'from-[#7aa2ea] via-[#6d92da] to-[#5977bf]',
     cta: 'Открыть →',
     onAction: (fn: (t: 'link') => void) => fn('link'),
   },
@@ -72,7 +72,7 @@ const GRADIENT_CARDS = [
     accent: 'радар',
     subtitle: 'Отслеживай новые видео с профилей',
     icon: Radar,
-    gradient: 'from-emerald-400 via-emerald-500 to-emerald-600',
+    gradient: 'from-[#65d2b0] via-[#52c3a1] to-[#45aa8b]',
     cta: 'Открыть →',
     onAction: (fn: (t: 'radar') => void) => fn('radar'),
   },
@@ -104,9 +104,9 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
       <div className="mx-4 md:mx-6 lg:mx-8 py-4 md:py-8 lg:py-10 pb-24 md:pb-16">
         <div className="max-w-5xl mx-auto">
           <div
-            className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-8 lg:p-10"
+            className="rounded-2xl md:rounded-3xl p-4 md:p-8 lg:p-10 bg-white/72 backdrop-blur-glass-xl border border-white/55"
             style={{
-              boxShadow: '0 4px 24px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04)',
+              boxShadow: '0 10px 40px rgba(15,23,42,0.05), 0 2px 12px rgba(15,23,42,0.035), inset 0 1px 0 rgba(255,255,255,0.82)',
             }}
           >
             {/* Greeting — friendly headline (phrase lighter, name bolder like reference) */}
@@ -140,32 +140,32 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
                   )}
                   style={{
                     boxShadow:
-                      '0 4px 6px -1px rgba(0,0,0,0.08), 0 10px 20px -5px rgba(0,0,0,0.1), 0 20px 40px -10px rgba(0,0,0,0.08)',
+                      '0 12px 32px rgba(37,55,92,0.12), 0 4px 18px rgba(37,55,92,0.08)',
                   }}
                 >
                   {/* Subtle 3D-style decorative shape — размыты чтобы не выделялись */}
                   <div
-                    className="absolute -right-8 -bottom-8 w-32 h-32 rounded-full bg-white/10 blur-3xl"
+                    className="absolute -right-8 -bottom-8 w-32 h-32 rounded-full bg-white/8 blur-3xl"
                     aria-hidden
                   />
                   <div
-                    className="absolute -right-4 -top-4 w-24 h-24 rounded-full bg-white/5 blur-3xl"
+                    className="absolute -right-4 -top-4 w-24 h-24 rounded-full bg-white/4 blur-3xl"
                     aria-hidden
                   />
                   <div className="relative p-4 md:p-6 flex flex-col min-h-[120px] md:min-h-[160px]">
                     <div className="flex items-start justify-between mb-3">
-                      <div className="w-11 h-11 rounded-xl bg-white/25 flex items-center justify-center flex-shrink-0 shadow-sm">
+                      <div className="w-11 h-11 rounded-2xl bg-white/18 backdrop-blur-glass border border-white/25 flex items-center justify-center flex-shrink-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.32),0_4px_12px_rgba(0,0,0,0.08)]">
                         <card.icon className="w-5 h-5" strokeWidth={2.5} />
                       </div>
                     </div>
                     <h3 className="text-base md:text-lg font-bold mb-[0.6em] font-heading">{renderTitleWithAccent(card.title, card.accent)}</h3>
-                    <p className="text-white/90 text-sm mb-4 flex-1 leading-snug">
+                    <p className="text-white/88 text-sm mb-4 flex-1 leading-snug">
                       {card.subtitle}
                     </p>
                     <button
                       type="button"
                       onClick={() => card.onAction(onOpenSearch)}
-                      className="self-start px-4 py-2.5 min-h-[44px] rounded-xl bg-white/25 hover:bg-white/30 active:bg-white/35 text-white font-semibold text-sm transition-colors touch-manipulation"
+                      className="self-start px-4 py-2.5 min-h-[44px] rounded-2xl bg-white/16 backdrop-blur-glass border border-white/24 hover:bg-white/22 active:bg-white/26 text-white font-semibold text-sm transition-colors touch-manipulation shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]"
                     >
                       {card.cta}
                     </button>
@@ -184,24 +184,24 @@ export function Dashboard({ onOpenSearch, onOpenFeed, onOpenTeam, videosCount = 
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.35, delay: 0.1 + i * 0.05 }}
-                  className="relative bg-white rounded-2xl p-4 md:p-6 text-left border border-slate-100/80 hover:border-slate-200 hover:shadow-lg transition-all duration-200 group overflow-hidden active:scale-[0.99] touch-manipulation"
+                  className="relative rounded-2xl p-4 md:p-6 text-left border border-white/55 bg-white/66 backdrop-blur-glass hover:bg-white/78 hover:border-white/70 transition-all duration-200 group overflow-hidden active:scale-[0.99] touch-manipulation"
                   style={{
                     boxShadow:
-                      '0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.05), 0 2px 6px rgba(0,0,0,0.03)',
+                      '0 8px 24px rgba(15,23,42,0.045), 0 2px 10px rgba(15,23,42,0.03), inset 0 1px 0 rgba(255,255,255,0.72)',
                   }}
                 >
                   {/* Subtle underlay */}
                   <div
-                    className="absolute inset-0 bg-gradient-to-br from-slate-50/50 to-transparent pointer-events-none"
+                    className="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent pointer-events-none"
                     aria-hidden
                   />
                   <div className="relative flex flex-col h-full">
                     <div className="flex items-start justify-between mb-3">
-                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
+                      <div className="w-10 h-10 rounded-2xl bg-white/70 border border-white/60 backdrop-blur-glass flex items-center justify-center flex-shrink-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
                         <card.icon className="w-5 h-5 text-slate-600" strokeWidth={2.5} />
                       </div>
                       {card.id === 'feed' && videosCount > 0 && (
-                        <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold tabular-nums">
+                        <span className="px-2.5 py-1 rounded-pill bg-white/72 border border-white/55 backdrop-blur-glass text-slate-600 text-xs font-semibold tabular-nums shadow-glass-sm">
                           {videosCount}
                         </span>
                       )}

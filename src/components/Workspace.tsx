@@ -918,12 +918,12 @@ export function Workspace(_props?: WorkspaceProps) {
       <div className="h-full min-h-0 overflow-hidden relative flex flex-col">
       {/* Floating Folder Widget - Desktop */}
       <div className={cn(
-        "hidden md:block absolute top-4 right-4 z-40 bg-glass-white/80 backdrop-blur-glass-xl rounded-card-xl shadow-glass border border-white/[0.35] transition-all duration-300",
+        "hidden md:block absolute top-4 right-4 z-40 bg-white/72 backdrop-blur-glass-xl rounded-card-xl shadow-glass border border-white/55 transition-all duration-300",
         isFolderWidgetOpen ? "w-56" : "w-auto"
       )}>
         {/* Widget Header */}
           <div 
-          className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-white/[0.08] rounded-t-card-xl transition-colors"
+          className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-white/55 rounded-t-card-xl transition-colors"
           onClick={() => setIsFolderWidgetOpen(!isFolderWidgetOpen)}
         >
           <div className="flex items-center gap-2">
@@ -948,8 +948,8 @@ export function Workspace(_props?: WorkspaceProps) {
                   className={cn(
                     "w-full flex items-center gap-3 px-3 py-2.5 rounded-card transition-all text-left mb-2 shrink-0",
                     selectedCarouselFolderId === null 
-                      ? "bg-slate-200/40 text-slate-800 shadow-glass-sm" 
-                      : "hover:bg-glass-white/60 text-slate-600"
+                      ? "bg-white/82 text-slate-800 border border-white/55 shadow-glass-sm" 
+                      : "hover:bg-white/58 text-slate-600"
                   )}
                 >
                   <GlassFolderIcon iconType="inbox" color="#64748b" size={22} simple />
@@ -969,7 +969,7 @@ export function Workspace(_props?: WorkspaceProps) {
                         onClick={() => setSelectedCarouselFolderId(folder.id)}
                         className={cn(
                           "w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-left",
-                          isSelected ? "bg-slate-100" : "hover:bg-slate-50 text-slate-600"
+                          isSelected ? "bg-white/82 border border-white/55 shadow-glass-sm" : "hover:bg-white/55 text-slate-600"
                         )}
                       >
                         <GlassFolderIcon iconType={folder.iconType} color={folder.color} size={22} simple />
@@ -990,8 +990,8 @@ export function Workspace(_props?: WorkspaceProps) {
                   className={cn(
                     "w-full flex items-center gap-3 px-3 py-2.5 rounded-card transition-all text-left mb-2 shrink-0",
                     selectedFolderId === null 
-                      ? "bg-slate-200/40 text-slate-800 shadow-glass-sm" 
-                      : "hover:bg-glass-white/60 text-slate-600"
+                      ? "bg-white/82 text-slate-800 border border-white/55 shadow-glass-sm" 
+                      : "hover:bg-white/58 text-slate-600"
                   )}
                 >
                   <GlassFolderIcon iconType="inbox" color="#64748b" size={22} simple />
@@ -1012,7 +1012,7 @@ export function Workspace(_props?: WorkspaceProps) {
                         onClick={() => setSelectedFolderId(folder.id)}
                         className={cn(
                           "w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-left",
-                          isSelected ? "bg-slate-100" : "hover:bg-slate-50 text-slate-600",
+                          isSelected ? "bg-white/82 border border-white/55 shadow-glass-sm" : "hover:bg-white/55 text-slate-600",
                           isRejected && "opacity-70"
                         )}
                       >
@@ -1030,7 +1030,7 @@ export function Workspace(_props?: WorkspaceProps) {
             <div className="my-3 shrink-0" aria-hidden />
             <button
               onClick={() => setShowFolderSettings(true)}
-              className="w-full flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-xl hover:bg-slate-50 active:bg-slate-100 text-slate-500 text-sm transition-colors touch-manipulation shrink-0"
+              className="w-full flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-xl hover:bg-white/55 active:bg-white/70 text-slate-500 text-sm transition-colors touch-manipulation shrink-0"
             >
               <Settings className="w-4 h-4" />
               {contentSection === 'carousels' ? 'Настроить папки каруселей' : 'Настроить папки'}
@@ -1187,14 +1187,14 @@ export function Workspace(_props?: WorkspaceProps) {
       >
         <div className="max-w-6xl mx-auto py-4 md:py-8 pb-28 md:pb-8 safe-top safe-bottom">
           {/* Tabs: Рилсы | Карусели (в каждом проекте два раздела) */}
-          <div className="flex gap-1.5 p-1.5 mb-4 md:mb-6 rounded-2xl md:rounded-card-xl bg-slate-100/80 md:bg-glass-white/60 backdrop-blur-sm md:backdrop-blur-glass border border-slate-200/60 md:border-white/[0.35] w-full md:w-fit">
+          <div className="flex gap-1.5 p-1.5 mb-4 md:mb-6 rounded-2xl md:rounded-card-xl bg-white/68 backdrop-blur-glass border border-white/55 shadow-glass-sm w-full md:w-fit">
             <button
               onClick={() => setContentSection('reels')}
               className={cn(
                 'flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-3 md:py-2.5 min-h-[44px] rounded-xl text-sm font-semibold transition-all touch-manipulation',
                 contentSection === 'reels'
-                  ? 'bg-white text-slate-800 shadow-sm'
-                  : 'text-slate-600 active:bg-white/50'
+                  ? 'bg-white/88 text-slate-800 border border-white/60 shadow-glass-sm'
+                  : 'text-slate-600 active:bg-white/50 hover:bg-white/45'
               )}
             >
               <Sparkles className="w-4 h-4" strokeWidth={2.5} />
@@ -1206,8 +1206,8 @@ export function Workspace(_props?: WorkspaceProps) {
               className={cn(
                 'flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-3 md:py-2.5 min-h-[44px] rounded-xl text-sm font-semibold transition-all touch-manipulation',
                 contentSection === 'carousels'
-                  ? 'bg-white text-slate-800 shadow-sm'
-                  : 'text-slate-600 active:bg-white/50'
+                  ? 'bg-white/88 text-slate-800 border border-white/60 shadow-glass-sm'
+                  : 'text-slate-600 active:bg-white/50 hover:bg-white/45'
               )}
             >
               <Images className="w-4 h-4" strokeWidth={2.5} />
@@ -1220,7 +1220,7 @@ export function Workspace(_props?: WorkspaceProps) {
           {contentSection === 'reels' && (
           <>
           {/* Header — glass bar, на мобильных кнопка папок справа */}
-          <div className="mb-6 md:mb-8 rounded-2xl md:rounded-card-xl bg-slate-50/90 md:bg-glass-white/80 backdrop-blur-sm md:backdrop-blur-glass-xl shadow-sm md:shadow-glass border border-slate-200/60 md:border-white/[0.35] px-4 py-4 md:px-6 md:py-5 overflow-hidden">
+          <div className="mb-6 md:mb-8 rounded-2xl md:rounded-card-xl bg-white/72 backdrop-blur-glass-xl shadow-glass border border-white/55 px-4 py-4 md:px-6 md:py-5 overflow-hidden">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-5">
               <div className="flex items-center justify-between md:justify-start gap-3 flex-shrink-0 min-w-0">
                 <div className="flex items-center gap-3 min-w-0">
@@ -1253,7 +1253,7 @@ export function Workspace(_props?: WorkspaceProps) {
                 {/* Кнопка папок — мобильные, сверху справа */}
                 <button
                   onClick={() => setIsMobileFolderPanelOpen(true)}
-                  className="md:hidden p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-white/80 backdrop-blur-sm border border-slate-200/60 text-slate-600 active:bg-slate-100 transition-colors touch-manipulation flex-shrink-0"
+                  className="md:hidden p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-2xl bg-white/80 backdrop-blur-glass border border-white/60 text-slate-600 active:bg-white transition-colors touch-manipulation flex-shrink-0 shadow-glass-sm"
                   aria-label="Папки"
                 >
                   <FolderOpen className="w-5 h-5" strokeWidth={2.5} />
@@ -1263,7 +1263,7 @@ export function Workspace(_props?: WorkspaceProps) {
               {/* Фильтры сортировки — всегда видны сверху, отдельно от кнопок */}
               <div className="flex flex-wrap items-center gap-2 mb-3">
                 <span className="text-xs text-slate-500 font-medium">Фильтры:</span>
-                <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                <label className="flex items-center gap-1.5 text-xs text-slate-600 bg-white/62 border border-white/55 rounded-pill px-3 py-1.5 backdrop-blur-glass shadow-glass-sm">
                   виральность ≥
                   <input
                     type="number"
@@ -1271,10 +1271,10 @@ export function Workspace(_props?: WorkspaceProps) {
                     step={0.5}
                     value={sortFilterMinViral}
                     onChange={(e) => setSortFilterMinViral(Math.max(0, parseFloat(e.target.value) || 0))}
-                    className="w-14 px-2 py-1.5 rounded-lg border border-slate-200 text-slate-800 text-sm bg-white"
+                    className="w-14 px-2 py-1 rounded-lg border border-white/60 text-slate-800 text-sm bg-white/85 outline-none focus:ring-2 focus:ring-slate-200/70"
                   />
                 </label>
-                <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                <label className="flex items-center gap-1.5 text-xs text-slate-600 bg-white/62 border border-white/55 rounded-pill px-3 py-1.5 backdrop-blur-glass shadow-glass-sm">
                   просмотры ≥
                   <input
                     type="number"
@@ -1283,7 +1283,7 @@ export function Workspace(_props?: WorkspaceProps) {
                     value={sortFilterMinViews || ''}
                     onChange={(e) => setSortFilterMinViews(Math.max(0, parseInt(e.target.value, 10) || 0))}
                     placeholder="0"
-                    className="w-20 px-2 py-1.5 rounded-lg border border-slate-200 text-slate-800 text-sm bg-white"
+                    className="w-20 px-2 py-1 rounded-lg border border-white/60 text-slate-800 text-sm bg-white/85 outline-none focus:ring-2 focus:ring-slate-200/70"
                   />
                 </label>
               </div>
@@ -1293,7 +1293,7 @@ export function Workspace(_props?: WorkspaceProps) {
                 {canUndo && (
                   <button
                     onClick={handleUndo}
-                    className="flex items-center gap-2 px-3 py-1.5 min-h-[44px] rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 text-xs font-medium transition-all shadow-sm touch-manipulation flex-shrink-0"
+                    className="flex items-center gap-2 px-3 py-1.5 min-h-[44px] rounded-2xl bg-white/72 backdrop-blur-glass border border-white/55 hover:bg-white/88 active:bg-white text-slate-700 text-xs font-medium transition-all shadow-glass-sm touch-manipulation flex-shrink-0"
                     title="Отменить последнее действие"
                   >
                     <Undo2 className="w-3.5 h-3.5" />
@@ -1316,8 +1316,8 @@ export function Workspace(_props?: WorkspaceProps) {
                     className={cn(
                       "sort-pill flex items-center gap-1.5 rounded-xl text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 touch-manipulation",
                       sortBy === value
-                        ? "bg-slate-800 text-white"
-                        : "bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700"
+                        ? "bg-slate-800 text-white shadow-glass-sm"
+                        : "bg-white/68 backdrop-blur-glass border border-white/55 text-slate-500 hover:bg-white/84 hover:text-slate-700"
                     )}
                   >
                     <Icon className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={2.5} />
@@ -1328,14 +1328,14 @@ export function Workspace(_props?: WorkspaceProps) {
               </div>
             </div>
             {/* Добавить рилс по ссылке — как во вкладке Карусели */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-4 pt-4 border-t border-slate-200/60">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-4 pt-4 border-t border-white/55">
                 <div className="flex gap-2 flex-1 sm:min-w-[280px]">
                   <input
                     type="url"
                     value={reelLinkUrl}
                     onChange={e => setReelLinkUrl(e.target.value)}
                     placeholder="Ссылка на рилс (instagram.com/reel/...)"
-                    className="flex-1 min-w-0 px-4 py-2.5 rounded-xl border border-slate-200/80 bg-white/80 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300"
+                    className="flex-1 min-w-0 px-4 py-2.5 rounded-2xl border border-white/60 bg-white/82 backdrop-blur-glass text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200/70 focus:border-white/70 shadow-glass-sm"
                   />
                   <button
                     onClick={async () => {
@@ -1381,7 +1381,7 @@ export function Workspace(_props?: WorkspaceProps) {
                       }
                     }}
                     disabled={isAddingReelByLink || !reelLinkUrl.trim()}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-600 hover:bg-slate-700 disabled:bg-slate-200 disabled:text-slate-400 text-white text-sm font-medium transition-colors shrink-0"
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-700 hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 text-white text-sm font-medium transition-colors shrink-0 shadow-glass-sm"
                   >
                     {isAddingReelByLink ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
                     Добавить
@@ -1563,11 +1563,11 @@ export function Workspace(_props?: WorkspaceProps) {
           {/* Карусели: список + добавление по ссылке */}
           {contentSection === 'carousels' && (
             <>
-              <div className="mb-6 md:mb-8 rounded-card-xl bg-glass-white/80 backdrop-blur-glass-xl shadow-glass border border-white/[0.35] px-5 py-4 md:px-6 md:py-5">
+              <div className="mb-6 md:mb-8 rounded-card-xl bg-white/72 backdrop-blur-glass-xl shadow-glass border border-white/55 px-5 py-4 md:px-6 md:py-5">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                   <div className="flex items-center justify-between sm:justify-start gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-12 h-12 rounded-2xl bg-slate-200/40 flex items-center justify-center flex-shrink-0">
+                      <div className="w-12 h-12 rounded-2xl bg-white/78 border border-white/60 shadow-glass-sm flex items-center justify-center flex-shrink-0">
                         <Images className="w-6 h-6 text-slate-600" strokeWidth={2.5} />
                       </div>
                       <div>
@@ -1578,7 +1578,7 @@ export function Workspace(_props?: WorkspaceProps) {
                     {/* Папки — только мобильные */}
                     <button
                       onClick={() => setIsMobileFolderPanelOpen(true)}
-                      className="md:hidden p-2.5 flex items-center justify-center rounded-xl bg-white/80 backdrop-blur-sm border border-slate-200/60 text-slate-600 active:bg-slate-100 transition-colors touch-manipulation flex-shrink-0"
+                      className="md:hidden p-2.5 flex items-center justify-center rounded-2xl bg-white/80 backdrop-blur-glass border border-white/60 text-slate-600 active:bg-white transition-colors touch-manipulation flex-shrink-0 shadow-glass-sm"
                       aria-label="Папки"
                     >
                       <FolderOpen className="w-5 h-5" strokeWidth={2.5} />
@@ -1591,7 +1591,7 @@ export function Workspace(_props?: WorkspaceProps) {
                         value={carouselLinkUrl}
                         onChange={e => setCarouselLinkUrl(e.target.value)}
                         placeholder="Ссылка на пост с каруселью (instagram.com/p/...)"
-                        className="flex-1 min-w-0 px-4 py-2.5 rounded-xl border border-slate-200/80 bg-white/80 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300"
+                        className="flex-1 min-w-0 px-4 py-2.5 rounded-2xl border border-white/60 bg-white/82 backdrop-blur-glass text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200/70 focus:border-white/70 shadow-glass-sm"
                       />
                       <button
                         onClick={async () => {
@@ -1643,7 +1643,7 @@ export function Workspace(_props?: WorkspaceProps) {
                           }
                         }}
                         disabled={isAddingCarouselByLink || !carouselLinkUrl.trim() || !canAfford(getTokenCost('add_carousel'))}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-600 hover:bg-slate-700 disabled:bg-slate-200 disabled:text-slate-400 text-white text-sm font-medium transition-colors shrink-0"
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-700 hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 text-white text-sm font-medium transition-colors shrink-0 shadow-glass-sm"
                       >
                         {isAddingCarouselByLink ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
                         Добавить
@@ -1665,10 +1665,10 @@ export function Workspace(_props?: WorkspaceProps) {
                         key={value}
                         onClick={() => setCarouselSortBy(value)}
                         className={cn(
-                          'flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all',
+                          'flex items-center gap-1.5 px-3 py-2 rounded-2xl text-sm font-medium transition-all',
                           carouselSortBy === value
-                            ? 'bg-slate-600 text-white shadow-sm'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            ? 'bg-slate-800 text-white shadow-glass-sm'
+                            : 'bg-white/68 backdrop-blur-glass border border-white/55 text-slate-600 hover:bg-white/84'
                         )}
                       >
                         <Icon className="w-3.5 h-3.5" strokeWidth={2.5} />
