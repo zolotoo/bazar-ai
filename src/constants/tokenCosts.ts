@@ -19,8 +19,14 @@ export type TokenAction =
   | 'calculate_viral'
   | 'transcribe_video'
   | 'transcribe_carousel'
-  | 'train_style' // Обучить стиль по примерам (Gemini)
-  | 'add_to_folder'; // 0 — сохранение в БД без API
+  | 'train_style'
+  | 'add_to_folder'
+  | 'sw_clarify'
+  | 'sw_hooks'
+  | 'sw_body'
+  | 'sw_assemble'
+  | 'sw_improve'
+  | 'sw_validate_reel';
 
 /** Базовые стоимости в коинах */
 const TOKEN_COSTS: Record<Exclude<TokenAction, 'radar_refresh_all'>, number> = {
@@ -38,6 +44,12 @@ const TOKEN_COSTS: Record<Exclude<TokenAction, 'radar_refresh_all'>, number> = {
   transcribe_carousel: 2, // 1 Gemini
   train_style: 5, // 1 Gemini (анализ примеров)
   add_to_folder: 0,
+  sw_clarify: 3,        // 1 Gemini — уточнение темы
+  sw_hooks: 5,          // 1 Gemini — 5 вариантов хуков
+  sw_body: 5,           // 1 Gemini — 3 варианта тела
+  sw_assemble: 3,       // 1 Gemini — сборка финального сценария
+  sw_improve: 5,        // 1 Gemini — улучшение по комментариям
+  sw_validate_reel: 2,  // 1 RapidAPI — проверка рилса при обучении
 };
 
 /** Коинов за один профиль при «Обновить все» в радаре */

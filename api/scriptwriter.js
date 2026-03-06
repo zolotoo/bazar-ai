@@ -30,10 +30,18 @@ export default async function handler(req, res) {
       return handleRefine(req, res);
     case 'refine-by-diff':
       return handleRefineByDiff(req, res);
+    case 'clarify-topic':
+      return handleClarifyTopic(req, res);
+    case 'generate-hooks':
+      return handleGenerateHooks(req, res);
+    case 'generate-body':
+      return handleGenerateBody(req, res);
+    case 'assemble-script':
+      return handleAssembleScript(req, res);
+    case 'improve-script':
+      return handleImproveScript(req, res);
     default:
-      return res.status(400).json({
-        error: 'Unknown action. Use: analyze-structure, generate-from-topic, generate-from-reference, chat, check-similarity, refine, refine-by-diff',
-      });
+      return res.status(400).json({ error: 'Unknown action' });
   }
 }
 
@@ -571,6 +579,282 @@ ${feedback?.trim() ? `\nКОММЕНТАРИЙ:\n«${feedback.trim()}»\n` : ''}
     });
   } catch (err) {
     console.error('scriptwriter refine-by-diff error:', err);
+    return res.status(502).json({ error: 'OpenRouter API error', details: err.message });
+  }
+}
+
+// ── Шаг 1: Уточнение темы (3 вопроса) ───────────────────────────────────────
+
+async function handleClarifyTopic(req, res) {
+  const { prompt, topic, structure_analysis } = req.body;
+  if (!prompt?.trim() || !topic?.trim()) {
+    return res.status(400).json({ error: 'prompt and topic are required' });
+  }
+  if (!OPENROUTER_API_KEY) return res.status(500).json({ error: 'OPENROUTER_API_KEY not configured' });
+
+  let structureHint = '';
+  if (structure_analysis) {
+    structureHint = '\n\nСТРУКТУРА ПОДЧЕРКА:';
+    if (structure_analysis.hookDescription) structureHint += `\nХук: ${structure_analysis.hookDescription} (${structure_analysis.hookDuration || '?'})`;
+    if (structure_analysis.bodyPhases?.length) structureHint += `\nФазы тела: ${structure_analysis.bodyPhases.join(' → ')}`;
+    if (structure_analysis.ctaType) structureHint += `\nCTA: ${structure_analysis.ctaType}`;
+    if (structure_analysis.avgLengthSeconds) structureHint += `\nЦелевая длительность: ~${structure_analysis.avgLengthSeconds} сек`;
+  }
+
+  const userText = `Ты ИИ-сценарист. Пользователь хочет создать сценарий короткого видео (рилс/шортс).
+
+ТВОЙ ПОДЧЕРК (промт):
+---
+${prompt.trim()}
+---
+${structureHint}
+
+ТЕМА ПОЛЬЗОВАТЕЛЯ: «${topic.trim()}»
+
+Задай РОВНО 3 уточняющих вопроса, чтобы лучше понять что он хочет. Вопросы должны касаться:
+1. СОДЕРЖАНИЕ — что конкретно будет раскрыто в видео, какой угол подачи
+2. СТРУКТУРА — как построить тело сценария, какие повороты/фазы использовать
+3. КОНЦОВКА — какой финал/CTA/перегон, какую эмоцию оставить
+
+Каждый вопрос должен предлагать 2-3 варианта ответа, исходя из твоего подчерка.
+
+Ответ строго в JSON:
+{
+  "questions": [
+    { "question": "текст вопроса", "options": ["вариант 1", "вариант 2", "вариант 3"] },
+    { "question": "текст вопроса", "options": ["вариант 1", "вариант 2"] },
+    { "question": "текст вопроса", "options": ["вариант 1", "вариант 2", "вариант 3"] }
+  ]
+}`;
+
+  try {
+    const rawText = await callWithFallback(
+      [MODELS.FLASH, MODELS.FLASH_3],
+      [{ role: 'user', content: userText }],
+      { temperature: 0.4, response_format: { type: 'json_object' } }
+    );
+    if (!rawText) return res.status(502).json({ error: 'Empty response' });
+    const parsed = parseJsonResponse(rawText);
+    return res.status(200).json({ success: true, questions: parsed.questions || [] });
+  } catch (err) {
+    console.error('scriptwriter clarify-topic error:', err);
+    return res.status(502).json({ error: 'OpenRouter API error', details: err.message });
+  }
+}
+
+// ── Шаг 2: Генерация 5 вариантов хуков ──────────────────────────────────────
+
+async function handleGenerateHooks(req, res) {
+  const { prompt, topic, answers, structure_analysis } = req.body;
+  if (!prompt?.trim() || !topic?.trim()) {
+    return res.status(400).json({ error: 'prompt and topic are required' });
+  }
+  if (!OPENROUTER_API_KEY) return res.status(500).json({ error: 'OPENROUTER_API_KEY not configured' });
+
+  let structureHint = '';
+  if (structure_analysis) {
+    structureHint = '\n\nСТРУКТУРА ПОДЧЕРКА:';
+    if (structure_analysis.hookDescription) structureHint += `\nХук: ${structure_analysis.hookDescription} (${structure_analysis.hookDuration || '?'})`;
+    if (structure_analysis.specialFeatures?.length) structureHint += `\nОсобенности: ${structure_analysis.specialFeatures.join(', ')}`;
+  }
+
+  const answersText = Array.isArray(answers) && answers.length
+    ? '\n\nОТВЕТЫ ПОЛЬЗОВАТЕЛЯ НА УТОЧНЕНИЯ:\n' + answers.map((a, i) => `${i + 1}. ${a}`).join('\n')
+    : '';
+
+  const userText = `Ты ИИ-сценарист коротких видео (рилсы/шортсы).
+
+ПОДЧЕРК:
+---
+${prompt.trim()}
+---
+${structureHint}
+
+ТЕМА: «${topic.trim()}»${answersText}
+
+Сгенерируй РОВНО 5 разных вариантов ХУКОВ (первые 1-3 предложения сценария, которые цепляют внимание).
+Каждый хук должен быть в стиле подчерка, но с разным подходом к привлечению внимания.
+
+Ответ строго в JSON:
+{
+  "hooks": [
+    { "text": "полный текст хука", "approach": "краткое описание подхода в 3-5 слов" },
+    ...
+  ]
+}`;
+
+  try {
+    const rawText = await callWithFallback(
+      [MODELS.PRO_3, MODELS.FLASH],
+      [{ role: 'user', content: userText }],
+      { temperature: 0.6, response_format: { type: 'json_object' } }
+    );
+    if (!rawText) return res.status(502).json({ error: 'Empty response' });
+    const parsed = parseJsonResponse(rawText);
+    return res.status(200).json({ success: true, hooks: parsed.hooks || [] });
+  } catch (err) {
+    console.error('scriptwriter generate-hooks error:', err);
+    return res.status(502).json({ error: 'OpenRouter API error', details: err.message });
+  }
+}
+
+// ── Шаг 3: Генерация 3 вариантов тела ───────────────────────────────────────
+
+async function handleGenerateBody(req, res) {
+  const { prompt, topic, answers, selected_hook, structure_analysis } = req.body;
+  if (!prompt?.trim() || !topic?.trim() || !selected_hook?.trim()) {
+    return res.status(400).json({ error: 'prompt, topic and selected_hook are required' });
+  }
+  if (!OPENROUTER_API_KEY) return res.status(500).json({ error: 'OPENROUTER_API_KEY not configured' });
+
+  let structureHint = '';
+  if (structure_analysis) {
+    structureHint = '\n\nСТРУКТУРА ПОДЧЕРКА:';
+    if (structure_analysis.bodyPhases?.length) structureHint += `\nФазы тела: ${structure_analysis.bodyPhases.join(' → ')}`;
+    if (structure_analysis.ctaType) structureHint += `\nCTA: ${structure_analysis.ctaType}`;
+    if (structure_analysis.avgLengthSeconds) structureHint += `\nЦелевая длительность: ~${structure_analysis.avgLengthSeconds} сек`;
+  }
+
+  const answersText = Array.isArray(answers) && answers.length
+    ? '\n\nОТВЕТЫ ПОЛЬЗОВАТЕЛЯ:\n' + answers.map((a, i) => `${i + 1}. ${a}`).join('\n')
+    : '';
+
+  const userText = `Ты ИИ-сценарист коротких видео.
+
+ПОДЧЕРК:
+---
+${prompt.trim()}
+---
+${structureHint}
+
+ТЕМА: «${topic.trim()}»${answersText}
+
+ВЫБРАННЫЙ ХУК:
+«${selected_hook.trim()}»
+
+Сгенерируй РОВНО 3 разных варианта ТЕЛА сценария (основная часть после хука, включая CTA/концовку если нужно по подчерку).
+Каждый вариант должен:
+- Начинаться сразу после хука
+- Следовать фазам из подчерка
+- Иметь разный подход к раскрытию темы
+- Включать CTA/перегон если есть в подчерке
+
+Ответ строго в JSON:
+{
+  "bodies": [
+    { "text": "полный текст тела + концовка", "approach": "краткое описание подхода в 3-5 слов" },
+    ...
+  ]
+}`;
+
+  try {
+    const rawText = await callWithFallback(
+      [MODELS.PRO_3, MODELS.FLASH],
+      [{ role: 'user', content: userText }],
+      { temperature: 0.6, response_format: { type: 'json_object' } }
+    );
+    if (!rawText) return res.status(502).json({ error: 'Empty response' });
+    const parsed = parseJsonResponse(rawText);
+    return res.status(200).json({ success: true, bodies: parsed.bodies || [] });
+  } catch (err) {
+    console.error('scriptwriter generate-body error:', err);
+    return res.status(502).json({ error: 'OpenRouter API error', details: err.message });
+  }
+}
+
+// ── Шаг 4: Сборка финального сценария ────────────────────────────────────────
+
+async function handleAssembleScript(req, res) {
+  const { prompt, topic, answers, selected_hook, selected_body, structure_analysis } = req.body;
+  if (!prompt?.trim() || !selected_hook?.trim() || !selected_body?.trim()) {
+    return res.status(400).json({ error: 'prompt, selected_hook and selected_body are required' });
+  }
+  if (!OPENROUTER_API_KEY) return res.status(500).json({ error: 'OPENROUTER_API_KEY not configured' });
+
+  let structureHint = '';
+  if (structure_analysis) {
+    structureHint = '\nСТРУКТУРА: ';
+    if (structure_analysis.hookDuration) structureHint += `хук ~${structure_analysis.hookDuration}, `;
+    if (structure_analysis.bodyPhases?.length) structureHint += `фазы: ${structure_analysis.bodyPhases.join(' → ')}, `;
+    if (structure_analysis.ctaType) structureHint += `CTA: ${structure_analysis.ctaType}`;
+  }
+
+  const userText = `Ты ИИ-сценарист. Собери финальный сценарий из выбранных частей.
+
+ПОДЧЕРК:
+---
+${prompt.trim()}
+---
+${structureHint}
+
+ТЕМА: «${(topic || '').trim()}»
+
+ХУК (выбран пользователем):
+${selected_hook.trim()}
+
+ТЕЛО + КОНЦОВКА (выбрано пользователем):
+${selected_body.trim()}
+
+Задача: соедини хук и тело в единый гладкий сценарий. Убери швы между частями. Сохрани стиль подчерка. Если нужно — немного отредактируй для плавности, но не меняй смысл и структуру.
+
+Выводи ТОЛЬКО текст финального сценария, без пояснений.`;
+
+  try {
+    const rawText = await callWithFallback(
+      MODELS_FALLBACK,
+      [
+        { role: 'system', content: prompt.trim() },
+        { role: 'user', content: userText },
+      ],
+      { temperature: 0.3 }
+    );
+    if (!rawText?.trim()) return res.status(502).json({ error: 'Empty response' });
+    return res.status(200).json({ success: true, script: rawText.trim() });
+  } catch (err) {
+    console.error('scriptwriter assemble-script error:', err);
+    return res.status(502).json({ error: 'OpenRouter API error', details: err.message });
+  }
+}
+
+// ── Шаг 5: Улучшение сценария по комментариям ───────────────────────────────
+
+async function handleImproveScript(req, res) {
+  const { prompt, script_text, feedback, structure_analysis } = req.body;
+  if (!prompt?.trim() || !script_text?.trim() || !feedback?.trim()) {
+    return res.status(400).json({ error: 'prompt, script_text and feedback are required' });
+  }
+  if (!OPENROUTER_API_KEY) return res.status(500).json({ error: 'OPENROUTER_API_KEY not configured' });
+
+  const userText = `Ты ИИ-сценарист. Улучши сценарий по комментариям пользователя.
+
+ПОДЧЕРК:
+---
+${prompt.trim()}
+---
+
+ТЕКУЩИЙ СЦЕНАРИЙ:
+---
+${script_text.trim()}
+---
+
+КОММЕНТАРИЙ ПОЛЬЗОВАТЕЛЯ:
+«${feedback.trim()}»
+
+Задача: учти комментарий и выведи УЛУЧШЕННЫЙ сценарий. Сохрани стиль подчерка. Выводи ТОЛЬКО текст сценария, без пояснений.`;
+
+  try {
+    const rawText = await callWithFallback(
+      MODELS_FALLBACK,
+      [
+        { role: 'system', content: prompt.trim() },
+        { role: 'user', content: userText },
+      ],
+      { temperature: 0.4 }
+    );
+    if (!rawText?.trim()) return res.status(502).json({ error: 'Empty response' });
+    return res.status(200).json({ success: true, script: rawText.trim() });
+  } catch (err) {
+    console.error('scriptwriter improve-script error:', err);
     return res.status(502).json({ error: 'OpenRouter API error', details: err.message });
   }
 }
