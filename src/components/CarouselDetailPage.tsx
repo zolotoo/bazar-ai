@@ -740,9 +740,9 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col md:flex-row gap-4 min-h-0 overflow-y-auto md:overflow-hidden p-4 pb-28 md:pb-4">
+      <div className="flex-1 flex flex-col md:flex-row gap-4 min-h-0 overflow-y-auto md:overflow-hidden p-4 pb-[calc(7rem+env(safe-area-inset-bottom,0px))] md:pb-4">
         {/* Left: slides + folder + stats + links + responsibles — узкая колонка с собственным скроллом */}
-        <div className="flex-shrink-0 flex flex-col gap-3 w-full md:w-[240px] lg:w-[260px] min-h-0 overflow-y-auto rounded-xl">
+        <div className="order-3 md:order-none flex-shrink-0 flex flex-col gap-3 w-full md:w-[240px] lg:w-[260px] min-h-0 overflow-y-auto rounded-xl">
           <div className="relative flex-shrink-0 rounded-2xl overflow-hidden shadow-lg bg-slate-200 w-full aspect-[3/4] max-w-full mx-auto md:mx-0">
             {hasMainImage && !mainImageError ? (
               <img
@@ -919,7 +919,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
         </div>
 
         {/* Middle: Transcript — высота шапки как у Сценария для одного уровня текста */}
-        <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-xl bg-white/80 border border-slate-200/80 overflow-hidden">
+        <div className="order-2 md:order-none flex-1 flex flex-col min-w-0 min-h-0 rounded-xl bg-white/80 border border-slate-200/80 overflow-hidden">
           <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-3 p-4 border-b border-slate-100 min-h-[72px]">
             <div className="flex items-center gap-2">
               <FileText className="w-5 h-5 text-slate-400 flex-shrink-0" />
@@ -1004,7 +1004,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
         </div>
 
         {/* Right: Script — высота шапки как у Транскрипта */}
-        <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-xl bg-white/80 border border-slate-200/80 overflow-hidden">
+        <div className="order-1 md:order-none flex-1 flex flex-col min-w-0 min-h-0 rounded-xl bg-white/80 border border-slate-200/80 overflow-hidden">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-b border-slate-100 flex-shrink-0">
             <div className="flex items-center gap-2 flex-wrap">
               <FileText className="w-5 h-5 text-slate-600 flex-shrink-0" />
@@ -1140,13 +1140,13 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
               </div>
               {script && (
                 <>
-                  <button onClick={handleSaveScript} disabled={isSavingScript} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-600 text-white text-xs font-medium disabled:opacity-50">
+                  <button onClick={handleSaveScript} disabled={isSavingScript} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-600 text-white text-xs font-medium disabled:opacity-50 shrink-0">
                     {isSavingScript ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                     Сохранить
                   </button>
                   <button
                     onClick={() => { navigator.clipboard.writeText(script); setCopiedScript(true); setTimeout(() => setCopiedScript(false), 2000); }}
-                    className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"
+                    className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 shrink-0"
                   >
                     {copiedScript ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                   </button>
@@ -1158,7 +1158,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
             <textarea
               value={script}
               onChange={e => setScript(e.target.value)}
-              className="w-full flex-1 min-h-[120px] p-3 rounded-xl border border-slate-200 text-sm text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-slate-200"
+              className="w-full flex-1 min-h-[40dvh] md:min-h-[120px] p-3 rounded-xl border border-slate-200 text-sm text-slate-700 resize-y md:resize-none focus:outline-none focus:ring-2 focus:ring-slate-200"
               placeholder="Сгенерируйте сценарий по подчерку или напишите вручную."
             />
           </div>

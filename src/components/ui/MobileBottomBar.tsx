@@ -30,7 +30,7 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
         data-floating="true"
         role="tablist"
         className={cn(
-          "md:hidden fixed left-0 right-0 bottom-0 z-[9998]",
+          "md:hidden fixed left-0 right-0 bottom-0 z-40",
           "pointer-events-none flex justify-center",
           className
         )}
