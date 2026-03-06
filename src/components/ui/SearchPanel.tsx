@@ -994,7 +994,7 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
             {/* Close button — iOS 26 glass */}
             <motion.button
               onClick={handleClose}
-              className="absolute top-4 right-4 p-2.5 min-w-[44px] min-h-[44px] rounded-card-xl bg-glass-white/80 backdrop-blur-glass border border-white/[0.35] text-slate-500 hover:text-slate-700 hover:bg-slate-100/80 transition-all z-20 shadow-glass-sm flex items-center justify-center touch-manipulation"
+              className="absolute top-4 right-4 p-2.5 min-w-[44px] min-h-[44px] rounded-card-xl bg-white/80 backdrop-blur-glass-xl border border-white/60 text-slate-500 hover:text-slate-700 hover:bg-white transition-all z-20 shadow-glass-sm flex items-center justify-center touch-manipulation"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -1005,7 +1005,7 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
             {viewMode === 'results' && (
               <motion.button
                 onClick={backToCarousel}
-                className="absolute top-4 left-4 px-4 py-2 min-h-[44px] rounded-card-xl bg-glass-white/80 backdrop-blur-glass border border-white/[0.35] text-slate-600 hover:text-slate-800 hover:bg-slate-100/80 transition-all z-20 flex items-center gap-2 text-sm font-medium shadow-glass-sm touch-manipulation"
+                className="absolute top-4 left-4 px-4 py-2 min-h-[44px] rounded-card-xl bg-white/80 backdrop-blur-glass-xl border border-white/60 text-slate-600 hover:text-slate-800 hover:bg-white transition-all z-20 flex items-center gap-2 text-sm font-medium shadow-glass-sm touch-manipulation"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -1016,7 +1016,7 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
 
             {/* Project indicator — iOS 26 glass */}
             <div className="flex items-center justify-center gap-2 mb-3">
-              <div className="px-4 py-2 rounded-pill bg-glass-white/70 backdrop-blur-glass border border-white/[0.35] text-slate-700 text-xs font-medium flex items-center gap-1.5 shadow-glass-sm">
+              <div className="px-4 py-2 rounded-pill bg-white/76 backdrop-blur-glass-xl border border-white/60 text-slate-700 text-xs font-medium flex items-center gap-1.5 shadow-glass-sm">
                 <FolderPlus className="w-3.5 h-3.5" />
                 Проект: {currentProjectName}
               </div>
@@ -1054,7 +1054,7 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
             {/* Search Tab Content */}
             {!HIDE_SEARCH_BY_WORD && activeTab === 'search' && (
               <>
-                <GlassCardStatic className="shadow-glass">
+                <GlassCardStatic className="shadow-glass bg-white/76 border-white/60">
                   <div className="flex items-center gap-3 px-5 py-4">
                     <Search className="w-5 h-5 text-slate-600" />
                     <input
@@ -1070,8 +1070,8 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
                       onClick={() => handleSearch()}
                       disabled={!query.trim() || loading}
                       className={cn(
-                        "px-4 py-2 rounded-xl font-medium text-sm transition-all active:scale-95 flex items-center gap-2",
-                        "bg-slate-600 hover:bg-slate-700 text-white",
+                        "px-4 py-2 rounded-2xl font-medium text-sm transition-all active:scale-95 flex items-center gap-2",
+                        "bg-slate-800 hover:bg-slate-900 text-white",
                         "disabled:opacity-40 disabled:cursor-not-allowed",
                         "shadow-glass hover:shadow-glass-hover"
                       )}
@@ -1089,7 +1089,7 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
                       <button
                         key={index}
                         onClick={() => handleSearch(item)}
-                        className="px-3 py-1.5 rounded-full glass text-slate-600 hover:text-slate-800 text-sm font-medium transition-all"
+                        className="px-3 py-1.5 rounded-pill bg-white/72 backdrop-blur-glass border border-white/60 shadow-glass-sm text-slate-600 hover:text-slate-800 hover:bg-white text-sm font-medium transition-all"
                       >
                         {item}
                       </button>
@@ -1120,9 +1120,9 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
               animate="visible"
               exit="exit"
             >
-              <GlassCardStatic className="p-6 shadow-glass">
+              <GlassCardStatic className="p-6 shadow-glass bg-white/76 border-white/60">
                 <div className="flex items-center gap-3 mb-5">
-                  <div className="w-12 h-12 rounded-card-xl bg-glass-white/80 backdrop-blur-glass-xl flex items-center justify-center border border-white/[0.35] shadow-glass-sm">
+                  <div className="w-12 h-12 rounded-card-xl bg-white/84 backdrop-blur-glass-xl flex items-center justify-center border border-white/60 shadow-glass-sm">
                     <Link className="w-6 h-6 text-slate-600" />
                   </div>
                   <div>
@@ -1137,7 +1137,7 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
                     onChange={(e) => setLinkUrl(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleParseLink()}
                     placeholder="https://instagram.com/reel/ABC123..."
-                    className="flex-1 px-4 py-3 rounded-card-xl border border-white/[0.5] bg-glass-white/60 backdrop-blur-glass outline-none focus:ring-2 focus:ring-slate-300/50 focus:border-slate-400/50 text-sm"
+                    className="flex-1 px-4 py-3 rounded-card-xl border border-white/60 bg-white/86 backdrop-blur-glass outline-none focus:ring-2 focus:ring-slate-300/50 focus:border-white/80 text-sm shadow-glass-sm"
                   />
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button
@@ -1145,7 +1145,7 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
                       disabled={!linkUrl.trim() || linkLoading || !canAfford(getTokenCost('link_add'))}
                       className={cn(
                         "px-5 py-3 rounded-card-xl font-medium text-sm transition-all active:scale-95 flex items-center justify-center gap-2",
-                        "bg-slate-600 hover:bg-slate-700 text-white shadow-glass hover:shadow-glass-hover",
+                        "bg-slate-800 hover:bg-slate-900 text-white shadow-glass hover:shadow-glass-hover",
                         "disabled:opacity-40 disabled:cursor-not-allowed"
                       )}
                     >
@@ -1163,12 +1163,12 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
                 {/* Link Preview — компактная карточка без большого превью видео */}
                 {linkPreview && (
                   <motion.div
-                    className="mt-5 pt-5 border-t border-slate-200/50 space-y-4"
+                    className="mt-5 pt-5 border-t border-white/55 space-y-4"
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                   >
-                    <div className="flex items-center gap-3 p-4 rounded-card-xl bg-glass-white/60 backdrop-blur-glass border border-white/[0.35]">
+                    <div className="flex items-center gap-3 p-4 rounded-card-xl bg-white/74 backdrop-blur-glass border border-white/60 shadow-glass-sm">
                       <div className="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                         {(linkPreview.owner?.username || 'U')[0].toUpperCase()}
                       </div>
@@ -1180,11 +1180,11 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
                           <span className="flex items-center gap-1"><SparklesIcon className="w-3.5 h-3.5" />{linkPreview.is_carousel ? calculateCarouselViralCoefficient(linkPreview.like_count, linkPreview.taken_at).toFixed(1) : calculateViralCoefficient(linkPreview.view_count, linkPreview.taken_at).toFixed(1)}</span>
                         </div>
                       </div>
-                      <a href={linkPreview.url} target="_blank" rel="noopener noreferrer" className="p-2 rounded-xl bg-glass-white/80 hover:bg-slate-100/80 text-slate-500 transition-all">
+                      <a href={linkPreview.url} target="_blank" rel="noopener noreferrer" className="p-2 rounded-xl bg-white/82 border border-white/60 hover:bg-white text-slate-500 transition-all shadow-glass-sm">
                         <ExternalLink className="w-4 h-4" />
                       </a>
                     </div>
-                    <div className="p-3 rounded-card-xl bg-accent-positive/10 border border-accent-positive/20">
+                    <div className="p-3 rounded-card-xl bg-emerald-50/85 border border-emerald-200/80 shadow-glass-sm">
                       <div className="flex items-center gap-2">
                         <Check className="w-4 h-4 text-accent-positive" />
                         <span className="text-sm text-slate-700">
@@ -1205,7 +1205,7 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
                                 onClick={() => handleAddLinkPreviewToAllVideos(folder.id)}
                                 className={cn(
                                   "flex items-center gap-2 px-3 py-2.5 rounded-card-xl border transition-all text-left",
-                                  "bg-glass-white/50 border-white/[0.4] hover:bg-glass-white/80 hover:border-slate-200"
+                                  "bg-white/72 border-white/60 hover:bg-white hover:border-white/75 shadow-glass-sm"
                                 )}
                               >
                                 <FolderIcon className="w-4 h-4 flex-shrink-0" style={{ color: folder.color }} />
@@ -1218,7 +1218,7 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
                     )}
                     <motion.button
                       onClick={() => { setLinkUrl(''); setLinkPreview(null); }}
-                      className="w-full px-4 py-3 rounded-card-xl font-medium text-sm bg-slate-600 hover:bg-slate-700 text-white shadow-glass hover:shadow-glass-hover transition-all"
+                      className="w-full px-4 py-3 rounded-card-xl font-medium text-sm bg-slate-800 hover:bg-slate-900 text-white shadow-glass hover:shadow-glass-hover transition-all"
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
                     >
@@ -1240,10 +1240,10 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
               animate="visible"
               exit="exit"
             >
-              <GlassCardStatic className="p-6 shadow-glass">
+              <GlassCardStatic className="p-6 shadow-glass bg-white/76 border-white/60">
                 <div className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-card-xl bg-glass-white/80 backdrop-blur-glass-xl flex items-center justify-center relative border border-white/[0.35] shadow-glass-sm">
+                    <div className="w-12 h-12 rounded-card-xl bg-white/84 backdrop-blur-glass-xl flex items-center justify-center relative border border-white/60 shadow-glass-sm">
                       <Radar className="w-6 h-6 text-slate-600" />
                       {radarProfiles.length > 0 && (
                         <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent-positive rounded-full border-2 border-white flex items-center justify-center text-[10px] text-white font-bold">
@@ -1293,7 +1293,7 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
                           disabled={radarLoading || !canAfford(getTokenCost('radar_refresh_all', radarProfiles.length))}
                           className={cn(
                             "px-3 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5",
-                            "bg-glass-white/80 backdrop-blur-glass border border-white/[0.35] text-slate-600 hover:bg-slate-100/80 shadow-glass-sm",
+                        "bg-white/82 backdrop-blur-glass border border-white/60 text-slate-600 hover:bg-white shadow-glass-sm",
                             radarLoading && "opacity-50 cursor-not-allowed"
                           )}
                         >
@@ -1311,7 +1311,7 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
 
                 {/* Info banner — glass style */}
                 {currentProjectId && (
-                  <div className="mb-5 p-4 rounded-card-xl bg-glass-white/60 backdrop-blur-glass border border-white/[0.35] shadow-glass-sm">
+                  <div className="mb-5 p-4 rounded-card-xl bg-white/72 backdrop-blur-glass border border-white/60 shadow-glass-sm">
                     <p className="text-xs text-slate-600 leading-relaxed">
                       <span className="font-semibold text-slate-700">Как это работает:</span> Я автоматически добавляю все видео из этих профилей в папку «Все видео» проекта «{currentProjectName}». При обновлении — новые видео добавятся, а статистика старых обновится.
                     </p>
@@ -1334,7 +1334,7 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
                         }}
                         placeholder="username или ссылка на профиль"
                         disabled={!currentProjectId}
-                        className="w-full pl-9 pr-4 py-3 rounded-card-xl border border-white/[0.5] bg-glass-white/60 backdrop-blur-glass outline-none focus:ring-2 focus:ring-slate-300/50 focus:border-slate-400/50 text-sm disabled:opacity-50"
+                        className="w-full pl-9 pr-4 py-3 rounded-card-xl border border-white/60 bg-white/86 backdrop-blur-glass outline-none focus:ring-2 focus:ring-slate-300/50 focus:border-white/80 text-sm disabled:opacity-50 shadow-glass-sm"
                       />
                     </div>
                     <button
@@ -1346,7 +1346,7 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
                       disabled={!radarUsername.trim() || !currentProjectId || !canAfford(radarAddCost)}
                       className={cn(
                         "px-5 py-3 rounded-card-xl font-medium text-sm transition-all active:scale-95 flex items-center gap-2",
-                        "bg-slate-600 hover:bg-slate-700 text-white",
+                        "bg-slate-800 hover:bg-slate-900 text-white",
                         "disabled:opacity-40 disabled:cursor-not-allowed",
                         "shadow-glass hover:shadow-glass-hover"
                       )}
@@ -1363,10 +1363,10 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
                         key={days}
                         onClick={() => setRadarAddFrequencyDays(days)}
                         className={cn(
-                          "px-2.5 py-1 rounded-lg text-xs font-medium transition-all",
+                          "px-2.5 py-1 rounded-xl text-xs font-medium transition-all border",
                           radarAddFrequencyDays === days
-                            ? "bg-slate-600 text-white"
-                            : "bg-glass-white/60 text-slate-600 hover:bg-slate-100/80"
+                            ? "bg-slate-800 border-slate-800 text-white"
+                            : "bg-white/72 border-white/60 text-slate-600 hover:bg-white"
                         )}
                       >
                         {days === 1 ? '1 день' : `${days} дней`}

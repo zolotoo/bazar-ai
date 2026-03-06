@@ -22,14 +22,14 @@ const GlassTabButton = React.forwardRef<HTMLButtonElement, GlassTabButtonProps>(
     return (
       <motion.div
         className="relative"
-        whileHover={{ scale: 1.02 }}
+        whileHover={{ scale: 1.015 }}
         whileTap={{ scale: 0.98 }}
         transition={{ type: "spring", stiffness: 400, damping: 30 }}
       >
         <button
           ref={ref}
           className={cn(
-            "group relative z-10 flex items-center justify-center rounded-xl font-medium transition-all duration-300",
+            "group relative z-10 flex items-center justify-center rounded-2xl font-medium transition-all duration-300",
             sizeClasses[size],
             isActive
               ? "text-white"
@@ -41,16 +41,14 @@ const GlassTabButton = React.forwardRef<HTMLButtonElement, GlassTabButtonProps>(
           {/* Background layers — iOS 26 / glass style */}
           {isActive ? (
             <>
-              {/* Active: slate-600, glass depth */}
-              <div className="absolute inset-0 rounded-xl bg-slate-600 shadow-glass-sm" />
-              <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-transparent via-white/10 to-white/20" />
-              <div className="absolute inset-[1px] rounded-[10px] bg-gradient-to-b from-white/15 to-transparent opacity-60" />
+              <div className="absolute inset-0 rounded-2xl bg-slate-800 shadow-glass-sm" />
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-white/14 via-white/5 to-transparent" />
+              <div className="absolute inset-[1px] rounded-[15px] bg-gradient-to-b from-white/14 to-transparent opacity-70" />
             </>
           ) : (
             <>
-              {/* Inactive: glass */}
-              <div className="absolute inset-0 rounded-xl bg-glass-white/80 backdrop-blur-glass border border-white/[0.35] shadow-glass-sm" />
-              <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gradient-to-t from-slate-500/0 via-slate-500/0 to-slate-500/5" />
+              <div className="absolute inset-0 rounded-2xl bg-white/76 backdrop-blur-glass-xl border border-white/60 shadow-glass-sm" />
+              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gradient-to-b from-white/20 to-transparent" />
             </>
           )}
 
@@ -63,7 +61,7 @@ const GlassTabButton = React.forwardRef<HTMLButtonElement, GlassTabButtonProps>(
 
         {/* Active glow — subtle */}
         {isActive && (
-          <div className="absolute inset-0 rounded-xl bg-slate-600/15 blur-xl -z-10" />
+          <div className="absolute inset-0 rounded-2xl bg-slate-700/10 blur-xl -z-10" />
         )}
       </motion.div>
     );
@@ -83,7 +81,7 @@ const GlassTabGroup = ({ children, className }: GlassTabGroupProps) => {
     <div
       className={cn(
         "inline-flex items-center gap-1.5 p-1.5 rounded-card-xl",
-        "bg-glass-white/60 backdrop-blur-glass-xl border border-white/[0.35]",
+        "bg-white/72 backdrop-blur-glass-xl border border-white/60",
         "shadow-glass-sm",
         className
       )}
