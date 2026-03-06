@@ -918,12 +918,12 @@ export function Workspace(_props?: WorkspaceProps) {
       <div className="h-full min-h-0 overflow-hidden relative flex flex-col">
       {/* Floating Folder Widget - Desktop */}
       <div className={cn(
-        "hidden md:block absolute top-4 right-4 z-40 bg-white/72 backdrop-blur-glass-xl rounded-card-xl shadow-glass border border-white/55 transition-all duration-300",
+        "hidden md:block absolute top-4 right-4 z-40 bg-white/88 backdrop-blur-glass-xl rounded-card-xl shadow-glass-lg border border-white/70 transition-all duration-300",
         isFolderWidgetOpen ? "w-56" : "w-auto"
       )}>
         {/* Widget Header */}
           <div 
-          className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-white/55 rounded-t-card-xl transition-colors"
+          className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-white/95 rounded-t-card-xl transition-colors"
           onClick={() => setIsFolderWidgetOpen(!isFolderWidgetOpen)}
         >
           <div className="flex items-center gap-2">
@@ -939,7 +939,7 @@ export function Workspace(_props?: WorkspaceProps) {
         
         {/* Widget Content */}
         {isFolderWidgetOpen && (
-          <div className="px-2 pb-3 flex flex-col max-h-[min(60vh,400px)] min-h-0">
+          <div className="px-2 pb-3 flex flex-col max-h-[min(60vh,400px)] min-h-0 bg-white/82 rounded-b-card-xl">
             {contentSection === 'carousels' ? (
               <>
                 {/* Все карусели */}
@@ -948,8 +948,8 @@ export function Workspace(_props?: WorkspaceProps) {
                   className={cn(
                     "w-full flex items-center gap-3 px-3 py-2.5 rounded-card transition-all text-left mb-2 shrink-0",
                     selectedCarouselFolderId === null 
-                      ? "bg-white/82 text-slate-800 border border-white/55 shadow-glass-sm" 
-                      : "hover:bg-white/58 text-slate-600"
+                      ? "bg-white text-slate-800 border border-white/80 shadow-glass-sm" 
+                      : "hover:bg-white/82 text-slate-700"
                   )}
                 >
                   <GlassFolderIcon iconType="inbox" color="#64748b" size={22} simple />
@@ -969,7 +969,7 @@ export function Workspace(_props?: WorkspaceProps) {
                         onClick={() => setSelectedCarouselFolderId(folder.id)}
                         className={cn(
                           "w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-left",
-                          isSelected ? "bg-white/82 border border-white/55 shadow-glass-sm" : "hover:bg-white/55 text-slate-600"
+                          isSelected ? "bg-white border border-white/80 shadow-glass-sm" : "hover:bg-white/80 text-slate-700"
                         )}
                       >
                         <GlassFolderIcon iconType={folder.iconType} color={folder.color} size={22} simple />
@@ -990,8 +990,8 @@ export function Workspace(_props?: WorkspaceProps) {
                   className={cn(
                     "w-full flex items-center gap-3 px-3 py-2.5 rounded-card transition-all text-left mb-2 shrink-0",
                     selectedFolderId === null 
-                      ? "bg-white/82 text-slate-800 border border-white/55 shadow-glass-sm" 
-                      : "hover:bg-white/58 text-slate-600"
+                      ? "bg-white text-slate-800 border border-white/80 shadow-glass-sm" 
+                      : "hover:bg-white/82 text-slate-700"
                   )}
                 >
                   <GlassFolderIcon iconType="inbox" color="#64748b" size={22} simple />
@@ -1012,7 +1012,7 @@ export function Workspace(_props?: WorkspaceProps) {
                         onClick={() => setSelectedFolderId(folder.id)}
                         className={cn(
                           "w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-left",
-                          isSelected ? "bg-white/82 border border-white/55 shadow-glass-sm" : "hover:bg-white/55 text-slate-600",
+                          isSelected ? "bg-white border border-white/80 shadow-glass-sm" : "hover:bg-white/80 text-slate-700",
                           isRejected && "opacity-70"
                         )}
                       >
@@ -1030,7 +1030,7 @@ export function Workspace(_props?: WorkspaceProps) {
             <div className="my-3 shrink-0" aria-hidden />
             <button
               onClick={() => setShowFolderSettings(true)}
-              className="w-full flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-xl hover:bg-white/55 active:bg-white/70 text-slate-500 text-sm transition-colors touch-manipulation shrink-0"
+              className="w-full flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-xl hover:bg-white/82 active:bg-white text-slate-700 text-sm transition-colors touch-manipulation shrink-0"
             >
               <Settings className="w-4 h-4" />
               {contentSection === 'carousels' ? 'Настроить папки каруселей' : 'Настроить папки'}
@@ -1704,7 +1704,7 @@ export function Workspace(_props?: WorkspaceProps) {
                     {carouselsForFeed.map(c => (
                       <div
                         key={c.id}
-                        className="group rounded-2xl overflow-hidden bg-white/80 border border-slate-200/80 shadow-sm hover:shadow-lg hover:border-slate-300/80 transition-all relative"
+                        className="group rounded-2xl overflow-hidden bg-white/86 border border-white/65 shadow-[0_10px_26px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.65)] hover:shadow-[0_16px_36px_rgba(15,23,42,0.12)] transition-all relative"
                       >
                         <button
                           onClick={() => setSelectedCarousel(c)}
@@ -1724,10 +1724,11 @@ export function Workspace(_props?: WorkspaceProps) {
                             <div
                               className="absolute inset-0 pointer-events-none z-[1]"
                               style={{
-                                background: 'linear-gradient(to top, rgba(15,15,18,0.85) 0%, rgba(25,25,30,0.45) 35%, rgba(35,35,42,0.15) 55%, transparent 75%)',
+                                background: 'linear-gradient(to top, rgba(10,12,18,0.9) 0%, rgba(22,26,36,0.58) 30%, rgba(30,34,42,0.2) 56%, rgba(255,255,255,0.04) 100%)',
                               }}
                             />
-                            <div className="absolute bottom-1.5 right-1.5 z-[2] px-1.5 py-0.5 rounded-lg backdrop-blur-[20px] bg-black/40 border border-white/20 text-white text-[10px] font-medium flex items-center gap-0.5 shadow-[0_2px_8px_rgba(0,0,0,0.2)]">
+                            <div className="absolute inset-x-0 top-0 h-20 pointer-events-none z-[1] bg-gradient-to-b from-black/18 via-black/5 to-transparent" />
+                            <div className="absolute bottom-1.5 right-1.5 z-[2] px-1.5 py-0.5 rounded-lg backdrop-blur-[20px] bg-black/34 border border-white/25 text-white text-[10px] font-medium flex items-center gap-0.5 shadow-[0_4px_14px_rgba(0,0,0,0.18)]">
                               <Images className="w-2.5 h-2.5" />
                               {c.slide_count || 0}
                             </div>
@@ -1742,14 +1743,14 @@ export function Workspace(_props?: WorkspaceProps) {
                                 e.stopPropagation();
                                 setDescriptionModalText(c.caption ?? 'Нет описания');
                               }}
-                              className="absolute top-1.5 right-1.5 z-[2] p-2 rounded-full backdrop-blur-[20px] bg-black/40 hover:bg-black/60 border border-white/20 text-white transition-colors touch-manipulation"
+                              className="absolute top-1.5 right-1.5 z-[2] p-2 rounded-full backdrop-blur-[20px] bg-black/34 hover:bg-black/52 border border-white/25 text-white transition-colors touch-manipulation shadow-[0_4px_14px_rgba(0,0,0,0.18)]"
                               title="Описание поста"
                             >
                               <BookOpen className="w-4 h-4" strokeWidth={2} />
                             </button>
-                            <div className="absolute bottom-0 left-0 right-0 z-[2] p-2 pt-6 flex flex-col gap-1.5">
+                            <div className="absolute bottom-0 left-0 right-0 z-[2] p-2.5 pt-8 flex flex-col gap-1.5">
                               {c.caption && (
-                                <p className="text-white/90 text-[10px] leading-snug line-clamp-2 break-words overflow-hidden">
+                                <p className="text-white/95 text-[10px] leading-snug line-clamp-2 break-words overflow-hidden drop-shadow-[0_1px_3px_rgba(0,0,0,0.45)]">
                                   {c.caption}
                                 </p>
                               )}
@@ -1759,11 +1760,11 @@ export function Workspace(_props?: WorkspaceProps) {
                                 </p>
                               )}
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="px-2 py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20 text-white">
+                                <span className="px-2 py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/35 shadow-[0_4px_14px_rgba(0,0,0,0.16),inset_0_1px_0_rgba(255,255,255,0.28)] bg-white/20 text-white">
                                   <Heart className="w-2.5 h-2.5 flex-shrink-0" strokeWidth={2} />
                                   <span className="text-[10px] font-semibold tabular-nums">{formatNumber(c.like_count)}</span>
                                 </span>
-                                <span className="px-2 py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20 text-white">
+                                <span className="px-2 py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/35 shadow-[0_4px_14px_rgba(0,0,0,0.16),inset_0_1px_0_rgba(255,255,255,0.28)] bg-white/20 text-white">
                                   <MessageCircle className="w-2.5 h-2.5 flex-shrink-0" strokeWidth={2} />
                                   <span className="text-[10px] font-semibold tabular-nums">{formatNumber(c.comment_count)}</span>
                                 </span>
@@ -1774,7 +1775,7 @@ export function Workspace(_props?: WorkspaceProps) {
                                   return (
                                     <>
                                       {viralCoef > 0 && (
-                                        <span className="px-2 py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] bg-white/20 text-white" title="Виральность (лайки/день)">
+                                        <span className="px-2 py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/35 shadow-[0_4px_14px_rgba(0,0,0,0.16),inset_0_1px_0_rgba(255,255,255,0.28)] bg-white/20 text-white" title="Виральность (лайки/день)">
                                           <Sparkles className="w-2.5 h-2.5 flex-shrink-0" strokeWidth={2} />
                                           <span className="text-[10px] font-semibold tabular-nums">{viralCoef.toFixed(1)}</span>
                                         </span>
@@ -1782,8 +1783,8 @@ export function Workspace(_props?: WorkspaceProps) {
                                       {viralMult !== null && viralMult !== undefined && (
                                         <span
                                           className={cn(
-                                            'px-2 py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] text-white',
-                                            viralMult >= 5 ? 'bg-amber-500/80' : viralMult >= 3 ? 'bg-emerald-500/80' : viralMult >= 2 ? 'bg-white/30' : 'bg-white/20'
+                                            'px-2 py-1 rounded-pill backdrop-blur-[20px] backdrop-saturate-[180%] flex items-center gap-1 border border-white/35 shadow-[0_4px_14px_rgba(0,0,0,0.16),inset_0_1px_0_rgba(255,255,255,0.28)] text-white',
+                                            viralMult >= 5 ? 'bg-amber-500/85' : viralMult >= 3 ? 'bg-emerald-500/82' : viralMult >= 2 ? 'bg-white/30' : 'bg-white/20'
                                           )}
                                           title={`В ${Math.round(viralMult)}x раз ${viralMult >= 1 ? 'больше' : 'меньше'} минимума по лайкам у автора`}
                                         >

@@ -1048,14 +1048,14 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
   const thumbnailUrl = proxyImageUrl(video.preview_url, PLACEHOLDER_400x600);
 
   return (
-    <div className="h-full overflow-hidden flex flex-col bg-base">
+    <div className="h-full overflow-hidden flex flex-col bg-[#f5f6f8]">
       <div className="w-full h-full p-4 md:p-6 pb-28 md:pb-6 flex flex-col overflow-y-auto min-h-0">
         {/* Header — на мобильных компактнее */}
-        <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-shrink-0">
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-shrink-0 rounded-card-xl bg-white/78 backdrop-blur-glass-xl border border-white/65 shadow-glass p-4">
           <div className="flex items-center gap-4">
             <button
               onClick={onBack}
-              className="flex items-center gap-2 min-h-[44px] min-w-[44px] pr-2 -ml-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100/80 transition-colors active:scale-95 touch-manipulation"
+              className="flex items-center gap-2 min-h-[44px] min-w-[44px] pr-2 -ml-2 rounded-2xl text-slate-500 hover:text-slate-700 hover:bg-white/82 transition-colors active:scale-95 touch-manipulation"
             >
               <ChevronLeft className="w-5 h-5 flex-shrink-0" />
               <span className="text-sm font-medium">Назад</span>
@@ -1087,8 +1087,8 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                       className={cn(
                         "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors",
                         isInRadar
-                          ? "bg-emerald-100 text-emerald-700 cursor-default"
-                          : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                          ? "bg-emerald-50 border border-emerald-200 text-emerald-700 cursor-default"
+                          : "bg-white/78 border border-white/70 hover:bg-white text-slate-700 shadow-glass-sm"
                       )}
                     >
                       <Radar className="w-3.5 h-3.5" strokeWidth={2} />
@@ -1105,7 +1105,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
             <button
               type="button"
               onClick={() => setShowDescriptionModal(true)}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-700 text-sm font-medium transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/78 border border-white/70 hover:bg-white text-slate-700 text-sm font-medium transition-colors shadow-glass-sm"
               title="Описание поста"
             >
               <BookOpen className="w-4 h-4" />
@@ -1115,7 +1115,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
               <button
                 onClick={handleRefreshData}
                 disabled={isRefreshingData}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-700 text-sm font-medium transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/78 border border-white/70 hover:bg-white text-slate-700 text-sm font-medium transition-colors disabled:opacity-50 shadow-glass-sm"
               >
                 {isRefreshingData ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -1126,21 +1126,21 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
               </button>
             )}
             {transcriptStatus === 'processing' || transcriptStatus === 'downloading' ? (
-              <div className="px-4 py-2 rounded-full bg-amber-100 text-amber-700 text-sm font-medium flex items-center gap-2">
+              <div className="px-4 py-2 rounded-pill bg-amber-50 border border-amber-200 text-amber-700 text-sm font-medium flex items-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Обработка видео...
               </div>
             ) : transcriptStatus === 'completed' ? (
-              <div className="px-4 py-2 rounded-full bg-emerald-100 text-emerald-700 text-sm font-medium flex items-center gap-2">
+              <div className="px-4 py-2 rounded-pill bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium flex items-center gap-2">
                 <Check className="w-4 h-4" />
                 Транскрибация готова
               </div>
             ) : transcriptStatus === 'error' ? (
-              <div className="px-4 py-2 rounded-full bg-red-100 text-red-700 text-sm font-medium">
+              <div className="px-4 py-2 rounded-pill bg-red-50 border border-red-200 text-red-700 text-sm font-medium">
                 Ошибка обработки
               </div>
             ) : (
-              <div className="px-4 py-2 rounded-full bg-slate-100 text-slate-600 text-sm font-medium">
+              <div className="px-4 py-2 rounded-pill bg-white/78 border border-white/70 text-slate-600 text-sm font-medium shadow-glass-sm">
                 Ожидает обработки
               </div>
             )}
@@ -1154,7 +1154,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
             {/* Видео 9:16 — выше по центру колонки. Заглушка: клик → загрузка через API (стоит кредитов) */}
             <div className="flex justify-center flex-shrink-0">
               <div 
-                className="relative rounded-xl overflow-hidden shadow-md border border-slate-200/80 bg-black"
+                className="relative rounded-2xl overflow-hidden shadow-[0_18px_40px_rgba(15,23,42,0.18)] border border-white/65 bg-black"
                 style={{ aspectRatio: '9/16', width: 'min(100%, 220px)' }}
               >
               {showVideo && directVideoUrl && !videoLoadError ? (
@@ -1203,7 +1203,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
 
             {/* Current folder + move — z-[60] чтобы дропдаун был поверх раздела параметров */}
             <div className={cn(
-              "rounded-card-xl p-3 shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] relative",
+              "rounded-card-xl p-3 shadow-glass bg-white/82 backdrop-blur-glass-xl border border-white/70 relative",
               showFolderMenu && "z-[60]"
             )}>
               <div className="flex items-center justify-between mb-2">
@@ -1298,7 +1298,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
             </div>
 
             {/* Quick stats */}
-            <div className="rounded-card-xl p-3 shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35]">
+            <div className="rounded-card-xl p-3 shadow-glass bg-white/82 backdrop-blur-glass-xl border border-white/70">
               <div className="grid grid-cols-2 gap-2">
                 <div className="flex items-center gap-2 text-slate-600">
                   <Eye className="w-4 h-4 text-slate-400" />

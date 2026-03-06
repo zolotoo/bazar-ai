@@ -114,14 +114,14 @@ export const VideoGradientCard = ({
         className={cn(
           "relative rounded-card-xl overflow-hidden cursor-pointer",
           "backdrop-blur-sm touch-manipulation",
-          "border border-white/50",
+          "border border-white/55",
           className
         )}
         style={{
           aspectRatio: "9/16",
           boxShadow: isHovered 
-            ? "0 24px 64px -8px rgba(0, 0, 0, 0.12), 0 12px 32px -8px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 0 0 1px rgba(0, 0, 0, 0.04)"
-            : "0 12px 40px -8px rgba(0, 0, 0, 0.08), 0 4px 16px -4px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 0 0 1px rgba(0, 0, 0, 0.04)",
+            ? "0 24px 64px -8px rgba(0, 0, 0, 0.13), 0 12px 32px -8px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 0 0 1px rgba(0, 0, 0, 0.04)"
+            : "0 14px 34px -8px rgba(0, 0, 0, 0.10), 0 6px 18px -6px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.52), 0 0 0 1px rgba(0, 0, 0, 0.04)",
         }}
         initial={false}
         animate={{
@@ -183,13 +183,14 @@ export const VideoGradientCard = ({
           className="absolute inset-0 z-10 pointer-events-none"
           style={{
             background: `linear-gradient(to top, 
-              rgba(15, 15, 18, 0.85) 0%, 
-              rgba(25, 25, 30, 0.45) 35%, 
-              rgba(35, 35, 42, 0.15) 55%, 
-              transparent 75%
+              rgba(9, 11, 18, 0.92) 0%, 
+              rgba(20, 24, 34, 0.58) 30%, 
+              rgba(32, 36, 44, 0.20) 56%, 
+              rgba(255,255,255,0.04) 100%
             )`,
           }}
         />
+        <div className="absolute inset-x-0 top-0 z-10 h-20 pointer-events-none bg-gradient-to-b from-black/18 via-black/5 to-transparent" />
 
         {/* Content */}
         <div className="relative flex flex-col justify-end h-full p-3 md:p-4 z-20 text-white min-h-0">
@@ -298,7 +299,7 @@ export const VideoGradientCard = ({
           <div>
             {/* Username as iOS 26 button - маленький и белый */}
             <motion.div
-              className="px-2 py-0.5 md:px-2.5 md:py-1 rounded-pill md:backdrop-blur-[20px] md:backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 bg-black/40 md:bg-white/20 mb-2 inline-flex max-w-full"
+              className="px-2 py-0.5 md:px-2.5 md:py-1 rounded-pill md:backdrop-blur-[20px] md:backdrop-saturate-[180%] flex items-center gap-1 border border-white/35 bg-black/36 md:bg-white/20 shadow-[0_4px_14px_rgba(0,0,0,0.16),inset_0_1px_0_rgba(255,255,255,0.18)] mb-2 inline-flex max-w-full"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.15 }}
@@ -317,7 +318,7 @@ export const VideoGradientCard = ({
             <div className="flex items-center gap-1.5 md:gap-2 mb-2 flex-wrap">
               {viewCount !== undefined && (
                 <motion.div
-                  className="px-2 py-1 md:px-2.5 md:py-1.5 rounded-pill md:backdrop-blur-[20px] md:backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 bg-black/40 md:bg-white/20"
+                  className="px-2 py-1 md:px-2.5 md:py-1.5 rounded-pill md:backdrop-blur-[20px] md:backdrop-saturate-[180%] flex items-center gap-1 border border-white/35 bg-black/36 md:bg-white/20 shadow-[0_4px_14px_rgba(0,0,0,0.16),inset_0_1px_0_rgba(255,255,255,0.18)]"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.2 }}
@@ -328,7 +329,7 @@ export const VideoGradientCard = ({
               )}
               {likeCount !== undefined && (
                 <motion.div
-                  className="px-2 py-1 md:px-2.5 md:py-1.5 rounded-pill md:backdrop-blur-[20px] md:backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 bg-black/40 md:bg-white/20"
+                  className="px-2 py-1 md:px-2.5 md:py-1.5 rounded-pill md:backdrop-blur-[20px] md:backdrop-saturate-[180%] flex items-center gap-1 border border-white/35 bg-black/36 md:bg-white/20 shadow-[0_4px_14px_rgba(0,0,0,0.16),inset_0_1px_0_rgba(255,255,255,0.18)]"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.25 }}
@@ -339,7 +340,7 @@ export const VideoGradientCard = ({
               )}
               {commentCount !== undefined && (
                 <motion.div
-                  className="px-2 py-1 md:px-2.5 md:py-1.5 rounded-pill md:backdrop-blur-[20px] md:backdrop-saturate-[180%] flex items-center gap-1 border border-white/30 bg-black/40 md:bg-white/20"
+                  className="px-2 py-1 md:px-2.5 md:py-1.5 rounded-pill md:backdrop-blur-[20px] md:backdrop-saturate-[180%] flex items-center gap-1 border border-white/35 bg-black/36 md:bg-white/20 shadow-[0_4px_14px_rgba(0,0,0,0.16),inset_0_1px_0_rgba(255,255,255,0.18)]"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.3 }}
@@ -350,7 +351,7 @@ export const VideoGradientCard = ({
               )}
               {date && (
                 <motion.div
-                  className="px-2.5 py-1.5 rounded-pill md:backdrop-blur-[20px] md:backdrop-saturate-[180%] flex items-center gap-1.5 border border-white/30 bg-black/40 md:bg-white/20"
+                  className="px-2.5 py-1.5 rounded-pill md:backdrop-blur-[20px] md:backdrop-saturate-[180%] flex items-center gap-1.5 border border-white/35 bg-black/36 md:bg-white/20 shadow-[0_4px_14px_rgba(0,0,0,0.16),inset_0_1px_0_rgba(255,255,255,0.18)]"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.35 }}
@@ -434,7 +435,7 @@ export const VideoGradientCard = ({
 
             {/* Caption */}
             {caption && !folderBadge && (
-              <p className="text-white/60 text-xs leading-relaxed line-clamp-2 mb-3 break-words overflow-hidden">
+              <p className="text-white/74 text-xs leading-relaxed line-clamp-2 mb-3 break-words overflow-hidden drop-shadow-[0_1px_3px_rgba(0,0,0,0.4)]">
                 {caption}
               </p>
             )}

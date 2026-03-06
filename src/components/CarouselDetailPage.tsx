@@ -659,19 +659,19 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
   const hasMainImage = Boolean(thumbnailUrl);
 
   return (
-    <div className="flex flex-col h-full bg-slate-50/80 overflow-hidden">
+    <div className="flex flex-col h-full bg-[#f5f6f8] overflow-hidden">
       {/* Header */}
-      <div className="flex-shrink-0 flex items-center justify-between gap-4 p-4 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
+      <div className="flex-shrink-0 flex items-center justify-between gap-4 p-4 border-b border-white/65 bg-white/78 backdrop-blur-glass-xl shadow-glass">
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={onBack}
-            className="p-2 -m-2 min-w-[44px] min-h-[44px] rounded-xl hover:bg-slate-100 text-slate-600 touch-manipulation flex items-center justify-center active:scale-95"
+            className="p-2 -m-2 min-w-[44px] min-h-[44px] rounded-2xl hover:bg-white/82 text-slate-600 touch-manipulation flex items-center justify-center active:scale-95"
             aria-label="Назад"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-slate-200/80 flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-white/84 border border-white/65 shadow-glass-sm flex items-center justify-center flex-shrink-0">
               <Images className="w-5 h-5 text-slate-600" />
             </div>
             <div className="min-w-0">
@@ -700,8 +700,8 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                       className={cn(
                         "flex items-center gap-1.5 px-2.5 py-1 min-h-[32px] rounded-lg text-[10px] font-medium transition-colors touch-manipulation",
                         isInRadar
-                          ? "bg-emerald-100 text-emerald-700 cursor-default"
-                          : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                          ? "bg-emerald-50 border border-emerald-200 text-emerald-700 cursor-default"
+                          : "bg-white/78 border border-white/70 hover:bg-white text-slate-700 shadow-glass-sm"
                       )}
                     >
                       <Radar className="w-3 h-3" strokeWidth={2} />
@@ -717,14 +717,14 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
           <button
             type="button"
             onClick={() => setShowDescriptionModal(true)}
-            className="flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium touch-manipulation"
+            className="flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-2xl bg-white/78 border border-white/70 hover:bg-white text-slate-700 text-sm font-medium touch-manipulation shadow-glass-sm"
             title="Описание поста"
           >
             <BookOpen className="w-4 h-4" />
             Описание
           </button>
           {onRefreshData && (
-            <button onClick={handleRefreshData} className="p-2 min-w-[44px] min-h-[44px] rounded-xl hover:bg-slate-100 text-slate-600 touch-manipulation flex items-center justify-center">
+            <button onClick={handleRefreshData} className="p-2 min-w-[44px] min-h-[44px] rounded-2xl bg-white/78 border border-white/70 hover:bg-white text-slate-600 touch-manipulation flex items-center justify-center shadow-glass-sm">
               Обновить
             </button>
           )}
@@ -732,7 +732,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
             href={carousel.url || `https://www.instagram.com/p/${carousel.shortcode}/`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium touch-manipulation"
+            className="flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-2xl bg-white/78 border border-white/70 hover:bg-white text-slate-700 text-sm font-medium touch-manipulation shadow-glass-sm"
           >
             <ExternalLink className="w-4 h-4" />
             Instagram
@@ -743,7 +743,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
       <div className="flex-1 flex flex-col md:flex-row gap-4 min-h-0 overflow-y-auto md:overflow-hidden p-4 pb-28 md:pb-4">
         {/* Left: slides + folder + stats + links + responsibles — узкая колонка с собственным скроллом */}
         <div className="flex-shrink-0 flex flex-col gap-3 w-full md:w-[240px] lg:w-[260px] min-h-0 overflow-y-auto rounded-xl">
-          <div className="relative flex-shrink-0 rounded-2xl overflow-hidden shadow-lg bg-slate-200 w-full aspect-[3/4] max-w-full mx-auto md:mx-0">
+          <div className="relative flex-shrink-0 rounded-2xl overflow-hidden shadow-[0_18px_40px_rgba(15,23,42,0.18)] bg-slate-200 w-full aspect-[3/4] max-w-full mx-auto md:mx-0 border border-white/65">
             {hasMainImage && !mainImageError ? (
               <img
                 src={thumbnailUrl}
@@ -775,7 +775,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
             type="button"
             onClick={handleRefreshSlides}
             disabled={isRefreshingSlides}
-            className="flex items-center justify-center gap-2 w-full py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium disabled:opacity-60 transition-colors"
+            className="flex items-center justify-center gap-2 w-full py-2 rounded-2xl bg-white/78 border border-white/70 hover:bg-white text-slate-700 text-sm font-medium disabled:opacity-60 transition-colors shadow-glass-sm"
           >
             {isRefreshingSlides ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
             Обновить слайды
@@ -807,7 +807,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
             </div>
           )}
 
-          <div className="rounded-xl p-3 bg-white/80 border border-slate-200/80">
+          <div className="rounded-card-xl p-3 bg-white/82 backdrop-blur-glass border border-white/70 shadow-glass">
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div className="flex items-center gap-1.5 text-slate-600">
                 <Heart className="w-4 h-4 text-slate-400" />
@@ -824,7 +824,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
             </div>
           </div>
 
-          <div className={cn('rounded-xl p-3 bg-white/80 border border-slate-200/80 relative', showFolderMenu && 'z-10')}>
+          <div className={cn('rounded-card-xl p-3 bg-white/82 backdrop-blur-glass border border-white/70 shadow-glass relative', showFolderMenu && 'z-10')}>
             <span className="text-xs text-slate-400 font-medium">Папка</span>
             <button
               type="button"
@@ -879,7 +879,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
             )}
           </div>
 
-          <div className="rounded-xl p-3 bg-white/80 border border-slate-200/80 space-y-2">
+          <div className="rounded-card-xl p-3 bg-white/82 backdrop-blur-glass border border-white/70 shadow-glass space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-400">Ссылки</span>
               <div className="flex gap-1">
@@ -898,7 +898,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
             ))}
           </div>
 
-          <div className="rounded-xl p-3 bg-white/80 border border-slate-200/80 space-y-2">
+          <div className="rounded-card-xl p-3 bg-white/82 backdrop-blur-glass border border-white/70 shadow-glass space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-400">Ответственные</span>
               <div className="flex gap-1">
@@ -919,23 +919,23 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
         </div>
 
         {/* Middle: Transcript — высота шапки как у Сценария для одного уровня текста */}
-        <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-xl bg-white/80 border border-slate-200/80 overflow-hidden">
-          <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-3 p-4 border-b border-slate-100 min-h-[72px]">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-card-xl bg-white/82 backdrop-blur-glass border border-white/70 shadow-glass overflow-hidden">
+          <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-3 p-4 border-b border-white/55 min-h-[72px]">
             <div className="flex items-center gap-2">
               <FileText className="w-5 h-5 text-slate-400 flex-shrink-0" />
               <h3 className="font-semibold text-slate-800">Транскрипт по слайдам</h3>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex bg-slate-100 rounded-lg p-0.5">
+              <div className="flex bg-white/76 border border-white/65 rounded-xl p-0.5 shadow-glass-sm">
                 <button
                   onClick={() => setTranscriptTab('original')}
-                  className={cn('px-3 py-1.5 rounded-md text-xs font-medium', transcriptTab === 'original' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-600')}
+                  className={cn('px-3 py-1.5 rounded-lg text-xs font-medium', transcriptTab === 'original' ? 'bg-white text-slate-800 shadow-glass-sm' : 'text-slate-600')}
                 >
                   Оригинал
                 </button>
                 <button
                   onClick={() => setTranscriptTab('translation')}
-                  className={cn('px-3 py-1.5 rounded-md text-xs font-medium', transcriptTab === 'translation' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-600')}
+                  className={cn('px-3 py-1.5 rounded-lg text-xs font-medium', transcriptTab === 'translation' ? 'bg-white text-slate-800 shadow-glass-sm' : 'text-slate-600')}
                 >
                   Перевод
                 </button>
@@ -943,7 +943,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
               <button
                 onClick={handleTranslate}
                 disabled={!transcript.trim() || isTranslating || !canAfford(getTokenCost('translate'))}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/78 border border-white/70 hover:bg-white text-slate-700 text-xs font-medium disabled:opacity-50 shadow-glass-sm"
               >
                 {isTranslating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Languages className="w-3.5 h-3.5" />}
                 Перевести
@@ -953,7 +953,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                 onClick={handleTranscribe}
                 disabled={slideUrls.length === 0 || isTranscribing || !canAfford(getTokenCost('transcribe_carousel'))}
                 className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium transition-colors',
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-white text-xs font-medium transition-colors shadow-glass-sm',
                   slideUrls.length === 0 || isTranscribing || !canAfford(getTokenCost('transcribe_carousel'))
                     ? 'bg-slate-400 cursor-not-allowed'
                     : 'bg-slate-600 hover:bg-slate-700'
@@ -1004,7 +1004,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
         </div>
 
         {/* Right: Script — высота шапки как у Транскрипта */}
-        <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-xl bg-white/80 border border-slate-200/80 overflow-hidden">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-card-xl bg-white/82 backdrop-blur-glass border border-white/70 shadow-glass overflow-hidden">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-b border-slate-100 flex-shrink-0">
             <div className="flex items-center gap-2 flex-wrap">
               <FileText className="w-5 h-5 text-slate-600 flex-shrink-0" />
