@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    /* Светлая тема с насыщенным оранжевым акцентом */
+    /* Светлая тема с более системным iOS-акцентом */
     --background: 0 0% 98%;
     --foreground: 0 0% 8%;
 
@@ -14,8 +14,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 8%;
 
-    /* Мягкий оранжевый: hsl(25, 95%, 53%) ≈ #f97316 */
-    --primary: 25 95% 53%;
+    /* iOS-like blue accent */
+    --primary: 214 90% 56%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 0 0% 97%;
@@ -24,7 +24,7 @@
     --muted: 0 0% 97%;
     --muted-foreground: 0 0% 40%;
 
-    --accent: 25 95% 53%;
+    --accent: 214 90% 56%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 50%;
@@ -32,7 +32,7 @@
 
     --border: 0 0% 92%;
     --input: 0 0% 98%;
-    --ring: 25 95% 53%;
+    --ring: 214 90% 56%;
 
     --radius: 0.875rem;
   }
@@ -104,7 +104,7 @@
     @apply border-border;
   }
   html {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'system-ui', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Inter, 'system-ui', sans-serif;
     font-weight: 400;
     letter-spacing: 0;
     line-height: 1.45;
@@ -118,7 +118,7 @@
     line-height: 1.45;
   }
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'system-ui', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Inter, 'system-ui', sans-serif;
     font-weight: 500;
     letter-spacing: -0.01em;
     line-height: 1.25;
@@ -133,6 +133,13 @@
     line-height: 1.6;
     font-weight: 400;
   }
+}
+
+/* Keep keyboard focus visible on all breakpoints, not only mobile rules. */
+:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.45);
+  outline-offset: 2px;
+  border-radius: var(--ios-border-radius-small, 12px);
 }
 
 /* Tabular numbers utility */
@@ -285,15 +292,8 @@ body {
 
   /* iOS 26 Text Selection */
   ::selection {
-    background: rgba(249, 115, 22, 0.2);
+    background: rgba(59, 130, 246, 0.2);
     color: inherit;
-  }
-
-  /* iOS 26 Focus States */
-  :focus-visible {
-    outline: 2px solid rgba(249, 115, 22, 0.5);
-    outline-offset: 2px;
-    border-radius: var(--ios-border-radius-small);
   }
 
   /* iOS 26 Input Styles */
@@ -304,11 +304,11 @@ body {
     min-height: var(--ios-touch-target);
   }
 
-  /* iOS 26 Large Title Style — Roboto, letter-spacing -0.01em адаптирован под мобильную */
+  /* iOS 26 Large Title Style — system stack, adapted for mobile. */
   h1 {
     font-size: 34px;
     font-weight: 700;
-    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'system-ui', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Inter, 'system-ui', sans-serif;
     letter-spacing: -0.015em;
     line-height: 1.2;
   }
@@ -316,7 +316,7 @@ body {
   h2 {
     font-size: 28px;
     font-weight: 600;
-    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'system-ui', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Inter, 'system-ui', sans-serif;
     letter-spacing: -0.01em;
   }
 
@@ -605,19 +605,11 @@ body {
   scrollbar-width: none;  /* Firefox */
 }
 
-/* Smooth transitions */
-* {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+/* Avoid global transform/transition conflicts with Framer Motion. */
+:where(button, [role="button"], a, input, textarea, select) {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, filter, backdrop-filter;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
-}
-
-/* Glass morphism effect */
-.glass {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 /* Gradient text */
