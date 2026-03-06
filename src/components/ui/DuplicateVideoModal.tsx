@@ -79,19 +79,6 @@ export function DuplicateVideoModal({ prompt, onResolve }: DuplicateVideoModalPr
                 Можно обновить текущую запись или добавить копию. В обоих случаях мы подтянем свежие данные у уже сохраненного видео.
               </p>
 
-              {/* Video preview card */}
-              <div
-                className="mt-4 rounded-2xl px-4 py-3"
-                style={{
-                  background: 'rgba(120,120,128,0.08)',
-                  border: '0.5px solid rgba(0,0,0,0.07)',
-                }}
-              >
-                <p className="line-clamp-2 text-[13px] font-medium leading-snug text-slate-700">
-                  {prompt.title || 'Видео из Instagram'}
-                </p>
-              </div>
-
               {prompt.ownerUsername ? (
                 <div
                   className="mt-2.5 inline-flex items-center rounded-full px-3 py-1 text-[12px] font-medium text-slate-500"
