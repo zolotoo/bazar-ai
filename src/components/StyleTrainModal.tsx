@@ -284,7 +284,7 @@ export function StyleTrainModal({
             <div className="p-4 border-b border-slate-100">
               <h3 className="font-semibold text-slate-800">Уточнение понимания</h3>
               <p className="text-slate-500 text-sm mt-1">
-                Нейросеть сформировала промт. Подтвердите или скорректируйте ключевые моменты — это улучшит результат.
+                Нейросеть сформировала промт. Подтвердите или скорректируйте ключевые моменты - это улучшит результат.
               </p>
             </div>
             <div className="flex-1 overflow-y-auto p-4">

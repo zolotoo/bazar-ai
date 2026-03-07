@@ -87,7 +87,7 @@ export function LandingPage() {
             </h1>
 
             <p className="text-center text-slate-600 text-base md:text-lg max-w-lg mb-2">
-              Я <span className="text-slate-800 font-semibold">Riri AI</span> — твой персональный ассистент, который сделает твои ролики вирусными
+              Я <span className="text-slate-800 font-semibold">Riri AI</span> - твой персональный ассистент, который сделает твои ролики вирусными
             </p>
             <p className="text-center text-slate-500 text-sm max-w-md mb-12">
               Нахожу трендовые видео, пишу вирусные сценарии, объединяю твою команду

@@ -990,7 +990,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                 value={transcript}
                 onChange={e => setTranscript(e.target.value)}
                 className="w-full flex-1 min-h-[120px] p-3 rounded-xl border border-slate-200 text-sm text-slate-700 resize-y focus:outline-none focus:ring-2 focus:ring-slate-200"
-                placeholder="Нажмите «Транскрибировать» — текст будет извлечён из слайдов через Gemini."
+                placeholder="Нажмите «Транскрибировать» - текст будет извлечён из слайдов через Gemini."
               />
             )}
             {transcriptTab === 'translation' && (
@@ -1047,7 +1047,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                   type="button"
                   onClick={() => setShowChoiceModal(true)}
                   className="px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-medium transition-all flex items-center gap-1.5 whitespace-nowrap"
-                  title="Дать обратную связь — промт дообучится"
+                  title="Дать обратную связь - промт дообучится"
                 >
                   Что не так сделал?
                 </button>
@@ -1471,7 +1471,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                 onClick={() => { setShowChoiceModal(false); setShowFeedbackModal(true); }}
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 text-left text-sm text-slate-700 hover:bg-slate-50 transition-colors"
               >
-                <span className="font-medium">Написать текстом</span> — что не так и что отлично
+                <span className="font-medium">Написать текстом</span> - что не так и что отлично
               </button>
               <button
                 type="button"
@@ -1485,7 +1485,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                 }}
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 text-left text-sm text-slate-700 hover:bg-slate-50 transition-colors"
               >
-                <span className="font-medium">Сам допилю сценарий</span> — отредактировать сценарий ИИ, нейросеть дообучится на ваших правках
+                <span className="font-medium">Сам допилю сценарий</span> - отредактировать сценарий ИИ, нейросеть дообучится на ваших правках
               </button>
             </div>
             <button type="button" onClick={() => setShowChoiceModal(false)} className="mt-4 w-full py-2 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
@@ -1526,14 +1526,14 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
         </div>
       )}
 
-      {/* Модальное окно: сценарий ИИ → ваш идеальный — дообучение на правках */}
+      {/* Модальное окно: сценарий ИИ → ваш идеальный - дообучение на правках */}
       {showEditScriptModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !isRefiningPrompt && setShowEditScriptModal(false)}>
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-4xl w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="p-4 border-b border-slate-100">
               <h3 className="font-semibold text-slate-800">Сценарий ИИ-помощник → ваш идеальный</h3>
               <p className="text-slate-500 text-sm mt-1">
-                Слева — переключайте вкладки (исходник, перевод, сценарий ИИ). Справа — ваш идеальный сценарий. Промт дообучится на ваших правках.
+                Слева - переключайте вкладки (исходник, перевод, сценарий ИИ). Справа - ваш идеальный сценарий. Промт дообучится на ваших правках.
               </p>
             </div>
             <div className="flex-1 overflow-hidden flex flex-col md:flex-row gap-4 p-4 min-h-0">

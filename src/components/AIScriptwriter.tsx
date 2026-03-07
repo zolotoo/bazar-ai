@@ -284,8 +284,8 @@ export function AIScriptwriter() {
   useEffect(() => {
     if (messages.length === 0 && genStep === 'idle') {
       const greeting = styles.length > 0
-        ? 'Привет! Я Riri — твой AI-ассистент. Давай напишем сценарий вместе, как ты хочешь начать работу?'
-        : 'Привет! Я Riri — твой AI-ассистент. Для начала создай подчерк — перейди на вкладку «Подчерки».';
+        ? 'Привет! Я Riri - твоя AI-ассистент. Давай напишем сценарий вместе, как ты хочешь начать работу сегодня?'
+        : 'Привет! Я Riri - твоя AI-ассистент. Для начала создай подчерк - перейди на вкладку «Подчерки».';
       setMessages([{ id: 'init', role: 'riri', text: greeting }]);
       if (styles.length > 0) setGenStep('mode-select');
     }
@@ -344,7 +344,7 @@ export function AIScriptwriter() {
     setFeedbackText('');
     setEditingHookIdx(null);
     setEditingBodyIdx(null);
-    setMessages([{ id: 'init', role: 'riri', text: 'Привет! Я Riri — твой AI-ассистент. Давай напишем сценарий вместе, как ты хочешь начать работу?' }]);
+    setMessages([{ id: 'init', role: 'riri', text: 'Привет! Я Riri - твоя AI-ассистент. Давай напишем сценарий вместе, как ты хочешь начать работу сегодня?' }]);
   }, []);
 
   // ── Resume draft ──
@@ -396,11 +396,11 @@ export function AIScriptwriter() {
       setGenStep('topic');
     } else if (mode === 'reference') {
       addMsg('user', 'Переписать по референсу');
-      addMsg('riri', 'Вставь ссылку на Instagram рилс — я транскрибирую и использую как основу.');
+      addMsg('riri', 'Вставь ссылку на Instagram рилс - я транскрибирую и использую как основу.');
       setGenStep('reference');
     } else {
       addMsg('user', 'Быстрая генерация');
-      addMsg('riri', 'Введи тему — я сразу напишу готовый сценарий.');
+      addMsg('riri', 'Введи тему - я сразу напишу готовый сценарий.');
       setGenStep('topic');
     }
   }, [selectedStyle, addMsg]);
@@ -548,7 +548,7 @@ export function AIScriptwriter() {
         setBodyTexts(data.bodies.map((b: BodyVariant) => b.text));
         setSelectedBodyIdx(0);
         setFeedbackText('');
-        addMsg('riri', 'Теперь 3 варианта тела — выбери, отредактируй или перегенерируй.');
+        addMsg('riri', 'Теперь 3 варианта тела - выбери, отредактируй или перегенерируй.');
         setGenStep('body');
         await autoSaveDraft({ step: 'body', bodies: data.bodies, bodyTexts: data.bodies.map((b: BodyVariant) => b.text) });
       } else { toast.error('Ошибка'); }
@@ -669,7 +669,7 @@ export function AIScriptwriter() {
       const ownerUsername = data.owner?.username || data.owner_username || '';
       let vm: number | null = null;
       if (ownerUsername) { try { const ps = await getOrUpdateProfileStats(ownerUsername); vm = calculateViralMultiplier(views, ps); } catch { /* */ } }
-      setReelInputs(prev => { const n = [...prev]; n[index] = { ...n[index], loading: false, views, ownerUsername, viralMultiplier: vm, error: vm !== null && vm < 10 ? `x${vm.toFixed(1)} — не залёт (нужен x10+)` : null }; return n; });
+      setReelInputs(prev => { const n = [...prev]; n[index] = { ...n[index], loading: false, views, ownerUsername, viralMultiplier: vm, error: vm !== null && vm < 10 ? `x${vm.toFixed(1)} - не залёт (нужен x10+)` : null }; return n; });
     } catch { setReelInputs(prev => { const n = [...prev]; n[index] = { ...n[index], loading: false, error: 'Ошибка' }; return n; }); }
   }, [canAfford, deduct]);
 
@@ -851,7 +851,7 @@ export function AIScriptwriter() {
                         <p className="text-[10px] text-slate-400 mt-1 ml-7">{hook.approach}</p>
                       </div>
                     ))}
-                    <p className="text-[10px] text-slate-400 mt-2 pl-7">Напиши в чат, что не так — перегенерирую с учётом фидбека</p>
+                    <p className="text-[10px] text-slate-400 mt-2 pl-7">Напиши в чат, что не так - перегенерирую с учётом фидбека</p>
                   </motion.div>
                 )}
 
@@ -882,7 +882,7 @@ export function AIScriptwriter() {
                         <p className="text-[10px] text-slate-400 mt-1 ml-7">{body.approach}</p>
                       </div>
                     ))}
-                    <p className="text-[10px] text-slate-400 mt-2 pl-7">Напиши в чат, что не так — перегенерирую</p>
+                    <p className="text-[10px] text-slate-400 mt-2 pl-7">Напиши в чат, что не так - перегенерирую</p>
                   </motion.div>
                 )}
 

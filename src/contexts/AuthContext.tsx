@@ -310,7 +310,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!chatId) {
         setError(
           'Я не могу найти тебя :(\n' +
-          'Напиши @ririai_bot — /start\n' +
+          'Напиши @ririai_bot - /start\n' +
           'И нажми «Получить код» заново'
         );
         return false;
