@@ -4,6 +4,7 @@ import {
   ChevronLeft, FileText, Copy, ExternalLink, Loader2, Check,
   Languages, ChevronDown, Save, Plus, Trash2, Wand2, Images, Heart, MessageCircle, RefreshCw, BookOpen, Pencil, Sparkles, Radar, X
 } from 'lucide-react';
+import { AnimatedCopyIcon } from './ui/animated-state-icons';
 import { cn } from '../utils/cn';
 import { proxyImageUrl } from '../utils/imagePlaceholder';
 import { toast } from 'sonner';
@@ -972,7 +973,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                   }}
                   className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"
                 >
-                  {copiedTranscript ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                  <AnimatedCopyIcon size={16} active={copiedTranscript} />
                 </button>
               )}
             </div>
@@ -1148,7 +1149,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
                     onClick={() => { navigator.clipboard.writeText(script); setCopiedScript(true); setTimeout(() => setCopiedScript(false), 2000); }}
                     className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"
                   >
-                    {copiedScript ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                    <AnimatedCopyIcon size={16} active={copiedScript} />
                   </button>
                 </>
               )}

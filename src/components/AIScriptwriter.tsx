@@ -19,8 +19,8 @@ import {
   Sparkles, Plus, ArrowLeft, Loader2, Trash2,
   FileText, MessageSquare, Pencil, LayoutGrid,
   AlertTriangle, Link as LinkIcon, Type,
-  Check, FolderOpen, ChevronRight,
-  Zap, Send, RefreshCw,
+  Check, FolderOpen, ChevronRight, ChevronDown,
+  Zap, Send, Eye,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -213,6 +213,10 @@ export function AIScriptwriter() {
   const [clarifyAnswers, setClarifyAnswers] = useState<Record<number, string>>({});
   const [isRefining, setIsRefining] = useState(false);
 
+  // ── Prompt box ──
+  const promptRef = useRef<HTMLTextAreaElement>(null);
+  const [expandedStyleId, setExpandedStyleId] = useState<string | null>(null);
+
   // ── Add-to-feed modal ──
   const [showFeedModal, setShowFeedModal] = useState(false);
   const [feedDraftId, setFeedDraftId] = useState<string | null>(null);
@@ -227,6 +231,50 @@ export function AIScriptwriter() {
     if (!selectedStyleId && styles.length > 0) setSelectedStyleId(styles[0].id);
   }, [styles, selectedStyleId]);
 
+  // Unified prompt value helpers
+  const getPromptValue = () => {
+    if (genStep === 'topic' || genStep === 'mode-select') return genTopic;
+    if (genStep === 'reference') return referenceUrl;
+    if (genStep === 'hooks' || genStep === 'body' || genStep === 'final') return feedbackText;
+    return '';
+  };
+  const setPromptValue = (val: string) => {
+    if (genStep === 'topic' || genStep === 'mode-select') setGenTopic(val);
+    else if (genStep === 'reference') setReferenceUrl(val);
+    else setFeedbackText(val);
+  };
+  const getPlaceholder = () => {
+    if (genStep === 'mode-select' || genStep === 'topic') return 'Введи тему или идею сценария...';
+    if (genStep === 'reference') return 'https://instagram.com/reel/...';
+    if (genStep === 'hooks') return 'Что не так с хуками?';
+    if (genStep === 'body') return 'Что не так с телом?';
+    if (genStep === 'final') return 'Что улучшить в сценарии?';
+    return 'Сообщение...';
+  };
+  const handlePromptSend = () => {
+    const val = getPromptValue();
+    if (!val.trim()) return;
+    if (genStep === 'topic' || genStep === 'mode-select') handleTopicSubmit();
+    else if (genStep === 'reference') handleReferenceSubmit();
+    else if (genStep === 'hooks' && feedbackText.trim()) handleRegenerateHooks();
+    else if (genStep === 'body' && feedbackText.trim()) handleRegenerateBody();
+    else if (genStep === 'final' && feedbackText.trim()) handleImprove();
+  };
+  const promptSendCost = () => {
+    if (genStep === 'mode-select' || genStep === 'topic') return genMode === 'quick' ? getTokenCost('sw_quick') : getTokenCost('sw_clarify');
+    if (genStep === 'reference') return getTokenCost('transcribe_video') + getTokenCost('sw_clarify');
+    if (genStep === 'hooks') return getTokenCost('sw_hooks');
+    if (genStep === 'body') return getTokenCost('sw_body');
+    if (genStep === 'final') return getTokenCost('sw_improve');
+    return 0;
+  };
+
+  // Auto-resize prompt textarea
+  useEffect(() => {
+    const el = promptRef.current;
+    if (el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 180) + 'px'; }
+  }, [getPromptValue()]);
+
   // Auto-scroll chat
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -236,8 +284,8 @@ export function AIScriptwriter() {
   useEffect(() => {
     if (messages.length === 0 && genStep === 'idle') {
       const greeting = styles.length > 0
-        ? 'Привет! Я Riri — твой ИИ-сценарист. Выбери режим работы.'
-        : 'Привет! Я Riri. Для начала создай подчерк — перейди на вкладку «Подчерки».';
+        ? 'Привет! Я Riri — твой AI-ассистент. Давай напишем сценарий вместе, как ты хочешь начать работу?'
+        : 'Привет! Я Riri — твой AI-ассистент. Для начала создай подчерк — перейди на вкладку «Подчерки».';
       setMessages([{ id: 'init', role: 'riri', text: greeting }]);
       if (styles.length > 0) setGenStep('mode-select');
     }
@@ -296,7 +344,7 @@ export function AIScriptwriter() {
     setFeedbackText('');
     setEditingHookIdx(null);
     setEditingBodyIdx(null);
-    setMessages([{ id: 'init', role: 'riri', text: 'Привет! Я Riri — твой ИИ-сценарист. Выбери режим работы.' }]);
+    setMessages([{ id: 'init', role: 'riri', text: 'Привет! Я Riri — твой AI-ассистент. Давай напишем сценарий вместе, как ты хочешь начать работу?' }]);
   }, []);
 
   // ── Resume draft ──
@@ -759,14 +807,7 @@ export function AIScriptwriter() {
 
                 {/* ── Inline interactive areas ── */}
 
-                {/* Mode select */}
-                {genStep === 'mode-select' && !genLoading && styles.length > 0 && (
-                  <motion.div {...msgAnim} className="flex flex-wrap gap-2 pl-9">
-                    <CostBtn onClick={() => handleModeSelect('topic')} variant="primary" cost={getTokenCost('sw_clarify')} className="text-xs"><Type className="w-3.5 h-3.5" /> По теме</CostBtn>
-                    <CostBtn onClick={() => handleModeSelect('reference')} variant="secondary" cost={getTokenCost('transcribe_video') + getTokenCost('sw_clarify')} className="text-xs"><LinkIcon className="w-3.5 h-3.5" /> По референсу</CostBtn>
-                    <CostBtn onClick={() => handleModeSelect('quick')} variant="ghost" cost={getTokenCost('sw_quick')} className="text-xs"><Zap className="w-3.5 h-3.5" /> Быстрая</CostBtn>
-                  </motion.div>
-                )}
+                {/* Mode select is rendered as chips above the prompt box */}
 
                 {/* Clarify questions */}
                 {genStep === 'clarify' && !genLoading && (
@@ -784,7 +825,6 @@ export function AIScriptwriter() {
                         <input type="text" value={!q.options.includes(genAnswers[qi] || '') ? genAnswers[qi] || '' : ''} onChange={e => setGenAnswers(prev => { const n = [...prev]; n[qi] = e.target.value; return n; })} placeholder="Свой вариант..." className="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300" />
                       </GlassCard>
                     ))}
-                    <CostBtn onClick={handleClarifyDone} disabled={genAnswers.some(a => !a?.trim())} cost={getTokenCost('sw_hooks')} className="w-full">Далее: хуки <ChevronRight className="w-3.5 h-3.5" /></CostBtn>
                   </motion.div>
                 )}
 
@@ -811,13 +851,7 @@ export function AIScriptwriter() {
                         <p className="text-[10px] text-slate-400 mt-1 ml-7">{hook.approach}</p>
                       </div>
                     ))}
-                    <div className="flex gap-2 mt-2">
-                      <div className="flex-1 flex gap-2">
-                        <input type="text" value={feedbackText} onChange={e => setFeedbackText(e.target.value)} placeholder="Что не так с хуками?" className="flex-1 px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300" onKeyDown={e => e.key === 'Enter' && feedbackText.trim() && handleRegenerateHooks()} />
-                        <CostBtn onClick={handleRegenerateHooks} disabled={!feedbackText.trim()} cost={getTokenCost('sw_hooks')} variant="ghost" className="text-xs px-2"><RefreshCw className="w-3.5 h-3.5" /></CostBtn>
-                      </div>
-                    </div>
-                    <CostBtn onClick={handleHookConfirm} cost={getTokenCost('sw_body')} className="w-full">Далее: тело <ChevronRight className="w-3.5 h-3.5" /></CostBtn>
+                    <p className="text-[10px] text-slate-400 mt-2 pl-7">Напиши в чат, что не так — перегенерирую с учётом фидбека</p>
                   </motion.div>
                 )}
 
@@ -848,11 +882,7 @@ export function AIScriptwriter() {
                         <p className="text-[10px] text-slate-400 mt-1 ml-7">{body.approach}</p>
                       </div>
                     ))}
-                    <div className="flex gap-2 mt-2">
-                      <input type="text" value={feedbackText} onChange={e => setFeedbackText(e.target.value)} placeholder="Что не так с телом?" className="flex-1 px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300" onKeyDown={e => e.key === 'Enter' && feedbackText.trim() && handleRegenerateBody()} />
-                      <CostBtn onClick={handleRegenerateBody} disabled={!feedbackText.trim()} cost={getTokenCost('sw_body')} variant="ghost" className="text-xs px-2"><RefreshCw className="w-3.5 h-3.5" /></CostBtn>
-                    </div>
-                    <CostBtn onClick={handleBodyConfirm} cost={getTokenCost('sw_assemble')} className="w-full">Собрать сценарий <ChevronRight className="w-3.5 h-3.5" /></CostBtn>
+                    <p className="text-[10px] text-slate-400 mt-2 pl-7">Напиши в чат, что не так — перегенерирую</p>
                   </motion.div>
                 )}
 
@@ -869,35 +899,21 @@ export function AIScriptwriter() {
                       </div>
                       <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">{genFinalScript}</p>
                     </GlassCard>
-                    <div className="flex gap-2">
-                      <button onClick={() => { if (currentDraftIdRef.current) { setFeedDraftId(currentDraftIdRef.current); setFeedFolder(null); setShowFeedModal(true); } }} className="flex-1 py-2.5 rounded-2xl bg-slate-600 hover:bg-slate-700 text-white text-xs font-medium transition-all shadow-glass min-h-[40px] flex items-center justify-center gap-1.5 touch-manipulation">
-                        <LayoutGrid className="w-3.5 h-3.5" /> В Ленту
-                      </button>
-                      <CostBtn onClick={() => setGenStep('retrain')} variant="secondary" cost={getTokenCost('refine_prompt')} className="flex-1 text-xs">
-                        <Sparkles className="w-3.5 h-3.5" /> Дообучить
-                      </CostBtn>
-                    </div>
-                    <button onClick={resetChat} className="w-full py-2 text-xs text-slate-400 hover:text-slate-600 transition-colors touch-manipulation">
-                      Новый сценарий
-                    </button>
+                    {/* Action buttons rendered as chips above prompt */}
                   </motion.div>
                 )}
 
-                {/* Retrain confirmation */}
+                {/* Retrain info */}
                 {genStep === 'retrain' && !genLoading && (
-                  <motion.div {...msgAnim} className="space-y-3 pl-9">
+                  <motion.div {...msgAnim} className="pl-9">
                     <GlassCard className="p-3">
-                      <p className="text-xs font-medium text-slate-600 mb-2">Что будет учтено:</p>
+                      <p className="text-xs font-medium text-slate-600 mb-2">Что будет учтено при дообучении:</p>
                       <div className="space-y-1.5">
                         {hookTexts[selectedHookIdx] !== genHooks[selectedHookIdx]?.text && <div className="flex items-center gap-1.5"><Check className="w-3 h-3 text-emerald-500" /><p className="text-[11px] text-slate-600">Правки хука</p></div>}
                         {bodyTexts[selectedBodyIdx] !== genBodies[selectedBodyIdx]?.text && <div className="flex items-center gap-1.5"><Check className="w-3 h-3 text-emerald-500" /><p className="text-[11px] text-slate-600">Правки тела</p></div>}
                         <div className="flex items-center gap-1.5"><Check className="w-3 h-3 text-emerald-500" /><p className="text-[11px] text-slate-600">Выборы и финальный сценарий</p></div>
                       </div>
                     </GlassCard>
-                    <div className="flex gap-2">
-                      <button onClick={() => { setGenStep('final'); toast.info('Подчерк не изменён'); }} className="flex-1 py-2.5 rounded-2xl border border-slate-200 text-slate-500 text-xs font-medium hover:bg-slate-50 transition-all min-h-[40px] touch-manipulation">Не стоит</button>
-                      <CostBtn onClick={handleRetrain} cost={getTokenCost('refine_prompt')} className="flex-1 text-xs"><Sparkles className="w-3.5 h-3.5" /> Дообучить</CostBtn>
-                    </div>
                   </motion.div>
                 )}
 
@@ -905,29 +921,82 @@ export function AIScriptwriter() {
               </div>
             </div>
 
-            {/* ── Bottom input bar ── */}
-            <div className="border-t border-slate-200/50 bg-white/90 backdrop-blur-glass px-4 py-3 safe-bottom">
+            {/* ── ChatGPT-style prompt box ── */}
+            <div className="px-4 pb-4 pt-2 safe-bottom">
               <div className="max-w-2xl mx-auto">
-                {(genStep === 'topic' || (genStep === 'mode-select' && genMode === 'quick')) && (
-                  <div className="flex gap-2">
-                    <textarea value={genTopic} onChange={e => setGenTopic(e.target.value)} placeholder={genMode === 'quick' ? 'Тема для быстрой генерации...' : 'Тема или идея сценария...'} rows={2} className="flex-1 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-400 resize-none" onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && genTopic.trim()) { e.preventDefault(); handleTopicSubmit(); } }} />
-                    <CostBtn onClick={handleTopicSubmit} disabled={!genTopic.trim() || genLoading} loading={genLoading} cost={genMode === 'quick' ? getTokenCost('sw_quick') : getTokenCost('sw_clarify')} className="self-end"><Send className="w-4 h-4" /></CostBtn>
-                  </div>
-                )}
-                {genStep === 'reference' && (
-                  <div className="flex gap-2">
-                    <input type="url" value={referenceUrl} onChange={e => setReferenceUrl(e.target.value)} placeholder="https://instagram.com/reel/..." className="flex-1 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-400" onKeyDown={e => { if (e.key === 'Enter' && referenceUrl.trim()) { e.preventDefault(); handleReferenceSubmit(); } }} />
-                    <CostBtn onClick={handleReferenceSubmit} disabled={!referenceUrl.trim() || genLoading} loading={genLoading} cost={getTokenCost('transcribe_video') + getTokenCost('sw_clarify')} className="self-end"><Send className="w-4 h-4" /></CostBtn>
-                  </div>
-                )}
-                {genStep === 'final' && !genLoading && (
-                  <div className="flex gap-2">
-                    <input type="text" value={feedbackText} onChange={e => setFeedbackText(e.target.value)} placeholder="Что улучшить в сценарии?" className="flex-1 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-400" onKeyDown={e => { if (e.key === 'Enter' && feedbackText.trim()) { e.preventDefault(); handleImprove(); } }} />
-                    <CostBtn onClick={handleImprove} disabled={!feedbackText.trim() || genLoading} loading={genLoading} cost={getTokenCost('sw_improve')}><Send className="w-4 h-4" /></CostBtn>
+                {/* Suggestion chips above the prompt */}
+                <AnimatePresence mode="wait">
+                  {genStep === 'mode-select' && !genLoading && styles.length > 0 && (
+                    <motion.div key="mode-chips" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={iosSpringSoft} className="flex flex-wrap gap-2 mb-3">
+                      <button onClick={() => handleModeSelect('topic')} className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl border border-slate-200 bg-white text-xs text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all touch-manipulation shadow-sm"><Type className="w-3.5 h-3.5" /> По теме <TokenBadge tokens={getTokenCost('sw_clarify')} size="sm" /></button>
+                      <button onClick={() => handleModeSelect('reference')} className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl border border-slate-200 bg-white text-xs text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all touch-manipulation shadow-sm"><LinkIcon className="w-3.5 h-3.5" /> По референсу <TokenBadge tokens={getTokenCost('transcribe_video') + getTokenCost('sw_clarify')} size="sm" /></button>
+                      <button onClick={() => handleModeSelect('quick')} className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl border border-slate-200 bg-white text-xs text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all touch-manipulation shadow-sm"><Zap className="w-3.5 h-3.5" /> Быстрая <TokenBadge tokens={getTokenCost('sw_quick')} size="sm" /></button>
+                    </motion.div>
+                  )}
+                  {genStep === 'clarify' && !genLoading && (
+                    <motion.div key="clarify-chip" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={iosSpringSoft} className="flex gap-2 mb-3">
+                      <CostBtn onClick={handleClarifyDone} disabled={genAnswers.some(a => !a?.trim())} cost={getTokenCost('sw_hooks')} className="text-xs">Подтвердить и далее <ChevronRight className="w-3.5 h-3.5" /></CostBtn>
+                    </motion.div>
+                  )}
+                  {genStep === 'hooks' && !genLoading && (
+                    <motion.div key="hooks-chips" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={iosSpringSoft} className="flex gap-2 mb-3">
+                      <CostBtn onClick={handleHookConfirm} cost={getTokenCost('sw_body')} className="text-xs">Далее: тело <ChevronRight className="w-3.5 h-3.5" /></CostBtn>
+                    </motion.div>
+                  )}
+                  {genStep === 'body' && !genLoading && (
+                    <motion.div key="body-chips" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={iosSpringSoft} className="flex gap-2 mb-3">
+                      <CostBtn onClick={handleBodyConfirm} cost={getTokenCost('sw_assemble')} className="text-xs">Собрать сценарий <ChevronRight className="w-3.5 h-3.5" /></CostBtn>
+                    </motion.div>
+                  )}
+                  {genStep === 'final' && !genLoading && (
+                    <motion.div key="final-chips" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={iosSpringSoft} className="flex flex-wrap gap-2 mb-3">
+                      <button onClick={() => { if (currentDraftIdRef.current) { setFeedDraftId(currentDraftIdRef.current); setFeedFolder(null); setShowFeedModal(true); } }} className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl border border-slate-200 bg-white text-xs text-slate-600 hover:bg-slate-50 transition-all shadow-sm touch-manipulation"><LayoutGrid className="w-3.5 h-3.5" /> В Ленту</button>
+                      <button onClick={() => setGenStep('retrain')} className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl border border-slate-200 bg-white text-xs text-slate-600 hover:bg-slate-50 transition-all shadow-sm touch-manipulation"><Sparkles className="w-3.5 h-3.5" /> Дообучить <TokenBadge tokens={getTokenCost('refine_prompt')} size="sm" /></button>
+                      <button onClick={resetChat} className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl border border-slate-200 bg-white text-xs text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all shadow-sm touch-manipulation"><Plus className="w-3.5 h-3.5" /> Новый</button>
+                    </motion.div>
+                  )}
+                  {genStep === 'retrain' && !genLoading && (
+                    <motion.div key="retrain-chips" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={iosSpringSoft} className="flex gap-2 mb-3">
+                      <CostBtn onClick={handleRetrain} cost={getTokenCost('refine_prompt')} className="text-xs"><Sparkles className="w-3.5 h-3.5" /> Да, дообучить</CostBtn>
+                      <button onClick={() => { setGenStep('final'); toast.info('Подчерк не изменён'); }} className="px-3.5 py-2 rounded-2xl border border-slate-200 bg-white text-xs text-slate-500 hover:bg-slate-50 transition-all shadow-sm touch-manipulation">Нет, не стоит</button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Prompt box */}
+                {!(['idle', 'transcribing'] as GenStep[]).includes(genStep) && (
+                  <div className="rounded-3xl bg-white border border-slate-200/80 shadow-[0_2px_12px_rgba(15,23,42,0.06)] transition-all focus-within:shadow-[0_2px_20px_rgba(15,23,42,0.1)] focus-within:border-slate-300">
+                    <textarea
+                      ref={promptRef}
+                      value={getPromptValue()}
+                      onChange={e => setPromptValue(e.target.value)}
+                      placeholder={getPlaceholder()}
+                      rows={1}
+                      className="w-full resize-none border-0 bg-transparent px-4 pt-3.5 pb-1 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none min-h-[48px]"
+                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && getPromptValue().trim()) { e.preventDefault(); handlePromptSend(); } }}
+                      disabled={genLoading}
+                    />
+                    <div className="flex items-center gap-2 px-3 pb-2.5 pt-0.5">
+                      {selectedStyle && (
+                        <span className="text-[10px] text-slate-400 px-2 py-0.5 rounded-full bg-slate-100 truncate max-w-[120px]">{selectedStyle.name}</span>
+                      )}
+                      {promptSendCost() > 0 && getPromptValue().trim() && (
+                        <TokenBadge tokens={promptSendCost()} size="sm" className="opacity-60" />
+                      )}
+                      <div className="ml-auto">
+                        <button
+                          onClick={handlePromptSend}
+                          disabled={!getPromptValue().trim() || genLoading}
+                          className="w-8 h-8 rounded-full flex items-center justify-center transition-all disabled:opacity-30 bg-slate-700 text-white hover:bg-slate-800 disabled:bg-slate-300 disabled:text-slate-500"
+                        >
+                          {genLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
                 {genStep === 'transcribing' && (
-                  <div className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="w-4 h-4 animate-spin" /> Транскрибирую видео...</div>
+                  <div className="flex items-center justify-center gap-2 text-sm text-slate-500 py-3"><Loader2 className="w-4 h-4 animate-spin" /> Транскрибирую видео...</div>
                 )}
               </div>
             </div>
@@ -944,23 +1013,79 @@ export function AIScriptwriter() {
 
               {trainScreen === 'list' && (
                 <div className="space-y-2.5">
-                  {styles.map(style => (
-                    <GlassCard key={style.id} className="p-3.5">
-                      <div className="flex items-start justify-between mb-1.5">
-                        <div className="flex-1 min-w-0"><h3 className="font-semibold text-slate-800 text-sm truncate">{style.name}</h3>{style.meta?.summary && <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">{style.meta.summary}</p>}</div>
-                        <div className="flex gap-1 ml-2">{style.trainingMode && <span className="px-1.5 py-0.5 rounded-md text-[9px] font-medium bg-slate-100 text-slate-500">{style.trainingMode === 'reels' ? 'Рилсы' : 'Тексты'}</span>}</div>
-                      </div>
-                      {style.structureAnalysis && (
-                        <div className="flex flex-wrap gap-1 mb-2">
-                          {style.structureAnalysis.hookDuration && <span className="px-1.5 py-0.5 rounded text-[9px] bg-slate-50 text-slate-500 border border-slate-100">Хук: {style.structureAnalysis.hookDuration}</span>}
-                          {style.structureAnalysis.ctaType && <span className="px-1.5 py-0.5 rounded text-[9px] bg-slate-50 text-slate-500 border border-slate-100">CTA: {style.structureAnalysis.ctaType}</span>}
+                  {styles.map(style => {
+                    const isExpanded = expandedStyleId === style.id;
+                    const sa = style.structureAnalysis;
+                    return (
+                      <GlassCard key={style.id} className="p-3.5">
+                        <div className="flex items-start justify-between mb-1.5">
+                          <div className="flex-1 min-w-0"><h3 className="font-semibold text-slate-800 text-sm truncate">{style.name}</h3>{style.meta?.summary && <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">{style.meta.summary}</p>}</div>
+                          <div className="flex gap-1 ml-2">{style.trainingMode && <span className="px-1.5 py-0.5 rounded-md text-[9px] font-medium bg-slate-100 text-slate-500">{style.trainingMode === 'reels' ? 'Рилсы' : 'Тексты'}</span>}</div>
                         </div>
-                      )}
-                      <button onClick={() => { setSelectedStyleId(style.id); setActiveTab('chat'); resetChat(); }} className="w-full py-2 rounded-xl bg-slate-600 hover:bg-slate-700 text-white text-xs font-medium active:scale-[0.97] transition-all shadow-glass min-h-[40px] flex items-center justify-center gap-1.5 touch-manipulation">
-                        <MessageSquare className="w-3.5 h-3.5" /> Начать чат
-                      </button>
-                    </GlassCard>
-                  ))}
+                        {sa && (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {sa.hookDuration && <span className="px-1.5 py-0.5 rounded text-[9px] bg-slate-50 text-slate-500 border border-slate-100">Хук: {sa.hookDuration}</span>}
+                            {sa.ctaType && <span className="px-1.5 py-0.5 rounded text-[9px] bg-slate-50 text-slate-500 border border-slate-100">CTA: {sa.ctaType}</span>}
+                            {sa.bodyPhases?.length ? <span className="px-1.5 py-0.5 rounded text-[9px] bg-slate-50 text-slate-500 border border-slate-100">{sa.bodyPhases.length} фаз</span> : null}
+                          </div>
+                        )}
+
+                        {/* Expand/collapse details */}
+                        <button onClick={() => setExpandedStyleId(isExpanded ? null : style.id)} className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-600 transition-colors mb-2 touch-manipulation">
+                          <Eye className="w-3 h-3" />
+                          {isExpanded ? 'Скрыть детали' : 'Посмотреть под капот'}
+                          <ChevronDown className={cn('w-3 h-3 transition-transform', isExpanded && 'rotate-180')} />
+                        </button>
+
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden mb-3">
+                              <div className="space-y-2.5 pt-1 border-t border-slate-100">
+                                {/* Structure */}
+                                {sa && (
+                                  <div className="mt-2">
+                                    <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Структура</p>
+                                    {sa.hookDescription && <div className="text-[11px] text-slate-600 mb-1"><span className="text-slate-400">Хук:</span> {sa.hookDescription}{sa.hookDuration ? ` (${sa.hookDuration})` : ''}</div>}
+                                    {sa.bodyPhases?.length ? <div className="text-[11px] text-slate-600 mb-1"><span className="text-slate-400">Фазы тела:</span> {sa.bodyPhases.join(' → ')}</div> : null}
+                                    {sa.ctaType && <div className="text-[11px] text-slate-600 mb-1"><span className="text-slate-400">CTA:</span> {sa.ctaType}</div>}
+                                    {sa.avgLengthSeconds ? <div className="text-[11px] text-slate-600 mb-1"><span className="text-slate-400">Длительность:</span> ~{sa.avgLengthSeconds} сек</div> : null}
+                                    {sa.specialFeatures?.length ? <div className="text-[11px] text-slate-600"><span className="text-slate-400">Особенности:</span> {sa.specialFeatures.join(', ')}</div> : null}
+                                  </div>
+                                )}
+                                {/* Rules */}
+                                {style.meta?.rules?.length ? (
+                                  <div>
+                                    <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Правила</p>
+                                    <ul className="space-y-0.5">{style.meta.rules.map((r, i) => <li key={i} className="text-[11px] text-slate-600 flex gap-1.5"><span className="text-emerald-500 flex-shrink-0">+</span>{r}</li>)}</ul>
+                                  </div>
+                                ) : null}
+                                {/* Do not */}
+                                {style.meta?.doNot?.length ? (
+                                  <div>
+                                    <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Избегать</p>
+                                    <ul className="space-y-0.5">{style.meta.doNot.map((r, i) => <li key={i} className="text-[11px] text-slate-600 flex gap-1.5"><span className="text-red-400 flex-shrink-0">−</span>{r}</li>)}</ul>
+                                  </div>
+                                ) : null}
+                                {/* Prompt (raw) */}
+                                {style.prompt && (
+                                  <div>
+                                    <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Промт модели</p>
+                                    <div className="p-2 rounded-lg bg-slate-50 border border-slate-100 max-h-32 overflow-y-auto">
+                                      <p className="text-[10px] text-slate-500 whitespace-pre-wrap leading-relaxed font-mono">{style.prompt}</p>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+
+                        <button onClick={() => { setSelectedStyleId(style.id); setActiveTab('chat'); resetChat(); }} className="w-full py-2 rounded-xl bg-slate-600 hover:bg-slate-700 text-white text-xs font-medium active:scale-[0.97] transition-all shadow-glass min-h-[40px] flex items-center justify-center gap-1.5 touch-manipulation">
+                          <MessageSquare className="w-3.5 h-3.5" /> Начать чат
+                        </button>
+                      </GlassCard>
+                    );
+                  })}
                   <button onClick={() => { setTrainStyleName(''); setTrainMode('reels'); setPreferredFormat(null); setReelInputs(Array.from({ length: 5 }, () => ({ url: '', loading: false, views: null, ownerUsername: null, viralMultiplier: null, error: null, transcriptText: null, transcriptLoading: false }))); setScriptInputs(Array.from({ length: 5 }, () => ({ text: '' }))); setTrainScreen('mode-select'); }} className="w-full p-3 rounded-card-xl border-2 border-dashed border-slate-200/60 text-slate-400 hover:border-slate-400 hover:text-slate-600 transition-all flex items-center justify-center gap-1.5 min-h-[44px] touch-manipulation">
                     <Plus className="w-4 h-4" /> <span className="text-xs font-medium">Создать подчерк</span>
                   </button>

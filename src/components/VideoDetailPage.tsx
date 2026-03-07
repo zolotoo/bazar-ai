@@ -5,6 +5,7 @@ import {
   Sparkles, FileText, Copy, ExternalLink, Loader2, Check,
   Languages, ChevronDown, Mic, Save, RefreshCw, Plus, Trash2, Wand2, BookOpen, Pencil, Radar, X
 } from 'lucide-react';
+import { AnimatedCopyIcon } from './ui/animated-state-icons';
 import { cn } from '../utils/cn';
 import { proxyImageUrl, PLACEHOLDER_400x600 } from '../utils/imagePlaceholder';
 import { proxyVideoUrl } from '../utils/videoProxy';
@@ -1565,7 +1566,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                     className="flex items-center gap-1.5 p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-700"
                     title="Копировать"
                   >
-                    {copiedTranscript ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                    <AnimatedCopyIcon size={16} active={copiedTranscript} />
                   </button>
                 </div>
               )}
@@ -1807,7 +1808,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
                       className="flex items-center justify-center p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-700"
                       title="Копировать"
                     >
-                      {copiedScript ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                      <AnimatedCopyIcon size={16} active={copiedScript} />
                     </button>
                   </>
                 )}

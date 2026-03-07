@@ -3,8 +3,8 @@
 import { cn } from "../../utils/cn";
 import React, { useState, createContext, useContext, ReactNode } from "react";
 import { motion } from "framer-motion";
-import { X } from "lucide-react";
 import { GlassFolderIcon } from "./GlassFolderIcons";
+import { AnimatedMenuIcon } from "./animated-state-icons";
 
 interface SidebarContextProps {
   open: boolean;
@@ -147,11 +147,11 @@ export const MobileSidebar = ({
           <span className="text-[15px] font-semibold text-slate-800 font-heading tracking-[-0.01em]">Меню</span>
           <button
             onClick={() => setOpen(false)}
-            className="flex items-center justify-center rounded-full touch-manipulation"
+            className="flex items-center justify-center rounded-full touch-manipulation text-slate-600"
             style={{ width: 32, height: 32, backgroundColor: "rgba(0,0,0,0.07)" }}
             aria-label="Закрыть"
           >
-            <X className="w-4 h-4 text-slate-600" strokeWidth={2.5} />
+            <AnimatedMenuIcon size={16} color="currentColor" active={open} />
           </button>
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain p-4 pt-3 space-y-1">
