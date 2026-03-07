@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "../../utils/cn";
 import type { LucideIcon } from "lucide-react";
 
@@ -20,7 +20,8 @@ interface MobileBottomBarProps extends React.HTMLAttributes<HTMLElement> {
   onTabClick: (id: MobileTabId) => void;
 }
 
-const spring = { type: "spring" as const, stiffness: 420, damping: 34, mass: 0.85 };
+const tapSpring = { type: "spring" as const, stiffness: 500, damping: 30, mass: 0.7 };
+const dotSpring = { type: "spring" as const, stiffness: 600, damping: 38, mass: 0.6 };
 
 export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProps>(
   ({ className, items, activeId, onTabClick, ...props }, ref) => {
@@ -44,18 +45,18 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
         }}
         {...props}
       >
-        {/* iOS 17 frosted glass pill */}
+        {/* iOS 26-style frosted glass pill */}
         <div
           className="pointer-events-auto"
           style={{
-            background: "rgba(248, 248, 252, 0.84)",
-            backdropFilter: "blur(44px) saturate(200%)",
-            WebkitBackdropFilter: "blur(44px) saturate(200%)",
-            borderRadius: 34,
-            border: "1px solid rgba(255,255,255,0.72)",
+            background: "rgba(248, 248, 252, 0.88)",
+            backdropFilter: "blur(48px) saturate(200%)",
+            WebkitBackdropFilter: "blur(48px) saturate(200%)",
+            borderRadius: 36,
+            border: "1px solid rgba(255,255,255,0.76)",
             boxShadow:
-              "0 4px 24px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)",
-            padding: "6px 4px",
+              "0 8px 32px rgba(0,0,0,0.10), 0 1px 0 rgba(255,255,255,0.95) inset, 0 -1px 0 rgba(0,0,0,0.04) inset",
+            padding: "5px 2px 6px",
           }}
         >
           <ul
@@ -69,7 +70,7 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
               return (
                 <li
                   key={item.id}
-                  style={{ padding: 0, minHeight: "unset", borderRadius: 0, listStyle: "none" }}
+                  style={{ padding: 0, minHeight: "unset", borderRadius: 0, listStyle: "none", position: "relative" }}
                 >
                   <motion.button
                     type="button"
@@ -81,45 +82,94 @@ export const MobileBottomBar = React.forwardRef<HTMLElement, MobileBottomBarProp
                       flexDirection: "column",
                       alignItems: "center",
                       justifyContent: "center",
-                      width: 72,
-                      paddingTop: 9,
-                      paddingBottom: 9,
+                      width: 76,
+                      paddingTop: 8,
+                      paddingBottom: 8,
                       background: "transparent",
                       border: "none",
+                      position: "relative",
                       willChange: "transform",
                       minHeight: "unset",
                       minWidth: "unset",
                       cursor: "pointer",
                       WebkitTapHighlightColor: "transparent",
-                      gap: 3,
+                      gap: 4,
                     }}
-                    whileTap={{ scale: 0.87 }}
-                    transition={spring}
+                    whileTap={{ scale: 0.84 }}
+                    transition={tapSpring}
                   >
-                    <Icon
-                      style={{
-                        width: 24,
-                        height: 24,
-                        color: isActive ? "#18181b" : "#a8a8b0",
-                        strokeWidth: isActive ? 2.1 : 1.65,
-                        transition: "color 0.18s ease",
-                        flexShrink: 0,
-                      }}
-                    />
+                    {/* Active background pill */}
+                    <AnimatePresence>
+                      {isActive && (
+                        <motion.div
+                          layoutId="tab-active-bg"
+                          initial={{ opacity: 0, scale: 0.85 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.85 }}
+                          transition={dotSpring}
+                          style={{
+                            position: "absolute",
+                            inset: "2px 8px",
+                            borderRadius: 20,
+                            background: "rgba(24,24,27,0.07)",
+                            pointerEvents: "none",
+                          }}
+                        />
+                      )}
+                    </AnimatePresence>
+
+                    {/* Icon with subtle scale on active */}
+                    <motion.div
+                      animate={isActive ? { scale: 1.08, y: -1 } : { scale: 1, y: 0 }}
+                      transition={dotSpring}
+                      style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}
+                    >
+                      <Icon
+                        style={{
+                          width: 23,
+                          height: 23,
+                          color: isActive ? "#111113" : "#a8a8b0",
+                          strokeWidth: isActive ? 2.2 : 1.6,
+                          transition: "color 0.15s ease",
+                          flexShrink: 0,
+                        }}
+                      />
+                    </motion.div>
 
                     <span
                       style={{
-                        fontSize: 10.5,
-                        fontWeight: isActive ? 600 : 400,
+                        fontSize: 10,
+                        fontWeight: isActive ? 650 : 400,
                         letterSpacing: "-0.01em",
-                        color: isActive ? "#18181b" : "#a8a8b0",
+                        color: isActive ? "#111113" : "#a8a8b0",
                         lineHeight: 1,
-                        transition: "color 0.18s ease, font-weight 0.18s ease",
+                        transition: "color 0.15s ease",
                         whiteSpace: "nowrap",
+                        position: "relative",
                       }}
                     >
                       {item.label}
                     </span>
+
+                    {/* iOS-style active dot under label */}
+                    <AnimatePresence>
+                      {isActive && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0, y: -2 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0 }}
+                          transition={dotSpring}
+                          style={{
+                            width: 4,
+                            height: 4,
+                            borderRadius: "50%",
+                            background: "#111113",
+                            position: "absolute",
+                            bottom: 2,
+                          }}
+                        />
+                      )}
+                    </AnimatePresence>
                   </motion.button>
                 </li>
               );

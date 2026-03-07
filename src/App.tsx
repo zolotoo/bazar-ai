@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Workspace } from './components/Workspace';
 import { LandingPage } from './components/LandingPage';
 import { Dashboard, getDisplayName } from './components/Dashboard';
@@ -597,7 +598,7 @@ function AppContent() {
 
   return (
     <div className={cn(
-        "w-full h-[100dvh] md:h-screen text-foreground overflow-hidden flex flex-col md:flex-row safe-top",
+        "w-full h-[100dvh] text-foreground overflow-hidden flex flex-col md:flex-row safe-top",
         viewMode === 'dashboard' ? "bg-[#fafafa]" : "bg-base"
       )}>
       {/* Background: clean for dashboard, subtle blobs for other views */}
@@ -778,20 +779,31 @@ function AppContent() {
       </Sidebar>
 
       {/* Main Content — контент идёт до низа, таб-бар поверх */}
-      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-        {viewMode === 'dashboard' && (
-          <Dashboard
-            onOpenSearch={(tab) => { setSearchTab(tab); setIsSearchOpen(true); }}
-            onOpenFeed={() => setViewMode('workspace')}
-            onOpenTeam={() => setIsMembersModalOpen(true)}
-            videosCount={videos.length}
-            telegramUsername={user?.telegram_username}
-          />
-        )}
-        {viewMode === 'workspace' && <Workspace />}
-        {viewMode === 'scriptwriter' && <AIScriptwriter />}
-        {viewMode === 'history' && <History />}
-        {viewMode === 'profile' && <ProfilePage />}
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={viewMode}
+            className="flex-1 min-h-0 overflow-hidden flex flex-col absolute inset-0"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+          >
+            {viewMode === 'dashboard' && (
+              <Dashboard
+                onOpenSearch={(tab) => { setSearchTab(tab); setIsSearchOpen(true); }}
+                onOpenFeed={() => setViewMode('workspace')}
+                onOpenTeam={() => setIsMembersModalOpen(true)}
+                videosCount={videos.length}
+                telegramUsername={user?.telegram_username}
+              />
+            )}
+            {viewMode === 'workspace' && <Workspace />}
+            {viewMode === 'scriptwriter' && <AIScriptwriter />}
+            {viewMode === 'history' && <History />}
+            {viewMode === 'profile' && <ProfilePage />}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* Нижнее меню в стиле iOS — только на мобильных */}
