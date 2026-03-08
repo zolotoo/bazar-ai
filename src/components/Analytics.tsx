@@ -32,6 +32,31 @@ function fmt(n: number): string {
   return String(n);
 }
 
+// ─── Viral helpers (same logic as Workspace.tsx) ──────────────────────────────
+
+/** views / days / 1000 — скорость набора просмотров */
+function calcViralCoef(views: number, takenAt: number | null): number {
+  if (!views) return 0;
+  if (!takenAt) return Math.round((views / 30000) * 10) / 10;
+  const diffDays = Math.max(1, Math.floor((Date.now() - takenAt * 1000) / 86400000));
+  return Math.round((views / diffDays / 1000) * 10) / 10;
+}
+
+/** video_views / avg_bottom3_views профиля */
+function calcViralMultiplier(views: number, avgBottom3: number): number | null {
+  if (!avgBottom3) return null;
+  return Math.round((views / avgBottom3) * 10) / 10;
+}
+
+/** Усиливает viralCoef на основе множителя залётности */
+function applyMultiplier(coef: number, mult: number | null): number {
+  if (mult === null || mult < 1) return coef * 0.1;
+  if (mult >= 4) return coef * 5;
+  if (mult >= 3) return coef * 3;
+  if (mult >= 2) return coef * 1.3;
+  return coef * 0.1;
+}
+
 // ─── Grey Sphere ──────────────────────────────────────────────────────────────
 
 function GreySphere({ size = 56 }: { size?: number }) {
@@ -239,7 +264,9 @@ function SyncModal({ onSync, onClose, syncing, lastSyncAt }: {
 
 // ─── Reel Card ────────────────────────────────────────────────────────────────
 
-function ReelCard({ reel, onClick, layout }: { reel: ProjectReel; onClick: () => void; layout: ViewLayout }) {
+function ReelCard({ reel, onClick, layout, avgBottom3Views }: {
+  reel: ProjectReel; onClick: () => void; layout: ViewLayout; avgBottom3Views: number;
+}) {
   const takenAt = reel.taken_at ? new Date(reel.taken_at * 1000) : null;
   const views = reel.latest_view_count ?? 0;
   const likes = reel.latest_like_count ?? 0;
@@ -248,8 +275,11 @@ function ReelCard({ reel, onClick, layout }: { reel: ProjectReel; onClick: () =>
     ? takenAt.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
     : undefined;
 
-  // Grid — точно тот же VideoGradientCard что и в ленте
+  // Grid — точно тот же VideoGradientCard что и в ленте, с виральностью
   if (layout === 'grid') {
+    const viralCoefRaw = calcViralCoef(views, reel.taken_at ?? null);
+    const viralMult = calcViralMultiplier(views, avgBottom3Views);
+    const viralCoef = applyMultiplier(viralCoefRaw, viralMult);
     return (
       <VideoGradientCard
         thumbnailUrl={reel.thumbnail_url ?? undefined}
@@ -258,6 +288,8 @@ function ReelCard({ reel, onClick, layout }: { reel: ProjectReel; onClick: () =>
         likeCount={likes}
         commentCount={comments}
         date={dateLabel}
+        viralCoef={viralCoef}
+        viralMultiplier={viralMult}
         onClick={onClick}
       />
     );
@@ -603,6 +635,17 @@ export function Analytics() {
     });
   }, [reels, sortBy]);
 
+  // Среднее из 3 роликов с минимальными просмотрами — база для расчёта х-множителя
+  const avgBottom3Views = useMemo(() => {
+    const views = reels
+      .map(r => r.latest_view_count ?? 0)
+      .filter(v => v > 0)
+      .sort((a, b) => a - b);
+    const bottom3 = views.slice(0, Math.min(3, views.length));
+    if (!bottom3.length) return 0;
+    return Math.floor(bottom3.reduce((s, v) => s + v, 0) / bottom3.length);
+  }, [reels]);
+
   const hasAccount = !!instagramUsername;
   const hasData = reels.length > 0;
 
@@ -821,13 +864,13 @@ export function Analytics() {
               {viewLayout === 'grid' ? (
                 <div className="grid grid-cols-3 gap-2">
                   {sortedReels.map(reel => (
-                    <ReelCard key={reel.id} reel={reel} onClick={() => setSelectedReel(reel)} layout="grid" />
+                    <ReelCard key={reel.id} reel={reel} onClick={() => setSelectedReel(reel)} layout="grid" avgBottom3Views={avgBottom3Views} />
                   ))}
                 </div>
               ) : (
                 <div className="space-y-2">
                   {sortedReels.map(reel => (
-                    <ReelCard key={reel.id} reel={reel} onClick={() => setSelectedReel(reel)} layout="list" />
+                    <ReelCard key={reel.id} reel={reel} onClick={() => setSelectedReel(reel)} layout="list" avgBottom3Views={avgBottom3Views} />
                   ))}
                 </div>
               )}
