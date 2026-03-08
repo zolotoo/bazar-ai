@@ -950,21 +950,22 @@ export function Analytics() {
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}
         >
           {/*
-           * ┌──────────────┬──────────────────┬──────────┐
-           * │              │  Просмотры (wide)│ Роликов  │
-           * │  HERO        │  мини-чарт       │ (narrow) │
-           * │  Кубок+месяц ├──────────────────┴──────────┤
-           * │              │  Лучший рилс недели (wide)  │
-           * └──────────────┴─────────────────────────────┘
+           * ┌──────────────┬──────────────────┬──────────┐  row 1
+           * │              │  Просмотры чарт  │ Роликов  │
+           * │  HERO        │  (rows 1-2)      ├──────────┤  row 2
+           * │  Кубок+месяц │                  │ Ср.просм │
+           * │  (rows 1-3)  ├──────────────────┼──────────┤  row 3
+           * │              │  Лучший недели   │ Вчера    │
+           * └──────────────┴──────────────────┴──────────┘
            * cols: 5fr  7fr  4fr
            */}
           <div
             className="grid gap-3"
-            style={{ gridTemplateColumns: '5fr 7fr 4fr', gridTemplateRows: 'auto auto' }}
+            style={{ gridTemplateColumns: '5fr 7fr 4fr', gridTemplateRows: 'auto auto auto' }}
           >
             {/* ── LEFT HERO: кубок + сумма просмотров за месяц ─────────────── */}
             <div
-              style={{ gridRow: '1 / 3' }}
+              style={{ gridRow: '1 / 4' }}
               className={cn(CARD, "relative overflow-hidden flex flex-col items-center justify-between p-4 min-h-[280px]")}
               // Dark-gold gradient background
               css-ignore="true"
@@ -1002,10 +1003,11 @@ export function Analytics() {
               </div>
             </div>
 
-            {/* ── MIDDLE TOP: мини-граф просмотров (wide, row 1) ────────────── */}
+            {/* ── MIDDLE: граф просмотров, rows 1-2 ────────────────────────── */}
             <motion.button
               onClick={() => setSubView('charts')}
               className={cn(CARD, "p-4 text-left active:scale-[0.98] transition-transform")}
+              style={{ gridRow: '1 / 3' }}
               whileTap={{ scale: 0.98 }}
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
             >
@@ -1017,7 +1019,7 @@ export function Analytics() {
                 </div>
               </div>
               {chartData.length >= 2 ? (
-                <AreaChart data={chartData} aspectRatio="2.6 / 1" margin={{ top: 8, right: 8, bottom: 20, left: 32 }}>
+                <AreaChart data={chartData} aspectRatio="1.8 / 1" margin={{ top: 8, right: 8, bottom: 20, left: 32 }}>
                   <Grid horizontal numTicksRows={2} />
                   <Area dataKey="views" fill="#6366f1" fillOpacity={0.13} stroke="#6366f1" strokeWidth={1.5} fadeEdges />
                   <YAxis numTicks={2} formatValue={(v) => fmt(v as number)} />
@@ -1025,93 +1027,103 @@ export function Analytics() {
                   <ChartTooltip rows={(p) => [{ color: '#6366f1', label: 'Просмотры', value: (p.views as number) ?? 0 }]} />
                 </AreaChart>
               ) : (
-                <div className="h-16 flex items-center justify-center">
-                  <p className="text-xs text-slate-300">Мало данных</p>
+                <div className="flex-1 flex flex-col items-center justify-center gap-2 py-8 text-center">
+                  <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center">
+                    <BarChart2 className="w-4 h-4 text-indigo-300" />
+                  </div>
+                  <p className="text-[12px] font-medium text-slate-400">Обнови через день —</p>
+                  <p className="text-[11px] text-slate-300">и графики появятся</p>
                 </div>
               )}
             </motion.button>
 
-            {/* ── RIGHT TOP: Роликов / Ср.просм / Вчера (narrow, row 1) ─────── */}
+            {/* ── RIGHT row 1: Роликов ───────────────────────────────────────── */}
             <motion.div
-              className={cn(CARD, "p-4 flex flex-col justify-between")}
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
+              className={cn(CARD, "p-3 flex flex-col justify-between")}
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }}
             >
-              {/* Роликов */}
+              <div className="flex items-center gap-1">
+                <Film className="w-3 h-3 text-slate-400" />
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Роликов</p>
+              </div>
               <div>
-                <div className="flex items-center gap-1 mb-2">
-                  <Film className="w-3 h-3 text-slate-400" />
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Роликов</p>
-                </div>
-                <p className="text-[24px] font-bold text-slate-900 leading-none tabular-nums">{stats?.totalReels || 0}</p>
+                <p className="text-[28px] font-bold text-slate-900 leading-none tabular-nums">{stats?.totalReels || 0}</p>
                 <p className="text-[10px] text-slate-400 mt-0.5">в базе</p>
-              </div>
-
-              {/* Ср. просм */}
-              <div className="mt-3 pt-3 border-t border-slate-100/80">
-                <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">Ср. просм.</p>
-                <p className="text-[15px] font-bold text-slate-700 tabular-nums">{fmt(stats?.avgViewsLast30Days || 0)}</p>
-              </div>
-
-              {/* Вчера */}
-              <div className="mt-3 pt-3 border-t border-slate-100/80">
-                <div className="flex items-center gap-1 mb-1">
-                  <CalendarDays className="w-3 h-3 text-slate-400" />
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Вчера</p>
-                </div>
-                {syncFreshEnough ? (
-                  <>
-                    <p className="text-[18px] font-bold text-slate-900 leading-none tabular-nums">{videosYesterday.length}</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      {videosYesterday.length === 1 ? 'ролик' : videosYesterday.length >= 2 && videosYesterday.length <= 4 ? 'ролика' : 'роликов'}
-                    </p>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => setShowSyncModal(true)}
-                    className="flex items-center gap-1 mt-0.5 group"
-                  >
-                    <RefreshCw className="w-3 h-3 text-indigo-400 group-hover:rotate-180 transition-transform duration-500" />
-                    <p className="text-[10px] text-indigo-400 font-medium leading-snug">Обнови,{'\n'}чтобы увидеть</p>
-                  </button>
-                )}
               </div>
             </motion.div>
 
-            {/* ── BOTTOM RIGHT (cols 2-3): лучший рилс недели ────────────────── */}
+            {/* ── RIGHT row 2: Ср. просмотров ───────────────────────────────── */}
+            <motion.div
+              className={cn(CARD, "p-3 flex flex-col justify-between")}
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.09 }}
+            >
+              <div className="flex items-center gap-1">
+                <Eye className="w-3 h-3 text-indigo-400" />
+                <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Ср. просм.</p>
+              </div>
+              <div>
+                <p className="text-[20px] font-bold text-slate-900 leading-none tabular-nums">{fmt(stats?.avgViewsLast30Days || 0)}</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">за 30 дней</p>
+              </div>
+            </motion.div>
+
+            {/* ── MIDDLE row 3: Лучший рилс недели ─────────────────────────── */}
             {stats?.bestReelWeek ? (
               <motion.button
                 onClick={() => setSelectedReel(stats.bestReelWeek!)}
                 className={cn(CARD, "p-3 text-left flex items-center gap-3 active:scale-[0.98] transition-transform")}
-                style={{ gridColumn: '2 / 4' }}
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
+                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.11 }}
                 whileTap={{ scale: 0.97 }}
               >
-                <div className="relative w-12 h-[68px] rounded-xl overflow-hidden flex-shrink-0 bg-slate-100">
+                <div className="relative w-10 h-[60px] rounded-xl overflow-hidden flex-shrink-0 bg-slate-100">
                   {stats.bestReelWeek.thumbnail_url
                     ? <img src={stats.bestReelWeek.thumbnail_url} alt="" className="w-full h-full object-cover" />
-                    : <Film className="w-4 h-4 text-slate-300 m-auto mt-5" />
+                    : <Film className="w-4 h-4 text-slate-300 m-auto mt-4" />
                   }
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1 mb-1">
                     <Award className="w-3 h-3 text-amber-500" />
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-amber-500">Лучший рилс недели</p>
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-amber-500">Лучший недели</p>
                   </div>
                   <p className="text-[15px] font-bold text-slate-900 tabular-nums">{fmt(stats.bestReelWeek.latest_view_count ?? 0)}</p>
-                  <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">{stats.bestReelWeek.caption || 'Без подписи'}</p>
+                  <p className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">{stats.bestReelWeek.caption || 'Без подписи'}</p>
                 </div>
               </motion.button>
             ) : (
               <motion.div
-                className={cn(CARD, "flex items-center justify-center p-3")}
-                style={{ gridColumn: '2 / 4' }}
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
+                className={cn(CARD, "flex items-center gap-2 p-3")}
+                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.11 }}
               >
-                <Award className="w-6 h-6 text-slate-200" />
-                <p className="text-xs text-slate-300 ml-2">Лучший рилс недели</p>
+                <Award className="w-5 h-5 text-slate-200 flex-shrink-0" />
+                <p className="text-[11px] text-slate-300">Лучший рилс недели</p>
               </motion.div>
             )}
+
+            {/* ── RIGHT row 3: Вчера выложено ───────────────────────────────── */}
+            <motion.div
+              className={cn(CARD, "p-3 flex flex-col justify-between")}
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.13 }}
+            >
+              <div className="flex items-center gap-1">
+                <CalendarDays className="w-3 h-3 text-emerald-500" />
+                <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider">Вчера</p>
+              </div>
+              {syncFreshEnough ? (
+                <div>
+                  <p className="text-[28px] font-bold text-slate-900 leading-none tabular-nums">{videosYesterday.length}</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    {videosYesterday.length === 1 ? 'ролик выложен' : videosYesterday.length >= 2 && videosYesterday.length <= 4 ? 'ролика выложено' : 'роликов выложено'}
+                  </p>
+                </div>
+              ) : (
+                <button onClick={() => setShowSyncModal(true)} className="group flex flex-col gap-0.5">
+                  <RefreshCw className="w-4 h-4 text-indigo-400 group-hover:rotate-180 transition-transform duration-500" />
+                  <p className="text-[10px] text-indigo-400 font-medium leading-tight">Обнови,<br/>чтобы<br/>увидеть</p>
+                </button>
+              )}
+            </motion.div>
           </div>
 
           {/* ── Full-width: Reels preview ──────────────────────────────────────── */}
