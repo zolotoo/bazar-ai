@@ -5,12 +5,13 @@ import { useProjectAnalytics, type ProjectReel, type SyncCount } from '../hooks/
 import { useTokenBalance } from '../contexts/TokenBalanceContext';
 import { getTokenCost } from '../constants/tokenCosts';
 import { CoinBadge } from './ui/CoinBadge';
+import { VideoGradientCard } from './ui/VideoGradientCard';
 import { AreaChart, Area, Grid, XAxis, YAxis, ChartTooltip } from './ui/area-chart';
 import { cn } from '../utils/cn';
 import {
   BarChart2, RefreshCw, Instagram, Eye, Heart, MessageCircle,
   TrendingUp, Award, Film, X,
-  ArrowUpRight, ArrowDownRight, Minus, Play, Mic, Sparkles,
+  ArrowUpRight, ArrowDownRight, Minus, Mic, Sparkles,
   LayoutGrid, List, AlertCircle, Clock,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -236,7 +237,7 @@ function SyncModal({ onSync, onClose, syncing, lastSyncAt }: {
   );
 }
 
-// ─── Reel Card — стиль как VideoGradientCard ──────────────────────────────────
+// ─── Reel Card ────────────────────────────────────────────────────────────────
 
 function ReelCard({ reel, onClick, layout }: { reel: ProjectReel; onClick: () => void; layout: ViewLayout }) {
   const takenAt = reel.taken_at ? new Date(reel.taken_at * 1000) : null;
@@ -245,111 +246,59 @@ function ReelCard({ reel, onClick, layout }: { reel: ProjectReel; onClick: () =>
   const comments = reel.latest_comment_count ?? 0;
   const dateLabel = takenAt
     ? takenAt.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
-    : null;
+    : undefined;
 
-  if (layout === 'list') {
+  // Grid — точно тот же VideoGradientCard что и в ленте
+  if (layout === 'grid') {
     return (
-      <motion.button
+      <VideoGradientCard
+        thumbnailUrl={reel.thumbnail_url ?? undefined}
+        caption={reel.caption ?? undefined}
+        viewCount={views}
+        likeCount={likes}
+        commentCount={comments}
+        date={dateLabel}
         onClick={onClick}
-        className="w-full flex items-center gap-3 p-3 bg-white/70 backdrop-blur-sm border border-white/65 rounded-2xl shadow-[0_2px_12px_rgba(15,23,42,0.07)] hover:shadow-[0_6px_20px_rgba(15,23,42,0.10)] hover:bg-white/90 transition-all text-left"
-        initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} whileTap={{ scale: 0.98 }}
-      >
-        {/* Превью */}
-        <div className="relative w-12 h-[68px] rounded-xl overflow-hidden flex-shrink-0 bg-slate-100">
-          {reel.thumbnail_url ? (
-            <img src={reel.thumbnail_url} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <Film className="w-4 h-4 text-slate-300" />
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-          <Play className="absolute bottom-1.5 right-1 w-2.5 h-2.5 text-white fill-white" />
-        </div>
-
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <p className="text-[11px] text-slate-400 mb-0.5">{dateLabel || '—'}</p>
-          <p className="text-[13px] text-slate-700 line-clamp-2 leading-snug font-medium">
-            {reel.caption || 'Без подписи'}
-          </p>
-          {/* Glass pill stats */}
-          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">
-              <Eye className="w-2.5 h-2.5" />{fmt(views)}
-            </span>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-500">
-              <Heart className="w-2.5 h-2.5" />{fmt(likes)}
-            </span>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-600">
-              <MessageCircle className="w-2.5 h-2.5" />{fmt(comments)}
-            </span>
-          </div>
-        </div>
-      </motion.button>
+      />
     );
   }
 
-  // Grid card — стиль VideoGradientCard
+  // List layout
   return (
     <motion.button
       onClick={onClick}
-      className="relative group rounded-2xl overflow-hidden bg-slate-200"
-      style={{
-        aspectRatio: '9/16',
-        boxShadow: '0 10px 28px -6px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.5)',
-      }}
-      initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-      whileHover={{ y: -4, scale: 1.02 }} whileTap={{ scale: 0.97 }}
-      transition={{ type: 'tween', duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+      className="w-full flex items-center gap-3 p-3 bg-white/70 backdrop-blur-sm border border-white/65 rounded-2xl shadow-[0_2px_12px_rgba(15,23,42,0.07)] hover:shadow-[0_6px_20px_rgba(15,23,42,0.10)] hover:bg-white/90 transition-all text-left"
+      initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} whileTap={{ scale: 0.98 }}
     >
-      {reel.thumbnail_url ? (
-        <img src={reel.thumbnail_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Film className="w-8 h-8 text-slate-300" />
-        </div>
-      )}
-
-      {/* Gradient overlay */}
-      <div className="absolute inset-0" style={{
-        background: 'linear-gradient(to top, rgba(9,11,18,0.90) 0%, rgba(20,24,34,0.50) 35%, rgba(32,36,44,0.12) 60%, transparent 100%)',
-      }} />
-      <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/20 to-transparent" />
-
-      {/* Date top-left */}
-      {dateLabel && (
-        <div className="absolute top-2 left-2">
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-semibold bg-black/36 text-white/90 border border-white/20 backdrop-blur-sm">
-            {dateLabel}
-          </span>
-        </div>
-      )}
-
-      {/* Bottom stats */}
-      <div className="absolute bottom-0 left-0 right-0 p-2.5 flex flex-col gap-1.5">
-        {/* View/like/comment pills */}
-        <div className="flex items-center gap-1 flex-wrap">
-          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-black/36 text-white/90 border border-white/20 backdrop-blur-sm">
-            <Eye className="w-2 h-2" />{fmt(views)}
-          </span>
-          {likes > 0 && (
-            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-black/36 text-white/90 border border-white/20 backdrop-blur-sm">
-              <Heart className="w-2 h-2" />{fmt(likes)}
-            </span>
-          )}
-          {comments > 0 && (
-            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-black/36 text-white/90 border border-white/20 backdrop-blur-sm">
-              <MessageCircle className="w-2 h-2" />{fmt(comments)}
-            </span>
-          )}
-        </div>
-        {/* Caption */}
-        {reel.caption && (
-          <p className="text-white/70 text-[9px] leading-tight line-clamp-1">
-            {reel.caption}
-          </p>
+      {/* Превью */}
+      <div className="relative w-12 h-[68px] rounded-xl overflow-hidden flex-shrink-0 bg-slate-100">
+        {reel.thumbnail_url ? (
+          <img src={reel.thumbnail_url} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <Film className="w-4 h-4 text-slate-300" />
+          </div>
         )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+      </div>
+
+      {/* Info */}
+      <div className="flex-1 min-w-0">
+        <p className="text-[11px] text-slate-400 mb-0.5">{dateLabel || '—'}</p>
+        <p className="text-[13px] text-slate-700 line-clamp-2 leading-snug font-medium">
+          {reel.caption || 'Без подписи'}
+        </p>
+        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">
+            <Eye className="w-2.5 h-2.5" />{fmt(views)}
+          </span>
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-500">
+            <Heart className="w-2.5 h-2.5" />{fmt(likes)}
+          </span>
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-600">
+            <MessageCircle className="w-2.5 h-2.5" />{fmt(comments)}
+          </span>
+        </div>
       </div>
     </motion.button>
   );

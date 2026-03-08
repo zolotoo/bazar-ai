@@ -87,10 +87,11 @@ export const DesktopSidebar = ({
   return (
     <motion.div
       className={cn(
-        "h-full px-4 py-4 hidden md:flex md:flex-col flex-shrink-0",
+        "px-4 py-4 hidden md:flex md:flex-col flex-shrink-0",
+        "my-3 ml-3 rounded-[28px]",
         variant === 'minimal'
-          ? "bg-slate-50/95 border-r border-slate-200/60"
-          : "bg-white/72 backdrop-blur-glass-xl backdrop-saturate-[180%] border-r border-white/50 shadow-glass",
+          ? "bg-white/88 border border-slate-200/50 shadow-glass"
+          : "bg-white/80 backdrop-blur-glass-2xl backdrop-saturate-[200%] border border-white/70 shadow-float",
         className
       )}
       animate={{
@@ -122,36 +123,38 @@ export const MobileSidebar = ({
       {/* Panel — всегда в DOM, слайдится off-screen */}
       <motion.div
         initial={false}
-        animate={{ x: open ? "0%" : "-100%" }}
+        animate={{ x: open ? "0%" : "-115%" }}
         transition={{
           type: "tween",
-          duration: open ? 0.34 : 0.22,
+          duration: open ? 0.36 : 0.24,
           ease: open ? [0.25, 0.46, 0.45, 0.94] : [0.55, 0, 1, 0.45],
         }}
-        className="md:hidden fixed inset-y-0 left-0 z-[10000] w-[min(320px,92vw)] flex flex-col"
+        className="md:hidden fixed z-[10000] w-[min(300px,88vw)] flex flex-col"
         style={{
+          top: 12,
+          bottom: 12,
+          left: 12,
           willChange: "transform",
-          backgroundColor: "rgba(248,248,250,0.84)",
-          borderTopRightRadius: 20,
-          borderBottomRightRadius: 20,
-          boxShadow: "8px 0 40px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.7)",
-          backdropFilter: "blur(28px) saturate(180%)",
-          WebkitBackdropFilter: "blur(28px) saturate(180%)",
-          paddingTop: "env(safe-area-inset-top, 0px)",
+          backgroundColor: "rgba(248,249,251,0.90)",
+          borderRadius: 28,
+          boxShadow: "0 24px 64px rgba(0,0,0,0.12), 0 8px 32px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.85)",
+          backdropFilter: "blur(36px) saturate(200%)",
+          WebkitBackdropFilter: "blur(36px) saturate(200%)",
+          border: "1px solid rgba(255,255,255,0.72)",
         }}
       >
         <div
-          className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0"
-          style={{ borderBottom: "1px solid rgba(255,255,255,0.55)", backgroundColor: "rgba(248,248,250,0.7)" }}
+          className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0"
+          style={{ borderBottom: "1px solid rgba(0,0,0,0.05)" }}
         >
           <span className="text-[15px] font-semibold text-slate-800 font-heading tracking-[-0.01em]">Меню</span>
           <button
             onClick={() => setOpen(false)}
-            className="flex items-center justify-center rounded-full touch-manipulation text-slate-600"
-            style={{ width: 32, height: 32, backgroundColor: "rgba(0,0,0,0.07)" }}
+            className="flex items-center justify-center rounded-full touch-manipulation text-slate-500"
+            style={{ width: 30, height: 30, backgroundColor: "rgba(0,0,0,0.06)" }}
             aria-label="Закрыть"
           >
-            <AnimatedMenuIcon size={16} color="currentColor" active={open} />
+            <AnimatedMenuIcon size={15} color="currentColor" active={open} />
           </button>
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain p-4 pt-3 space-y-1">
@@ -194,17 +197,17 @@ export const SidebarLink = ({
         "font-medium",
         open ? "px-2.5" : "px-2 justify-center",
         isActive 
-          ? "bg-white/78 backdrop-blur-glass text-slate-800 border border-white/55 shadow-glass-sm" 
+          ? "bg-white/90 text-slate-900 border border-white/80 shadow-[0_2px_12px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.9)]" 
           : variant === 'danger'
-            ? "text-accent-negative hover:bg-white/55 hover:backdrop-blur-glass"
-            : "text-slate-700 hover:bg-white/55 hover:backdrop-blur-glass hover:text-slate-800",
+            ? "text-accent-negative hover:bg-white/60 hover:shadow-glass-sm"
+            : "text-slate-600 hover:bg-white/60 hover:text-slate-800 hover:shadow-glass-sm",
         className
       )}
     >
       <div className={cn(
         "flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-xl transition-all",
-        isActive && "bg-white/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]",
-        !open && isActive && "bg-white/70"
+        isActive && "bg-slate-100/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_1px_2px_rgba(0,0,0,0.06)]",
+        !open && isActive && "bg-white/80"
       )}>
         {React.cloneElement(icon as React.ReactElement, { 
           className: "w-3.5 h-3.5",
@@ -269,7 +272,7 @@ export const SidebarSection = ({ title, children, onAdd }: SidebarSectionProps) 
         transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
         className="flex items-center justify-between px-3 mb-1.5 overflow-hidden"
       >
-        <span className="text-xs font-semibold text-slate-500 font-heading tracking-[-0.01em]">
+        <span className="text-[11px] font-semibold text-slate-400 uppercase font-heading tracking-[0.04em]">
           {title}
         </span>
         {onAdd && (
@@ -324,8 +327,8 @@ export const SidebarProject = ({
         "group flex items-center gap-3 py-2 rounded-2xl transition-all cursor-pointer relative border border-transparent",
         open ? "px-4 pl-3" : "px-3 justify-center",
         isActive 
-          ? "bg-white/78 backdrop-blur-glass border-white/55 shadow-glass-sm" 
-          : "hover:bg-white/55 hover:backdrop-blur-glass"
+          ? "bg-white/90 border-white/80 shadow-[0_2px_12px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.9)]" 
+          : "hover:bg-white/60 hover:shadow-glass-sm"
       )}
     >
       {open && (
@@ -398,10 +401,10 @@ export const SidebarLogo = () => {
   
   return (
     <div className={cn(
-      "flex items-center gap-3 py-2 mb-6 transition-all",
-      open ? "px-3" : "px-2 justify-center"
+      "flex items-center gap-3 py-2 mb-5 transition-all",
+      open ? "px-2" : "px-1.5 justify-center"
     )}>
-      <div className="w-9 h-9 rounded-2xl overflow-hidden flex items-center justify-center shadow-glass-sm flex-shrink-0 bg-white/72 border border-white/55 backdrop-blur-glass">
+      <div className="w-9 h-9 rounded-2xl overflow-hidden flex items-center justify-center flex-shrink-0 bg-white/90 border border-white/80 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,1)]">
         <img src="/riri-logo.png" alt="Riri AI" className="w-full h-full object-contain p-0.5" />
       </div>
       <motion.div
@@ -411,8 +414,8 @@ export const SidebarLogo = () => {
         }}
         className="overflow-hidden leading-none"
       >
-        <h1 className="text-base font-semibold text-slate-800 whitespace-nowrap font-heading tracking-[-0.01em]">Riri AI</h1>
-        <p className="text-[10px] text-slate-500 whitespace-nowrap font-medium mt-px font-heading tracking-[-0.01em]">Твой ассистент</p>
+        <h1 className="text-[15px] font-semibold text-slate-800 whitespace-nowrap font-heading tracking-[-0.02em]">Riri AI</h1>
+        <p className="text-[10px] text-slate-400 whitespace-nowrap font-medium mt-0.5 font-heading tracking-[-0.01em]">Твой ассистент</p>
       </motion.div>
     </div>
   );
@@ -422,8 +425,8 @@ export const SidebarDivider = () => {
   const { open } = useSidebar();
   return (
     <div className={cn(
-      "h-px bg-gradient-to-r from-transparent via-slate-200/55 to-transparent my-4 transition-all",
-      open ? "mx-4" : "mx-3"
+      "h-px bg-gradient-to-r from-transparent via-slate-200/70 to-transparent my-3 transition-all",
+      open ? "mx-2" : "mx-2"
     )} />
   );
 };
