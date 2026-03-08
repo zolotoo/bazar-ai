@@ -147,7 +147,7 @@ export function useProjectAnalytics(projectId: string | null) {
     setSyncing(true);
     try {
       // Fetch from Instagram via our API
-      const res = await fetch('/api/analytics-sync', {
+      const res = await fetch('/api/user-reels', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, count }),

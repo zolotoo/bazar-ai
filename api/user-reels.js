@@ -1,113 +1,131 @@
 // Vercel Serverless Function - получение видео пользователя по username
+// Поддерживает count (12/24/36) для постраничной загрузки (аналитика)
 export default async function handler(req, res) {
-  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  const { username, count } = req.body;
+  if (!username) return res.status(400).json({ error: 'username is required' });
 
-  const { username } = req.body;
-
-  if (!username) {
-    return res.status(400).json({ error: 'username is required' });
-  }
-
-  // ОСНОВНОЙ КЛЮЧ - оплаченный instagram-scraper-20251
   const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY || '959a088626msh74020d3fb11ad19p1e067bjsnb273d9fac830';
-  
-  // Очищаем username от @ если есть
   const cleanUsername = username.replace(/^@/, '').trim().toLowerCase();
-  
-  console.log('Fetching reels for user:', cleanUsername);
 
-  // Используем ТОЛЬКО оплаченный API instagram-scraper-20251
-  try {
-    const apiUrl = `https://instagram-scraper-20251.p.rapidapi.com/userreels/?username_or_id=${cleanUsername}&url_embed_safe=true`;
-    console.log('Calling instagram-scraper-20251:', apiUrl);
-    
-    const response = await fetch(apiUrl, {
-      method: 'GET',
-      headers: {
-        'x-rapidapi-host': 'instagram-scraper-20251.p.rapidapi.com',
-        'x-rapidapi-key': RAPIDAPI_KEY,
-      },
-    });
-
-    console.log('API status:', response.status);
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log('API raw response keys:', Object.keys(data));
-      console.log('API full response:', JSON.stringify(data).slice(0, 2000));
-      
-      // Парсим ответ - пробуем разные структуры
-      let items = data?.data?.items || data?.items || data?.data || data?.reels;
-      
-      if (!items || !Array.isArray(items)) {
-        // Может быть объект с edge_owner_to_timeline_media
-        if (data?.data?.user?.edge_owner_to_timeline_media?.edges) {
-          items = data.data.user.edge_owner_to_timeline_media.edges.map(e => e.node);
-        }
+  // Helper: parse items from API response
+  const parseItems = (data) => {
+    let items = data?.data?.items || data?.items || data?.data || data?.reels;
+    if (!items || !Array.isArray(items)) {
+      if (data?.data?.user?.edge_owner_to_timeline_media?.edges) {
+        items = data.data.user.edge_owner_to_timeline_media.edges.map(e => e.node);
       }
-      
-      if (items && Array.isArray(items)) {
-        // Фильтруем закрепленные видео (pinned/highlighted)
-        // Обычно закрепленные видео имеют is_pinned, is_highlight, или pinned: true
-        const filteredItems = items.filter(item => {
-          // Исключаем закрепленные видео по различным признакам
-          if (item.is_pinned === true || item.pinned === true) return false;
-          if (item.is_highlight === true || item.highlight === true) return false;
-          if (item.is_featured === true || item.featured === true) return false;
-          // Если есть поле pinned_reel или highlight_reel - тоже исключаем
-          if (item.pinned_reel === true || item.highlight_reel === true) return false;
-          return true;
-        });
-        
-        const reels = filteredItems.map(item => ({
-          id: item.id || item.pk,
-          shortcode: item.code || item.shortcode,
-          url: `https://www.instagram.com/reel/${item.code || item.shortcode}/`,
-          thumbnail_url: item.image_versions2?.candidates?.[0]?.url || item.thumbnail_url || item.display_url || item.thumbnail_src,
-          caption: item.caption?.text || item.edge_media_to_caption?.edges?.[0]?.node?.text || '',
-          view_count: item.play_count || item.view_count || item.video_view_count || 0,
-          like_count: item.like_count || item.edge_liked_by?.count || 0,
-          comment_count: item.comment_count || item.edge_media_to_comment?.count || 0,
-          taken_at: item.taken_at || item.taken_at_timestamp,
-          owner: { username: cleanUsername },
-        })).filter(r => r.shortcode);
-        
-        if (reels.length > 0) {
-          console.log(`Found ${reels.length} reels`);
-          return res.status(200).json({
-            success: true,
-            username: cleanUsername,
-            reels,
-            api_used: 'instagram-scraper-20251',
-          });
-        }
-      }
-      
-      console.log('No reels parsed from response');
-    } else {
-      const errorText = await response.text();
-      console.log('API error:', response.status, errorText);
     }
-  } catch (e) {
-    console.error('API error:', e.message);
+    return Array.isArray(items) ? items : [];
+  };
+
+  // Helper: map raw item → reel object
+  const mapReel = (item) => ({
+    id: item.id || item.pk,
+    shortcode: item.code || item.shortcode,
+    url: `https://www.instagram.com/reel/${item.code || item.shortcode}/`,
+    thumbnail_url: item.image_versions2?.candidates?.[0]?.url || item.thumbnail_url || item.display_url || item.thumbnail_src,
+    caption: (item.caption?.text || item.edge_media_to_caption?.edges?.[0]?.node?.text || '').slice(0, 500),
+    view_count: item.play_count || item.view_count || item.video_view_count || 0,
+    like_count: item.like_count || item.edge_liked_by?.count || 0,
+    comment_count: item.comment_count || item.edge_media_to_comment?.count || 0,
+    taken_at: item.taken_at || item.taken_at_timestamp,
+    owner: { username: cleanUsername },
+  });
+
+  // Helper: filter pinned/highlighted reels
+  const filterPinned = (item) =>
+    !item.is_pinned && !item.pinned && !item.is_highlight && !item.highlight &&
+    !item.is_featured && !item.featured && !item.pinned_reel && !item.highlight_reel;
+
+  // Paginated mode (for analytics: count = 12/24/36)
+  const targetCount = count ? Math.min(Number(count), 36) : 0;
+  const pagesNeeded = targetCount > 0 ? Math.ceil(targetCount / 12) : 1;
+
+  console.log(`Fetching reels for @${cleanUsername}, pages=${pagesNeeded}, target=${targetCount || 'default'}`);
+
+  const allReels = [];
+  let nextCursor = null;
+
+  for (let page = 0; page < pagesNeeded; page++) {
+    try {
+      let apiUrl = `https://instagram-scraper-20251.p.rapidapi.com/userreels/?username_or_id=${cleanUsername}&url_embed_safe=true`;
+      if (nextCursor) apiUrl += `&next_cursor=${encodeURIComponent(nextCursor)}`;
+
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'x-rapidapi-host': 'instagram-scraper-20251.p.rapidapi.com',
+          'x-rapidapi-key': RAPIDAPI_KEY,
+        },
+      });
+
+      console.log(`Page ${page + 1} status:`, response.status);
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error(`Page ${page + 1} error:`, response.status, errText.slice(0, 200));
+        break;
+      }
+
+      const data = await response.json();
+
+      // Log only on first page to avoid noise
+      if (page === 0) {
+        console.log('API response keys:', Object.keys(data));
+        console.log('API response preview:', JSON.stringify(data).slice(0, 500));
+      }
+
+      const items = parseItems(data);
+      if (items.length === 0) { console.log(`No items on page ${page + 1}`); break; }
+
+      const reels = items.filter(filterPinned).map(mapReel).filter(r => r.shortcode);
+      allReels.push(...reels);
+
+      nextCursor = data?.data?.next_cursor || data?.next_cursor || data?.pagination_token || null;
+      if (!nextCursor && page < pagesNeeded - 1) {
+        console.log('No next_cursor, stopping pagination');
+        break;
+      }
+
+      if (page < pagesNeeded - 1) await new Promise(r => setTimeout(r, 300));
+    } catch (e) {
+      console.error(`Page ${page + 1} exception:`, e.message);
+      break;
+    }
   }
 
-  // Если не удалось - возвращаем пустой результат
+  // Deduplicate
+  const seen = new Set();
+  const uniqueReels = allReels.filter(r => {
+    if (seen.has(r.shortcode)) return false;
+    seen.add(r.shortcode);
+    return true;
+  });
+
+  console.log(`Total unique reels: ${uniqueReels.length}`);
+
+  if (uniqueReels.length > 0) {
+    return res.status(200).json({
+      success: true,
+      username: cleanUsername,
+      reels: uniqueReels,
+      count: uniqueReels.length,
+      api_used: 'instagram-scraper-20251',
+    });
+  }
+
   return res.status(200).json({
     success: false,
     username: cleanUsername,
     reels: [],
+    count: 0,
     message: 'Could not fetch user reels',
   });
 }
