@@ -809,7 +809,7 @@ export function AIScriptwriter() {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden" style={{ background: '#f5f5f3' }}>
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-base">
       {/* ── Header + Tabs ── */}
       <div className="px-4 pt-5 pb-0 safe-top">
         <div className="max-w-2xl mx-auto">

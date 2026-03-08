@@ -12,7 +12,7 @@ import {
   BarChart2, RefreshCw, Instagram, Eye, Heart, MessageCircle,
   TrendingUp, Award, Film, X,
   ArrowUpRight, ArrowDownRight, Minus, Mic, Sparkles,
-  LayoutGrid, List, AlertCircle, Clock,
+  LayoutGrid, List, AlertCircle, Clock, ChevronRight, ChevronLeft,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -72,54 +72,72 @@ function GreySphere({ size = 56 }: { size?: number }) {
   );
 }
 
-// ─── Bento Stat Cards ─────────────────────────────────────────────────────────
+// ─── Bento Cards ──────────────────────────────────────────────────────────────
 
-/** Маленькая карточка для 2-колоночного ряда */
+const CARD = "bg-white/80 backdrop-blur-[24px] border border-white/70 rounded-3xl shadow-[0_2px_20px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,0.8)]";
+
 function StatCell({ icon, label, value, sub, accent = '#64748b' }: {
   icon: React.ReactNode; label: string; value: string | number; sub?: string; accent?: string;
 }) {
   return (
     <motion.div
-      className="bg-white/78 backdrop-blur-[20px] border border-white/65 rounded-2xl p-4 flex flex-col gap-1 shadow-[0_4px_24px_rgba(15,23,42,0.07)]"
-      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
+      className={cn(CARD, "p-4 flex flex-col justify-between min-h-[96px]")}
+      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
     >
-      <div className="flex items-center gap-1.5 mb-1">
-        <span style={{ color: accent }} className="opacity-75">{icon}</span>
-        <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wide truncate">{label}</p>
+      <div className="flex items-center gap-1.5">
+        <span style={{ color: accent }}>{icon}</span>
+        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider truncate">{label}</p>
       </div>
-      <p className="text-[28px] font-bold text-slate-800 tracking-tight leading-none tabular-nums">
-        {typeof value === 'number' ? fmt(value) : value}
-      </p>
-      {sub && <p className="text-[11px] text-slate-400 mt-0.5 truncate">{sub}</p>}
+      <div>
+        <p className="text-[30px] font-bold text-slate-900 tracking-tight leading-none tabular-nums">
+          {typeof value === 'number' ? fmt(value) : value}
+        </p>
+        {sub && <p className="text-[11px] text-slate-400 mt-0.5">{sub}</p>}
+      </div>
     </motion.div>
   );
 }
 
-/** Широкая карточка (полная ширина) с подсветкой */
-function FeatureCell({ icon, label, value, sub, caption, accent = '#64748b', children }: {
-  icon: React.ReactNode; label: string; value: string | number; sub?: string; caption?: string; accent?: string;
-  children?: React.ReactNode;
+function BestReelCell({ icon, label, reel, accent, onClick }: {
+  icon: React.ReactNode; label: string; reel: ProjectReel; accent: string; onClick: () => void;
 }) {
   return (
-    <motion.div
-      className="bg-white/78 backdrop-blur-[20px] border border-white/65 rounded-2xl p-4 shadow-[0_4px_24px_rgba(15,23,42,0.07)]"
-      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
+    <motion.button
+      onClick={onClick}
+      className={cn(CARD, "p-4 text-left flex flex-col gap-3 active:scale-[0.97] transition-transform")}
+      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
+      whileTap={{ scale: 0.97 }}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <span style={{ color: accent }} className="opacity-75">{icon}</span>
-            <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">{label}</p>
+      {/* Thumbnail */}
+      <div className="relative w-full rounded-2xl overflow-hidden bg-slate-100" style={{ aspectRatio: '9/5' }}>
+        {reel.thumbnail_url ? (
+          <img src={reel.thumbnail_url} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <Film className="w-6 h-6 text-slate-300" />
           </div>
-          <p className="text-[32px] font-bold text-slate-800 tracking-tight leading-none tabular-nums">
-            {typeof value === 'number' ? fmt(value) : value}
-          </p>
-          {sub && <p className="text-[12px] text-slate-400 mt-1">{sub}</p>}
-          {caption && <p className="text-[12px] text-slate-600 mt-0.5 line-clamp-1">{caption}</p>}
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+        <div className="absolute bottom-2 left-2">
+          <span
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-white border border-white/20 backdrop-blur-sm"
+            style={{ background: accent + '99' }}
+          >
+            <Eye className="w-2.5 h-2.5" />{fmt(reel.latest_view_count ?? 0)}
+          </span>
         </div>
-        {children}
       </div>
-    </motion.div>
+      {/* Label + caption */}
+      <div>
+        <div className="flex items-center gap-1 mb-0.5">
+          <span style={{ color: accent }}>{icon}</span>
+          <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: accent }}>{label}</p>
+        </div>
+        <p className="text-[12px] text-slate-600 line-clamp-2 leading-snug">
+          {reel.caption || 'Без подписи'}
+        </p>
+      </div>
+    </motion.button>
   );
 }
 

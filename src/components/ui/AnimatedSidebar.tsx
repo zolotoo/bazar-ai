@@ -89,9 +89,7 @@ export const DesktopSidebar = ({
       className={cn(
         "px-4 py-4 hidden md:flex md:flex-col flex-shrink-0",
         "my-3 ml-3 rounded-[28px]",
-        variant === 'minimal'
-          ? "bg-white/88 border border-slate-200/50 shadow-glass"
-          : "bg-white/80 backdrop-blur-glass-2xl backdrop-saturate-[200%] border border-white/70 shadow-float",
+        "bg-white border border-slate-200/60 shadow-[0_8px_32px_rgba(0,0,0,0.06),0_2px_8px_rgba(0,0,0,0.04)]",
         className
       )}
       animate={{
