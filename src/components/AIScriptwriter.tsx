@@ -809,7 +809,7 @@ export function AIScriptwriter() {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden" style={{ background: '#f9f8f6' }}>
+    <div className="flex-1 flex flex-col h-full overflow-hidden" style={{ background: '#f5f5f3' }}>
       {/* ── Header + Tabs ── */}
       <div className="px-4 pt-5 pb-0 safe-top">
         <div className="max-w-2xl mx-auto">
@@ -832,8 +832,7 @@ export function AIScriptwriter() {
           <div
             className="flex gap-1 p-1 mb-3 rounded-2xl"
             style={{
-              background: 'rgba(0,0,0,0.055)',
-              border: '1px solid rgba(0,0,0,0.04)',
+              background: 'rgba(0,0,0,0.06)',
             }}
           >
             {(['chat', 'styles', 'drafts'] as Tab[]).map(tab => (
@@ -841,12 +840,12 @@ export function AIScriptwriter() {
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={cn(
-                  'flex-1 py-2 px-2 rounded-xl text-[13px] font-medium transition-all min-h-[36px] touch-manipulation',
-                  activeTab === tab ? 'text-[#1a1a18]' : 'text-[#1a1a18]/45 hover:text-[#1a1a18]/70'
+                  'flex-1 py-2 px-2 rounded-[14px] text-[13px] font-medium transition-all min-h-[36px] touch-manipulation',
+                  activeTab === tab ? 'text-[#1a1a18]' : 'text-[#1a1a18]/40 hover:text-[#1a1a18]/65'
                 )}
                 style={activeTab === tab ? {
                   background: '#ffffff',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                  boxShadow: '0 1px 6px rgba(0,0,0,0.1)',
                 } : {}}
               >
                 {tab === 'chat' ? 'Чат' : tab === 'styles' ? `Подчерки (${styles.length})` : `Черновики (${drafts.length})`}
@@ -884,8 +883,8 @@ export function AIScriptwriter() {
                         <h2 className="text-[32px] font-semibold leading-[1.12] tracking-[-0.03em] text-[#1a1a18]">
                           {displayName ? `Привет, ${displayName}!` : 'Привет!'}
                         </h2>
-                        <p className="text-[30px] font-semibold italic leading-[1.12] tracking-[-0.03em] text-[#1a1a18]/50 mt-0.5">
-                          Какой сценарий<br/>создаем сегодня?
+                        <p className="text-[30px] font-semibold leading-[1.12] tracking-[-0.03em] text-[#1a1a18]/50 mt-0.5">
+                          Какой <em>сценарий</em><br/>создаем сегодня?
                         </p>
                       </div>
 
@@ -896,7 +895,7 @@ export function AIScriptwriter() {
                             <button
                               onClick={() => handleModeSelect('topic')}
                               className="flex flex-col items-start gap-1 px-3.5 py-3 rounded-2xl text-left touch-manipulation active:scale-95 transition-transform"
-                              style={{ background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}
+                              style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
                             >
                               <span className="text-[13px] font-medium text-[#1a1a18]">По теме</span>
                               <span className="text-[11px] text-[#1a1a18]/45">идея → сценарий</span>
@@ -904,7 +903,7 @@ export function AIScriptwriter() {
                             <button
                               onClick={() => handleModeSelect('reference')}
                               className="flex flex-col items-start gap-1 px-3.5 py-3 rounded-2xl text-left touch-manipulation active:scale-95 transition-transform"
-                              style={{ background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}
+                              style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
                             >
                               <span className="text-[13px] font-medium text-[#1a1a18]">По референсу</span>
                               <span className="text-[11px] text-[#1a1a18]/45">ссылка на рилс</span>
@@ -913,7 +912,7 @@ export function AIScriptwriter() {
                           <button
                             onClick={() => handleModeSelect('quick')}
                             className="flex items-center justify-between px-3.5 py-3 rounded-2xl touch-manipulation active:scale-95 transition-transform"
-                            style={{ background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}
+                            style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
                           >
                             <div className="flex flex-col items-start gap-0.5">
                               <span className="text-[13px] font-medium text-[#1a1a18]">Быстрый сценарий</span>
@@ -923,7 +922,7 @@ export function AIScriptwriter() {
                           </button>
                         </div>
                       ) : (
-                        <div className="px-4 py-3 rounded-2xl text-center" style={{ background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(0,0,0,0.06)' }}>
+                        <div className="px-4 py-3 rounded-2xl text-center" style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
                           <p className="text-[13px] text-[#1a1a18]/60">Сначала обучи Riri —</p>
                           <p className="text-[13px] font-medium text-[#1a1a18]">перейди на вкладку «Подчерки»</p>
                         </div>
@@ -1098,8 +1097,8 @@ export function AIScriptwriter() {
                     className="rounded-3xl transition-all"
                     style={{
                       background: '#ffffff',
-                      border: '1px solid rgba(0,0,0,0.07)',
-                      boxShadow: '0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)',
+                      border: '1px solid rgba(0,0,0,0.08)',
+                      boxShadow: '0 2px 16px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04)',
                     }}
                   >
                     <textarea
