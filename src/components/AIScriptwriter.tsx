@@ -130,17 +130,17 @@ function RiriOrb({ size = 160, floating = false, className }: { size?: number; f
   return (
     <motion.div
       className={cn('rounded-full flex-shrink-0 select-none', className)}
-      animate={floating ? { y: [-6, 6, -6], scale: [1, 1.018, 1] } : undefined}
-      transition={floating ? { duration: 4.8, repeat: Infinity, ease: 'easeInOut' } : undefined}
+      animate={floating ? { y: [-6, 6, -6], scale: [1, 1.016, 1] } : undefined}
+      transition={floating ? { duration: 5.2, repeat: Infinity, ease: 'easeInOut' } : undefined}
       style={{
         width: s,
         height: s,
-        background: `radial-gradient(circle at 36% 30%, #ffe0a0 0%, #ffb340 26%, #f07012 55%, #c04010 80%, #8c2c00 100%)`,
+        background: `radial-gradient(circle at 36% 28%, #ffffff 0%, #eceef4 20%, #d0d4e2 44%, #a8aec0 68%, #787e92 88%, #5a6070 100%)`,
         boxShadow: `
-          inset ${-s * 0.07}px ${-s * 0.07}px ${s * 0.18}px rgba(100,20,0,0.38),
-          inset ${s * 0.065}px ${s * 0.055}px ${s * 0.14}px rgba(255,228,120,0.52),
-          0 ${s * 0.1}px ${s * 0.38}px rgba(200,70,0,0.22),
-          0 ${s * 0.04}px ${s * 0.1}px rgba(180,50,0,0.14)
+          inset ${-s * 0.07}px ${-s * 0.07}px ${s * 0.18}px rgba(40,44,60,0.28),
+          inset ${s * 0.07}px ${s * 0.055}px ${s * 0.16}px rgba(255,255,255,0.72),
+          0 ${s * 0.1}px ${s * 0.42}px rgba(80,88,120,0.16),
+          0 ${s * 0.04}px ${s * 0.1}px rgba(60,68,90,0.1)
         `,
       }}
     />
@@ -809,7 +809,7 @@ export function AIScriptwriter() {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden" style={{ background: '#f5f4f0' }}>
+    <div className="flex-1 flex flex-col h-full overflow-hidden" style={{ background: '#f9f8f6' }}>
       {/* ── Header + Tabs ── */}
       <div className="px-4 pt-5 pb-0 safe-top">
         <div className="max-w-2xl mx-auto">
@@ -861,21 +861,6 @@ export function AIScriptwriter() {
         {/* ════════════════════ CHAT TAB ════════════════════ */}
         {activeTab === 'chat' && (
           <motion.div key="chat" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col overflow-hidden">
-            {/* Style selector */}
-            {styles.length > 0 && (
-              <div className="px-4 pb-2">
-                <div className="max-w-2xl mx-auto">
-                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-                    {styles.map(s => (
-                      <button key={s.id} onClick={() => setSelectedStyleId(s.id)} className={cn('px-3 py-1.5 rounded-pill text-xs font-medium whitespace-nowrap transition-all border flex-shrink-0 touch-manipulation', selectedStyleId === s.id ? 'bg-slate-600 text-white border-slate-600 shadow-glass-sm' : 'bg-white/70 text-slate-500 border-slate-200 hover:border-slate-400')}>
-                        {s.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Messages area */}
             <div className="flex-1 overflow-y-auto px-4 custom-scrollbar-light">
               <div className="max-w-2xl mx-auto space-y-3 py-3">
@@ -895,12 +880,12 @@ export function AIScriptwriter() {
                       <RiriOrb size={148} floating />
 
                       {/* Heading */}
-                      <div className="space-y-1 px-4">
-                        <h2 className="text-[30px] font-semibold leading-tight tracking-[-0.02em] text-[#1a1a18]">
+                      <div className="px-4">
+                        <h2 className="text-[32px] font-semibold leading-[1.12] tracking-[-0.03em] text-[#1a1a18]">
                           {displayName ? `Привет, ${displayName}!` : 'Привет!'}
                         </h2>
-                        <p className="text-[28px] font-semibold leading-tight tracking-[-0.02em] text-[#1a1a18]/55">
-                          Что хочешь<br/>создать сегодня?
+                        <p className="text-[30px] font-semibold italic leading-[1.12] tracking-[-0.03em] text-[#1a1a18]/50 mt-0.5">
+                          Какой сценарий<br/>создаем сегодня?
                         </p>
                       </div>
 
@@ -1179,66 +1164,125 @@ export function AIScriptwriter() {
               )}
 
               {trainScreen === 'list' && (
-                <div className="space-y-2.5">
+                <div className="space-y-3">
+                  {/* Section header */}
+                  <div className="flex items-center justify-between pt-1 pb-2">
+                    <div>
+                      <h2 className="text-[17px] font-semibold text-[#1a1a18] tracking-tight">Подчерки</h2>
+                      <p className="text-[12px] text-[#1a1a18]/45 mt-0.5">Стиль письма, на котором обучена Riri</p>
+                    </div>
+                  </div>
+
+                  {styles.length === 0 && (
+                    <div className="flex flex-col items-center text-center py-10 gap-3">
+                      <RiriOrb size={56} />
+                      <div>
+                        <p className="text-[15px] font-medium text-[#1a1a18]">Riri ещё не обучена</p>
+                        <p className="text-[13px] text-[#1a1a18]/45 mt-0.5">Добавь подчерк чтобы начать</p>
+                      </div>
+                    </div>
+                  )}
+
                   {styles.map(style => {
                     const isExpanded = expandedStyleId === style.id;
                     const sa = style.structureAnalysis;
                     return (
-                      <GlassCard key={style.id} className="p-3.5">
-                        <div className="flex items-start justify-between mb-1.5">
-                          <div className="flex-1 min-w-0"><h3 className="font-semibold text-slate-800 text-sm truncate">{style.name}</h3>{style.meta?.summary && <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">{style.meta.summary}</p>}</div>
-                          <div className="flex gap-1 ml-2">{style.trainingMode && <span className="px-1.5 py-0.5 rounded-md text-[9px] font-medium bg-slate-100 text-slate-500">{style.trainingMode === 'reels' ? 'Рилсы' : 'Тексты'}</span>}</div>
-                        </div>
-                        {sa && (
-                          <div className="flex flex-wrap gap-1 mb-2">
-                            {sa.hookDuration && <span className="px-1.5 py-0.5 rounded text-[9px] bg-slate-50 text-slate-500 border border-slate-100">Хук: {sa.hookDuration}</span>}
-                            {sa.ctaType && <span className="px-1.5 py-0.5 rounded text-[9px] bg-slate-50 text-slate-500 border border-slate-100">CTA: {sa.ctaType}</span>}
-                            {sa.bodyPhases?.length ? <span className="px-1.5 py-0.5 rounded text-[9px] bg-slate-50 text-slate-500 border border-slate-100">{sa.bodyPhases.length} фаз</span> : null}
+                      <div
+                        key={style.id}
+                        className="rounded-[20px] overflow-hidden"
+                        style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}
+                      >
+                        {/* Card header */}
+                        <div className="px-4 pt-4 pb-3">
+                          <div className="flex items-start justify-between gap-3 mb-1.5">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-[15px] font-semibold text-[#1a1a18] truncate">{style.name}</h3>
+                              {style.meta?.summary && (
+                                <p className="text-[12px] text-[#1a1a18]/50 mt-0.5 leading-[1.45] line-clamp-2">{style.meta.summary}</p>
+                              )}
+                            </div>
+                            {style.trainingMode && (
+                              <span
+                                className="flex-shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full mt-0.5"
+                                style={{ background: 'rgba(0,0,0,0.05)', color: 'rgba(26,26,24,0.5)' }}
+                              >
+                                {style.trainingMode === 'reels' ? 'Рилсы' : 'Тексты'}
+                              </span>
+                            )}
                           </div>
-                        )}
+
+                          {/* Compact meta tags */}
+                          {sa && (sa.hookDuration || sa.ctaType || sa.bodyPhases?.length) && (
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {sa.hookDuration && (
+                                <span className="text-[11px] text-[#1a1a18]/45 px-2 py-0.5 rounded-lg" style={{ background: 'rgba(0,0,0,0.04)' }}>
+                                  Хук: {sa.hookDuration}
+                                </span>
+                              )}
+                              {sa.bodyPhases?.length ? (
+                                <span className="text-[11px] text-[#1a1a18]/45 px-2 py-0.5 rounded-lg" style={{ background: 'rgba(0,0,0,0.04)' }}>
+                                  {sa.bodyPhases.length} фаз
+                                </span>
+                              ) : null}
+                              {sa.ctaType && (
+                                <span className="text-[11px] text-[#1a1a18]/45 px-2 py-0.5 rounded-lg" style={{ background: 'rgba(0,0,0,0.04)' }}>
+                                  {sa.ctaType}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
 
                         {/* Expand/collapse details */}
-                        <button onClick={() => setExpandedStyleId(isExpanded ? null : style.id)} className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-600 transition-colors mb-2 touch-manipulation">
-                          <Eye className="w-3 h-3" />
-                          {isExpanded ? 'Скрыть детали' : 'Посмотреть под капот'}
-                          <ChevronDown className={cn('w-3 h-3 transition-transform', isExpanded && 'rotate-180')} />
+                        <button
+                          onClick={() => setExpandedStyleId(isExpanded ? null : style.id)}
+                          className="w-full px-4 py-2.5 flex items-center gap-1.5 touch-manipulation"
+                          style={{ borderTop: '1px solid rgba(0,0,0,0.05)' }}
+                        >
+                          <Eye className="w-3 h-3 text-[#1a1a18]/35" />
+                          <span className="text-[12px] text-[#1a1a18]/45 flex-1 text-left">
+                            {isExpanded ? 'Скрыть детали' : 'Посмотреть под капот'}
+                          </span>
+                          <ChevronDown className={cn('w-3.5 h-3.5 text-[#1a1a18]/30 transition-transform', isExpanded && 'rotate-180')} />
                         </button>
 
                         <AnimatePresence>
                           {isExpanded && (
-                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden mb-3">
-                              <div className="space-y-2.5 pt-1 border-t border-slate-100">
-                                {/* Structure */}
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.22 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="px-4 pb-3 space-y-3" style={{ borderTop: '1px solid rgba(0,0,0,0.05)' }}>
                                 {sa && (
-                                  <div className="mt-2">
-                                    <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Структура</p>
-                                    {sa.hookDescription && <div className="text-[11px] text-slate-600 mb-1"><span className="text-slate-400">Хук:</span> {sa.hookDescription}{sa.hookDuration ? ` (${sa.hookDuration})` : ''}</div>}
-                                    {sa.bodyPhases?.length ? <div className="text-[11px] text-slate-600 mb-1"><span className="text-slate-400">Фазы тела:</span> {sa.bodyPhases.join(' → ')}</div> : null}
-                                    {sa.ctaType && <div className="text-[11px] text-slate-600 mb-1"><span className="text-slate-400">CTA:</span> {sa.ctaType}</div>}
-                                    {sa.avgLengthSeconds ? <div className="text-[11px] text-slate-600 mb-1"><span className="text-slate-400">Длительность:</span> ~{sa.avgLengthSeconds} сек</div> : null}
-                                    {sa.specialFeatures?.length ? <div className="text-[11px] text-slate-600"><span className="text-slate-400">Особенности:</span> {sa.specialFeatures.join(', ')}</div> : null}
+                                  <div className="pt-3">
+                                    <p className="text-[10px] font-semibold text-[#1a1a18]/35 uppercase tracking-wider mb-2">Структура</p>
+                                    <div className="space-y-1">
+                                      {sa.hookDescription && <p className="text-[12px] text-[#1a1a18]/60"><span className="text-[#1a1a18]/35">Хук: </span>{sa.hookDescription}{sa.hookDuration ? ` (${sa.hookDuration})` : ''}</p>}
+                                      {sa.bodyPhases?.length ? <p className="text-[12px] text-[#1a1a18]/60"><span className="text-[#1a1a18]/35">Фазы: </span>{sa.bodyPhases.join(' → ')}</p> : null}
+                                      {sa.ctaType && <p className="text-[12px] text-[#1a1a18]/60"><span className="text-[#1a1a18]/35">CTA: </span>{sa.ctaType}</p>}
+                                    </div>
                                   </div>
                                 )}
-                                {/* Rules */}
                                 {style.meta?.rules?.length ? (
                                   <div>
-                                    <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Правила</p>
-                                    <ul className="space-y-0.5">{style.meta.rules.map((r, i) => <li key={i} className="text-[11px] text-slate-600 flex gap-1.5"><span className="text-emerald-500 flex-shrink-0">+</span>{r}</li>)}</ul>
+                                    <p className="text-[10px] font-semibold text-[#1a1a18]/35 uppercase tracking-wider mb-1.5">Правила</p>
+                                    <ul className="space-y-1">{style.meta.rules.map((r, i) => <li key={i} className="text-[12px] text-[#1a1a18]/60 flex gap-1.5 items-start"><span className="text-emerald-500 flex-shrink-0 mt-px">+</span>{r}</li>)}</ul>
                                   </div>
                                 ) : null}
-                                {/* Do not */}
                                 {style.meta?.doNot?.length ? (
                                   <div>
-                                    <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Избегать</p>
-                                    <ul className="space-y-0.5">{style.meta.doNot.map((r, i) => <li key={i} className="text-[11px] text-slate-600 flex gap-1.5"><span className="text-red-400 flex-shrink-0">−</span>{r}</li>)}</ul>
+                                    <p className="text-[10px] font-semibold text-[#1a1a18]/35 uppercase tracking-wider mb-1.5">Избегать</p>
+                                    <ul className="space-y-1">{style.meta.doNot.map((r, i) => <li key={i} className="text-[12px] text-[#1a1a18]/60 flex gap-1.5 items-start"><span className="text-red-400 flex-shrink-0 mt-px">−</span>{r}</li>)}</ul>
                                   </div>
                                 ) : null}
-                                {/* Prompt (raw) */}
                                 {style.prompt && (
                                   <div>
-                                    <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Промт модели</p>
-                                    <div className="p-2 rounded-lg bg-slate-50 border border-slate-100 max-h-32 overflow-y-auto">
-                                      <p className="text-[10px] text-slate-500 whitespace-pre-wrap leading-relaxed font-mono">{style.prompt}</p>
+                                    <p className="text-[10px] font-semibold text-[#1a1a18]/35 uppercase tracking-wider mb-1.5">Промт</p>
+                                    <div className="p-3 rounded-xl max-h-32 overflow-y-auto" style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.05)' }}>
+                                      <p className="text-[11px] text-[#1a1a18]/50 whitespace-pre-wrap leading-relaxed font-mono">{style.prompt}</p>
                                     </div>
                                   </div>
                                 )}
@@ -1247,30 +1291,75 @@ export function AIScriptwriter() {
                           )}
                         </AnimatePresence>
 
-                        <button onClick={() => { setSelectedStyleId(style.id); setActiveTab('chat'); resetChat(); }} className="w-full py-2 rounded-xl bg-slate-600 hover:bg-slate-700 text-white text-xs font-medium active:scale-[0.97] transition-all shadow-glass min-h-[40px] flex items-center justify-center gap-1.5 touch-manipulation">
-                          <MessageSquare className="w-3.5 h-3.5" /> Начать чат
-                        </button>
-                      </GlassCard>
+                        {/* Action row */}
+                        <div className="px-4 pb-4 pt-2">
+                          <button
+                            onClick={() => { setSelectedStyleId(style.id); setActiveTab('chat'); resetChat(); }}
+                            className="w-full py-2.5 rounded-[14px] text-[13px] font-medium transition-all active:scale-[0.97] touch-manipulation flex items-center justify-center gap-1.5 min-h-[42px]"
+                            style={{ background: '#1a1a18', color: '#ffffff' }}
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" /> Начать чат
+                          </button>
+                        </div>
+                      </div>
                     );
                   })}
-                  <button onClick={() => { setTrainStyleName(''); setTrainMode('reels'); setPreferredFormat(null); setReelInputs(Array.from({ length: 5 }, () => ({ url: '', loading: false, views: null, ownerUsername: null, viralMultiplier: null, error: null, transcriptText: null, transcriptLoading: false }))); setScriptInputs(Array.from({ length: 5 }, () => ({ text: '' }))); setTrainScreen('mode-select'); }} className="w-full p-3 rounded-card-xl border-2 border-dashed border-slate-200/60 text-slate-400 hover:border-slate-400 hover:text-slate-600 transition-all flex items-center justify-center gap-1.5 min-h-[44px] touch-manipulation">
-                    <Plus className="w-4 h-4" /> <span className="text-xs font-medium">Создать подчерк</span>
+
+                  {/* Create new style */}
+                  <button
+                    onClick={() => { setTrainStyleName(''); setTrainMode('reels'); setPreferredFormat(null); setReelInputs(Array.from({ length: 5 }, () => ({ url: '', loading: false, views: null, ownerUsername: null, viralMultiplier: null, error: null, transcriptText: null, transcriptLoading: false }))); setScriptInputs(Array.from({ length: 5 }, () => ({ text: '' }))); setTrainScreen('mode-select'); }}
+                    className="w-full py-3.5 rounded-[20px] flex items-center justify-center gap-2 text-[13px] font-medium touch-manipulation active:scale-[0.98] transition-transform"
+                    style={{ border: '1.5px dashed rgba(0,0,0,0.15)', color: 'rgba(26,26,24,0.5)', background: 'transparent' }}
+                  >
+                    <Plus className="w-4 h-4" /> Создать подчерк
                   </button>
                 </div>
               )}
 
               {trainScreen === 'mode-select' && (
                 <div className="space-y-3">
-                  <div className="mb-4"><label className="text-xs font-medium text-slate-600 mb-1.5 block">Название подчерка</label><input type="text" value={trainStyleName} onChange={e => setTrainStyleName(e.target.value)} placeholder="Мотивация 30с" className="w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-400" /></div>
-                  <button onClick={() => { setTrainMode('reels'); setTrainScreen('reels'); }} className="w-full p-3.5 rounded-card-xl bg-white/72 backdrop-blur-glass-xl border border-white/55 shadow-glass hover:bg-white/85 transition-all text-left group touch-manipulation flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center"><LinkIcon className="w-4 h-4 text-slate-600" /></div>
-                    <div className="flex-1"><h3 className="font-semibold text-sm text-slate-800">5 залётных рилсов</h3><p className="text-[11px] text-slate-500">Ссылки на Instagram рилсы</p></div>
-                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                  <div className="pt-1 pb-2">
+                    <h2 className="text-[17px] font-semibold text-[#1a1a18] tracking-tight">Новый подчерк</h2>
+                    <p className="text-[12px] text-[#1a1a18]/45 mt-0.5">Обучение занимает ~2 минуты</p>
+                  </div>
+                  <div>
+                    <label className="text-[12px] font-medium text-[#1a1a18]/50 mb-1.5 block">Название</label>
+                    <input
+                      type="text"
+                      value={trainStyleName}
+                      onChange={e => setTrainStyleName(e.target.value)}
+                      placeholder="Мотивация 30с"
+                      className="w-full px-3.5 py-3 rounded-[14px] text-[15px] text-[#1a1a18] placeholder:text-[#1a1a18]/30 focus:outline-none"
+                      style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.08)' }}
+                    />
+                  </div>
+                  <button
+                    onClick={() => { setTrainMode('reels'); setTrainScreen('reels'); }}
+                    className="w-full p-4 rounded-[20px] text-left touch-manipulation active:scale-[0.98] transition-transform flex items-center gap-3"
+                    style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
+                  >
+                    <div className="w-9 h-9 rounded-[12px] flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(0,0,0,0.05)' }}>
+                      <LinkIcon className="w-4 h-4 text-[#1a1a18]/60" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[14px] font-semibold text-[#1a1a18]">5 залётных рилсов</p>
+                      <p className="text-[12px] text-[#1a1a18]/45 mt-0.5">Ссылки на Instagram рилсы</p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-[#1a1a18]/30 flex-shrink-0" />
                   </button>
-                  <button onClick={() => { setTrainMode('scripts'); setTrainScreen('scripts'); }} className="w-full p-3.5 rounded-card-xl bg-white/72 backdrop-blur-glass-xl border border-white/55 shadow-glass hover:bg-white/85 transition-all text-left group touch-manipulation flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center"><Type className="w-4 h-4 text-slate-600" /></div>
-                    <div className="flex-1"><h3 className="font-semibold text-sm text-slate-800">5 своих сценариев</h3><p className="text-[11px] text-slate-500">Тексты ваших сценариев</p></div>
-                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                  <button
+                    onClick={() => { setTrainMode('scripts'); setTrainScreen('scripts'); }}
+                    className="w-full p-4 rounded-[20px] text-left touch-manipulation active:scale-[0.98] transition-transform flex items-center gap-3"
+                    style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
+                  >
+                    <div className="w-9 h-9 rounded-[12px] flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(0,0,0,0.05)' }}>
+                      <Type className="w-4 h-4 text-[#1a1a18]/60" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[14px] font-semibold text-[#1a1a18]">5 своих сценариев</p>
+                      <p className="text-[12px] text-[#1a1a18]/45 mt-0.5">Тексты ваших сценариев</p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-[#1a1a18]/30 flex-shrink-0" />
                   </button>
                 </div>
               )}
@@ -1338,31 +1427,97 @@ export function AIScriptwriter() {
         {activeTab === 'drafts' && (
           <motion.div key="drafts" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 overflow-y-auto px-4 custom-scrollbar-light">
             <div className="max-w-lg mx-auto py-4 safe-bottom">
+              {/* Section header */}
+              <div className="pt-1 pb-3">
+                <h2 className="text-[17px] font-semibold text-[#1a1a18] tracking-tight">Черновики</h2>
+                <p className="text-[12px] text-[#1a1a18]/45 mt-0.5">Незаконченные и готовые сценарии</p>
+              </div>
+
               {draftsLoading ? (
-                <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-slate-400" /></div>
+                <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-[#1a1a18]/30" /></div>
               ) : drafts.length === 0 ? (
-                <div className="text-center py-12"><FileText className="w-8 h-8 text-slate-300 mx-auto mb-2" /><p className="text-xs text-slate-400">Черновиков пока нет</p></div>
+                <div className="flex flex-col items-center text-center py-12 gap-2">
+                  <div
+                    className="w-12 h-12 rounded-[16px] flex items-center justify-center mb-1"
+                    style={{ background: 'rgba(0,0,0,0.05)' }}
+                  >
+                    <FileText className="w-5 h-5 text-[#1a1a18]/30" />
+                  </div>
+                  <p className="text-[15px] font-medium text-[#1a1a18]">Черновиков пока нет</p>
+                  <p className="text-[13px] text-[#1a1a18]/40">Созданные сценарии появятся здесь</p>
+                </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {drafts.map(draft => (
-                    <GlassCard key={draft.id} className="p-3.5">
-                      <div className="flex items-start justify-between mb-1.5">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-slate-800 text-sm truncate">{draft.title}</h3>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            {styles.find(s => s.id === draft.style_id)?.name && <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 font-medium">{styles.find(s => s.id === draft.style_id)?.name}</span>}
-                            <span className="text-[9px] text-slate-400">{new Date(draft.updated_at).toLocaleDateString('ru-RU')}</span>
-                            {draft.status === 'done' && <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-600 font-medium">В Ленте</span>}
+                    <div
+                      key={draft.id}
+                      className="rounded-[20px] overflow-hidden"
+                      style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 1px 5px rgba(0,0,0,0.05)' }}
+                    >
+                      <div className="px-4 pt-4 pb-3">
+                        {/* Header row */}
+                        <div className="flex items-start gap-2 mb-2">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-[14px] font-semibold text-[#1a1a18] truncate leading-snug">{draft.title}</h3>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              {styles.find(s => s.id === draft.style_id)?.name && (
+                                <span
+                                  className="text-[10px] font-medium px-2 py-0.5 rounded-full"
+                                  style={{ background: 'rgba(0,0,0,0.05)', color: 'rgba(26,26,24,0.5)' }}
+                                >
+                                  {styles.find(s => s.id === draft.style_id)?.name}
+                                </span>
+                              )}
+                              {draft.status === 'done' && (
+                                <span
+                                  className="text-[10px] font-medium px-2 py-0.5 rounded-full"
+                                  style={{ background: 'rgba(16,185,129,0.1)', color: 'rgba(5,150,105,1)' }}
+                                >
+                                  В Ленте
+                                </span>
+                              )}
+                              <span className="text-[11px] text-[#1a1a18]/35">
+                                {new Date(draft.updated_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+                              </span>
+                            </div>
                           </div>
+                          <button
+                            onClick={async () => { if (confirm('Удалить?')) { await deleteDraft(draft.id); toast.success('Удалён'); } }}
+                            className="p-1.5 rounded-xl touch-manipulation flex-shrink-0 text-[#1a1a18]/25 hover:text-red-400 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
+
+                        {/* Script preview */}
+                        {draft.script_text && (
+                          <p className="text-[12px] text-[#1a1a18]/50 line-clamp-2 leading-[1.5]">{draft.script_text}</p>
+                        )}
                       </div>
-                      {draft.script_text && <p className="text-[11px] text-slate-500 line-clamp-2 mb-2.5">{draft.script_text}</p>}
-                      <div className="flex gap-2">
-                        <button onClick={() => resumeDraft(draft)} className="flex-1 py-2 rounded-xl bg-slate-100 text-slate-600 text-[11px] font-medium hover:bg-slate-200 transition-all flex items-center justify-center gap-1 min-h-[38px] touch-manipulation"><MessageSquare className="w-3 h-3" /> Продолжить</button>
-                        {draft.status !== 'done' && <button onClick={() => { setFeedDraftId(draft.id); setFeedFolder(null); setShowFeedModal(true); }} className="flex-1 py-2 rounded-xl border border-slate-200 text-slate-600 text-[11px] font-medium hover:bg-slate-50 transition-all flex items-center justify-center gap-1 min-h-[38px] touch-manipulation"><LayoutGrid className="w-3 h-3" /> В Ленту</button>}
-                        <button onClick={async () => { if (confirm('Удалить?')) { await deleteDraft(draft.id); toast.success('Удалён'); } }} className="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all touch-manipulation"><Trash2 className="w-3.5 h-3.5" /></button>
+
+                      {/* Action row */}
+                      <div
+                        className="px-4 pb-4 pt-2.5 flex gap-2"
+                        style={{ borderTop: '1px solid rgba(0,0,0,0.05)' }}
+                      >
+                        <button
+                          onClick={() => resumeDraft(draft)}
+                          className="flex-1 py-2.5 rounded-[14px] text-[13px] font-medium touch-manipulation active:scale-[0.97] transition-transform flex items-center justify-center gap-1.5"
+                          style={{ background: '#1a1a18', color: '#ffffff' }}
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" /> Продолжить
+                        </button>
+                        {draft.status !== 'done' && (
+                          <button
+                            onClick={() => { setFeedDraftId(draft.id); setFeedFolder(null); setShowFeedModal(true); }}
+                            className="flex-1 py-2.5 rounded-[14px] text-[13px] font-medium touch-manipulation active:scale-[0.97] transition-transform flex items-center justify-center gap-1.5"
+                            style={{ background: 'rgba(0,0,0,0.06)', color: 'rgba(26,26,24,0.7)' }}
+                          >
+                            <LayoutGrid className="w-3.5 h-3.5" /> В Ленту
+                          </button>
+                        )}
                       </div>
-                    </GlassCard>
+                    </div>
                   ))}
                 </div>
               )}
