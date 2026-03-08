@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { supabase } from '../utils/supabase';
 import { setUserContext } from '../utils/supabase';
 import { useAuth } from './useAuth';
@@ -50,6 +50,16 @@ export function useProjectAnalytics(projectId: string | null) {
   const [syncing, setSyncing] = useState(false);
   const [instagramUsername, setInstagramUsernameState] = useState<string | null>(null);
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
+
+  // Reset all state immediately when project changes so old data never bleeds into new project
+  useEffect(() => {
+    setReels([]);
+    setSnapshots([]);
+    setInstagramUsernameState(null);
+    setLastSyncAt(null);
+    setLoading(false);
+    setSyncing(false);
+  }, [projectId]);
 
   // ── Load reels + snapshots from DB ──────────────────────────────────────────
   const loadAnalytics = useCallback(async () => {
