@@ -27,7 +27,10 @@ export type TokenAction =
   | 'sw_assemble'
   | 'sw_improve'
   | 'sw_validate_reel'
-  | 'sw_quick';
+  | 'sw_quick'
+  | 'analytics_sync_12'
+  | 'analytics_sync_24'
+  | 'analytics_sync_36';
 
 /** Базовые стоимости в коинах */
 const TOKEN_COSTS: Record<Exclude<TokenAction, 'radar_refresh_all'>, number> = {
@@ -52,6 +55,9 @@ const TOKEN_COSTS: Record<Exclude<TokenAction, 'radar_refresh_all'>, number> = {
   sw_improve: 5,        // 1 Gemini — улучшение по комментариям
   sw_validate_reel: 2,  // 1 RapidAPI — проверка рилса при обучении
   sw_quick: 8,          // 1-2 Gemini — полный сценарий за один запрос
+  analytics_sync_12: 5,   // 1 RapidAPI страница (12 роликов)
+  analytics_sync_24: 10,  // 2 RapidAPI страницы (24 ролика)
+  analytics_sync_36: 15,  // 3 RapidAPI страницы (36 роликов)
 };
 
 /** Коинов за один профиль при «Обновить все» в радаре */

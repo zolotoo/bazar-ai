@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useProjectContext } from '../contexts/ProjectContext';
 import { useProjectAnalytics, type ProjectReel, type SyncCount } from '../hooks/useProjectAnalytics';
+import { useTokenBalance } from '../contexts/TokenBalanceContext';
+import { getTokenCost } from '../constants/tokenCosts';
+import { CoinBadge } from './ui/CoinBadge';
 import { AreaChart, Area, Grid, XAxis, YAxis, ChartTooltip } from './ui/area-chart';
 import { cn } from '../utils/cn';
 import {
@@ -133,52 +136,85 @@ function SyncModal({ onSync, onClose, syncing }: {
   onClose: () => void;
   syncing: boolean;
 }) {
-  const options: { count: SyncCount; label: string; desc: string }[] = [
-    { count: 12, label: '12 роликов', desc: '1 страница API — быстро' },
-    { count: 24, label: '24 ролика', desc: '2 страницы API' },
-    { count: 36, label: '36 роликов', desc: '3 страницы API — полно' },
+  const { balance, canAfford } = useTokenBalance();
+
+  const options: { count: SyncCount; tokenAction: 'analytics_sync_12' | 'analytics_sync_24' | 'analytics_sync_36' }[] = [
+    { count: 12, tokenAction: 'analytics_sync_12' },
+    { count: 24, tokenAction: 'analytics_sync_24' },
+    { count: 36, tokenAction: 'analytics_sync_36' },
   ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <motion.div
-        className="relative w-full max-w-sm mx-0 md:mx-4 bg-white/92 backdrop-blur-[28px] backdrop-saturate-[180%] rounded-t-3xl md:rounded-3xl shadow-2xl border border-white/60 safe-bottom"
-        initial={{ opacity: 0, y: 40 }}
+        className="absolute inset-0 bg-black/50 backdrop-blur-[6px]"
+        onClick={onClose}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+      />
+      <motion.div
+        className="relative w-full max-w-sm mx-0 md:mx-4 safe-bottom"
+        initial={{ opacity: 0, y: 56 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 40 }}
+        exit={{ opacity: 0, y: 56 }}
+        transition={{ type: 'spring', stiffness: 340, damping: 32 }}
       >
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-slate-800">Обновить аналитику</h3>
-            <button onClick={onClose} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 touch-manipulation">
-              <X className="w-4 h-4" />
+        {/* iOS-style handle */}
+        <div className="flex justify-center pb-2 md:hidden">
+          <div className="w-10 h-1 rounded-full bg-white/40" />
+        </div>
+
+        <div className="bg-white/80 backdrop-blur-[32px] backdrop-saturate-[200%] border border-white/70 rounded-t-[28px] md:rounded-[28px] shadow-float overflow-hidden">
+          {/* Header */}
+          <div className="px-6 pt-6 pb-4 flex items-start justify-between">
+            <div>
+              <h3 className="text-[17px] font-semibold text-slate-900 tracking-tight">Обновить аналитику</h3>
+              <p className="text-[13px] text-slate-500 mt-0.5">Баланс: {balance} монет</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100/80 text-slate-500 hover:bg-slate-200/80 transition-colors touch-manipulation -mt-0.5"
+            >
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
-          <p className="text-sm text-slate-500 mb-4">Выберите сколько последних роликов загрузить:</p>
-          <div className="space-y-2">
-            {options.map(o => (
-              <button
-                key={o.count}
-                onClick={() => onSync(o.count)}
-                disabled={syncing}
-                className={cn(
-                  'w-full flex items-center justify-between p-4 rounded-2xl border transition-all touch-manipulation',
-                  'border-slate-200/80 bg-white/60 hover:bg-white/90 hover:border-slate-300',
-                  'disabled:opacity-50 disabled:cursor-not-allowed'
-                )}
-              >
-                <div className="text-left">
-                  <p className="font-medium text-slate-800">{o.label}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">{o.desc}</p>
-                </div>
-                {syncing ? (
-                  <RefreshCw className="w-4 h-4 text-slate-400 animate-spin" />
-                ) : (
-                  <ArrowUpRight className="w-4 h-4 text-slate-400" />
-                )}
-              </button>
-            ))}
+
+          {/* Options */}
+          <div className="px-4 pb-6 space-y-2.5">
+            {options.map((o, i) => {
+              const cost = getTokenCost(o.tokenAction);
+              const affordable = canAfford(cost);
+              return (
+                <motion.button
+                  key={o.count}
+                  onClick={() => onSync(o.count)}
+                  disabled={syncing || !affordable}
+                  className={cn(
+                    'w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all touch-manipulation',
+                    'border shadow-glass-sm active:scale-[0.98]',
+                    affordable
+                      ? 'bg-white/70 border-white/80 hover:bg-white/90 hover:shadow-glass'
+                      : 'bg-slate-50/50 border-slate-100 opacity-50 cursor-not-allowed',
+                    syncing && 'opacity-60 cursor-not-allowed'
+                  )}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.06, type: 'spring', stiffness: 400, damping: 28 }}
+                  whileTap={affordable && !syncing ? { scale: 0.97 } : {}}
+                >
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-[28px] font-bold text-slate-900 tracking-tight leading-none">{o.count}</span>
+                    <span className="text-[13px] font-medium text-slate-500">роликов</span>
+                  </div>
+                  {syncing ? (
+                    <RefreshCw className="w-4 h-4 text-slate-400 animate-spin" />
+                  ) : (
+                    <CoinBadge coins={cost} size="sm" />
+                  )}
+                </motion.button>
+              );
+            })}
           </div>
         </div>
       </motion.div>
@@ -512,39 +548,75 @@ function SetupModal({ onSave, onClose, initial }: { onSave: (u: string) => void;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <motion.div
-        className="relative w-full max-w-sm mx-0 md:mx-4 bg-white/92 backdrop-blur-[28px] backdrop-saturate-[180%] rounded-t-3xl md:rounded-3xl shadow-2xl border border-white/60 safe-bottom"
-        initial={{ opacity: 0, y: 40 }}
+        className="absolute inset-0 bg-black/50 backdrop-blur-[6px]"
+        onClick={onClose}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+      />
+      <motion.div
+        className="relative w-full max-w-sm mx-0 md:mx-4 safe-bottom"
+        initial={{ opacity: 0, y: 56 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 40 }}
+        exit={{ opacity: 0, y: 56 }}
+        transition={{ type: 'spring', stiffness: 340, damping: 32 }}
       >
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-slate-800">Instagram аккаунт</h3>
-            <button onClick={onClose} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 touch-manipulation">
-              <X className="w-4 h-4" />
+        {/* iOS-style handle */}
+        <div className="flex justify-center pb-2 md:hidden">
+          <div className="w-10 h-1 rounded-full bg-white/40" />
+        </div>
+
+        <div className="bg-white/80 backdrop-blur-[32px] backdrop-saturate-[200%] border border-white/70 rounded-t-[28px] md:rounded-[28px] shadow-float overflow-hidden">
+          {/* Header */}
+          <div className="px-6 pt-6 pb-5 flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow-glass">
+                <Instagram className="w-5 h-5 text-white" strokeWidth={1.8} />
+              </div>
+              <div>
+                <h3 className="text-[17px] font-semibold text-slate-900 tracking-tight">Instagram аккаунт</h3>
+                <p className="text-[12px] text-slate-500">Аналитика проекта</p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100/80 text-slate-500 hover:bg-slate-200/80 transition-colors touch-manipulation"
+            >
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
-          <p className="text-sm text-slate-500 mb-4">Введите username вашего Instagram аккаунта для отслеживания</p>
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-slate-400 font-medium">@</span>
-            <input
-              type="text"
-              value={username}
-              onChange={e => setUsername(e.target.value.replace(/^@/, '').trim().toLowerCase())}
-              placeholder="your_instagram"
-              className="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-white/80 outline-none focus:ring-2 focus:ring-slate-200/50 text-slate-800 font-medium text-base"
-              autoFocus
-            />
+
+          {/* Input */}
+          <div className="px-6 pb-6 space-y-4">
+            <div className="flex items-center gap-0 bg-slate-100/70 rounded-2xl border border-slate-200/60 overflow-hidden focus-within:ring-2 focus-within:ring-slate-300/50 focus-within:border-slate-300/60 transition-all">
+              <span className="pl-4 pr-1 text-[15px] font-semibold text-slate-400 select-none">@</span>
+              <input
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value.replace(/^@/, '').trim().toLowerCase())}
+                placeholder="your_instagram"
+                className="flex-1 px-3 py-4 bg-transparent outline-none text-slate-900 font-medium text-[15px] placeholder:text-slate-400"
+                autoFocus
+                autoComplete="off"
+                autoCapitalize="none"
+              />
+            </div>
+
+            <motion.button
+              onClick={() => { if (username) onSave(username); }}
+              disabled={!username}
+              className={cn(
+                'w-full py-4 rounded-2xl font-semibold text-[15px] transition-all touch-manipulation',
+                'bg-slate-900 text-white shadow-glass active:scale-[0.98]',
+                'disabled:opacity-40 disabled:cursor-not-allowed',
+                'hover:bg-slate-800'
+              )}
+              whileTap={username ? { scale: 0.97 } : {}}
+            >
+              Сохранить и синхронизировать
+            </motion.button>
           </div>
-          <button
-            onClick={() => { if (username) onSave(username); }}
-            disabled={!username}
-            className="w-full py-3 rounded-2xl bg-slate-800 text-white font-medium text-sm hover:bg-slate-700 active:scale-95 transition-all disabled:opacity-50 touch-manipulation"
-          >
-            Сохранить и синхронизировать
-          </button>
         </div>
       </motion.div>
     </div>
@@ -569,6 +641,8 @@ export function Analytics() {
     getReelSnapshots,
     buildChartData,
   } = useProjectAnalytics(currentProjectId);
+
+  const { deduct, canAfford } = useTokenBalance();
 
   const [period, setPeriod] = useState<Period>('week');
   const [chartMode, setChartMode] = useState<ChartMode>('cumulative');
@@ -595,9 +669,16 @@ export function Analytics() {
 
   const handleSync = useCallback(async (count: SyncCount) => {
     if (!instagramUsername) return;
+    const tokenAction = count === 12 ? 'analytics_sync_12' : count === 24 ? 'analytics_sync_24' : 'analytics_sync_36';
+    const cost = getTokenCost(tokenAction);
+    if (!canAfford(cost)) {
+      toast.error(`Недостаточно монет. Нужно ${cost} монет`);
+      return;
+    }
     setShowSyncModal(false);
+    await deduct(cost);
     await syncReels(instagramUsername, count);
-  }, [instagramUsername, syncReels]);
+  }, [instagramUsername, syncReels, deduct, canAfford]);
 
   // Chart data
   const chartData = useMemo(() => buildChartData(period, chartMode), [buildChartData, period, chartMode]);
