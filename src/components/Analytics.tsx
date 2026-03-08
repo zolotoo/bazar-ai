@@ -560,14 +560,14 @@ function EmptyState({ onSetup }: { onSetup: () => void }) {
       <GreySphere size={72} />
       <h3 className="mt-5 text-lg font-semibold text-slate-800">Настройте аналитику</h3>
       <p className="mt-2 text-sm text-slate-500 max-w-xs">
-        Укажите Instagram-аккаунт проекта, и мы будем отслеживать все ваши рилсы
+        Введи свой никнейм в Instagram — и мы будем отслеживать все твои рилсы
       </p>
       <button
         onClick={onSetup}
         className="mt-6 flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-800 text-white font-medium text-sm shadow-glass hover:bg-slate-700 active:scale-95 transition-all touch-manipulation"
       >
         <Instagram className="w-4 h-4" />
-        Подключить аккаунт
+        Ввести никнейм
       </button>
     </div>
   );
@@ -596,7 +596,7 @@ function SetupModal({ onSave, onClose, initial }: { onSave: (u: string) => void;
                 <Instagram className="w-5 h-5 text-white" strokeWidth={1.8} />
               </div>
               <div>
-                <h3 className="text-[17px] font-semibold text-slate-900 tracking-tight">Instagram аккаунт</h3>
+                <h3 className="text-[17px] font-semibold text-slate-900 tracking-tight">Никнейм в Instagram</h3>
                 <p className="text-[12px] text-slate-500">Аналитика проекта</p>
               </div>
             </div>
