@@ -644,12 +644,6 @@ function AppContent() {
                   label="Радар"
                   onClick={() => { setSearchTab('radar'); setIsSearchOpen(true); }}
                 />
-                <SidebarLink
-                  icon={<Link className="w-4 h-4" strokeWidth={2.5} />}
-                  label="Поиск по ссылке"
-                  onClick={() => { setSearchTab('link'); setIsSearchOpen(true); }}
-                  disabled
-                />
                 {!HIDE_SEARCH_BY_WORD && (
                   <SidebarLink
                     icon={<Search className="w-4 h-4" strokeWidth={2.5} />}
@@ -668,13 +662,6 @@ function AppContent() {
                   label="ИИ-сценарист"
                   onClick={() => setViewMode('scriptwriter')}
                   isActive={viewMode === 'scriptwriter'}
-                />
-                <SidebarLink
-                  icon={<Clock className="w-4 h-4" strokeWidth={2.5} />}
-                  label="История"
-                  onClick={() => setViewMode('history')}
-                  isActive={viewMode === 'history'}
-                  disabled
                 />
               </div>
             </SidebarSection>

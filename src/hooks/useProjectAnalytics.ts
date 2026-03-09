@@ -38,7 +38,7 @@ export interface ReelWithHistory extends ProjectReel {
   snapshots: MetricsSnapshot[];
 }
 
-export type SyncCount = 12 | 24 | 36;
+export type SyncCount = 12 | 24 | 36 | 48 | 60;
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 

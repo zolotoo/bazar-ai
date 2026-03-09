@@ -60,6 +60,8 @@ const TOKEN_COSTS: Record<Exclude<TokenAction, 'radar_refresh_all'>, number> = {
   analytics_sync_12: 5,   // 1 RapidAPI страница (12 роликов)
   analytics_sync_24: 10,  // 2 RapidAPI страницы (24 ролика)
   analytics_sync_36: 15,  // 3 RapidAPI страницы (36 роликов)
+  analytics_sync_48: 20,  // 4 RapidAPI страницы (48 роликов)
+  analytics_sync_60: 25,  // 5 RapidAPI страниц  (60 роликов)
 };
 
 /** Коинов за один профиль при «Обновить все» в радаре */
