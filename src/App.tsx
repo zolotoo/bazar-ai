@@ -24,8 +24,8 @@ import { useInboxVideos } from './hooks/useInboxVideos';
 import { ProjectProvider, useProjectContext } from './contexts/ProjectContext';
 import type { Project } from './hooks/useProjects';
 import { 
-  Settings, Search, LayoutGrid, Clock, User, LogOut, 
-  Link, Radar, Plus, X, Palette, Sparkles, Trash2, Users, Menu, Home, BarChart2
+  Settings, Search, LayoutGrid, User, LogOut, 
+  Radar, Plus, X, Palette, Sparkles, Trash2, Users, Menu, Home, BarChart2
 } from 'lucide-react';
 import { GlassFolderIcon } from './components/ui/GlassFolderIcons';
 import { MobileBottomBar, type MobileTabId } from './components/ui/MobileBottomBar';
