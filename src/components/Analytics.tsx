@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useProjectContext } from '../contexts/ProjectContext';
 import { useProjectAnalytics, type ProjectReel, type SyncCount } from '../hooks/useProjectAnalytics';
+import { useInboxVideos } from '../hooks/useInboxVideos';
 import { useTokenBalance } from '../contexts/TokenBalanceContext';
 import { getTokenCost } from '../constants/tokenCosts';
 import { CoinBadge } from './ui/CoinBadge';
@@ -425,6 +426,10 @@ function ReelDetailModal({ reel, onClose, getReelSnapshots }: {
   const reelSnaps = getReelSnapshots(reel.id);
   const [transcribing, setTranscribing] = useState(false);
   const [transcript, setTranscript] = useState<string | null>(null);
+  const [captionExpanded, setCaptionExpanded] = useState(false);
+  const [showFolderPicker, setShowFolderPicker] = useState(false);
+  const { addVideoToInbox } = useInboxVideos();
+  const { currentProject } = useProjectContext();
 
   const chartData = useMemo(() => {
     if (reelSnaps.length < 2) return [];
@@ -440,6 +445,10 @@ function ReelDetailModal({ reel, onClose, getReelSnapshots }: {
   const prevSnap = reelSnaps[reelSnaps.length - 2];
   const viewsDelta = latestSnap && prevSnap ? latestSnap.view_count - prevSnap.view_count : null;
   const takenAt = reel.taken_at ? new Date(reel.taken_at * 1000) : null;
+  const views = latestSnap?.view_count ?? reel.latest_view_count ?? 0;
+  const likes = latestSnap?.like_count ?? reel.latest_like_count ?? 0;
+  const comments = latestSnap?.comment_count ?? reel.latest_comment_count ?? 0;
+  const instagramUrl = `https://www.instagram.com/reel/${reel.shortcode}/`;
 
   const handleTranscribe = async () => {
     if (!reel.video_url) { toast.error('Нет ссылки на видео для транскрибации'); return; }
@@ -458,125 +467,213 @@ function ReelDetailModal({ reel, onClose, getReelSnapshots }: {
     finally { setTranscribing(false); }
   };
 
+  const handleCopyToFolder = async (folderId: string | null) => {
+    setShowFolderPicker(false);
+    await addVideoToInbox({
+      title: reel.caption?.slice(0, 80) || 'Reel из аналитики',
+      previewUrl: reel.thumbnail_url || '',
+      url: instagramUrl,
+      viewCount: views,
+      likeCount: likes,
+      commentCount: comments,
+      ownerUsername: reel.shortcode,
+      shortcode: reel.shortcode,
+      folderId: folderId || undefined,
+      takenAt: reel.taken_at || undefined,
+    });
+    toast.success('Скопировано в ленту');
+  };
+
+  const folders = currentProject?.folders || [];
+
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
-      <motion.div className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+      <motion.div className="absolute inset-0 bg-black/60 backdrop-blur-[8px]"
         onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
       <motion.div
-        className="relative w-full max-w-lg mx-0 md:mx-4 max-h-[90vh] flex flex-col bg-white/92 backdrop-blur-[28px] backdrop-saturate-[180%] rounded-t-3xl md:rounded-3xl shadow-2xl border border-white/60 safe-bottom overflow-hidden"
+        className="relative w-full max-w-lg mx-0 md:mx-4 max-h-[92vh] flex flex-col rounded-t-[28px] md:rounded-[28px] shadow-2xl safe-bottom overflow-hidden"
+        style={{ background: 'rgba(248,248,252,0.96)', backdropFilter: 'blur(32px) saturate(200%)' }}
         initial={{ opacity: 0, y: 60 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 60 }}
-        transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+        transition={{ type: 'spring', stiffness: 280, damping: 30 }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-slate-100 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="relative w-10 h-14 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0">
-              {reel.thumbnail_url ? (
-                <img src={reel.thumbnail_url} alt="" className="w-full h-full object-cover" />
-              ) : <Film className="w-5 h-5 text-slate-300 m-auto mt-4" />}
+        {/* Hero thumbnail */}
+        <div className="relative w-full flex-shrink-0" style={{ aspectRatio: '16/9' }}>
+          {reel.thumbnail_url ? (
+            <img src={reel.thumbnail_url} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center">
+              <Film className="w-12 h-12 text-slate-500" />
             </div>
-            <div>
-              <p className="font-semibold text-slate-800 text-sm line-clamp-1">
-                {reel.caption ? reel.caption.slice(0, 40) + (reel.caption.length > 40 ? '…' : '') : 'Без подписи'}
-              </p>
-              <p className="text-xs text-slate-400 mt-0.5">
-                {takenAt ? takenAt.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}
-              </p>
-            </div>
+          )}
+          {/* Gradient overlay */}
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.4) 100%)' }} />
+
+          {/* Top buttons */}
+          <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
+            <a
+              href={instagramUrl} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-white/90 text-[11px] font-semibold backdrop-blur-md border border-white/20 touch-manipulation"
+              style={{ background: 'rgba(0,0,0,0.35)' }}
+              onClick={e => e.stopPropagation()}
+            >
+              <Instagram className="w-3.5 h-3.5" />
+              Открыть в Instagram
+            </a>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md border border-white/20 text-white/90 touch-manipulation"
+              style={{ background: 'rgba(0,0,0,0.35)' }}
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
-          <button onClick={onClose} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 touch-manipulation">
-            <X className="w-5 h-5" />
-          </button>
+
+          {/* Bottom title */}
+          <div className="absolute bottom-0 left-0 right-0 px-4 pb-3 pt-6">
+            <p className="text-white font-semibold text-[15px] leading-snug line-clamp-2 drop-shadow-sm">
+              {reel.caption ? reel.caption.slice(0, 80) + (reel.caption.length > 80 ? '…' : '') : 'Без подписи'}
+            </p>
+            <p className="text-white/60 text-[11px] mt-0.5">
+              {takenAt ? takenAt.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}
+            </p>
+          </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+        <div className="flex-1 overflow-y-auto">
           {/* Stats row */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="flex items-stretch gap-2 px-4 pt-4 pb-0">
             {[
-              { icon: <Eye className="w-3.5 h-3.5" />, label: 'Просмотры', value: latestSnap?.view_count ?? 0, delta: viewsDelta, color: 'indigo' },
-              { icon: <Heart className="w-3.5 h-3.5" />, label: 'Лайки', value: latestSnap?.like_count ?? 0, color: 'rose' },
-              { icon: <MessageCircle className="w-3.5 h-3.5" />, label: 'Комменты', value: latestSnap?.comment_count ?? 0, color: 'emerald' },
+              { icon: <Eye className="w-4 h-4" />, value: views, delta: viewsDelta, label: 'просмотров', color: '#6366f1', bg: 'rgba(99,102,241,0.08)' },
+              { icon: <Heart className="w-4 h-4" />, value: likes, label: 'лайков', color: '#f43f5e', bg: 'rgba(244,63,94,0.08)' },
+              { icon: <MessageCircle className="w-4 h-4" />, value: comments, label: 'коммент.', color: '#10b981', bg: 'rgba(16,185,129,0.08)' },
             ].map(s => (
-              <div key={s.label} className="bg-slate-50 rounded-xl p-3 text-center">
-                <div className={cn('w-6 h-6 rounded-lg mx-auto mb-1.5 flex items-center justify-center', {
-                  'bg-indigo-50 text-indigo-500': s.color === 'indigo',
-                  'bg-rose-50 text-rose-500': s.color === 'rose',
-                  'bg-emerald-50 text-emerald-500': s.color === 'emerald',
-                })}>{s.icon}</div>
-                <p className="text-base font-semibold text-slate-800">{fmt(s.value)}</p>
-                {s.delta !== null && s.delta !== undefined && (
-                  <p className={cn('text-xs font-medium flex items-center justify-center gap-0.5', {
-                    'text-emerald-500': s.delta > 0, 'text-rose-500': s.delta < 0, 'text-slate-400': s.delta === 0,
-                  })}>
-                    {s.delta > 0 ? <ArrowUpRight className="w-2.5 h-2.5" /> : s.delta < 0 ? <ArrowDownRight className="w-2.5 h-2.5" /> : <Minus className="w-2.5 h-2.5" />}
+              <div key={s.label} className="flex-1 rounded-2xl px-3 py-3 flex flex-col gap-0.5" style={{ background: s.bg }}>
+                <span style={{ color: s.color }}>{s.icon}</span>
+                <p className="text-[20px] font-bold text-slate-900 leading-none tabular-nums mt-1">{fmt(s.value)}</p>
+                {s.delta != null && (
+                  <p className={cn('text-[11px] font-semibold flex items-center gap-0.5', s.delta > 0 ? 'text-emerald-500' : s.delta < 0 ? 'text-rose-500' : 'text-slate-400')}>
+                    {s.delta > 0 ? <ArrowUpRight className="w-3 h-3" /> : s.delta < 0 ? <ArrowDownRight className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
                     {fmt(Math.abs(s.delta))}
                   </p>
                 )}
-                <p className="text-xs text-slate-400">{s.label}</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">{s.label}</p>
               </div>
             ))}
           </div>
 
-          {/* Views chart */}
-          {chartData.length >= 2 ? (
-            <div>
-              <p className="text-sm font-semibold text-slate-700 mb-2">Динамика просмотров</p>
-              <div className="bg-slate-50 rounded-2xl p-3">
-                <AreaChart data={chartData} aspectRatio="3 / 1" margin={{ top: 20, right: 20, bottom: 30, left: 40 }}>
+          <div className="px-4 pt-3 space-y-3 pb-6">
+            {/* Action buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={handleTranscribe} disabled={transcribing || !reel.video_url}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-[13px] font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-40 transition-all touch-manipulation"
+              >
+                {transcribing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Mic className="w-3.5 h-3.5" />}
+                {transcribing ? 'Транскрибирую…' : 'Транскрибировать'}
+              </button>
+              <button
+                onClick={() => setShowFolderPicker(true)}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-[13px] font-medium bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-all touch-manipulation"
+              >
+                <ArrowUpRight className="w-3.5 h-3.5" />
+                В папку
+              </button>
+            </div>
+
+            {/* Folder picker */}
+            <AnimatePresence>
+              {showFolderPicker && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="bg-slate-50 rounded-2xl p-3 space-y-1.5">
+                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide px-1 mb-2">Выбери папку</p>
+                    <button
+                      onClick={() => handleCopyToFolder(null)}
+                      className="w-full text-left px-3 py-2.5 rounded-xl bg-white text-[13px] font-medium text-slate-700 hover:bg-slate-100 transition-colors touch-manipulation"
+                    >
+                      📥 Все видео (без папки)
+                    </button>
+                    {folders.map((f: { id: string; name: string }) => (
+                      <button
+                        key={f.id}
+                        onClick={() => handleCopyToFolder(f.id)}
+                        className="w-full text-left px-3 py-2.5 rounded-xl bg-white text-[13px] font-medium text-slate-700 hover:bg-slate-100 transition-colors touch-manipulation"
+                      >
+                        📁 {f.name}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setShowFolderPicker(false)}
+                      className="w-full text-center py-2 text-[12px] text-slate-400 hover:text-slate-600 touch-manipulation"
+                    >
+                      Отмена
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Views chart */}
+            {chartData.length >= 2 ? (
+              <div className="bg-slate-50 rounded-2xl p-4">
+                <p className="text-[13px] font-semibold text-slate-700 mb-3">Динамика просмотров</p>
+                <AreaChart data={chartData} aspectRatio="3 / 1" margin={{ top: 12, right: 12, bottom: 28, left: 36 }}>
                   <Grid horizontal numTicksRows={3} />
-                  <Area dataKey="views" fill="#6366f1" fillOpacity={0.2} stroke="#6366f1" strokeWidth={2} fadeEdges />
+                  <Area dataKey="views" fill="#6366f1" fillOpacity={0.18} stroke="#6366f1" strokeWidth={2} fadeEdges />
                   <YAxis numTicks={3} formatValue={(v) => fmt(v as number)} />
                   <XAxis numTicks={Math.min(chartData.length, 4)} />
                   <ChartTooltip rows={(p) => [{ color: '#6366f1', label: 'Просмотры', value: (p.views as number) ?? 0 }]} />
                 </AreaChart>
-              </div>
-              <p className="text-xs text-slate-400 mt-1 text-center">{reelSnaps.length} снимков данных</p>
-            </div>
-          ) : (
-            <div className="bg-slate-50 rounded-2xl p-4 text-center">
-              <BarChart2 className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-              <p className="text-sm text-slate-500">Нужно минимум 2 обновления</p>
-              <p className="text-xs text-slate-400">для отображения динамики</p>
-            </div>
-          )}
-
-          {reel.caption && (
-            <div>
-              <p className="text-sm font-semibold text-slate-700 mb-2">Подпись</p>
-              <p className="text-sm text-slate-600 leading-relaxed bg-slate-50 rounded-xl p-3">{reel.caption}</p>
-            </div>
-          )}
-
-          {/* Transcription */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-semibold text-slate-700">Транскрибация</p>
-              <button
-                onClick={handleTranscribe} disabled={transcribing || !reel.video_url}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all touch-manipulation"
-              >
-                {transcribing ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Mic className="w-3 h-3" />}
-                {transcribing ? 'Транскрибирую…' : 'Транскрибировать'}
-              </button>
-            </div>
-            {transcript ? (
-              <div className="bg-slate-50 rounded-xl p-3 text-sm text-slate-600 leading-relaxed max-h-40 overflow-y-auto custom-scrollbar-light">
-                {transcript}
+                <p className="text-[10px] text-slate-400 text-center mt-2">{reelSnaps.length} снимков данных</p>
               </div>
             ) : (
-              <p className="text-xs text-slate-400">Нажмите кнопку чтобы транскрибировать аудио ролика</p>
+              <div className="bg-slate-50 rounded-2xl px-4 py-3 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center flex-shrink-0">
+                  <BarChart2 className="w-4 h-4 text-indigo-300" />
+                </div>
+                <div>
+                  <p className="text-[13px] font-medium text-slate-600">
+                    {reelSnaps.length === 0 ? 'Нужно 2 обновления для динамики' : 'Ещё 1 обновление — и появится график'}
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {reelSnaps.length === 0 ? 'Пока нет снимков данных' : `${reelSnaps.length}/2 снимков собрано`}
+                  </p>
+                </div>
+              </div>
             )}
-          </div>
 
-          {/* Analyze (disabled) */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-semibold text-slate-700">AI-анализ</p>
-              <span className="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded-lg">Скоро</span>
-            </div>
-            <button disabled className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 cursor-not-allowed">
+            {/* Transcription result */}
+            {transcript && (
+              <div className="bg-slate-50 rounded-2xl p-4">
+                <p className="text-[13px] font-semibold text-slate-700 mb-2">Транскрибация</p>
+                <p className="text-[13px] text-slate-600 leading-relaxed max-h-36 overflow-y-auto">{transcript}</p>
+              </div>
+            )}
+
+            {/* Caption */}
+            {reel.caption && (
+              <div className="bg-slate-50 rounded-2xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[13px] font-semibold text-slate-700">Подпись</p>
+                  {reel.caption.length > 120 && (
+                    <button onClick={() => setCaptionExpanded(v => !v)} className="text-[11px] text-indigo-500 font-medium">
+                      {captionExpanded ? 'Свернуть' : 'Развернуть'}
+                    </button>
+                  )}
+                </div>
+                <p className={cn('text-[13px] text-slate-600 leading-relaxed', !captionExpanded && 'line-clamp-4')}>
+                  {reel.caption}
+                </p>
+              </div>
+            )}
+
+            {/* AI analyze */}
+            <button disabled className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-dashed border-slate-200 text-slate-400 cursor-not-allowed">
               <Sparkles className="w-4 h-4" />
-              <span className="text-sm">Анализировать ролик</span>
+              <span className="text-[13px]">AI-анализ ролика — скоро</span>
             </button>
           </div>
         </div>

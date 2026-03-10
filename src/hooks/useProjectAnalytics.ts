@@ -244,7 +244,13 @@ export function useProjectAnalytics(projectId: string | null) {
       }
 
       if (savedCount > 0) {
-        toast.success(`Сохранено ${savedCount} из ${data.reels.length} роликов`);
+        // Check if this was already a second+ sync (snapshots existed before this sync)
+        const hadSnapshotsBefore = snapshots.length > 0;
+        if (hadSnapshotsBefore) {
+          toast.success(`Синхронизировано ${savedCount} роликов — графики обновлены`);
+        } else {
+          toast.success(`${savedCount} роликов сохранено. Синкайте ещё раз — и появятся графики динамики`);
+        }
       } else {
         toast.warning('Ролики получены, но не сохранились. Проверьте что SQL-миграция запущена.');
       }
