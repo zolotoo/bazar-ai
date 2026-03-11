@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { supabase } from '../utils/supabase';
+import { useAuth } from '../hooks/useAuth';
 import { cn } from '../utils/cn';
 import {
-  Activity, TrendingUp, Zap, Mic, Globe, RefreshCw,
-  ChevronDown, BarChart2, Users, Calendar
+  Activity, TrendingUp, Zap, Globe, RefreshCw,
+  BarChart2, Users, Calendar
 } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -88,6 +88,7 @@ const ACTION_LABELS: Record<string, string> = {
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export function UsageStats() {
+  const { user } = useAuth();
   const [period, setPeriod] = useState<Period>('30d');
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<UsageRow[]>([]);
@@ -97,27 +98,25 @@ export function UsageStats() {
     setLoading(true);
     setError(null);
     try {
-      let query = supabase
-        .from('api_usage_log')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (period !== 'all') {
-        const days = period === '7d' ? 7 : period === '30d' ? 30 : 90;
-        const since = new Date();
-        since.setDate(since.getDate() - days);
-        query = query.gte('created_at', since.toISOString());
+      const res = await fetch('/api/usage-stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user?.telegram_username, period }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        if (json.error === 'table_not_found') {
+          throw new Error('Таблица не создана. Запусти create_api_usage_log.sql в Supabase SQL Editor');
+        }
+        throw new Error(json.error || 'Ошибка загрузки данных');
       }
-
-      const { data, error: err } = await query.limit(5000);
-      if (err) throw err;
-      setRows(data || []);
+      setRows(json.rows || []);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Ошибка загрузки данных');
     } finally {
       setLoading(false);
     }
-  }, [period]);
+  }, [period, user?.telegram_username]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

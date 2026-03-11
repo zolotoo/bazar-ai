@@ -31,6 +31,11 @@ CREATE POLICY "users read own logs" ON api_usage_log
   USING (user_id = current_setting('request.jwt.claims', true)::json->>'sub'
       OR user_id = auth.uid()::text);
 
--- Суперпользователь (для дашборда) — отдельная политика по user_id = 'admin'
--- Если нужно дать одному юзеру видеть всё — добавь его telegram id сюда:
--- CREATE POLICY "admin read all" ON api_usage_log FOR SELECT USING (auth.uid()::text = 'YOUR_ADMIN_USER_ID');
+-- Администратор (sergeyzolotykh) видит все записи для дашборда статистики.
+-- user_id в таблице хранится как telegram username (строка), поэтому сравниваем по нему.
+CREATE POLICY "admin read all" ON api_usage_log
+  FOR SELECT
+  USING (
+    current_setting('request.jwt.claims', true)::json->>'sub' = 'sergeyzolotykh'
+    OR current_setting('request.jwt.claims', true)::json->>'telegram_username' = 'sergeyzolotykh'
+  );

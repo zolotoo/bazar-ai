@@ -368,6 +368,7 @@ function AppContent() {
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => !getDisplayName());
   const { logout, user } = useAuth();
+  const isAdmin = user?.telegram_username?.toLowerCase() === 'sergeyzolotykh';
 
   // Если пользователь залогинен по нику — не спрашиваем имя, используем username
   useEffect(() => {
@@ -664,12 +665,14 @@ function AppContent() {
                   onClick={() => setViewMode('scriptwriter')}
                   isActive={viewMode === 'scriptwriter'}
                 />
-                <SidebarLink
-                  icon={<Activity className="w-4 h-4" strokeWidth={2.5} />}
-                  label="Статистика API"
-                  onClick={() => setViewMode('usage')}
-                  isActive={viewMode === 'usage'}
-                />
+                {isAdmin && (
+                  <SidebarLink
+                    icon={<Activity className="w-4 h-4" strokeWidth={2.5} />}
+                    label="Статистика API"
+                    onClick={() => setViewMode('usage')}
+                    isActive={viewMode === 'usage'}
+                  />
+                )}
               </div>
             </SidebarSection>
             
@@ -806,7 +809,7 @@ function AppContent() {
             {viewMode === 'analytics' && <Analytics />}
             {viewMode === 'history' && <History />}
             {viewMode === 'profile' && <ProfilePage />}
-            {viewMode === 'usage' && <UsageStats />}
+            {viewMode === 'usage' && isAdmin && <UsageStats />}
           </motion.div>
         </AnimatePresence>
       </div>
