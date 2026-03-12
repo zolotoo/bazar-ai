@@ -2,12 +2,15 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../utils/supabase';
 import type { ProjectReel } from './useProjectAnalytics';
 
+export type ResponsibleRow = { templateId?: string; label?: string; value: string };
+
 export interface RefForLinking {
   id: string;
   shortcode: string | null;
   folder_id: string | null;
   caption: string | null;
   thumbnail_url: string | null;
+  responsibles?: ResponsibleRow[];
 }
 
 /**
@@ -26,20 +29,35 @@ export function useRefsForLinking(projectId: string | null) {
     setLoading(true);
     const { data, error } = await supabase
       .from('saved_videos')
-      .select('id, shortcode, folder_id, caption, thumbnail_url')
+      .select('id, shortcode, folder_id, caption, thumbnail_url, responsibles, script_responsible, editing_responsible')
       .eq('project_id', projectId);
     if (error) {
       setRefs([]);
       setLoading(false);
       return;
     }
-    setRefs((data || []).map((row: any) => ({
-      id: row.id,
-      shortcode: row.shortcode ?? null,
-      folder_id: row.folder_id ?? null,
-      caption: row.caption ?? null,
-      thumbnail_url: row.thumbnail_url ?? null,
-    })));
+    const templateLabels: Record<string, string> = { 'resp-0': 'За сценарий', 'resp-1': 'За монтаж' };
+    setRefs((data || []).map((row: any) => {
+      const rows: ResponsibleRow[] = [];
+      const arr = row.responsibles as ResponsibleRow[] | null;
+      if (Array.isArray(arr)) {
+        for (const r of arr) {
+          if (r?.value) rows.push({ templateId: r.templateId, label: r.label || templateLabels[r.templateId || ''] || 'Ответственный', value: r.value });
+        }
+      }
+      if (!rows.length && (row.script_responsible || row.editing_responsible)) {
+        if (row.script_responsible) rows.push({ templateId: 'resp-0', label: 'За сценарий', value: row.script_responsible });
+        if (row.editing_responsible) rows.push({ templateId: 'resp-1', label: 'За монтаж', value: row.editing_responsible });
+      }
+      return {
+        id: row.id,
+        shortcode: row.shortcode ?? null,
+        folder_id: row.folder_id ?? null,
+        caption: row.caption ?? null,
+        thumbnail_url: row.thumbnail_url ?? null,
+        responsibles: rows,
+      };
+    }));
     setLoading(false);
   }, [projectId]);
 

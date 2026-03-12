@@ -4,18 +4,20 @@ import { useProjectContext } from '../contexts/ProjectContext';
 import { useProjectAnalytics, type ProjectReel, type SyncCount } from '../hooks/useProjectAnalytics';
 import { useResponsiblesStats } from '../hooks/useResponsiblesAnalytics';
 import { useRefsForLinking, reelsWithoutLinkedRef } from '../hooks/useRefsForLinking';
+import { useParticipantsForResponsibles } from '../hooks/useParticipantsForResponsibles';
 import { useInboxVideos } from '../hooks/useInboxVideos';
 import { useTokenBalance } from '../contexts/TokenBalanceContext';
 import { getTokenCost } from '../constants/tokenCosts';
 import { CoinBadge } from './ui/CoinBadge';
 import { VideoGradientCard } from './ui/VideoGradientCard';
+import { ResponsiblePickerModal } from './ui/ResponsiblePickerModal';
 import { AreaChart, Area, Grid, XAxis, YAxis, ChartTooltip } from './ui/area-chart';
 import { cn } from '../utils/cn';
 import {
   BarChart2, RefreshCw, Instagram, Eye, Heart, MessageCircle,
   Award, Film, X, CalendarDays,
   ArrowUpRight, ArrowDownRight, Minus, Mic, Sparkles,
-  LayoutGrid, List, AlertCircle, Clock, ChevronRight, ChevronLeft, Users, Link2, Unlink,
+  LayoutGrid, List, AlertCircle, Clock, ChevronRight, ChevronLeft, Users, Link2, Unlink, UserPlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -457,9 +459,12 @@ function ReelDetailModal({ reel, onClose, getReelSnapshots }: {
   const [captionExpanded, setCaptionExpanded] = useState(false);
   const [showFolderPicker, setShowFolderPicker] = useState(false);
   const [showRefPicker, setShowRefPicker] = useState(false);
-  const { addVideoToInbox, updateVideoShortcode } = useInboxVideos();
+  const { addVideoToInbox, updateVideoShortcode, updateVideoResponsible } = useInboxVideos();
   const { currentProject } = useProjectContext();
   const { refs, refsWithoutShortcode, refetch: refetchRefs } = useRefsForLinking(currentProject?.id ?? null);
+  const participants = useParticipantsForResponsibles(currentProject?.id ?? null);
+  const rolesTemplate = (currentProject?.responsiblesTemplate ?? [{ id: 'resp-0', label: 'За сценарий' }, { id: 'resp-1', label: 'За монтаж' }]) as { id: string; label: string }[];
+  const [showResponsiblePicker, setShowResponsiblePicker] = useState(false);
 
   const linkedRef = refs.find(r => r.shortcode === reel.shortcode);
   const handleLinkRef = async (refId: string) => {
@@ -477,6 +482,14 @@ function ReelDetailModal({ reel, onClose, getReelSnapshots }: {
       toast.success('Привязка снята');
       refetchRefs();
     } else toast.error('Не удалось отвязать');
+  };
+  const handleSaveResponsibleReel = async (refId: string, items: { templateId: string; value: string }[]) => {
+    const ok = await updateVideoResponsible(refId, items);
+    if (ok) {
+      toast.success('Ответственный обновлён');
+      refetchRefs();
+    } else toast.error('Не удалось сохранить');
+    return ok;
   };
 
   const chartData = useMemo(() => {
@@ -669,19 +682,37 @@ function ReelDetailModal({ reel, onClose, getReelSnapshots }: {
               <div className="bg-slate-50 rounded-2xl p-3 space-y-2">
                 <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide px-1">Исходник из папки</p>
                 {linkedRef ? (
-                  <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-white border border-slate-100">
-                    <span className="text-[13px] text-slate-700 truncate flex-1">
-                      {linkedRef.caption?.slice(0, 50) || 'Исходник без названия'}
-                      {(linkedRef.caption?.length ?? 0) > 50 ? '…' : ''}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleUnlinkRef}
-                      className="shrink-0 p-2 rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 touch-manipulation"
-                      title="Отвязать исходник"
-                    >
-                      <Unlink className="w-4 h-4" />
-                    </button>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-white/80 border border-slate-200/70">
+                      <span className="text-[13px] text-slate-700 truncate flex-1">
+                        {linkedRef.caption?.slice(0, 50) || 'Исходник без названия'}
+                        {(linkedRef.caption?.length ?? 0) > 50 ? '…' : ''}
+                      </span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setShowResponsiblePicker(true)}
+                          className="p-2 rounded-xl bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 touch-manipulation flex items-center gap-1.5"
+                          title="Выбрать ответственного"
+                        >
+                          <UserPlus className="w-4 h-4" />
+                          <span className="text-[11px] font-medium">Ответственный</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleUnlinkRef}
+                          className="p-2 rounded-xl text-slate-400 hover:bg-rose-50 hover:text-rose-600 touch-manipulation"
+                          title="Отвязать исходник"
+                        >
+                          <Unlink className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    {linkedRef.responsibles?.length ? (
+                      <p className="text-[11px] text-slate-500 px-1">
+                        {linkedRef.responsibles.map(r => `${r.label}: ${r.value}`).join(', ')}
+                      </p>
+                    ) : null}
                   </div>
                 ) : (
                   <>
@@ -738,6 +769,19 @@ function ReelDetailModal({ reel, onClose, getReelSnapshots }: {
                   </>
                 )}
               </div>
+            )}
+
+            {showResponsiblePicker && linkedRef && (
+              <ResponsiblePickerModal
+                isOpen
+                onClose={() => setShowResponsiblePicker(false)}
+                refId={linkedRef.id}
+                refCaption={linkedRef.caption ?? undefined}
+                roles={rolesTemplate}
+                participants={participants}
+                currentResponsibles={linkedRef.responsibles ?? []}
+                onSave={(items) => handleSaveResponsibleReel(linkedRef.id, items)}
+              />
             )}
 
             {/* Views chart */}
@@ -896,11 +940,14 @@ export function Analytics() {
     getReelSnapshots, buildChartData,
   } = useProjectAnalytics(currentProjectId);
   const { stats: responsiblesStats, byRole } = useResponsiblesStats(currentProjectId, reels);
-  const { refsWithoutShortcode, linkedShortcodes, refetch: refetchRefsForLinking } = useRefsForLinking(currentProjectId);
-  const { updateVideoShortcode } = useInboxVideos();
+  const { refs, refsWithoutShortcode, linkedShortcodes, refetch: refetchRefsForLinking } = useRefsForLinking(currentProjectId);
+  const { updateVideoShortcode, updateVideoResponsible } = useInboxVideos();
   const reelsWithoutRef = reelsWithoutLinkedRef(reels, linkedShortcodes);
+  const participants = useParticipantsForResponsibles(currentProjectId);
+  const rolesTemplate = (currentProject?.responsiblesTemplate ?? [{ id: 'resp-0', label: 'За сценарий' }, { id: 'resp-1', label: 'За монтаж' }]) as { id: string; label: string }[];
   const [linkReelForRefId, setLinkReelForRefId] = useState<string | null>(null);
   const [linkRefForReelShortcode, setLinkRefForReelShortcode] = useState<string | null>(null);
+  const [responsiblePickerRefId, setResponsiblePickerRefId] = useState<string | null>(null);
 
   const { deduct, canAfford } = useTokenBalance();
 
@@ -1215,6 +1262,15 @@ export function Analytics() {
       } else toast.error('Не удалось привязать');
     };
 
+    const handleSaveResponsible = async (refId: string, items: { templateId: string; value: string }[]) => {
+      const ok = await updateVideoResponsible(refId, items);
+      if (ok) {
+        toast.success('Ответственный обновлён');
+        refetchRefsForLinking();
+      } else toast.error('Не удалось сохранить');
+      return ok;
+    };
+
     return (
       <div className="flex-1 min-h-0 overflow-y-auto bg-[#f0f0f5]">
         <div className="max-w-2xl mx-auto px-4 pt-6 pb-24 space-y-4">
@@ -1267,9 +1323,14 @@ export function Analytics() {
                                 <button type="button" onClick={() => setLinkReelForRefId(null)} className="w-full text-center py-1 text-[10px] text-slate-400 hover:text-slate-600">Отмена</button>
                               </div>
                             ) : (
-                              <button type="button" onClick={() => setLinkReelForRefId(ref.id)} className="mt-1.5 w-full py-1.5 rounded-lg bg-indigo-100 text-indigo-600 text-[11px] font-medium touch-manipulation">
-                                Привязать
-                              </button>
+                              <div className="flex gap-2 mt-2">
+                                <button type="button" onClick={() => setLinkReelForRefId(ref.id)} className="flex-1 py-2 rounded-xl bg-indigo-500/10 text-indigo-600 text-[11px] font-medium touch-manipulation flex items-center justify-center gap-1">
+                                  <Link2 className="w-3.5 h-3.5" />Привязать
+                                </button>
+                                <button type="button" onClick={() => setResponsiblePickerRefId(ref.id)} className="flex-1 py-2 rounded-xl bg-slate-100 text-slate-600 text-[11px] font-medium touch-manipulation flex items-center justify-center gap-1">
+                                  <UserPlus className="w-3.5 h-3.5" />Ответственный
+                                </button>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -1318,8 +1379,8 @@ export function Analytics() {
                               <button type="button" onClick={() => setLinkRefForReelShortcode(null)} className="w-full text-center py-1 text-[10px] text-slate-400 hover:text-slate-600">Отмена</button>
                             </div>
                           ) : (
-                            <button type="button" onClick={() => setLinkRefForReelShortcode(reel.shortcode)} className="mt-1.5 w-full py-1.5 rounded-lg bg-indigo-100 text-indigo-600 text-[11px] font-medium touch-manipulation">
-                              Привязать
+                            <button type="button" onClick={() => setLinkRefForReelShortcode(reel.shortcode)} className="mt-2 w-full py-2 rounded-xl bg-indigo-500/10 text-indigo-600 text-[11px] font-medium touch-manipulation flex items-center justify-center gap-1.5">
+                              <Link2 className="w-3.5 h-3.5" />Привязать
                             </button>
                           )}
                         </div>
@@ -1330,6 +1391,24 @@ export function Analytics() {
               )}
             </div>
           )}
+
+          {responsiblePickerRefId && (() => {
+            const ref = refs.find(r => r.id === responsiblePickerRefId);
+            if (!ref) return null;
+            return (
+              <ResponsiblePickerModal
+                key="responsible-picker"
+                isOpen
+                onClose={() => setResponsiblePickerRefId(null)}
+                refId={ref.id}
+                refCaption={ref.caption ?? undefined}
+                roles={rolesTemplate}
+                participants={participants}
+                currentResponsibles={ref.responsibles ?? []}
+                onSave={(items) => handleSaveResponsible(ref.id, items)}
+              />
+            );
+          })()}
 
           {responsiblesStats.length === 0 ? (
             <div className={cn(CARD, 'p-8 text-center')}>
