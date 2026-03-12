@@ -120,6 +120,7 @@ export interface ChartContextValue {
   animationDuration: number;
   xAccessor: (d: Record<string, unknown>) => Date;
   dateLabels: string[];
+  formatXLabel?: (date: Date) => string;
   selection?: ChartSelection | null;
   clearSelection?: () => void;
   barScale?: ScaleBandType<string>;
@@ -635,7 +636,7 @@ export function ChartTooltip({
   children,
   className = "",
 }: ChartTooltipProps) {
-  const { tooltipData, width, height, innerHeight, margin, lines, xAccessor, dateLabels, containerRef } = useChart();
+  const { tooltipData, width, height, innerHeight, margin, lines, xAccessor, dateLabels, formatXLabel, containerRef } = useChart();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
@@ -657,8 +658,9 @@ export function ChartTooltip({
 
   const title = useMemo(() => {
     if (!tooltipData) return undefined;
-    return xAccessor(tooltipData.point).toLocaleDateString("ru-RU", { weekday: "short", month: "short", day: "numeric" });
-  }, [tooltipData, xAccessor]);
+    const date = xAccessor(tooltipData.point);
+    return formatXLabel ? formatXLabel(date) : date.toLocaleDateString("ru-RU", { weekday: "short", month: "short", day: "numeric" });
+  }, [tooltipData, xAccessor, formatXLabel]);
 
   const container = containerRef.current;
   if (!(mounted && container)) return null;
@@ -796,7 +798,7 @@ function XAxisLabel({ label, x, crosshairX, isHovering, tickerHalfWidth }: {
 }
 
 export function XAxis({ numTicks = 5, tickerHalfWidth = 50 }: XAxisProps) {
-  const { xScale, margin, tooltipData, containerRef } = useChart();
+  const { xScale, margin, tooltipData, containerRef, formatXLabel } = useChart();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
@@ -817,9 +819,9 @@ export function XAxis({ numTicks = 5, tickerHalfWidth = 50 }: XAxisProps) {
     return dates.map((date) => ({
       date,
       x: (xScale(date) ?? 0) + margin.left,
-      label: date.toLocaleDateString("ru-RU", { month: "short", day: "numeric" }),
+      label: formatXLabel ? formatXLabel(date) : date.toLocaleDateString("ru-RU", { month: "short", day: "numeric" }),
     }));
-  }, [xScale, margin.left, numTicks]);
+  }, [xScale, margin.left, numTicks, formatXLabel]);
 
   const isHovering = tooltipData !== null;
   const crosshairX = tooltipData ? tooltipData.x + margin.left : null;
@@ -1067,6 +1069,8 @@ function extractAreaConfigs(children: ReactNode): LineConfig[] {
 export interface AreaChartProps {
   data: Record<string, unknown>[];
   xDataKey?: string;
+  /** Custom label for X-axis (date). E.g. (d) => "4–10 мар" for week range */
+  formatXLabel?: (date: Date) => string;
   margin?: Partial<Margin>;
   animationDuration?: number;
   aspectRatio?: string;
@@ -1081,13 +1085,14 @@ interface ChartInnerProps {
   height: number;
   data: Record<string, unknown>[];
   xDataKey: string;
+  formatXLabel?: (date: Date) => string;
   margin: Margin;
   animationDuration: number;
   children: ReactNode;
   containerRef: RefObject<HTMLDivElement | null>;
 }
 
-function ChartInner({ width, height, data, xDataKey, margin, animationDuration, children, containerRef }: ChartInnerProps) {
+function ChartInner({ width, height, data, xDataKey, formatXLabel, margin, animationDuration, children, containerRef }: ChartInnerProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const lines = useMemo(() => extractAreaConfigs(children), [children]);
   const innerWidth = width - margin.left - margin.right;
@@ -1121,7 +1126,7 @@ function ChartInner({ width, height, data, xDataKey, margin, animationDuration, 
     return scaleLinear({ range: [innerHeight, 0], domain: [0, maxValue * 1.1], nice: true });
   }, [innerHeight, data, lines]);
 
-  const dateLabels = useMemo(() => data.map((d) => xAccessor(d).toLocaleDateString("ru-RU", { month: "short", day: "numeric" })), [data, xAccessor]);
+  const dateLabels = useMemo(() => data.map((d) => formatXLabel ? formatXLabel(xAccessor(d)) : xAccessor(d).toLocaleDateString("ru-RU", { month: "short", day: "numeric" })), [data, xAccessor, formatXLabel]);
 
   useEffect(() => {
     const timer = setTimeout(() => { setIsLoaded(true); }, animationDuration);
@@ -1143,7 +1148,7 @@ function ChartInner({ width, height, data, xDataKey, margin, animationDuration, 
   });
 
   return (
-    <ChartProvider value={{ data, xScale, yScale, width, height, innerWidth, innerHeight, margin, columnWidth, tooltipData, setTooltipData, containerRef, lines, isLoaded, animationDuration, xAccessor, dateLabels, selection, clearSelection }}>
+    <ChartProvider value={{ data, xScale, yScale, width, height, innerWidth, innerHeight, margin, columnWidth, tooltipData, setTooltipData, containerRef, lines, isLoaded, animationDuration, xAccessor, dateLabels, formatXLabel, selection, clearSelection }}>
       <svg aria-hidden="true" height={height} width={width}>
         <rect fill="transparent" height={height} width={width} x={0} y={0} />
         <g {...interactionHandlers} style={interactionStyle} transform={`translate(${margin.left},${margin.top})`}>
@@ -1156,7 +1161,7 @@ function ChartInner({ width, height, data, xDataKey, margin, animationDuration, 
   );
 }
 
-export function AreaChart({ data, xDataKey = "date", margin: marginProp, animationDuration = 1100, aspectRatio = "2 / 1", className = "", children }: AreaChartProps) {
+export function AreaChart({ data, xDataKey = "date", formatXLabel, margin: marginProp, animationDuration = 1100, aspectRatio = "2 / 1", className = "", children }: AreaChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const margin = { ...DEFAULT_MARGIN, ...marginProp };
 
@@ -1164,7 +1169,7 @@ export function AreaChart({ data, xDataKey = "date", margin: marginProp, animati
     <div className={cn("relative w-full", className)} ref={containerRef} style={{ aspectRatio, touchAction: "none" }}>
       <ParentSize debounceTime={10}>
         {({ width, height }) => (
-          <ChartInner animationDuration={animationDuration} containerRef={containerRef} data={data} height={height} margin={margin} width={width} xDataKey={xDataKey}>
+          <ChartInner animationDuration={animationDuration} containerRef={containerRef} data={data} formatXLabel={formatXLabel} height={height} margin={margin} width={width} xDataKey={xDataKey}>
             {children}
           </ChartInner>
         )}

@@ -34,6 +34,28 @@ function fmt(n: number): string {
   return String(n);
 }
 
+/** Форматирует дату для подписи графика: для недели — "с 4 по 10 марта", для месяца — "с 1 по 31 марта" */
+function formatChartDateLabel(date: Date, period: Period): string {
+  const opts = { month: 'short' as const, day: 'numeric' as const };
+  if (period === 'day') {
+    return date.toLocaleDateString('ru-RU', opts);
+  }
+  if (period === 'week') {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    d.setDate(diff);
+    const mon = d.getDate();
+    const sun = new Date(d);
+    sun.setDate(sun.getDate() + 6);
+    return `с ${mon} по ${sun.getDate()} ${sun.toLocaleDateString('ru-RU', { month: 'short' })}`;
+  }
+  const d = new Date(date.getFullYear(), date.getMonth(), 1);
+  const last = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+  return `с ${d.getDate()} по ${last.getDate()} ${last.toLocaleDateString('ru-RU', { month: 'short' })}`;
+}
+
 // ─── Viral helpers (same logic as Workspace.tsx) ──────────────────────────────
 
 /** views / days / 1000 — скорость набора просмотров */
@@ -621,7 +643,7 @@ function ReelDetailModal({ reel, onClose, getReelSnapshots }: {
             {chartData.length >= 2 ? (
               <div className="bg-slate-50 rounded-2xl p-4">
                 <p className="text-[13px] font-semibold text-slate-700 mb-3">Динамика просмотров</p>
-                <AreaChart data={chartData} aspectRatio="3 / 1" margin={{ top: 12, right: 12, bottom: 28, left: 36 }}>
+                <AreaChart data={chartData} formatXLabel={(d) => formatChartDateLabel(d, 'day')} aspectRatio="3 / 1" margin={{ top: 12, right: 12, bottom: 28, left: 36 }}>
                   <Grid horizontal numTicksRows={3} />
                   <Area dataKey="views" fill="#6366f1" fillOpacity={0.18} stroke="#6366f1" strokeWidth={2} fadeEdges />
                   <YAxis numTicks={3} formatValue={(v) => fmt(v as number)} />
@@ -1022,7 +1044,7 @@ export function Analytics() {
               </div>
             </div>
             {chartData.length >= 1 ? (
-              <AreaChart data={chartData} aspectRatio="2.2 / 1" margin={{ top: 16, right: 16, bottom: 32, left: 44 }}>
+              <AreaChart data={chartData} formatXLabel={(d) => formatChartDateLabel(d, period)} aspectRatio="2.2 / 1" margin={{ top: 16, right: 16, bottom: 32, left: 44 }}>
                 <Grid horizontal numTicksRows={4} />
                 <Area dataKey="views" fill="#6366f1" fillOpacity={0.13} stroke="#6366f1" strokeWidth={2} fadeEdges />
                 <YAxis numTicks={4} formatValue={(v) => fmt(v as number)} />
@@ -1044,7 +1066,7 @@ export function Analytics() {
           {chartData.length >= 1 && (
             <div className={cn(CARD, "p-4")}>
               <p className="text-[13px] font-semibold text-slate-700 mb-3">Лайки и комментарии</p>
-              <AreaChart data={chartData} aspectRatio="2.2 / 1" margin={{ top: 16, right: 16, bottom: 32, left: 44 }}>
+              <AreaChart data={chartData} formatXLabel={(d) => formatChartDateLabel(d, period)} aspectRatio="2.2 / 1" margin={{ top: 16, right: 16, bottom: 32, left: 44 }}>
                 <Grid horizontal numTicksRows={3} />
                 <Area dataKey="likes" fill="#f43f5e" fillOpacity={0.12} stroke="#f43f5e" strokeWidth={2} fadeEdges />
                 <Area dataKey="comments" fill="#10b981" fillOpacity={0.12} stroke="#10b981" strokeWidth={2} fadeEdges />
@@ -1216,7 +1238,7 @@ export function Analytics() {
                 </div>
               </div>
               {chartData.length >= 1 ? (
-                <AreaChart data={chartData} aspectRatio="1.8 / 1" margin={{ top: 8, right: 8, bottom: 20, left: 32 }}>
+                <AreaChart data={chartData} formatXLabel={(d) => formatChartDateLabel(d, period)} aspectRatio="1.8 / 1" margin={{ top: 8, right: 8, bottom: 20, left: 32 }}>
                   <Grid horizontal numTicksRows={2} />
                   <Area dataKey="views" fill="#6366f1" fillOpacity={0.13} stroke="#6366f1" strokeWidth={1.5} fadeEdges />
                   <YAxis numTicks={2} formatValue={(v) => fmt(v as number)} />
