@@ -942,7 +942,7 @@ export function Analytics() {
   } = useProjectAnalytics(currentProjectId);
   const { stats: responsiblesStats, byRole } = useResponsiblesStats(currentProjectId, reels);
   const folderIdsForRefs = (currentProject?.folders ?? []).map(f => f.id);
-  const { refs, refsWithoutShortcode, linkedShortcodes, refetch: refetchRefsForLinking } = useRefsForLinking(currentProjectId, folderIdsForRefs);
+  const { refs, linkedShortcodes, refetch: refetchRefsForLinking } = useRefsForLinking(currentProjectId, folderIdsForRefs);
   const { updateVideoShortcode, updateVideoResponsible } = useInboxVideos();
   const reelsWithoutRef = reelsWithoutLinkedRef(reels, linkedShortcodes);
   const participants = useParticipantsForResponsibles(currentProjectId);
