@@ -889,7 +889,7 @@ function SetupModal({ onSave, onClose, initial }: { onSave: (u: string) => void;
 type SubView = 'overview' | 'reels' | 'charts' | 'responsibles';
 
 export function Analytics() {
-  const { currentProjectId } = useProjectContext();
+  const { currentProjectId, currentProject } = useProjectContext();
   const {
     reels, snapshots, loading, syncing, stats, instagramUsername, lastSyncAt,
     loadAnalytics, loadProjectConfig, setInstagramUsername, syncReels,
@@ -1231,61 +1231,101 @@ export function Analytics() {
               {refsWithoutShortcode.length > 0 && (
                 <div>
                   <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wide mb-2">Исходники без привязки</p>
-                  <ul className="space-y-1.5">
-                    {refsWithoutShortcode.map((ref) => (
-                      <li key={ref.id} className="flex items-center justify-between gap-2 py-2 px-3 rounded-xl bg-slate-50">
-                        <span className="text-[13px] text-slate-700 truncate flex-1">
-                          {ref.caption?.slice(0, 50) || 'Без названия'}
-                          {(ref.caption?.length ?? 0) > 50 ? '…' : ''}
-                        </span>
-                        {linkReelForRefId === ref.id ? (
-                          <div className="flex flex-col gap-1 max-h-32 overflow-y-auto shrink-0">
-                            {reelsWithoutRef.slice(0, 5).map((r) => (
-                              <button key={r.id} type="button" onClick={() => handleLinkRefToReel(ref.id, r.shortcode)}
-                                className="text-left px-2 py-1.5 rounded-lg bg-white text-[11px] text-slate-600 hover:bg-indigo-50 truncate max-w-[180px]">
-                                {r.caption?.slice(0, 30) || r.shortcode}…
-                              </button>
-                            ))}
-                            <button type="button" onClick={() => setLinkReelForRefId(null)} className="text-[10px] text-slate-400">Отмена</button>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {refsWithoutShortcode.map((ref) => {
+                      const folderName = ref.folder_id ? (currentProject?.folders?.find(f => f.id === ref.folder_id)?.name ?? null) : null;
+                      return (
+                        <div key={ref.id} className="rounded-xl overflow-hidden bg-slate-50 border border-slate-100">
+                          <div className="aspect-[9/16] bg-slate-200 relative">
+                            {ref.thumbnail_url ? (
+                              <img src={ref.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <Film className="w-8 h-8 text-slate-400" />
+                              </div>
+                            )}
                           </div>
-                        ) : (
-                          <button type="button" onClick={() => setLinkReelForRefId(ref.id)} className="shrink-0 px-2 py-1 rounded-lg bg-indigo-100 text-indigo-600 text-[11px] font-medium touch-manipulation">
-                            Привязать
-                          </button>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
+                          <div className="p-2">
+                            <p className="text-[11px] text-slate-600 truncate">{ref.caption?.slice(0, 36) || 'Без названия'}{(ref.caption?.length ?? 0) > 36 ? '…' : ''}</p>
+                            {folderName && <p className="text-[10px] text-slate-400 truncate">📁 {folderName}</p>}
+                            {linkReelForRefId === ref.id ? (
+                              <div className="mt-2 space-y-1 max-h-40 overflow-y-auto">
+                                <p className="text-[10px] font-medium text-slate-500">Выбери ролик:</p>
+                                {reelsWithoutRef.map((r) => (
+                                  <button key={r.id} type="button" onClick={() => handleLinkRefToReel(ref.id, r.shortcode)}
+                                    className="w-full flex items-center gap-2 p-1.5 rounded-lg bg-white hover:bg-indigo-50 transition-colors touch-manipulation text-left">
+                                    {r.thumbnail_url ? (
+                                      <img src={r.thumbnail_url} alt="" className="w-8 h-10 rounded object-cover shrink-0" />
+                                    ) : (
+                                      <div className="w-8 h-10 rounded bg-slate-200 shrink-0 flex items-center justify-center">
+                                        <Film className="w-4 h-4 text-slate-400" />
+                                      </div>
+                                    )}
+                                    <span className="text-[11px] text-slate-600 truncate flex-1">{r.caption?.slice(0, 25) || r.shortcode}</span>
+                                  </button>
+                                ))}
+                                <button type="button" onClick={() => setLinkReelForRefId(null)} className="w-full text-center py-1 text-[10px] text-slate-400 hover:text-slate-600">Отмена</button>
+                              </div>
+                            ) : (
+                              <button type="button" onClick={() => setLinkReelForRefId(ref.id)} className="mt-1.5 w-full py-1.5 rounded-lg bg-indigo-100 text-indigo-600 text-[11px] font-medium touch-manipulation">
+                                Привязать
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
               {reelsWithoutRef.length > 0 && (
                 <div>
                   <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wide mb-2">Ролики без исходника</p>
-                  <ul className="space-y-1.5">
-                    {reelsWithoutRef.slice(0, 10).map((reel) => (
-                      <li key={reel.id} className="flex items-center justify-between gap-2 py-2 px-3 rounded-xl bg-slate-50">
-                        <span className="text-[13px] text-slate-700 truncate flex-1">
-                          {reel.caption?.slice(0, 50) || reel.shortcode}
-                          {(reel.caption?.length ?? 0) > 50 ? '…' : ''}
-                        </span>
-                        {linkRefForReelShortcode === reel.shortcode ? (
-                          <div className="flex flex-col gap-1 max-h-32 overflow-y-auto shrink-0">
-                            {refsWithoutShortcode.slice(0, 5).map((r) => (
-                              <button key={r.id} type="button" onClick={() => handleLinkRefToReel(r.id, reel.shortcode)}
-                                className="text-left px-2 py-1.5 rounded-lg bg-white text-[11px] text-slate-600 hover:bg-indigo-50 truncate max-w-[180px]">
-                                {r.caption?.slice(0, 30) || 'Исходник'}…
-                              </button>
-                            ))}
-                            <button type="button" onClick={() => setLinkRefForReelShortcode(null)} className="text-[10px] text-slate-400">Отмена</button>
-                          </div>
-                        ) : (
-                          <button type="button" onClick={() => setLinkRefForReelShortcode(reel.shortcode)} className="shrink-0 px-2 py-1 rounded-lg bg-indigo-100 text-indigo-600 text-[11px] font-medium touch-manipulation">
-                            Привязать
-                          </button>
-                        )}
-                      </li>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {reelsWithoutRef.map((reel) => (
+                      <div key={reel.id} className="rounded-xl overflow-hidden bg-slate-50 border border-slate-100">
+                        <div className="aspect-[9/16] bg-slate-200 relative">
+                          {reel.thumbnail_url ? (
+                            <img src={reel.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <Film className="w-8 h-8 text-slate-400" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-2">
+                          <p className="text-[11px] text-slate-600 truncate">{reel.caption?.slice(0, 36) || reel.shortcode}{(reel.caption?.length ?? 0) > 36 ? '…' : ''}</p>
+                          {linkRefForReelShortcode === reel.shortcode ? (
+                            <div className="mt-2 space-y-1 max-h-40 overflow-y-auto">
+                              <p className="text-[10px] font-medium text-slate-500">Выбери исходник:</p>
+                              {refsWithoutShortcode.map((r) => {
+                                const folderName = r.folder_id ? (currentProject?.folders?.find(f => f.id === r.folder_id)?.name ?? null) : null;
+                                return (
+                                  <button key={r.id} type="button" onClick={() => handleLinkRefToReel(r.id, reel.shortcode)}
+                                    className="w-full flex items-center gap-2 p-1.5 rounded-lg bg-white hover:bg-indigo-50 transition-colors touch-manipulation text-left">
+                                    {r.thumbnail_url ? (
+                                      <img src={r.thumbnail_url} alt="" className="w-8 h-10 rounded object-cover shrink-0" />
+                                    ) : (
+                                      <div className="w-8 h-10 rounded bg-slate-200 shrink-0 flex items-center justify-center">
+                                        <Film className="w-4 h-4 text-slate-400" />
+                                      </div>
+                                    )}
+                                    <span className="text-[11px] text-slate-600 truncate flex-1">{r.caption?.slice(0, 25) || 'Исходник'}</span>
+                                    {folderName && <span className="text-[9px] text-slate-400">📁</span>}
+                                  </button>
+                                );
+                              })}
+                              <button type="button" onClick={() => setLinkRefForReelShortcode(null)} className="w-full text-center py-1 text-[10px] text-slate-400 hover:text-slate-600">Отмена</button>
+                            </div>
+                          ) : (
+                            <button type="button" onClick={() => setLinkRefForReelShortcode(reel.shortcode)} className="mt-1.5 w-full py-1.5 rounded-lg bg-indigo-100 text-indigo-600 text-[11px] font-medium touch-manipulation">
+                              Привязать
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
             </div>
