@@ -149,30 +149,46 @@ export const VideoGradientCard = ({
           transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
         >
           {isManual ? (
-            /* iOS 26 Liquid Glass–style превью для ручного сценария */
-            <div
-              className="absolute inset-0 flex flex-col items-center justify-center p-4"
-              style={{
-                background: 'linear-gradient(135deg, rgba(148,163,184,0.35) 0%, rgba(100,116,139,0.45) 40%, rgba(71,85,105,0.5) 70%, rgba(51,65,85,0.55) 100%)',
-                backdropFilter: 'blur(20px) saturate(180%)',
-                border: '1px solid rgba(255,255,255,0.18)',
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2), 0 4px 20px rgba(0,0,0,0.12)',
-              }}
-            >
+            /* Только текст: единый «стеклянный» фон + заголовок, без картинки и без «?» */
+            <div className="absolute inset-0 overflow-hidden">
               <div
-                className="w-14 h-14 md:w-16 md:h-16 rounded-2xl flex items-center justify-center mb-3"
+                className="absolute inset-0"
                 style={{
-                  background: 'rgba(255,255,255,0.25)',
-                  backdropFilter: 'blur(16px)',
-                  border: '1px solid rgba(255,255,255,0.35)',
-                  boxShadow: '0 4px 14px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.3)',
+                  background: `
+                    radial-gradient(ellipse 120% 80% at 20% 15%, rgba(255,255,255,0.38) 0%, transparent 55%),
+                    radial-gradient(ellipse 90% 70% at 85% 75%, rgba(148,163,184,0.45) 0%, transparent 50%),
+                    linear-gradient(155deg, #94a3b8 0%, #64748b 38%, #475569 72%, #334155 100%)
+                  `,
                 }}
-              >
-                <PenLine className="w-7 h-7 md:w-8 md:h-8 text-white/95" strokeWidth={2} />
+              />
+              <div
+                className="absolute inset-0 opacity-[0.22]"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+                }}
+              />
+              <div className="absolute inset-0 border border-white/25 pointer-events-none" />
+              <div className="absolute inset-0 flex flex-col items-center justify-center px-4 py-8 md:px-5 z-[1]">
+                <span
+                  className="mb-3 px-2.5 py-1 rounded-pill text-[10px] font-bold uppercase tracking-[0.14em] text-white/85 border border-white/25 bg-black/22 backdrop-blur-md"
+                  style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2)' }}
+                >
+                  Сценарий
+                </span>
+                <p
+                  className="text-center font-bold text-white leading-snug line-clamp-6 max-w-[95%] break-words"
+                  style={{
+                    fontSize: 'clamp(0.95rem, 3.8vw, 1.2rem)',
+                    textShadow: '0 2px 16px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.25)',
+                  }}
+                >
+                  {caption?.trim() || 'Без названия'}
+                </p>
+                <div className="mt-4 flex items-center gap-1 text-white/45">
+                  <PenLine className="w-3.5 h-3.5" strokeWidth={2} />
+                  <span className="text-[10px] font-medium">Без ссылки</span>
+                </div>
               </div>
-              <span className="text-[11px] md:text-xs font-semibold text-white/90 text-center leading-tight line-clamp-3 max-w-full">
-                {caption || 'Сценарий без ссылки'}
-              </span>
             </div>
           ) : (
             <>

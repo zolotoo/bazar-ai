@@ -23,6 +23,16 @@ import { TokenBadge } from './ui/TokenBadge';
 import { GlassFolderIcon } from './ui/GlassFolderIcons';
 import { getTokenCost } from '../constants/tokenCosts';
 import { DuplicateVideoModal } from './ui/DuplicateVideoModal';
+import { GlassFolderPickButton } from './ui/GlassFolderPickButton';
+
+/** Карточка «только сценарий» — без ссылки Instagram (в т.ч. если колонка is_manual ещё не в БД) */
+function isScriptOnlyFeedCard(video: ZoneVideo): boolean {
+  if ((video as any).is_manual) return true;
+  const url = (video.url || '').trim();
+  const hasIg = url.includes('instagram.com');
+  const hasShortcode = !!(video.shortcode && String(video.shortcode).trim());
+  return !hasIg && !hasShortcode;
+}
 
 
 function formatNumber(num?: number): string {
@@ -755,7 +765,7 @@ export function Workspace(_props?: WorkspaceProps) {
       final_link: (selectedVideo as any).final_link,
       links: (selectedVideo as any).links,
       responsibles: (selectedVideo as any).responsibles,
-      is_manual: (selectedVideo as any).is_manual,
+      is_manual: !!(selectedVideo as any).is_manual || isScriptOnlyFeedCard(selectedVideo),
     },
     onBack: () => setSelectedVideo(null),
     onRefreshData: async () => { await refetchInboxVideos(); },
@@ -1376,7 +1386,7 @@ export function Workspace(_props?: WorkspaceProps) {
             {/* Добавить рилс по ссылке или вручную */}
             <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-white/55">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                  <div className="flex gap-2 flex-1 sm:min-w-[280px]">
+                  <div className="flex flex-wrap gap-2 flex-1 sm:min-w-[280px] items-stretch">
                     <input
                       type="url"
                       value={reelLinkUrl}
@@ -1384,9 +1394,7 @@ export function Workspace(_props?: WorkspaceProps) {
                       placeholder="Ссылка на рилс (instagram.com/reel/...)"
                       className="flex-1 min-w-0 px-4 py-2.5 rounded-2xl border border-white/60 bg-white/82 backdrop-blur-glass text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200/70 focus:border-white/70 shadow-glass-sm"
                     />
-                    {/* Разделённая кнопка: Добавить + папка */}
-                    <div className="flex rounded-2xl overflow-hidden border border-white/60 bg-white/82 shadow-glass-sm">
-                      <button
+                    <button
                         onClick={async () => {
                           const url = reelLinkUrl.trim();
                           if (!url || !url.includes('instagram.com')) {
@@ -1442,27 +1450,20 @@ export function Workspace(_props?: WorkspaceProps) {
                           }
                         }}
                         disabled={isAddingReelByLink || !reelLinkUrl.trim()}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-l-2xl bg-slate-700 hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 text-white text-sm font-medium transition-colors shrink-0"
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-700 hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 text-white text-sm font-semibold transition-colors shrink-0 shadow-glass-sm touch-manipulation"
                       >
                         {isAddingReelByLink ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
                         Добавить
                         <TokenBadge tokens={getTokenCost('link_add')} />
-                      </button>
-                      <div className="relative group">
-                        <select
-                          value={reelAddToFolderId ?? ''}
-                          onChange={e => setReelAddToFolderId(e.target.value || null)}
-                          className="h-full pl-3 pr-8 py-2.5 bg-white/90 border-l border-white/60 text-slate-700 text-sm font-medium cursor-pointer appearance-none focus:outline-none min-w-[100px]"
-                          title="Папка для нового рилса"
-                        >
-                          <option value="">Без папки</option>
-                          {folderConfigs.map(f => (
-                            <option key={f.id ?? ''} value={f.id ?? ''}>{f.title}</option>
-                          ))}
-                        </select>
-                        <FolderOpen className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" strokeWidth={2.5} />
-                      </div>
-                    </div>
+                    </button>
+                    <GlassFolderPickButton
+                      folders={folderConfigs
+                        .filter((f): f is typeof f & { id: string } => f.id != null)
+                        .map((f) => ({ id: f.id, title: f.title, color: f.color, iconType: f.iconType }))}
+                      value={reelAddToFolderId}
+                      onChange={setReelAddToFolderId}
+                      disabled={isAddingReelByLink}
+                    />
                   </div>
                   <button
                     onClick={() => setShowAddManualModal(true)}
@@ -1521,7 +1522,7 @@ export function Workspace(_props?: WorkspaceProps) {
                     viralCoef={finalViralCoef}
                     viralMultiplier={viralMult}
                     folderBadge={folderBadge}
-                    isManual={!!(video as any).is_manual}
+                    isManual={isScriptOnlyFeedCard(video)}
                     transcriptStatus={video.transcript_status}
                     onClick={() => setSelectedVideo(video)}
                     showFolderMenu={cardMenuVideoId === video.id}
@@ -1592,7 +1593,7 @@ export function Workspace(_props?: WorkspaceProps) {
                           )}
                         </div>
                         
-                        {!((video as any).is_manual) && video.url && (
+                        {!isScriptOnlyFeedCard(video) && video.url && (
                         <a
                           href={video.url}
                           target="_blank"
@@ -1672,7 +1673,7 @@ export function Workspace(_props?: WorkspaceProps) {
                     </button>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                    <div className="flex gap-2 flex-1 sm:min-w-[280px]">
+                    <div className="flex flex-wrap gap-2 flex-1 sm:min-w-[280px] items-stretch">
                       <input
                         type="url"
                         value={carouselLinkUrl}
@@ -1680,9 +1681,7 @@ export function Workspace(_props?: WorkspaceProps) {
                         placeholder="Ссылка на пост с каруселью (instagram.com/p/...)"
                         className="flex-1 min-w-0 px-4 py-2.5 rounded-2xl border border-white/60 bg-white/82 backdrop-blur-glass text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200/70 focus:border-white/70 shadow-glass-sm"
                       />
-                      {/* Разделённая кнопка: Добавить + папка */}
-                      <div className="flex rounded-2xl overflow-hidden border border-white/60 bg-white/82 shadow-glass-sm">
-                        <button
+                      <button
                           onClick={async () => {
                             const url = carouselLinkUrl.trim();
                             if (!url || !url.includes('instagram.com')) {
@@ -1733,27 +1732,20 @@ export function Workspace(_props?: WorkspaceProps) {
                             }
                           }}
                           disabled={isAddingCarouselByLink || !carouselLinkUrl.trim() || !canAfford(getTokenCost('add_carousel'))}
-                          className="flex items-center gap-2 px-4 py-2.5 rounded-l-2xl bg-slate-700 hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 text-white text-sm font-medium transition-colors shrink-0"
+                          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-700 hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 text-white text-sm font-semibold transition-colors shrink-0 shadow-glass-sm touch-manipulation"
                         >
                           {isAddingCarouselByLink ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
                           Добавить
                           <TokenBadge tokens={getTokenCost('add_carousel')} />
                         </button>
-                        <div className="relative group">
-                          <select
-                            value={carouselAddToFolderId ?? ''}
-                            onChange={e => setCarouselAddToFolderId(e.target.value || null)}
-                            className="h-full pl-3 pr-8 py-2.5 bg-white/90 border-l border-white/60 text-slate-700 text-sm font-medium cursor-pointer appearance-none focus:outline-none min-w-[100px]"
-                            title="Папка для новой карусели"
-                          >
-                            <option value="">Без папки</option>
-                            {carouselFolderConfigs.map(f => (
-                              <option key={f.id ?? ''} value={f.id ?? ''}>{f.title}</option>
-                            ))}
-                          </select>
-                          <FolderOpen className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" strokeWidth={2.5} />
-                        </div>
-                      </div>
+                        <GlassFolderPickButton
+                          folders={carouselFolderConfigs
+                            .filter((f): f is typeof f & { id: string } => f.id != null)
+                            .map((f) => ({ id: f.id, title: f.title, color: f.color, iconType: f.iconType }))}
+                          value={carouselAddToFolderId}
+                          onChange={setCarouselAddToFolderId}
+                          disabled={isAddingCarouselByLink}
+                        />
                     </div>
                   </div>
                 </div>
@@ -2168,19 +2160,17 @@ export function Workspace(_props?: WorkspaceProps) {
                   disabled={isAddingManual}
                 />
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <label className="text-sm font-medium text-slate-700">Папка:</label>
-                <select
-                  value={reelAddToFolderId ?? ''}
-                  onChange={e => setReelAddToFolderId(e.target.value || null)}
-                  className="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm"
+              <div className="flex flex-col gap-2 shrink-0">
+                <span className="text-sm font-medium text-slate-700">Папка</span>
+                <GlassFolderPickButton
+                  className="w-full"
+                  folders={folderConfigs
+                    .filter((f): f is typeof f & { id: string } => f.id != null)
+                    .map((f) => ({ id: f.id, title: f.title, color: f.color, iconType: f.iconType }))}
+                  value={reelAddToFolderId}
+                  onChange={setReelAddToFolderId}
                   disabled={isAddingManual}
-                >
-                  <option value="">Без папки</option>
-                  {folderConfigs.map(f => (
-                    <option key={f.id ?? ''} value={f.id ?? ''}>{f.title}</option>
-                  ))}
-                </select>
+                />
               </div>
               <button
                 onClick={async () => {

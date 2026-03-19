@@ -1172,23 +1172,42 @@ export function VideoDetailPage({ video, onBack, onRefreshData }: VideoDetailPag
         <div className="flex flex-col md:flex-row md:flex-1 gap-4 md:min-h-0 md:overflow-hidden">
           {/* Left: видео 9:16 + папка + статистика */}
           <div className="flex-shrink-0 flex flex-col gap-3 md:overflow-y-auto custom-scrollbar-light w-full md:w-auto md:min-w-[256px] md:max-w-[min(256px,28vw)]">
-            {/* Видео 9:16 — для ручных видео показываем placeholder сценария */}
+            {/* Видео 9:16 — для сценария без ссылки: тот же стиль фона, что в ленте */}
             <div className="flex justify-center flex-shrink-0">
               <div 
                 className="relative rounded-2xl overflow-hidden shadow-[0_18px_40px_rgba(15,23,42,0.18)] border border-white/65 bg-black"
                 style={{ aspectRatio: '9/16', width: 'min(100%, 220px)' }}
               >
               {video.is_manual ? (
-                <div
-                  className="absolute inset-0 flex flex-col items-center justify-center p-4"
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(148,163,184,0.35) 0%, rgba(100,116,139,0.45) 40%, rgba(71,85,105,0.5) 70%, rgba(51,65,85,0.55) 100%)',
-                  }}
-                >
-                  <div className="w-12 h-12 rounded-2xl bg-white/25 flex items-center justify-center mb-2">
-                    <PenLine className="w-6 h-6 text-white" strokeWidth={2} />
+                <div className="absolute inset-0 overflow-hidden">
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: `
+                        radial-gradient(ellipse 120% 80% at 20% 15%, rgba(255,255,255,0.38) 0%, transparent 55%),
+                        radial-gradient(ellipse 90% 70% at 85% 75%, rgba(148,163,184,0.45) 0%, transparent 50%),
+                        linear-gradient(155deg, #94a3b8 0%, #64748b 38%, #475569 72%, #334155 100%)
+                      `,
+                    }}
+                  />
+                  <div
+                    className="absolute inset-0 opacity-[0.18]"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+                    }}
+                  />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center px-3 py-6 z-[1]">
+                    <span className="mb-2 px-2 py-0.5 rounded-pill text-[9px] font-bold uppercase tracking-widest text-white/85 border border-white/25 bg-black/22 backdrop-blur-md">
+                      Сценарий
+                    </span>
+                    <p className="text-center text-sm font-bold text-white leading-snug line-clamp-5 break-words px-1" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.35)' }}>
+                      {video.title?.trim() || video.caption?.trim() || 'Без названия'}
+                    </p>
+                    <div className="mt-3 flex items-center gap-1 text-white/50">
+                      <PenLine className="w-3 h-3" strokeWidth={2} />
+                      <span className="text-[9px] font-medium">Без ссылки</span>
+                    </div>
                   </div>
-                  <span className="text-white/90 text-xs font-medium text-center">Сценарий без ссылки</span>
                 </div>
               ) : showVideo && directVideoUrl && !videoLoadError ? (
                 <video
