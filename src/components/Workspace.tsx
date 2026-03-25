@@ -947,7 +947,7 @@ export function Workspace(_props?: WorkspaceProps) {
           <motion.div
             key="carousel-detail-overlay"
             className={cn(
-              "fixed inset-0 z-[100] flex overflow-y-auto",
+              "fixed inset-0 z-[20000] flex overflow-y-auto",
               "justify-center items-end md:items-center",
               "p-0 md:p-6"
             )}
@@ -982,7 +982,7 @@ export function Workspace(_props?: WorkspaceProps) {
           <motion.div
             key="video-detail-overlay"
             className={cn(
-              "fixed inset-0 z-[100] flex overflow-y-auto",
+              "fixed inset-0 z-[20000] flex overflow-y-auto",
               "justify-center items-end md:items-center",
               "p-0 md:p-6"
             )}
@@ -1435,7 +1435,7 @@ export function Workspace(_props?: WorkspaceProps) {
                       {showSortDropdown && (
                         <>
                           <div className="fixed inset-0 z-[40]" onClick={() => setShowSortDropdown(false)} />
-                          <div className="absolute right-0 top-full mt-1.5 z-[41] min-w-[170px] rounded-2xl bg-white/92 backdrop-blur-xl border border-white/60 shadow-glass p-1.5 animate-in fade-in zoom-in-95 duration-150">
+                          <div className="absolute right-0 top-full mt-1.5 z-[41] min-w-[170px] rounded-2xl bg-white border border-slate-200 shadow-xl p-1.5 animate-in fade-in zoom-in-95 duration-150">
                             {reelSortOptions.map(({ value, label, icon: Icon }) => {
                               const active = sortBy === value;
                               return (
@@ -1444,7 +1444,7 @@ export function Workspace(_props?: WorkspaceProps) {
                                   onClick={() => { setSortBy(value as typeof sortBy); setShowSortDropdown(false); }}
                                   className={cn(
                                     "w-full flex items-center gap-2.5 px-3 py-2.5 min-h-[40px] rounded-xl text-sm font-medium text-left transition-colors touch-manipulation",
-                                    active ? "bg-white/88 border border-white/60 shadow-glass-sm text-slate-800" : "hover:bg-white/65 text-slate-700"
+                                    active ? "bg-slate-100 text-slate-900" : "hover:bg-slate-50 text-slate-700"
                                   )}
                                 >
                                   <Icon className="w-4 h-4 flex-shrink-0 text-slate-500" strokeWidth={2.5} />
@@ -1535,6 +1535,7 @@ export function Workspace(_props?: WorkspaceProps) {
                         <TokenBadge tokens={getTokenCost('link_add')} />
                     </button>
                     <GlassFolderPickButton
+                      variant="light"
                       folders={folderConfigs
                         .filter((f): f is typeof f & { id: string } => f.id != null)
                         .map((f) => ({ id: f.id, title: f.title, color: f.color, iconType: f.iconType }))}
@@ -1818,6 +1819,7 @@ export function Workspace(_props?: WorkspaceProps) {
                           <TokenBadge tokens={getTokenCost('add_carousel')} />
                         </button>
                         <GlassFolderPickButton
+                          variant="light"
                           folders={carouselFolderConfigs
                             .filter((f): f is typeof f & { id: string } => f.id != null)
                             .map((f) => ({ id: f.id, title: f.title, color: f.color, iconType: f.iconType }))}
@@ -1852,7 +1854,7 @@ export function Workspace(_props?: WorkspaceProps) {
                           {showCarouselSortDropdown && (
                             <>
                               <div className="fixed inset-0 z-[40]" onClick={() => setShowCarouselSortDropdown(false)} />
-                              <div className="absolute left-0 top-full mt-1.5 z-[41] min-w-[160px] rounded-2xl bg-white/92 backdrop-blur-xl border border-white/60 shadow-glass p-1.5 animate-in fade-in zoom-in-95 duration-150">
+                              <div className="absolute left-0 top-full mt-1.5 z-[41] min-w-[160px] rounded-2xl bg-white border border-slate-200 shadow-xl p-1.5 animate-in fade-in zoom-in-95 duration-150">
                                 {carouselSortOptions.map(({ value, label, icon: Icon }) => {
                                   const active = carouselSortBy === value;
                                   return (
@@ -1861,7 +1863,7 @@ export function Workspace(_props?: WorkspaceProps) {
                                       onClick={() => { setCarouselSortBy(value); setShowCarouselSortDropdown(false); }}
                                       className={cn(
                                         "w-full flex items-center gap-2.5 px-3 py-2.5 min-h-[40px] rounded-xl text-sm font-medium text-left transition-colors touch-manipulation",
-                                        active ? "bg-white/88 border border-white/60 shadow-glass-sm text-slate-800" : "hover:bg-white/65 text-slate-700"
+                                        active ? "bg-slate-100 text-slate-900" : "hover:bg-slate-50 text-slate-700"
                                       )}
                                     >
                                       <Icon className="w-4 h-4 flex-shrink-0 text-slate-500" strokeWidth={2.5} />
