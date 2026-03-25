@@ -1118,7 +1118,7 @@ function ReelDetailModal({ reel, onClose, getReelSnapshots, allReels, avgBottom3
               <Trophy className="w-5 h-5 text-amber-500" />
             </div>
             <div className="flex-1 overflow-y-auto">
-              <div className="max-w-2xl mx-auto px-4 py-4 space-y-6">
+              <div className="max-w-5xl mx-auto px-4 py-4 space-y-6">
                 {/* Топ по просмотрам */}
                 <div>
                   <div className="flex items-center gap-2 mb-3">
@@ -1341,6 +1341,35 @@ export function Analytics() {
     ? 'просмотры роликов по дате выпуска'
     : snapshots.length === 0 ? null : null;
 
+  const countChartData = useMemo(() => {
+    const getBucketKey = (date: Date) => {
+      if (period === 'day') return date.toISOString().slice(0, 10);
+      if (period === 'week') {
+        const d = new Date(date);
+        d.setHours(0, 0, 0, 0);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        d.setDate(diff);
+        return d.toISOString().slice(0, 10);
+      }
+      return date.toISOString().slice(0, 7);
+    };
+    const bucketMap = new Map<string, { count: number; date: Date }>();
+    for (const reel of reels) {
+      if (!reel.taken_at) continue;
+      const date = new Date(reel.taken_at * 1000);
+      const key = getBucketKey(date);
+      const existing = bucketMap.get(key);
+      bucketMap.set(key, existing
+        ? { count: existing.count + 1, date: existing.date }
+        : { count: 1, date }
+      );
+    }
+    return Array.from(bucketMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([, v]) => ({ date: new Date(v.date.toISOString().slice(0, 10)), count: v.count }));
+  }, [reels, period]);
+
   const sortedReels = useMemo(() => {
     return [...reels].sort((a, b) => {
       if (sortBy === 'date') return (b.taken_at || 0) - (a.taken_at || 0);
@@ -1422,7 +1451,7 @@ export function Analytics() {
   if (loading) {
     return (
       <div className="flex-1 min-h-0 overflow-y-auto bg-[#f0f0f5]">
-        <div className="max-w-2xl mx-auto px-4 pt-6 pb-10">
+        <div className="max-w-5xl mx-auto px-4 pt-6 pb-10">
           {Header}
           <div className="grid grid-cols-2 gap-3">
             {[1,2,3,4,5,6].map(i => (
@@ -1438,7 +1467,7 @@ export function Analytics() {
   if (!hasAccount) {
     return (
       <div className="flex-1 min-h-0 overflow-y-auto bg-[#f0f0f5]">
-        <div className="max-w-2xl mx-auto px-4 pt-6 pb-10">
+        <div className="max-w-5xl mx-auto px-4 pt-6 pb-10">
           {Header}
           <EmptyState onSetup={() => setShowSetupModal(true)} />
         </div>
@@ -1453,7 +1482,7 @@ export function Analytics() {
   if (!hasData) {
     return (
       <div className="flex-1 min-h-0 overflow-y-auto bg-[#f0f0f5]">
-        <div className="max-w-2xl mx-auto px-4 pt-6 pb-10">
+        <div className="max-w-5xl mx-auto px-4 pt-6 pb-10">
           {Header}
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-16 h-16 rounded-3xl bg-white/80 border border-white/60 flex items-center justify-center mb-4 shadow-sm">
@@ -1477,7 +1506,7 @@ export function Analytics() {
   if (subView === 'reels') {
     return (
       <div className="flex-1 min-h-0 overflow-y-auto bg-[#f0f0f5]">
-        <div className="max-w-2xl mx-auto px-4 pt-6 pb-24">
+        <div className="max-w-5xl mx-auto px-4 pt-6 pb-24">
           {Header}
           {/* Sort + layout controls */}
           <div className="flex items-center justify-between mb-4">
@@ -1532,7 +1561,7 @@ export function Analytics() {
   if (subView === 'charts') {
     return (
       <div className="flex-1 min-h-0 overflow-y-auto bg-[#f0f0f5]">
-        <div className="max-w-2xl mx-auto px-4 pt-6 pb-24 space-y-4">
+        <div className="max-w-5xl mx-auto px-4 pt-6 pb-24 space-y-4">
           {Header}
           {/* Controls */}
           <div className="flex gap-2 flex-wrap">
@@ -1552,10 +1581,10 @@ export function Analytics() {
             {effectiveChartData.length >= 1 ? (
               <AreaChart data={effectiveChartData} formatXLabel={(d) => formatChartDateLabel(d, period)} aspectRatio="2.2 / 1" margin={{ top: 16, right: 20, bottom: 36, left: 44 }}>
                 <Grid horizontal numTicksRows={4} />
-                <Area dataKey="views" fill="#6366f1" fillOpacity={0.13} stroke="#6366f1" strokeWidth={2} fadeEdges />
+                <Area dataKey="views" fill="#6b7280" fillOpacity={0.13} stroke="#6b7280" strokeWidth={2} fadeEdges />
                 <YAxis numTicks={4} formatValue={(v) => fmt(v as number)} />
                 <XAxis numTicks={5} />
-                <ChartTooltip rows={(p) => [{ color: '#6366f1', label: 'Просмотры', value: (p.views as number) ?? 0 }]} />
+                <ChartTooltip rows={(p) => [{ color: '#6b7280', label: 'Просмотры', value: (p.views as number) ?? 0 }]} />
               </AreaChart>
             ) : (
               <div className="h-36 flex flex-col items-center justify-center text-center px-4">
@@ -1568,20 +1597,42 @@ export function Analytics() {
               </div>
             )}
           </div>
-          {/* Likes + Comments */}
+          {/* Likes */}
           {effectiveChartData.length >= 1 && (
             <div className={cn(CARD, "p-4")}>
-              <p className="text-[13px] font-semibold text-slate-700 mb-3">Лайки и комментарии</p>
+              <p className="text-[13px] font-semibold text-slate-700 mb-3">Лайки</p>
               <AreaChart data={effectiveChartData} formatXLabel={(d) => formatChartDateLabel(d, period)} aspectRatio="2.2 / 1" margin={{ top: 16, right: 20, bottom: 36, left: 44 }}>
                 <Grid horizontal numTicksRows={3} />
-                <Area dataKey="likes" fill="#f43f5e" fillOpacity={0.12} stroke="#f43f5e" strokeWidth={2} fadeEdges />
-                <Area dataKey="comments" fill="#10b981" fillOpacity={0.12} stroke="#10b981" strokeWidth={2} fadeEdges />
+                <Area dataKey="likes" fill="#881337" fillOpacity={0.12} stroke="#881337" strokeWidth={2} fadeEdges />
                 <YAxis numTicks={3} formatValue={(v) => fmt(v as number)} />
                 <XAxis numTicks={5} />
-                <ChartTooltip rows={(p) => [
-                  { color: '#f43f5e', label: 'Лайки', value: (p.likes as number) ?? 0 },
-                  { color: '#10b981', label: 'Комментарии', value: (p.comments as number) ?? 0 },
-                ]} />
+                <ChartTooltip rows={(p) => [{ color: '#881337', label: 'Лайки', value: (p.likes as number) ?? 0 }]} />
+              </AreaChart>
+            </div>
+          )}
+          {/* Comments */}
+          {effectiveChartData.length >= 1 && (
+            <div className={cn(CARD, "p-4")}>
+              <p className="text-[13px] font-semibold text-slate-700 mb-3">Комментарии</p>
+              <AreaChart data={effectiveChartData} formatXLabel={(d) => formatChartDateLabel(d, period)} aspectRatio="2.2 / 1" margin={{ top: 16, right: 20, bottom: 36, left: 44 }}>
+                <Grid horizontal numTicksRows={3} />
+                <Area dataKey="comments" fill="#1e3a8a" fillOpacity={0.12} stroke="#1e3a8a" strokeWidth={2} fadeEdges />
+                <YAxis numTicks={3} formatValue={(v) => fmt(v as number)} />
+                <XAxis numTicks={5} />
+                <ChartTooltip rows={(p) => [{ color: '#1e3a8a', label: 'Комментарии', value: (p.comments as number) ?? 0 }]} />
+              </AreaChart>
+            </div>
+          )}
+          {/* Count of released videos */}
+          {countChartData.length >= 1 && (
+            <div className={cn(CARD, "p-4")}>
+              <p className="text-[13px] font-semibold text-slate-700 mb-3">Вышедшие ролики</p>
+              <AreaChart data={countChartData} formatXLabel={(d) => formatChartDateLabel(d, period)} aspectRatio="2.2 / 1" margin={{ top: 16, right: 20, bottom: 36, left: 44 }}>
+                <Grid horizontal numTicksRows={3} />
+                <Area dataKey="count" fill="#18181b" fillOpacity={0.12} stroke="#18181b" strokeWidth={2} fadeEdges />
+                <YAxis numTicks={3} formatValue={(v) => String(v as number)} />
+                <XAxis numTicks={5} />
+                <ChartTooltip rows={(p) => [{ color: '#18181b', label: 'Роликов', value: (p.count as number) ?? 0 }]} />
               </AreaChart>
             </div>
           )}
@@ -1620,7 +1671,7 @@ export function Analytics() {
 
     return (
       <div className="flex-1 min-h-0 overflow-y-auto bg-[#f0f0f5]">
-        <div className="max-w-2xl mx-auto px-4 pt-6 pb-24 space-y-4">
+        <div className="max-w-5xl mx-auto px-4 pt-6 pb-24 space-y-4">
           {Header}
           <p className="text-[13px] text-slate-500">
             Сумма просмотров роликов, у которых указан ответственный. Заполняйте логины в карточках видео в ленте.
@@ -1877,7 +1928,7 @@ export function Analytics() {
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto bg-[#f0f0f5]">
-      <div className="max-w-2xl mx-auto px-4 pt-6 pb-10">
+      <div className="max-w-5xl mx-auto px-4 pt-6 pb-10">
         {Header}
 
         <motion.div
