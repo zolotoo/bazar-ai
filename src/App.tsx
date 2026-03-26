@@ -9,6 +9,7 @@ import { AIScriptwriter } from './components/AIScriptwriter';
 import { ProfilePage } from './components/ProfilePage';
 import { Analytics } from './components/Analytics';
 import { UsageStats } from './components/UsageStats';
+import { CarouselEditor } from './components/carousel-editor/CarouselEditor';
 import { IncomingVideosDrawer } from './components/sidebar/IncomingVideosDrawer';
 import { SearchPanel, HIDE_SEARCH_BY_WORD } from './components/ui/SearchPanel';
 import { ProjectMembersModal } from './components/ui/ProjectMembersModal';
@@ -25,8 +26,9 @@ import { useInboxVideos } from './hooks/useInboxVideos';
 import { ProjectProvider, useProjectContext } from './contexts/ProjectContext';
 import type { Project } from './hooks/useProjects';
 import { 
-  Settings, Search, LayoutGrid, User, LogOut, 
-  Radar, Plus, X, Palette, Sparkles, Trash2, Users, Menu, Home, BarChart2, Activity
+  Settings, Search, LayoutGrid, User, LogOut,
+  Radar, Plus, X, Palette, Sparkles, Trash2, Users, Menu, Home, BarChart2, Activity,
+  Image as ImageIcon
 } from 'lucide-react';
 import { GlassFolderIcon } from './components/ui/GlassFolderIcons';
 import { MobileBottomBar, type MobileTabId } from './components/ui/MobileBottomBar';
@@ -34,7 +36,7 @@ import { cn } from './utils/cn';
 import { Toaster, toast } from 'sonner';
 
 
-type ViewMode = 'dashboard' | 'workspace' | 'canvas' | 'history' | 'profile' | 'scriptwriter' | 'analytics' | 'usage';
+type ViewMode = 'dashboard' | 'workspace' | 'canvas' | 'history' | 'profile' | 'scriptwriter' | 'analytics' | 'usage' | 'carousel-editor';
 type SearchTab = 'search' | 'link' | 'radar';
 
 // Цвета для проектов
@@ -665,6 +667,12 @@ function AppContent() {
                   onClick={() => setViewMode('scriptwriter')}
                   isActive={viewMode === 'scriptwriter'}
                 />
+                <SidebarLink
+                  icon={<ImageIcon className="w-4 h-4" strokeWidth={2.5} />}
+                  label="Конструктор"
+                  onClick={() => setViewMode('carousel-editor')}
+                  isActive={viewMode === 'carousel-editor'}
+                />
                 {isAdmin && (
                   <SidebarLink
                     icon={<Activity className="w-4 h-4" strokeWidth={2.5} />}
@@ -811,6 +819,7 @@ function AppContent() {
             {viewMode === 'history' && <History />}
             {viewMode === 'profile' && <ProfilePage />}
             {viewMode === 'usage' && isAdmin && <UsageStats />}
+            {viewMode === 'carousel-editor' && <CarouselEditor />}
           </motion.div>
         </AnimatePresence>
       </div>
