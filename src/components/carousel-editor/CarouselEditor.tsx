@@ -430,10 +430,10 @@ function FreeEditor({ onBack }: { onBack: () => void }) {
             )}
           </div>
 
-          {/* Hint: double-click to edit */}
+          {/* Hint: drag handle */}
           {selectedEl?.type === 'text' && editingTextId !== selectedId && (
             <p className="text-[12px] text-[#1a1a18]/40 text-center">
-              Двойное нажатие чтобы редактировать текст
+              Нажми «Двигай» чтобы переместить
             </p>
           )}
         </div>
