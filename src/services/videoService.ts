@@ -316,7 +316,7 @@ export async function getHashtagReels(hashtag: string): Promise<InstagramSearchR
     // На localhost используем Vite proxy /api-v1/hashtag/
     const endpoint = isDev 
       ? `${API_BASE_URL}/hashtag/${encodeURIComponent(cleanHashtag)}/`
-      : `/api/hashtagreels?hashtag=${encodeURIComponent(cleanHashtag)}`;
+      : `/api/reels-search?type=hashtag&hashtag=${encodeURIComponent(cleanHashtag)}`;
     
     console.log('Hashtag endpoint:', endpoint);
     
@@ -519,7 +519,7 @@ export async function searchInstagramVideos(query: string): Promise<InstagramSea
     // На localhost используем Vite proxy /api-v1/searchreels
     const endpoint = isDev 
       ? `/api-v1/searchreels/?keyword=${encodeURIComponent(cleanQuery)}&url_embed_safe=true`
-      : `/api/searchreels?keyword=${encodeURIComponent(cleanQuery)}`;
+      : `/api/reels-search?keyword=${encodeURIComponent(cleanQuery)}`;
     
     try {
       console.log('Making request to:', endpoint);
