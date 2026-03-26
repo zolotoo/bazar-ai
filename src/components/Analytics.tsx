@@ -1370,6 +1370,17 @@ export function Analytics() {
       .map(([, v]) => ({ date: new Date(v.date.toISOString().slice(0, 10)), count: v.count }));
   }, [reels, period]);
 
+  // Обрезаем ведущие нули — убираем пустые периоды в начале графика
+  const trimmedChartData = useMemo(() => {
+    if (!effectiveChartData.length) return effectiveChartData;
+    const firstNonZero = effectiveChartData.findIndex(d =>
+      ((d as { views?: number }).views || 0) > 0 ||
+      ((d as { likes?: number }).likes || 0) > 0 ||
+      ((d as { comments?: number }).comments || 0) > 0
+    );
+    return firstNonZero > 0 ? effectiveChartData.slice(firstNonZero) : effectiveChartData;
+  }, [effectiveChartData]);
+
   const sortedReels = useMemo(() => {
     return [...reels].sort((a, b) => {
       if (sortBy === 'date') return (b.taken_at || 0) - (a.taken_at || 0);
@@ -1578,13 +1589,13 @@ export function Analytics() {
                 )}
               </div>
             </div>
-            {effectiveChartData.length >= 1 ? (
-              <AreaChart data={effectiveChartData} formatXLabel={(d) => formatChartDateLabel(d, period)} aspectRatio="2.2 / 1" margin={{ top: 16, right: 20, bottom: 36, left: 44 }}>
+            {trimmedChartData.length >= 1 ? (
+              <AreaChart data={trimmedChartData} formatXLabel={(d) => formatChartDateLabel(d, period)} aspectRatio="2.2 / 1" margin={{ top: 16, right: 20, bottom: 36, left: 44 }}>
                 <Grid horizontal numTicksRows={4} />
-                <Area dataKey="views" fill="#6b7280" fillOpacity={0.13} stroke="#6b7280" strokeWidth={2} fadeEdges />
+                <Area dataKey="views" fill="#f97316" fillOpacity={0.13} stroke="#f97316" strokeWidth={2} fadeEdges />
                 <YAxis numTicks={4} formatValue={(v) => fmt(v as number)} />
                 <XAxis numTicks={5} />
-                <ChartTooltip rows={(p) => [{ color: '#6b7280', label: 'Просмотры', value: (p.views as number) ?? 0 }]} />
+                <ChartTooltip rows={(p) => [{ color: '#f97316', label: 'Просмотры', value: (p.views as number) ?? 0 }]} />
               </AreaChart>
             ) : (
               <div className="h-36 flex flex-col items-center justify-center text-center px-4">
@@ -1597,33 +1608,24 @@ export function Analytics() {
               </div>
             )}
           </div>
-          {/* Likes */}
-          {effectiveChartData.length >= 1 && (
+          {/* Likes + Comments combined */}
+          {trimmedChartData.length >= 1 && (
             <div className={cn(CARD, "p-4")}>
-              <p className="text-[13px] font-semibold text-slate-700 mb-3">Лайки</p>
-              <AreaChart data={effectiveChartData} formatXLabel={(d) => formatChartDateLabel(d, period)} aspectRatio="2.2 / 1" margin={{ top: 16, right: 20, bottom: 36, left: 44 }}>
+              <p className="text-[13px] font-semibold text-slate-700 mb-3">Лайки и комментарии</p>
+              <AreaChart data={trimmedChartData} formatXLabel={(d) => formatChartDateLabel(d, period)} aspectRatio="2.2 / 1" margin={{ top: 16, right: 20, bottom: 36, left: 44 }}>
                 <Grid horizontal numTicksRows={3} />
                 <Area dataKey="likes" fill="#881337" fillOpacity={0.12} stroke="#881337" strokeWidth={2} fadeEdges />
-                <YAxis numTicks={3} formatValue={(v) => fmt(v as number)} />
-                <XAxis numTicks={5} />
-                <ChartTooltip rows={(p) => [{ color: '#881337', label: 'Лайки', value: (p.likes as number) ?? 0 }]} />
-              </AreaChart>
-            </div>
-          )}
-          {/* Comments */}
-          {effectiveChartData.length >= 1 && (
-            <div className={cn(CARD, "p-4")}>
-              <p className="text-[13px] font-semibold text-slate-700 mb-3">Комментарии</p>
-              <AreaChart data={effectiveChartData} formatXLabel={(d) => formatChartDateLabel(d, period)} aspectRatio="2.2 / 1" margin={{ top: 16, right: 20, bottom: 36, left: 44 }}>
-                <Grid horizontal numTicksRows={3} />
                 <Area dataKey="comments" fill="#1e3a8a" fillOpacity={0.12} stroke="#1e3a8a" strokeWidth={2} fadeEdges />
                 <YAxis numTicks={3} formatValue={(v) => fmt(v as number)} />
                 <XAxis numTicks={5} />
-                <ChartTooltip rows={(p) => [{ color: '#1e3a8a', label: 'Комментарии', value: (p.comments as number) ?? 0 }]} />
+                <ChartTooltip rows={(p) => [
+                  { color: '#881337', label: 'Лайки', value: (p.likes as number) ?? 0 },
+                  { color: '#1e3a8a', label: 'Комментарии', value: (p.comments as number) ?? 0 },
+                ]} />
               </AreaChart>
             </div>
           )}
-          {/* Count of released videos */}
+          {/* Count of released videos — always by taken_at (release_week logic) */}
           {countChartData.length >= 1 && (
             <div className={cn(CARD, "p-4")}>
               <p className="text-[13px] font-semibold text-slate-700 mb-3">Вышедшие ролики</p>
