@@ -1048,7 +1048,8 @@ async function handleAnalyzeCarousel(req, res) {
   }
 
   // ── Шаг 2: генерируем фон через OpenRouter gemini-2.5-flash-image ───────
-  // OpenRouter всегда стримит для image-моделей — читаем SSE и собираем финальный чанк
+  // user_agent "node" блокирует image gen у Google — ставим browser User-Agent
+  // Без modalities, stream: true, парсим SSE
   try {
     const imgGenRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -1057,10 +1058,10 @@ async function handleAnalyzeCarousel(req, res) {
         'Content-Type': 'application/json',
         'HTTP-Referer': 'https://riri.app',
         'X-Title': 'RiRi',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0.1 Safari/605.1.15',
       },
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash-image',
-        modalities: ['image', 'text'],
         stream: true,
         messages: [{
           role: 'user',
