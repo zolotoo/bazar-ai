@@ -1049,14 +1049,18 @@ async function handleAnalyzeCarousel(req, res) {
               role: 'user',
               content: [
                 { type: 'image_url', image_url: { url: `data:${mime_type};base64,${image_data}` } },
-                { type: 'text', text: `Describe ONLY the background layer of this image for image generation.
-Focus on: surface material, texture (grain/noise/smooth), dominant colors (exact hex if possible), lighting direction, atmosphere.
-IGNORE completely: all text, all icons, logos, UI elements, people, overlays.
-Reply with a single concise English paragraph (3-5 sentences). No lists. No mentions of text or typography.` },
+                { type: 'text', text: `You are a texture analyst. Look at this image and describe ONLY the visual surface/material properties of the background layer.
+
+Output format — exactly 2-3 sentences describing:
+1. Surface type (paper, concrete, fabric, painted wall, gradient, etc.)
+2. Exact colors (use hex codes)
+3. Texture quality (grain size, noise level, smoothness)
+
+CRITICAL: Do NOT mention text, words, typography, people, UI, or any objects. Only describe the physical surface properties as if it were a blank material swatch with no content on it.` },
               ],
             }],
             temperature: 0.1,
-            max_tokens: 200,
+            max_tokens: 150,
           });
           if (desc?.trim()) { bgPrompt = desc.trim(); break; }
         } catch (e) { /* try next model */ }
@@ -1080,7 +1084,14 @@ Reply with a single concise English paragraph (3-5 sentences). No lists. No ment
           image_config: { aspect_ratio: '3:4' },
           messages: [{
             role: 'user',
-            content: `Generate a clean background texture image based on this description: ${bgPrompt}. No text, no typography, no UI elements, no people, no icons. Pure background only.`,
+            content: `Generate a seamless abstract material/texture photograph. The material looks like this: ${bgPrompt}
+
+STRICT RULES — violating any rule makes the output useless:
+- Zero letters, zero words, zero numbers, zero symbols anywhere in the image
+- Zero UI elements, buttons, frames, or overlays
+- Zero people, faces, or body parts
+- The entire image must be 100% filled with the described texture/material
+- Think of it as a close-up photograph of a physical surface like paper, concrete, or fabric`,
           }],
         }),
       });
