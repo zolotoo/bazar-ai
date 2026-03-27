@@ -1033,78 +1033,40 @@ async function handleAnalyzeCarousel(req, res) {
     return res.status(502).json({ error: lastErr?.message ?? 'Vision API error' });
   }
 
-  // ── Шаг 2: всегда генерируем фон через Gemini Image ──────────────────────────
-  // Независимо от типа (solid/gradient/image) — всегда создаём через ИИ.
-  // Если не получится — фронт покажет solid-цвет из шага 1.
+  // ── Шаг 2: редактируем оригинал через Gemini Image — убираем текст/UI, оставляем фон ──
   try {
-    // Описываем фон для генерации
-    let bgDescription = null;
-    for (const model of VISION_MODELS) {
-      try {
-        const { text: desc } = await callOpenRouter({
-          apiKey: OPENROUTER_API_KEY,
-          model,
-          messages: [{
-            role: 'user',
-            content: [
-              { type: 'image_url', image_url: { url: `data:${mime_type};base64,${image_data}` } },
-              { type: 'text', text: `Analyze the background of this carousel image (ignore all text, UI elements, overlays).
+    const genRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://ririrai.vercel.app',
+        'X-Title': 'RiRi AI',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash-image',
+        modalities: ['image', 'text'],
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image_url', image_url: { url: `data:${mime_type};base64,${image_data}` } },
+            { type: 'text', text: 'Edit this image: erase ALL text, words, letters, numbers, captions, watermarks, and UI elements (buttons, icons, frames, overlays, logos). Keep EVERYTHING else completely unchanged — same background, same colors, same textures, same people, same objects, same lighting, same composition. Output only the cleaned image with text and UI removed, nothing else changed.' },
+          ],
+        }],
+      }),
+    });
 
-Return JSON:
-{
-  "bg_type": "texture" or "photo",
-  "description": "precise English description for image generation (colors with hex, material, texture density, lighting)"
-}
+    const genData = await genRes.json();
+    console.log('Gemini image edit status:', genRes.status, JSON.stringify(genData).slice(0, 400));
 
-"texture" = any surface without recognizable real-world objects: grain, noise, paper, fabric, concrete, gradient+grain, painted wall
-"photo" = real photographic scene: people, room, street, nature, objects
-
-Return ONLY the JSON.` },
-            ],
-          }],
-          temperature: 0.1,
-          max_tokens: 150,
-        });
-        if (desc?.trim()) {
-          const d = parseJsonResponse(desc);
-          if (d?.description) { bgDescription = d; break; }
-        }
-      } catch (e) { /* try next model */ }
-    }
-
-    console.log('BG description:', JSON.stringify(bgDescription));
-
-    if (bgDescription) {
-      const genPrompt = bgDescription.bg_type === 'photo'
-        ? `Photographic scene: ${bgDescription.description}. No text, no captions, no UI elements. Real photo only.`
-        : `Seamless surface texture: ${bgDescription.description}. Fill entire frame. No text, no words, no people, no objects. Pure material/texture only.`;
-
-      const genRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://ririrai.vercel.app',
-          'X-Title': 'RiRi AI',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash-image',
-          modalities: ['image', 'text'],
-          image_config: { aspect_ratio: '3:4' },
-          messages: [{ role: 'user', content: genPrompt }],
-        }),
-      });
-
-      const genData = await genRes.json();
-      console.log('Gemini image gen status:', genRes.status, JSON.stringify(genData).slice(0, 300));
-
-      const imgItem = genData?.choices?.[0]?.message?.images?.[0];
-      if (imgItem?.image_url?.url) {
-        parsed.background = { type: 'image', src: imgItem.image_url.url };
-      }
+    const imgItem = genData?.choices?.[0]?.message?.images?.[0];
+    if (imgItem?.image_url?.url) {
+      parsed.background = { type: 'image', src: imgItem.image_url.url };
+    } else {
+      console.warn('Gemini image edit: no image returned', JSON.stringify(genData).slice(0, 300));
     }
   } catch (err) {
-    console.error('Gemini image gen error:', err.message);
+    console.error('Gemini image edit error:', err.message);
     // fallback: оставляем solid/gradient из шага 1
   }
 
