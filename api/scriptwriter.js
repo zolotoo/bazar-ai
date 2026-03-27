@@ -969,9 +969,9 @@ async function handleAnalyzeCarousel(req, res) {
 }
 
 Правила для background:
-- Если фон ОДНОРОДНЫЙ или почти однородный (один цвет) → type="solid", color=точный hex-цвет пикселей фона (используй eyedropper-логику, определи максимально точно).
-- Если фон ГРАДИЕНТ (заметный переход цвета) → type="gradient", from=hex начала, to=hex конца, direction="to bottom" или "to bottom right" или другой CSS-направление.
-- Если фон ФОТОГРАФИЯ, текстура, рисунок, паттерн (не однородный) → type="image". Не пиши color или src, просто type="image".
+- type="solid" ТОЛЬКО если фон абсолютно плоский однородный цвет — как покрашенная стена, никакой текстуры, никакого зерна, никаких переходов. color=точный hex.
+- type="gradient" если есть плавный переход двух цветов без текстуры. from, to, direction.
+- type="image" в ЛЮБОМ из этих случаев: зернистый/шумный фон, фото, текстура бумаги/ткани/стены, паттерн, размытый фон, конкретная картинка, градиент с текстурой, любой фон с видимой фактурой. СЕРЫЙ ФОН С ЗЕРНОМ/ШУМОМ = type="image".
 
 Правила для текстовых элементов:
 - Точно скопируй текст (важно!).
@@ -1067,45 +1067,61 @@ Reply with only the prompt text, no explanations.`;
 
     // 2b. Генерируем фоновое изображение через OpenRouter FLUX
     if (bgGenPrompt) {
-      try {
-        const genRes = await fetch('https://openrouter.ai/api/v1/images/generations', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-            'Content-Type': 'application/json',
-            'HTTP-Referer': 'https://ririrai.vercel.app',
-          },
-          body: JSON.stringify({
-            model: 'black-forest-labs/flux-1-schnell',
-            prompt: bgGenPrompt + ', no text, no watermarks, no people, background only, high quality',
-            n: 1,
-            size: '1024x1024',
-          }),
-        });
+      const finalPrompt = bgGenPrompt + ', no text, no watermarks, no people, no UI, background texture only, high quality, seamless';
+      // Пробуем модели по очереди
+      const IMAGE_MODELS = [
+        'black-forest-labs/flux-1-schnell',
+        'black-forest-labs/flux-schnell',
+        'black-forest-labs/flux-1.1-pro',
+      ];
 
-        if (genRes.ok) {
+      let imageGenDone = false;
+      for (const imgModel of IMAGE_MODELS) {
+        if (imageGenDone) break;
+        try {
+          const genRes = await fetch('https://openrouter.ai/api/v1/images/generations', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': 'https://ririrai.vercel.app',
+              'X-Title': 'RiRi AI Carousel',
+            },
+            body: JSON.stringify({
+              model: imgModel,
+              prompt: finalPrompt,
+              n: 1,
+              width: 768,
+              height: 1024,
+            }),
+          });
+
           const genData = await genRes.json();
-          // OpenRouter возвращает URL или b64_json
+          console.log(`OpenRouter image gen [${imgModel}] status:`, genRes.status, JSON.stringify(genData).slice(0, 200));
+
+          if (!genRes.ok) continue;
+
           const item = genData?.data?.[0];
           if (item?.b64_json) {
             parsed.background = { type: 'image', src: `data:image/png;base64,${item.b64_json}` };
+            imageGenDone = true;
           } else if (item?.url) {
-            // Скачиваем и конвертируем в base64 чтобы не зависеть от временного URL
             const imgRes = await fetch(item.url);
             if (imgRes.ok) {
               const buf = await imgRes.arrayBuffer();
               const b64 = Buffer.from(buf).toString('base64');
               const ct = imgRes.headers.get('content-type') || 'image/png';
               parsed.background = { type: 'image', src: `data:${ct};base64,${b64}` };
+              imageGenDone = true;
             }
           }
-        } else {
-          const errText = await genRes.text();
-          console.error('OpenRouter image gen error:', genRes.status, errText);
+        } catch (err) {
+          console.error(`OpenRouter image gen error [${imgModel}]:`, err.message);
         }
-      } catch (err) {
-        console.error('OpenRouter image gen error:', err.message);
-        // Fallback: фронт подставит скриншот
+      }
+
+      if (!imageGenDone) {
+        console.warn('All image gen models failed — frontend will use screenshot as fallback');
       }
     }
   }
