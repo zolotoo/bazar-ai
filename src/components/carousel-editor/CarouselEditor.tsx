@@ -307,6 +307,7 @@ function AiPhotoScreen({ onBack, onDone }: { onBack: () => void; onDone: (slides
             textAlign?: string; width?: number; fontFamily?: string;
             fontStyle?: string; rotation?: number; lineHeight?: number; letterSpacing?: number;
             label?: string; borderRadius?: number; height?: number;
+            shapeType?: string; fill?: string; stroke?: string; strokeWidth?: number; opacity?: number;
           }>;
         };
 
@@ -357,6 +358,24 @@ function AiPhotoScreen({ onBack, onDone }: { onBack: () => void; onDone: (slides
               size: { width: Math.max(2, Math.min(90, el.width ?? 80)), height: Math.max(0.5, Math.min(90, el.height ?? 45)) },
               label: el.label ?? 'Фото',
               borderRadius: el.borderRadius ?? 16,
+            })];
+          }
+          if (el.type === 'shape') {
+            const validShapeTypes = ['rect', 'circle', 'line', 'arrow'] as const;
+            const rawType = el.shapeType ?? 'rect';
+            // pill → rect с большим borderRadius
+            const shapeType = validShapeTypes.includes(rawType as typeof validShapeTypes[number])
+              ? rawType as typeof validShapeTypes[number]
+              : 'rect';
+            return [createDefaultShapeElement({
+              position: { x: Math.max(0, Math.min(90, el.x ?? 10)), y: Math.max(0, Math.min(90, el.y ?? 30)) },
+              size: { width: Math.max(2, Math.min(90, el.width ?? 40)), height: Math.max(1, Math.min(90, el.height ?? 10)) },
+              shapeType,
+              fill: el.fill ?? 'transparent',
+              stroke: el.stroke ?? '#ffffff',
+              strokeWidth: el.strokeWidth ?? 2,
+              borderRadius: el.borderRadius ?? 0,
+              opacity: typeof el.opacity === 'number' ? el.opacity : 1,
             })];
           }
           return [];
