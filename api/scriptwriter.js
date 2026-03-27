@@ -1047,41 +1047,46 @@ async function handleAnalyzeCarousel(req, res) {
     return res.status(502).json({ error: lastErr?.message ?? 'Vision API error' });
   }
 
-  // ── Шаг 2: генерируем фон через Google AI API напрямую (responseModalities: IMAGE) ───────
-  const GOOGLE_AI_KEY = process.env.GOOGLE_AI_API_KEY;
-  if (GOOGLE_AI_KEY) {
-    try {
-      const googleRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${GOOGLE_AI_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{
-              parts: [
-                { inlineData: { mimeType: mime_type, data: image_data } },
-                { text: 'я прикрепил тебе фото. удали на нем все текста, блоки с фото (то есть все фото, кроме фона удали тоже), точки, все, кроме фона.\n\nсохрани точь в точь фон и дай мне только его. сохрани цвет, текстуру, палитру точь в точь.\n\nесли фоном является фото - создай это же фото.\n\nсделай фото размером 3 на 4.' },
-              ],
-            }],
-            generationConfig: { responseModalities: ['IMAGE'] },
-          }),
-        }
-      );
-      const googleData = await googleRes.json();
-      console.log('Google AI image gen status:', googleRes.status, JSON.stringify(googleData).slice(0, 400));
-      const imgPart = googleData?.candidates?.[0]?.content?.parts?.find(p => p.inlineData?.data);
-      if (imgPart?.inlineData?.data) {
-        const ct = imgPart.inlineData.mimeType || 'image/png';
-        parsed.background = { type: 'image', src: `data:${ct};base64,${imgPart.inlineData.data}` };
-        console.log('Google AI: background generated OK');
-      } else {
-        console.warn('Google AI: no image in response', JSON.stringify(googleData).slice(0, 400));
+  // ── Шаг 2: генерируем фон через OpenRouter gemini-2.5-flash-image ───────
+  // Ключевые условия: modalities: ["text","image"], stream: false, читать из message.images
+  try {
+    const imgGenRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://riri.app',
+        'X-Title': 'RiRi',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash-image',
+        modalities: ['text', 'image'],
+        stream: false,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image_url', image_url: { url: `data:${mime_type};base64,${image_data}` } },
+            { type: 'text', text: 'я прикрепил тебе фото. удали на нем все текста, блоки с фото (то есть все фото, кроме фона удали тоже), точки, все, кроме фона.\n\nсохрани точь в точь фон и дай мне только его. сохрани цвет, текстуру, палитру точь в точь.\n\nесли фоном является фото - создай это же фото.\n\nсделай фото размером 3 на 4.' },
+          ],
+        }],
+      }),
+    });
+    const imgGenData = await imgGenRes.json();
+    console.log('Gemini image gen status:', imgGenRes.status, JSON.stringify(imgGenData).slice(0, 500));
+
+    // Изображение приходит в message.images, а не в message.content
+    const images = imgGenData?.choices?.[0]?.message?.images;
+    if (images && images.length > 0) {
+      const imageUrl = images[0]?.image_url?.url;
+      if (imageUrl) {
+        parsed.background = { type: 'image', src: imageUrl };
+        console.log('Gemini: background generated OK');
       }
-    } catch (err) {
-      console.error('Google AI image gen error:', err.message);
+    } else {
+      console.warn('Gemini image gen: no image in response', JSON.stringify(imgGenData).slice(0, 500));
     }
-  } else {
-    console.warn('GOOGLE_AI_API_KEY not set — background generation skipped');
+  } catch (err) {
+    console.error('Gemini image gen error:', err.message);
   }
 
   return res.status(200).json(parsed);
