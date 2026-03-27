@@ -1052,7 +1052,7 @@ async function handleAnalyzeCarousel(req, res) {
             role: 'user',
             content: [
               { type: 'image_url', image_url: { url: `data:${mime_type};base64,${image_data}` } },
-              { type: 'text', text: 'Look at this image. Generate a new background image inspired by the colors, texture, grain, lighting, and overall mood of this photo\'s background. Do NOT include any text, words, numbers, logos, icons, buttons, UI elements, or watermarks. If the background shows a person, room, or scene — create a similar artistic scene with the same atmosphere. Output a clean 3:4 portrait background image only.' },
+              { type: 'text', text: 'Я прикрепил тебе фото. Удали на нём все тексты, блоки с фото, точки, иконки, кнопки, UI элементы, водяные знаки — всё, кроме фона.\n\nСохрани точь в точь фон и дай мне только его. Сохрани цвет, текстуру, палитру точь в точь.\n\nЕсли фоном является фото человека или сцены — создай это же фото.\n\nСделай фото размером 3 на 4.' },
             ],
           }],
         }),
