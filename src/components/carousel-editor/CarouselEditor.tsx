@@ -52,91 +52,81 @@ function HomeScreen({ onMode }: { onMode: (m: EditorMode) => void }) {
           className="text-center space-y-2 pb-2"
         >
           <div
-            className="mx-auto w-16 h-16 rounded-[22px] flex items-center justify-center mb-4"
-            style={{ background: 'linear-gradient(135deg, #e8eaf6 0%, #d1d5f0 100%)', boxShadow: '0 4px 16px rgba(100,116,160,0.18)' }}
+            className="mx-auto w-14 h-14 rounded-[20px] flex items-center justify-center mb-4"
+            style={{ background: 'linear-gradient(135deg, #1a1a18 0%, #2c2c28 100%)', boxShadow: '0 6px 20px rgba(0,0,0,0.22)' }}
           >
-            <span className="text-2xl">🎨</span>
+            <Sparkles size={26} className="text-white" />
           </div>
           <h2 className="text-[20px] font-semibold text-[#1a1a18] tracking-tight">ИИ-Карусели</h2>
-          <p className="text-[14px] text-[#1a1a18]/50 leading-relaxed">
+          <p className="text-[13px] text-[#1a1a18]/45 leading-relaxed max-w-xs mx-auto">
             Создавай красивые карусели для Instagram
           </p>
         </motion.div>
 
-        {/* Cards — 1 column */}
-        <div className="grid grid-cols-1 gap-3">
-          <motion.button
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.28, delay: 0.05, ease: [0.25, 0.46, 0.45, 0.94] }}
-            onClick={() => onMode('create')}
-            className="text-left group"
-          >
-            <GlassCard className="p-5 transition-all duration-200 hover:shadow-md active:scale-[0.98] touch-manipulation">
-              <div
-                className="w-11 h-11 rounded-2xl flex items-center justify-center mb-3"
-                style={{ background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)' }}
-              >
-                <PenLine size={22} className="text-slate-600" />
-              </div>
-              <p className="text-[15px] font-semibold text-[#1a1a18] mb-1">Создать карусель</p>
-              <p className="text-[13px] text-[#1a1a18]/45 leading-relaxed">
-                Пустой холст — добавляй текст, фото и фон сам
-              </p>
-            </GlassCard>
-          </motion.button>
-
-          <motion.button
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.28, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
-            onClick={() => onMode('template')}
-            className="text-left group"
-          >
-            <GlassCard className="p-5 transition-all duration-200 hover:shadow-md active:scale-[0.98] touch-manipulation">
-              <div
-                className="w-11 h-11 rounded-2xl flex items-center justify-center mb-3"
-                style={{ background: 'linear-gradient(135deg, #fef9c3 0%, #fde68a 100%)' }}
-              >
-                <LayoutTemplate size={22} className="text-amber-600" />
-              </div>
-              <p className="text-[15px] font-semibold text-[#1a1a18] mb-1">Готовые шаблоны</p>
-              <p className="text-[13px] text-[#1a1a18]/45 leading-relaxed">
-                Выбери стиль — просто заполни текст
-              </p>
-            </GlassCard>
-          </motion.button>
-
-          <motion.button
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.28, delay: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
-            onClick={() => onMode('ai-photo')}
-            className="text-left group relative"
-          >
-            <GlassCard className="p-5 transition-all duration-200 hover:shadow-md active:scale-[0.98] touch-manipulation">
-              {/* AI badge */}
-              <div
-                className="absolute top-3 right-3 px-2 py-0.5 rounded-full text-[11px] font-bold text-white"
-                style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}
-              >
-                ИИ
-              </div>
-              <div
-                className="w-11 h-11 rounded-2xl flex items-center justify-center mb-3"
-                style={{ background: 'linear-gradient(135deg, #e0e7ff 0%, #ede9fe 100%)' }}
-              >
+        {/* Cards — 1 column, horizontal layout */}
+        <div className="flex flex-col gap-2.5">
+          {[
+            {
+              delay: 0.05, mode: 'create' as EditorMode,
+              icon: <PenLine size={20} className="text-[#1a1a18]" />,
+              iconBg: '#f4f4f2',
+              title: 'Создать карусель',
+              desc: 'Пустой холст — добавляй текст, фото и фон сам',
+              badge: null,
+            },
+            {
+              delay: 0.1, mode: 'template' as EditorMode,
+              icon: <LayoutTemplate size={20} className="text-amber-700" />,
+              iconBg: '#fef3c7',
+              title: 'Готовые шаблоны',
+              desc: 'Выбери стиль — просто заполни текст',
+              badge: null,
+            },
+            {
+              delay: 0.15, mode: 'ai-photo' as EditorMode,
+              icon: (
                 <div className="relative">
-                  <Camera size={20} className="text-indigo-600" />
-                  <Sparkles size={10} className="text-purple-500 absolute -top-1 -right-1" />
+                  <Camera size={19} className="text-white" />
+                  <Sparkles size={9} className="text-white/70 absolute -top-1 -right-1" />
                 </div>
-              </div>
-              <p className="text-[15px] font-semibold text-[#1a1a18] mb-1">Создать по фото</p>
-              <p className="text-[13px] text-[#1a1a18]/45 leading-relaxed">
-                Загрузи скриншот — ИИ воспроизведёт дизайн
-              </p>
-            </GlassCard>
-          </motion.button>
+              ),
+              iconBg: 'linear-gradient(135deg, #1a1a18 0%, #2c2c28 100%)',
+              title: 'Создать по фото',
+              desc: 'Загрузи скриншот — ИИ воспроизведёт дизайн',
+              badge: 'ИИ',
+            },
+          ].map(({ delay, mode, icon, iconBg, title, desc, badge }) => (
+            <motion.button
+              key={mode}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.28, delay, ease: [0.25, 0.46, 0.45, 0.94] }}
+              onClick={() => onMode(mode)}
+              className="text-left active:scale-[0.98] touch-manipulation transition-transform"
+            >
+              <GlassCard className="px-4 py-3.5 flex items-center gap-4 hover:shadow-md transition-shadow">
+                <div
+                  className="w-10 h-10 rounded-[14px] flex items-center justify-center flex-shrink-0"
+                  style={{ background: iconBg }}
+                >
+                  {icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[15px] font-semibold text-[#1a1a18] leading-tight">{title}</p>
+                  <p className="text-[12px] text-[#1a1a18]/45 leading-snug mt-0.5">{desc}</p>
+                </div>
+                {badge && (
+                  <div
+                    className="px-2 py-0.5 rounded-full text-[10px] font-bold text-white flex-shrink-0"
+                    style={{ background: 'linear-gradient(135deg, #1a1a18 0%, #3d3d38 100%)' }}
+                  >
+                    {badge}
+                  </div>
+                )}
+                <ChevronRight size={16} className="text-[#1a1a18]/20 flex-shrink-0" />
+              </GlassCard>
+            </motion.button>
+          ))}
         </div>
 
         {/* Tips */}
@@ -170,6 +160,31 @@ function HomeScreen({ onMode }: { onMode: (m: EditorMode) => void }) {
 
 // ─── AI Photo screen ─────────────────────────────────────────
 
+/** Сжимаем изображение до max 1024px JPEG 0.65 — чтобы влезло в Vercel body limit */
+function compressImage(file: File): Promise<{ base64: string; mimeType: string }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const MAX = 1024;
+      let { width, height } = img;
+      if (width > MAX || height > MAX) {
+        if (width >= height) { height = Math.round((height * MAX) / width); width = MAX; }
+        else { width = Math.round((width * MAX) / height); height = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.65);
+      resolve({ base64: dataUrl.split(',')[1], mimeType: 'image/jpeg' });
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
 function AiPhotoScreen({ onBack, onDone }: { onBack: () => void; onDone: (slides: Slide[]) => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -180,21 +195,20 @@ function AiPhotoScreen({ onBack, onDone }: { onBack: () => void; onDone: (slides
     if (!file) return;
     e.target.value = '';
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const dataUrl = reader.result as string;
-      const [meta, base64] = dataUrl.split(',');
-      const mimeType = meta.match(/:(.*?);/)?.[1] ?? 'image/jpeg';
-
+    (async () => {
       setLoading(true);
       setError(null);
       try {
+        const { base64, mimeType } = await compressImage(file);
         const res = await fetch('/api/scriptwriter', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'analyze-carousel', image_data: base64, mime_type: mimeType }),
         });
-        if (!res.ok) throw new Error(`API ${res.status}`);
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `API ${res.status}`);
+        }
         const data = await res.json();
 
         const { background, elements = [] } = data as {
@@ -235,12 +249,12 @@ function AiPhotoScreen({ onBack, onDone }: { onBack: () => void; onDone: (slides
         onDone([newSlide]);
       } catch (err) {
         console.error('AI analyze error:', err);
-        setError('Не удалось проанализировать фото. Попробуй другое изображение.');
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(`Ошибка: ${msg}. Попробуй другое фото.`);
       } finally {
         setLoading(false);
       }
-    };
-    reader.readAsDataURL(file);
+    })();
   }, [onDone]);
 
   return (
