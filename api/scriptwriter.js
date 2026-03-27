@@ -969,9 +969,9 @@ async function handleAnalyzeCarousel(req, res) {
 }
 
 Правила для background:
-- type="solid" если фон однородный цвет, включая варианты с лёгким зерном/шумом/текстурой поверх цвета (бумага, бетон, полотно, шум-оверлей). Укажи доминирующий color=точный hex.
-- type="gradient" если есть плавный переход двух и более цветов (с текстурой или без). from, to, direction.
-- type="image" ТОЛЬКО если фон — настоящая ФОТОГРАФИЯ или СЦЕНА: люди, комнаты, улицы, природа, интерьеры, портреты, предметная съёмка. То есть реальный фотографический контент, не просто поверхность/текстура/цвет.
+- type="solid" ТОЛЬКО если фон абсолютно плоский однородный цвет без какой-либо текстуры. color=точный hex.
+- type="gradient" если есть плавный переход двух цветов без текстуры. from, to, direction.
+- type="image" если фон имеет ЛЮБУЮ из этих характеристик: зерно, шум, плёночная текстура, бумага, ткань, бетон, кожа, паттерн, фото человека, комната, природа, интерьер — то есть любой фон сложнее чистого цвета.
 
 Правила для текстовых элементов:
 - Точно скопируй текст (важно!).
@@ -1038,38 +1038,7 @@ async function handleAnalyzeCarousel(req, res) {
   // Модель генерации НЕ видит оригинал — только текст, поэтому текст/иконки не попадают.
   if (parsed.background?.type === 'image') {
     try {
-      // 2a. Gemini Vision описывает фон словами (без оригинального изображения в генерации)
-      let bgPrompt = null;
-      for (const model of VISION_MODELS) {
-        try {
-          const { text: desc } = await callOpenRouter({
-            apiKey: OPENROUTER_API_KEY,
-            model,
-            messages: [{
-              role: 'user',
-              content: [
-                { type: 'image_url', image_url: { url: `data:${mime_type};base64,${image_data}` } },
-                { type: 'text', text: `You are a texture analyst. Look at this image and describe ONLY the visual surface/material properties of the background layer.
-
-Output format — exactly 2-3 sentences describing:
-1. Surface type (paper, concrete, fabric, painted wall, gradient, etc.)
-2. Exact colors (use hex codes)
-3. Texture quality (grain size, noise level, smoothness)
-
-CRITICAL: Do NOT mention text, words, typography, people, UI, or any objects. Only describe the physical surface properties as if it were a blank material swatch with no content on it.` },
-              ],
-            }],
-            temperature: 0.1,
-            max_tokens: 150,
-          });
-          if (desc?.trim()) { bgPrompt = desc.trim(); break; }
-        } catch (e) { /* try next model */ }
-      }
-
-      if (!bgPrompt) throw new Error('Could not describe background');
-      console.log('Background description:', bgPrompt);
-
-      // 2b. Gemini Image gen из текстового описания — оригинал не передаём
+      // Передаём оригинал напрямую в Gemini Image — он видит фото и воспроизводит фон без текста/UI
       const genRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -1084,19 +1053,10 @@ CRITICAL: Do NOT mention text, words, typography, people, UI, or any objects. On
           image_config: { aspect_ratio: '3:4' },
           messages: [{
             role: 'user',
-            content: `Reproduce this background as closely as possible (~identical): ${bgPrompt}
-
-Your goal: recreate the full visual — if there is a person/photo/scene in the background, keep it. Reproduce colors, lighting, composition, and mood as accurately as you can.
-
-REMOVE ONLY these elements (they were overlaid on top and don't belong to the background):
-- All text, letters, words, numbers, captions, titles
-- All UI elements: buttons, icons, toggles, frames, overlays, borders
-- All graphic decorations that look like designed elements
-
-KEEP everything that is part of the actual photo/scene:
-- People, faces, bodies — if they are part of the background scene
-- Real-world objects, environments, textures, scenery
-- The original composition and visual style`,
+            content: [
+              { type: 'image_url', image_url: { url: `data:${mime_type};base64,${image_data}` } },
+              { type: 'text', text: `Edit this image: remove ALL text, captions, titles, numbers, UI elements (buttons, toggles, icons, frames), and any graphic overlays. Keep EVERYTHING else exactly as-is — same background, same colors, same texture, same grain, same people, same scene, same composition. Output the cleaned background image.` },
+            ],
           }],
         }),
       });
