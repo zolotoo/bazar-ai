@@ -1888,11 +1888,32 @@ export function Analytics() {
                   <p className="text-[13px] font-semibold text-slate-700 mb-3">{role}</p>
                   <div className="space-y-2">
                     {byRole.get(role)!.map((s, i) => (
-                      <div key={`${s.person}-${i}`} className="flex items-center justify-between py-2 px-3 rounded-xl bg-slate-50">
-                        <span className="text-[14px] font-medium text-slate-800">{s.person}</span>
-                        <div className="flex items-center gap-4">
-                          <span className="text-[12px] text-slate-400">{s.reelsCount} роликов</span>
-                          <span className="text-[15px] font-bold text-slate-900 tabular-nums">{fmt(s.views)}</span>
+                      <div key={`${s.person}-${i}`} className="rounded-xl bg-slate-50 px-3 py-2.5">
+                        {/* Имя */}
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[14px] font-semibold text-slate-800">{s.person}</span>
+                          {s.views > 0 && (
+                            <span className="text-[15px] font-bold text-slate-900 tabular-nums">{fmt(s.views)}</span>
+                          )}
+                        </div>
+                        {/* Статистика */}
+                        <div className="flex flex-wrap gap-2">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white border border-slate-200 text-[11px] font-medium text-slate-600">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 inline-block" />
+                            {s.assignedCount} {s.assignedCount === 1 ? 'видео' : s.assignedCount < 5 ? 'видео' : 'видео'} в работе
+                          </span>
+                          {s.linksFilledCount > 0 && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white border border-emerald-200 text-[11px] font-medium text-emerald-600">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                              {s.linksFilledCount} ссылок заполнено
+                            </span>
+                          )}
+                          {s.reelsCount > 0 && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white border border-slate-200 text-[11px] font-medium text-slate-500">
+                              <span className="w-1.5 h-1.5 rounded-full bg-slate-400 inline-block" />
+                              {s.reelsCount} опубл.
+                            </span>
+                          )}
                         </div>
                       </div>
                     ))}

@@ -1,5 +1,5 @@
 import { createContext, useContext, ReactNode } from 'react';
-import { useProjects, Project, ProjectFolder, ProjectStyle, ProjectStyleMeta } from '../hooks/useProjects';
+import { useProjects, Project, ProjectFolder, ProjectStyle, ProjectStyleMeta, DescriptionTemplate } from '../hooks/useProjects';
 
 interface ProjectContextType {
   projects: Project[];
@@ -7,7 +7,7 @@ interface ProjectContextType {
   currentProjectId: string | null;
   loading: boolean;
   createProject: (name: string, color?: string) => Promise<Project | null>;
-  updateProject: (projectId: string, updates: Partial<Pick<Project, 'name' | 'color' | 'icon' | 'folders' | 'carouselFolders' | 'linksTemplate' | 'responsiblesTemplate' | 'stylePrompt' | 'styleMeta' | 'styleExamplesCount' | 'projectStyles'>>) => Promise<void>;
+  updateProject: (projectId: string, updates: Partial<Pick<Project, 'name' | 'color' | 'icon' | 'folders' | 'carouselFolders' | 'linksTemplate' | 'responsiblesTemplate' | 'stylePrompt' | 'styleMeta' | 'styleExamplesCount' | 'projectStyles' | 'descriptionTemplates'>>) => Promise<void>;
   addProjectStyle: (projectId: string, style: Omit<ProjectStyle, 'id'>) => Promise<ProjectStyle | void>;
   updateProjectStyle: (projectId: string, styleId: string, updates: Partial<Omit<ProjectStyle, 'id'>>) => Promise<void>;
   removeProjectStyle: (projectId: string, styleId: string) => Promise<void>;
@@ -48,4 +48,4 @@ export function useProjectContext() {
   return context;
 }
 
-export type { Project, ProjectFolder, ProjectStyle, ProjectStyleMeta };
+export type { Project, ProjectFolder, ProjectStyle, ProjectStyleMeta, DescriptionTemplate };

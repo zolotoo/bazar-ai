@@ -16,6 +16,13 @@ export interface ProjectTemplateItem {
   label: string;
 }
 
+/** Шаблон описания для выкладки видео (сохраняется на уровне проекта) */
+export interface DescriptionTemplate {
+  id: string;
+  name: string;
+  content: string;
+}
+
 /** Мета стиля сценария проекта (результат анализа примеров) */
 export interface ProjectStyleMeta {
   rules?: string[];
@@ -73,6 +80,8 @@ export interface Project {
   styleExamplesCount?: number;
   /** Несколько стилей в проекте — приоритет над stylePrompt */
   projectStyles?: ProjectStyle[];
+  /** Шаблоны описаний для выкладки (список готовых текстов) */
+  descriptionTemplates?: DescriptionTemplate[];
   createdAt: Date;
   isShared?: boolean;
   membershipStatus?: 'active' | 'pending';
@@ -240,6 +249,7 @@ export function useProjects() {
               : DEFAULT_CAROUSEL_FOLDERS,
             linksTemplate: Array.isArray(p.links_template) && p.links_template.length > 0 ? p.links_template : DEFAULT_LINKS_TEMPLATE,
             responsiblesTemplate: Array.isArray(p.responsibles_template) && p.responsibles_template.length > 0 ? p.responsibles_template : DEFAULT_RESPONSIBLES_TEMPLATE,
+            descriptionTemplates: Array.isArray(p.description_templates) ? p.description_templates : [],
             stylePrompt: p.style_prompt ?? undefined,
             styleMeta: p.style_meta ?? undefined,
             styleExamplesCount: p.style_examples_count ?? 0,
@@ -380,12 +390,13 @@ export function useProjects() {
   }, [getUserId, projects.length]);
 
   // Обновление проекта (в т.ч. шаблоны ссылок, ответственных, стили сценария, папки каруселей)
-  const updateProject = useCallback(async (projectId: string, updates: Partial<Pick<Project, 'name' | 'color' | 'icon' | 'folders' | 'carouselFolders' | 'linksTemplate' | 'responsiblesTemplate' | 'stylePrompt' | 'styleMeta' | 'styleExamplesCount' | 'projectStyles'>>) => {
+  const updateProject = useCallback(async (projectId: string, updates: Partial<Pick<Project, 'name' | 'color' | 'icon' | 'folders' | 'carouselFolders' | 'linksTemplate' | 'responsiblesTemplate' | 'stylePrompt' | 'styleMeta' | 'styleExamplesCount' | 'projectStyles' | 'descriptionTemplates'>>) => {
     try {
       const dbUpdates: Record<string, unknown> = { ...updates };
       if ('carouselFolders' in updates) dbUpdates.carousel_folders = updates.carouselFolders ?? [];
       if ('linksTemplate' in updates) dbUpdates.links_template = updates.linksTemplate;
       if ('responsiblesTemplate' in updates) dbUpdates.responsibles_template = updates.responsiblesTemplate;
+      if ('descriptionTemplates' in updates) dbUpdates.description_templates = updates.descriptionTemplates;
       if ('stylePrompt' in updates) dbUpdates.style_prompt = updates.stylePrompt ?? null;
       if ('styleMeta' in updates) dbUpdates.style_meta = updates.styleMeta ?? null;
       if ('styleExamplesCount' in updates) dbUpdates.style_examples_count = updates.styleExamplesCount ?? null;

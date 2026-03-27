@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { 
   ChevronLeft, Play, Eye, Heart, MessageCircle, Calendar, 
   Sparkles, FileText, Copy, ExternalLink, Loader2, Check,
-  Languages, ChevronDown, Mic, Save, RefreshCw, Plus, Trash2, Wand2, BookOpen, Pencil, Radar, X, Link2, Film, PenLine
+  Languages, ChevronDown, Mic, Save, RefreshCw, Plus, Trash2, Wand2, BookOpen, Pencil, Radar, X, Link2, Film, PenLine, Send, AlignLeft
 } from 'lucide-react';
 import { AnimatedCopyIcon } from './ui/animated-state-icons';
 import { cn } from '../utils/cn';
@@ -22,7 +22,8 @@ import { StyleTrainModal } from './StyleTrainModal';
 import { CopyStylesToProjectModal } from './CopyStylesToProjectModal';
 import { useProjectContext } from '../contexts/ProjectContext';
 import { useTokenBalance } from '../contexts/TokenBalanceContext';
-import type { ProjectTemplateItem, ProjectStyle } from '../hooks/useProjects';
+import type { ProjectTemplateItem, ProjectStyle, DescriptionTemplate } from '../hooks/useProjects';
+import { useVideoComments } from '../hooks/useVideoComments';
 import { calculateViralMultiplier, getOrUpdateProfileStats, applyViralMultiplierToCoefficient } from '../services/profileStatsService';
 import { isRussian } from '../utils/language';
 import { TokenBadge } from './ui/TokenBadge';
@@ -60,6 +61,8 @@ interface VideoData {
   editing_responsible?: string;
   links?: VideoLinkRow[];
   responsibles?: VideoResponsibleRow[];
+  caption_translation?: string;
+  post_description?: string;
 }
 
 interface VideoDetailPageProps {
@@ -245,6 +248,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData, autoTranscribe }
   const currentPromptStyle = editingStyle || (projectStyles.length === 1 ? projectStyles[0] : null);
   const linksTemplate = currentProject?.linksTemplate ?? DEFAULT_LINKS_TEMPLATE;
   const responsiblesTemplate = currentProject?.responsiblesTemplate ?? DEFAULT_RESPONSIBLES_TEMPLATE;
+  const descriptionTemplates: DescriptionTemplate[] = currentProject?.descriptionTemplates ?? [];
 
   const buildMergedLinks = () => mergeLinksWithTemplate(
     linksTemplate,
@@ -265,6 +269,21 @@ export function VideoDetailPage({ video, onBack, onRefreshData, autoTranscribe }
   const [isSavingResponsible, setIsSavingResponsible] = useState(false);
   const [isRefreshingData, setIsRefreshingData] = useState(false);
 
+  // ── Перевод описания (caption) ─────────────────────────────────────────────
+  const [captionTab, setCaptionTab] = useState<'original' | 'translation'>('original');
+  const [captionTranslation, setCaptionTranslation] = useState(video.caption_translation || '');
+  const [isCaptionTranslating, setIsCaptionTranslating] = useState(false);
+
+  // ── Описание к видео (шаблоны описаний) ────────────────────────────────────
+  const [postDescription, setPostDescription] = useState(video.post_description || '');
+  const [isSavingPostDescription, setIsSavingPostDescription] = useState(false);
+  const [showDescTemplates, setShowDescTemplates] = useState(false);
+  const [copiedPostDesc, setCopiedPostDesc] = useState(false);
+
+  // ── Комментарии ─────────────────────────────────────────────────────────────
+  const [commentInput, setCommentInput] = useState('');
+  const { comments, isAdding: isAddingComment, addComment, deleteComment } = useVideoComments(video.id);
+
   useEffect(() => {
     setLinks(buildMergedLinks());
     setResponsibles(buildMergedResponsibles());
@@ -284,7 +303,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData, autoTranscribe }
     }
   }, [video.id, video.storage_video_url, video.download_url]);
 
-  const { updateVideoFolder, updateVideoScript, updateVideoTranscript, updateVideoTranslation, updateVideoResponsible, updateVideoLinks, updateVideoShortcode } = useInboxVideos();
+  const { updateVideoFolder, updateVideoScript, updateVideoTranscript, updateVideoTranslation, updateVideoResponsible, updateVideoLinks, updateVideoShortcode, updateVideoCaptionTranslation, updateVideoPostDescription } = useInboxVideos();
   const { canAfford, deduct } = useTokenBalance();
   const { reels } = useProjectAnalytics(currentProjectId);
   const refFolderIds = (currentProject?.folders ?? []).map(f => f.id);
@@ -353,6 +372,76 @@ export function VideoDetailPage({ video, onBack, onRefreshData, autoTranscribe }
     } finally {
       setIsRefreshingData(false);
     }
+  };
+
+  // ── Перевод описания (caption) ─────────────────────────────────────────────
+  const handleTranslateCaption = async () => {
+    const caption = video.caption || video.title || '';
+    if (!caption.trim()) {
+      toast.error('Нет описания для перевода');
+      return;
+    }
+    if (captionTranslation) {
+      setCaptionTab('translation');
+      return;
+    }
+    const cost = getTokenCost('translate');
+    if (!canAfford(cost)) {
+      toast.error('Недостаточно коинов');
+      return;
+    }
+    setIsCaptionTranslating(true);
+    toast.info('Перевожу описание...');
+    try {
+      const response = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: caption, to: 'ru' }),
+      });
+      const data = await response.json();
+      if (data.success && data.translated) {
+        await deduct(cost, { action: 'translate', section: 'lenta', label: 'Перевести описание' });
+        setCaptionTranslation(data.translated);
+        setCaptionTab('translation');
+        await updateVideoCaptionTranslation(video.id, data.translated);
+        toast.success('Перевод сохранён');
+      } else {
+        toast.error('Ошибка перевода', { description: data.error || 'Попробуйте позже' });
+      }
+    } catch {
+      toast.error('Ошибка перевода');
+    } finally {
+      setIsCaptionTranslating(false);
+    }
+  };
+
+  // ── Описание к видео ────────────────────────────────────────────────────────
+  const handleSavePostDescription = async () => {
+    setIsSavingPostDescription(true);
+    const ok = await updateVideoPostDescription(video.id, postDescription);
+    setIsSavingPostDescription(false);
+    if (ok) toast.success('Описание к видео сохранено');
+    else toast.error('Ошибка сохранения');
+  };
+
+  const handleApplyDescTemplate = (tpl: DescriptionTemplate) => {
+    setPostDescription(tpl.content);
+    setShowDescTemplates(false);
+  };
+
+  const handleCopyPostDesc = async () => {
+    if (!postDescription) return;
+    await navigator.clipboard.writeText(postDescription);
+    setCopiedPostDesc(true);
+    setTimeout(() => setCopiedPostDesc(false), 2000);
+  };
+
+  // ── Отправить комментарий ───────────────────────────────────────────────────
+  const handleAddComment = async () => {
+    if (!commentInput.trim()) return;
+    const ok = await addComment(commentInput, currentProjectId || undefined);
+    if (ok) setCommentInput('');
+    else toast.error('Не удалось добавить комментарий');
   };
 
   const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at);
@@ -1986,6 +2075,186 @@ export function VideoDetailPage({ video, onBack, onRefreshData, autoTranscribe }
             </div>
           </div>
         </div>
+
+        {/* ── Описание к видео ─────────────────────────────────────────────── */}
+        <div className="mt-4 rounded-card-xl shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <AlignLeft className="w-4 h-4 text-slate-400 flex-shrink-0" />
+              <h3 className="font-semibold text-slate-800 text-sm">Описание к видео</h3>
+              {postDescription && (
+                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 text-[10px] font-medium">сохранено</span>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              {/* Шаблоны */}
+              {descriptionTemplates.length > 0 && (
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowDescTemplates(!showDescTemplates)}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors"
+                    title="Выбрать шаблон описания"
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    Шаблоны
+                    <ChevronDown className="w-3 h-3" />
+                  </button>
+                  {showDescTemplates && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowDescTemplates(false)} aria-hidden />
+                      <div className="absolute top-full right-0 mt-1 z-50 min-w-[220px] rounded-xl border border-slate-200 bg-white shadow-xl py-1.5 animate-in fade-in slide-in-from-top-2 duration-150">
+                        {descriptionTemplates.map((tpl) => (
+                          <button
+                            key={tpl.id}
+                            type="button"
+                            onClick={() => handleApplyDescTemplate(tpl)}
+                            className="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex flex-col gap-0.5"
+                          >
+                            <span className="font-medium text-slate-800">{tpl.name}</span>
+                            <span className="text-[11px] text-slate-400 truncate">{tpl.content.slice(0, 60)}{tpl.content.length > 60 ? '…' : ''}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+              {/* Создать первый шаблон */}
+              {descriptionTemplates.length === 0 && currentProject && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const name = window.prompt('Название шаблона:');
+                    if (!name?.trim()) return;
+                    const content = postDescription || window.prompt('Текст шаблона (можно оставить пустым):') || '';
+                    const newTpl: DescriptionTemplate = { id: `desc-${Date.now()}`, name: name.trim(), content };
+                    await updateProject(currentProject.id, { descriptionTemplates: [...descriptionTemplates, newTpl] });
+                    await refetchProjects();
+                    toast.success('Шаблон создан');
+                  }}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium transition-colors"
+                  title="Добавить шаблон описания для этого проекта"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Добавить шаблон
+                </button>
+              )}
+              {descriptionTemplates.length > 0 && currentProject && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const name = window.prompt('Название нового шаблона:');
+                    if (!name?.trim()) return;
+                    const content = postDescription || window.prompt('Текст шаблона:') || '';
+                    const newTpl: DescriptionTemplate = { id: `desc-${Date.now()}`, name: name.trim(), content };
+                    await updateProject(currentProject.id, { descriptionTemplates: [...descriptionTemplates, newTpl] });
+                    await refetchProjects();
+                    toast.success('Шаблон создан');
+                  }}
+                  className="p-2 rounded-lg hover:bg-slate-200/80 text-slate-500 hover:text-slate-700 transition-colors"
+                  title="Добавить шаблон"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {/* Копировать */}
+              {postDescription && (
+                <button
+                  type="button"
+                  onClick={handleCopyPostDesc}
+                  className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
+                  title="Скопировать"
+                >
+                  {copiedPostDesc ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
+              )}
+              {/* Сохранить */}
+              <button
+                onClick={handleSavePostDescription}
+                disabled={isSavingPostDescription}
+                className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium flex items-center gap-1 transition-all disabled:opacity-50"
+              >
+                {isSavingPostDescription ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                Сохранить
+              </button>
+            </div>
+          </div>
+          {/* Textarea */}
+          <div className="p-4">
+            <textarea
+              value={postDescription}
+              onChange={(e) => setPostDescription(e.target.value)}
+              rows={5}
+              className="w-full resize-none text-slate-700 text-sm leading-relaxed focus:outline-none border border-slate-200 rounded-xl p-4 focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition-all"
+              placeholder="Описание, которое пойдёт под видео при выкладке..."
+            />
+          </div>
+        </div>
+
+        {/* ── Комментарии команды ──────────────────────────────────────────── */}
+        <div className="mt-4 mb-4 rounded-card-xl shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
+            <MessageCircle className="w-4 h-4 text-slate-400 flex-shrink-0" />
+            <h3 className="font-semibold text-slate-800 text-sm">Комментарии</h3>
+            {comments.length > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-medium">{comments.length}</span>
+            )}
+          </div>
+          {/* Comment list */}
+          <div className="px-4 py-3 space-y-3 max-h-64 overflow-y-auto">
+            {comments.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-4">Пока нет комментариев. Напишите первым!</p>
+            ) : (
+              comments.map((c) => (
+                <div key={c.id} className="flex gap-3 group">
+                  {/* Avatar */}
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                    {(c.username || 'А').replace('@', '').slice(0, 1).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xs font-semibold text-slate-700">{c.username || 'Аноним'}</span>
+                      <span className="text-[10px] text-slate-400">
+                        {new Date(c.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <p className="text-sm text-slate-700 leading-relaxed mt-0.5 break-words">{c.content}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => deleteComment(c.id)}
+                    className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-50 text-slate-300 hover:text-red-400 transition-all flex-shrink-0 self-start mt-0.5"
+                    title="Удалить"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+          {/* Input */}
+          <div className="px-4 py-3 border-t border-slate-100 flex gap-2">
+            <input
+              type="text"
+              value={commentInput}
+              onChange={(e) => setCommentInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddComment(); } }}
+              placeholder="Напишите комментарий..."
+              className="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-white/80 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-400 transition-all"
+              disabled={isAddingComment}
+            />
+            <button
+              type="button"
+              onClick={handleAddComment}
+              disabled={!commentInput.trim() || isAddingComment}
+              className="p-2.5 rounded-xl bg-slate-700 hover:bg-slate-800 text-white disabled:opacity-50 transition-all flex items-center justify-center"
+            >
+              {isAddingComment ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
       </div>
 
       <CopyStylesToProjectModal
@@ -2471,24 +2740,80 @@ export function VideoDetailPage({ video, onBack, onRefreshData, autoTranscribe }
             className="relative z-10 bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] flex flex-col border border-slate-200 overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
+            {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
-              <h3 id="description-modal-title" className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-slate-600" />
-                Описание
-              </h3>
-              <button
-                onClick={() => setShowDescriptionModal(false)}
-                className="p-2 rounded-2xl hover:bg-slate-100 transition-colors"
-                aria-label="Закрыть"
-              >
-                <X className="w-5 h-5 text-slate-400" />
-              </button>
+              <div className="flex items-center gap-3">
+                <h3 id="description-modal-title" className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-slate-500" />
+                  Описание поста
+                </h3>
+                {/* Tabs */}
+                <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
+                  <button
+                    onClick={() => setCaptionTab('original')}
+                    className={cn(
+                      "h-7 px-3 rounded-md text-xs font-medium transition-all",
+                      captionTab === 'original' ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                    )}
+                  >
+                    Оригинал
+                  </button>
+                  <button
+                    onClick={() => setCaptionTab('translation')}
+                    className={cn(
+                      "h-7 px-3 rounded-md text-xs font-medium transition-all",
+                      captionTab === 'translation' ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                    )}
+                  >
+                    Перевод
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleTranslateCaption}
+                  disabled={isCaptionTranslating || !canAfford(getTokenCost('translate'))}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium disabled:opacity-50 transition-colors"
+                >
+                  {isCaptionTranslating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Languages className="w-3.5 h-3.5" />}
+                  Перевести
+                  <TokenBadge tokens={getTokenCost('translate')} />
+                </button>
+                <button
+                  onClick={() => setShowDescriptionModal(false)}
+                  className="p-2 rounded-2xl hover:bg-slate-100 transition-colors"
+                  aria-label="Закрыть"
+                >
+                  <X className="w-5 h-5 text-slate-400" />
+                </button>
+              </div>
             </div>
+            {/* Content */}
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-              <div className="p-5 overflow-y-auto overflow-x-hidden min-h-0 scrollbar-visible" style={{ maxHeight: 'calc(85vh - 5.5rem)' }}>
-                <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap break-words">
-                  {(video.caption ?? video.title) || 'Нет описания'}
-                </p>
+              <div className="p-5 overflow-y-auto overflow-x-hidden min-h-0 scrollbar-visible" style={{ maxHeight: 'calc(85vh - 6rem)' }}>
+                {captionTab === 'original' ? (
+                  <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap break-words">
+                    {(video.caption ?? video.title) || 'Нет описания'}
+                  </p>
+                ) : captionTranslation ? (
+                  <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap break-words">
+                    {captionTranslation}
+                  </p>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <Languages className="w-10 h-10 text-slate-300 mb-3" />
+                    <p className="text-slate-600 font-medium mb-1">Перевод не выполнен</p>
+                    <button
+                      onClick={handleTranslateCaption}
+                      disabled={isCaptionTranslating}
+                      className="mt-2 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {isCaptionTranslating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Languages className="w-4 h-4" />}
+                      Перевести описание
+                      <TokenBadge tokens={getTokenCost('translate')} />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

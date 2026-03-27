@@ -1283,6 +1283,52 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
     }
   }, [getUserId]);
 
+  /**
+   * Сохраняет перевод подписи (caption) поста
+   */
+  const updateVideoCaptionTranslation = useCallback(async (videoId: string, translationText: string) => {
+    try {
+      const userId = getUserId();
+      await setUserContext(userId);
+      const { data, error } = await supabase
+        .from('saved_videos')
+        .update({ caption_translation: translationText })
+        .eq('id', videoId)
+        .select('id')
+        .maybeSingle();
+      if (error) { console.error('Error updating caption translation:', error); return false; }
+      if (!data) { console.warn('updateVideoCaptionTranslation: no row updated'); return false; }
+      setVideos(prev => prev.map(v => v.id === videoId ? { ...v, caption_translation: translationText } as any : v));
+      return true;
+    } catch (err) {
+      console.error('Error updating caption translation:', err);
+      return false;
+    }
+  }, [getUserId]);
+
+  /**
+   * Сохраняет описание для выкладки видео
+   */
+  const updateVideoPostDescription = useCallback(async (videoId: string, postDescription: string) => {
+    try {
+      const userId = getUserId();
+      await setUserContext(userId);
+      const { data, error } = await supabase
+        .from('saved_videos')
+        .update({ post_description: postDescription })
+        .eq('id', videoId)
+        .select('id')
+        .maybeSingle();
+      if (error) { console.error('Error updating post description:', error); return false; }
+      if (!data) { console.warn('updateVideoPostDescription: no row updated'); return false; }
+      setVideos(prev => prev.map(v => v.id === videoId ? { ...v, post_description: postDescription } as any : v));
+      return true;
+    } catch (err) {
+      console.error('Error updating post description:', err);
+      return false;
+    }
+  }, [getUserId]);
+
   return {
     videos,
     folderCounts,
@@ -1300,6 +1346,8 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
     updateVideoResponsible,
     updateVideoLinks,
     updateVideoShortcode,
+    updateVideoCaptionTranslation,
+    updateVideoPostDescription,
     restoreVideo,
     startVideoProcessing, // Ручной запуск транскрибации
     refreshThumbnail,
