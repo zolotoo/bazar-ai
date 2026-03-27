@@ -100,6 +100,8 @@ function TextElementView({
         top: `${el.position.y}%`,
         width: `${el.width}%`,
         cursor: editing ? 'text' : 'text',
+        transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined,
+        transformOrigin: 'top left',
       }}
     >
       {/* Drag handle — only when selected and not editing */}
@@ -148,7 +150,8 @@ function TextElementView({
           fontStyle: el.fontStyle,
           textAlign: el.textAlign,
           fontFamily: el.fontFamily ?? 'Inter, sans-serif',
-          lineHeight: 1.25,
+          lineHeight: el.lineHeight ?? 1.3,
+          letterSpacing: el.letterSpacing ? `${el.letterSpacing}em` : undefined,
           minHeight: el.fontSize * scale,
           userSelect: editing ? 'text' : 'none',
           cursor: editing ? 'text' : 'text',
@@ -326,6 +329,11 @@ function ShapeElementView({ el, selected, scale, onSelect, onMove, onResize, con
     shapeStyle.height = Math.max(el.strokeWidth * scale, 1);
     shapeStyle.background = el.stroke;
     shapeStyle.borderRadius = 2;
+  } else if (el.shapeType === 'arrow') {
+    shapeStyle.height = Math.max(el.strokeWidth * scale, 2);
+    shapeStyle.background = el.stroke;
+    shapeStyle.borderRadius = 2;
+    shapeStyle.position = 'relative';
   } else {
     shapeStyle.paddingBottom = `${(el.size.height / el.size.width) * 100}%`;
     shapeStyle.position = 'relative';
@@ -333,6 +341,8 @@ function ShapeElementView({ el, selected, scale, onSelect, onMove, onResize, con
     shapeStyle.border = `${el.strokeWidth * scale}px solid ${el.stroke}`;
     shapeStyle.borderRadius = el.shapeType === 'circle' ? '50%' : el.borderRadius * scale;
   }
+
+  const arrowHeadSize = Math.max(el.strokeWidth * scale * 3, 8);
 
   return (
     <div
@@ -348,7 +358,19 @@ function ShapeElementView({ el, selected, scale, onSelect, onMove, onResize, con
       onPointerUp={() => { setActiveDrag(false); drag.onPointerUp(); }}
       onClick={handleClick}
     >
-      <div style={shapeStyle} />
+      {el.shapeType === 'arrow' ? (
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', opacity: el.opacity }}>
+          <div style={{ flex: 1, height: Math.max(el.strokeWidth * scale, 1), background: el.stroke, borderRadius: 2 }} />
+          <div style={{
+            width: 0, height: 0,
+            borderTop: `${arrowHeadSize / 2}px solid transparent`,
+            borderBottom: `${arrowHeadSize / 2}px solid transparent`,
+            borderLeft: `${arrowHeadSize}px solid ${el.stroke}`,
+          }} />
+        </div>
+      ) : (
+        <div style={shapeStyle} />
+      )}
 
       {/* Selection ring */}
       {selected && (

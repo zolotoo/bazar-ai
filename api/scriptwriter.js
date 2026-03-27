@@ -956,7 +956,11 @@ async function handleAnalyzeCarousel(req, res) {
       "color": "#ffffff",
       "textAlign": "left",
       "width": 82,
-      "fontFamily": "serif"
+      "fontFamily": "serif",
+      "fontStyle": "normal",
+      "rotation": 0,
+      "lineHeight": 1.2,
+      "letterSpacing": 0
     },
     {
       "type": "placeholder",
@@ -979,6 +983,10 @@ async function handleAnalyzeCarousel(req, res) {
 - fontSize — как если бы слайд 1080px шириной (диапазон 24-160).
 - fontWeight: 400 (обычный) или 700 (жирный).
 - fontFamily: "serif" если шрифт с засечками (Playfair, Times, Georgia-style), "sans-serif" если без засечек (Inter, Helvetica-style), "display" если декоративный/капительный (Bebas Neue, Impact-style), "italic-serif" если курсивный с засечками.
+- fontStyle: "italic" если текст наклонённый/курсивный, иначе "normal".
+- rotation: угол наклона в градусах (например -5, 0, 15). 0 если текст прямой.
+- lineHeight: межстрочный интервал (1.0-1.8). Если строки плотно сжаты — 1.0-1.1, обычно — 1.3, широко — 1.6+.
+- letterSpacing: межбуквенный интервал в em (-0.05 до 0.3). Если буквы сжаты — отрицательное, разрежено — 0.1-0.3.
 - width — ширина текстового блока в % от ширины слайда.
 - Максимум 8 текстовых элементов.
 
@@ -987,6 +995,12 @@ async function handleAnalyzeCarousel(req, res) {
 - width и height в % от размеров слайда.
 - borderRadius: 0 если прямоугольник, 8-32 если скруглённые углы, 50 если круг.
 - Разделительные линии: height=0.5-1%.
+
+Правила для фигур (shapes):
+- Для горизонтальных/вертикальных линий: type="shape", shapeType="line", height=0.3-1%.
+- Для стрелок: type="shape", shapeType="arrow", указывай direction: "right"|"left"|"up"|"down".
+- Для прямоугольников/рамок: type="shape", shapeType="rect".
+- fill — цвет заливки (hex или "transparent"), stroke — цвет обводки, strokeWidth — толщина (1-8).
 
 Верни ТОЛЬКО JSON, без пояснений, без markdown.`;
 
@@ -1033,67 +1047,68 @@ async function handleAnalyzeCarousel(req, res) {
     return res.status(502).json({ error: lastErr?.message ?? 'Vision API error' });
   }
 
-  // ── Шаг 2: если фон — фото/текстура, описываем его и генерируем через images/generations ──
+  // ── Шаг 2: если фон — фото/текстура, редактируем через gemini-2.5-flash-image ──────────
+  // Без modalities — именно так работает в OpenRouter chat UI
   if (parsed.background?.type === 'image') {
     try {
-      // 2a. Gemini Vision описывает фон текстом
-      let bgPrompt = null;
-      for (const model of VISION_MODELS) {
-        try {
-          const { text } = await callOpenRouter({
-            apiKey: OPENROUTER_API_KEY,
-            model,
-            messages: [{
-              role: 'user',
-              content: [
-                { type: 'image_url', image_url: { url: `data:${mime_type};base64,${image_data}` } },
-                { type: 'text', text: 'Посмотри только на фон этого изображения. Игнорируй весь текст, иконки, UI элементы. Опиши фон для генерации изображения: цвет, текстуру, зернистость, освещение, атмосферу, стиль. Если на фоне есть человек или сцена — опиши их. Ответь только описанием, без лишних слов. На русском.' },
-              ],
-            }],
-            temperature: 0.1,
-            max_tokens: 300,
-          });
-          if (text?.trim()) { bgPrompt = text.trim(); break; }
-        } catch (e) { /* next model */ }
+      const genRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://ririrai.vercel.app',
+          'X-Title': 'RiRi AI',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash-image',
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'image_url', image_url: { url: `data:${mime_type};base64,${image_data}` } },
+              { type: 'text', text: 'я прикрепил тебе фото. удали на нем все текста, блоки с фото, точки, все, кроме фона.\n\nсохрани точь в точь фон и дай мне только его. сохрани цвет, текстуру, палитру точь в точь.\n\nесли фоном является фото - создай это же фото.\n\nсделай фото размером 3 на 4.' },
+            ],
+          }],
+        }),
+      });
+
+      const genData = await genRes.json();
+      console.log('Gemini image edit status:', genRes.status, JSON.stringify(genData).slice(0, 500));
+
+      // Ищем изображение во всех возможных форматах ответа OpenRouter
+      const msg = genData?.choices?.[0]?.message;
+      let imgSrc = null;
+
+      // Формат 1: message.images[]
+      if (msg?.images?.[0]?.image_url?.url) {
+        imgSrc = msg.images[0].image_url.url;
+      }
+      // Формат 2: message.content как массив
+      if (!imgSrc && Array.isArray(msg?.content)) {
+        const imgPart = msg.content.find(p => p.type === 'image_url');
+        if (imgPart?.image_url?.url) imgSrc = imgPart.image_url.url;
+      }
+      // Формат 3: message.content как строка data:image
+      if (!imgSrc && typeof msg?.content === 'string' && msg.content.startsWith('data:image')) {
+        imgSrc = msg.content;
       }
 
-      if (bgPrompt) {
-        // 2b. Генерируем фон через OpenRouter /images/generations
-        const genRes = await fetch('https://openrouter.ai/api/v1/images/generations', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-            'Content-Type': 'application/json',
-            'HTTP-Referer': 'https://ririrai.vercel.app',
-            'X-Title': 'RiRi AI',
-          },
-          body: JSON.stringify({
-            model: 'google/gemini-2.5-flash-image',
-            prompt: bgPrompt + '. Без текста, без надписей, без UI элементов. Только чистый фон.',
-            n: 1,
-            size: '1024x1024',
-            response_format: 'b64_json',
-          }),
-        });
-
-        const genData = await genRes.json();
-        console.log('Image gen status:', genRes.status, JSON.stringify(genData).slice(0, 300));
-
-        const item = genData?.data?.[0];
-        if (item?.b64_json) {
-          parsed.background = { type: 'image', src: `data:image/png;base64,${item.b64_json}` };
-        } else if (item?.url) {
-          const imgRes = await fetch(item.url);
+      if (imgSrc) {
+        // Если URL — скачиваем и конвертируем в base64
+        if (imgSrc.startsWith('http')) {
+          const imgRes = await fetch(imgSrc);
           if (imgRes.ok) {
             const buf = await imgRes.arrayBuffer();
-            parsed.background = { type: 'image', src: `data:image/png;base64,${Buffer.from(buf).toString('base64')}` };
+            const ct = imgRes.headers.get('content-type') || 'image/png';
+            imgSrc = `data:${ct};base64,${Buffer.from(buf).toString('base64')}`;
           }
-        } else {
-          console.warn('Image gen: no image in response', JSON.stringify(genData).slice(0, 300));
         }
+        parsed.background = { type: 'image', src: imgSrc };
+        console.log('Gemini image edit: background generated OK');
+      } else {
+        console.warn('Gemini image edit: no image found in response', JSON.stringify(genData).slice(0, 500));
       }
     } catch (err) {
-      console.error('Background gen error:', err.message);
+      console.error('Gemini image edit error:', err.message);
     }
   }
 

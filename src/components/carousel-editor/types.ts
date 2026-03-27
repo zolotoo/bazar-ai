@@ -22,6 +22,9 @@ export interface TextElement {
   textAlign: 'left' | 'center' | 'right';
   width: number; // percentage 0-100
   fontFamily: string;
+  rotation?: number;      // degrees, 0 = no rotation
+  lineHeight?: number;    // e.g. 1.2, 1.4 — CSS line-height multiplier
+  letterSpacing?: number; // em units, e.g. -0.02 to 0.3
 }
 
 export interface ImageElement {
@@ -40,7 +43,7 @@ export interface ShapeElement {
   type: 'shape';
   position: Position;
   size: Size;
-  shapeType: 'rect' | 'circle' | 'line';
+  shapeType: 'rect' | 'circle' | 'line' | 'arrow';
   fill: string;
   stroke: string;
   strokeWidth: number;

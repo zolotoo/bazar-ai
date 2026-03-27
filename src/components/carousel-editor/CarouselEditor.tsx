@@ -218,6 +218,7 @@ function AiPhotoScreen({ onBack, onDone }: { onBack: () => void; onDone: (slides
             type: string; text?: string; x: number; y: number;
             fontSize?: number; fontWeight?: number; color?: string;
             textAlign?: string; width?: number; fontFamily?: string;
+            fontStyle?: string; rotation?: number; lineHeight?: number; letterSpacing?: number;
             label?: string; borderRadius?: number; height?: number;
           }>;
         };
@@ -256,6 +257,10 @@ function AiPhotoScreen({ onBack, onDone }: { onBack: () => void; onDone: (slides
               textAlign: (['left', 'center', 'right'].includes(el.textAlign ?? '') ? el.textAlign : 'left') as 'left' | 'center' | 'right',
               width: Math.max(20, Math.min(92, el.width ?? 80)),
               fontFamily: FONT_MAP[el.fontFamily ?? ''] ?? 'Inter, sans-serif',
+              fontStyle: el.fontStyle === 'italic' ? 'italic' : 'normal',
+              rotation: typeof el.rotation === 'number' ? el.rotation : 0,
+              lineHeight: typeof el.lineHeight === 'number' ? Math.max(0.8, Math.min(2.5, el.lineHeight)) : 1.3,
+              letterSpacing: typeof el.letterSpacing === 'number' ? Math.max(-0.1, Math.min(0.5, el.letterSpacing)) : 0,
             })];
           }
           if (el.type === 'placeholder') {
