@@ -1007,6 +1007,8 @@ async function handleAnalyzeCarousel(req, res) {
     },
   ];
 
+  // ── Шаг 1: основной анализ ──────────────────────────────────
+  let parsed = null;
   let lastErr = null;
   for (const model of VISION_MODELS) {
     try {
@@ -1015,17 +1017,68 @@ async function handleAnalyzeCarousel(req, res) {
         model,
         messages,
         temperature: 0.1,
-        max_tokens: 1200,
+        max_tokens: 1400,
       });
       if (!text) continue;
-      const parsed = parseJsonResponse(text);
-      return res.status(200).json(parsed);
+      parsed = parseJsonResponse(text);
+      break;
     } catch (err) {
-      console.error(`analyze-carousel error with ${model}:`, err.message);
+      console.error(`analyze-carousel step1 error with ${model}:`, err.message);
       lastErr = err;
       if (err.message?.includes('429')) await new Promise(r => setTimeout(r, 1500));
     }
   }
 
-  return res.status(502).json({ error: lastErr?.message ?? 'Vision API error' });
+  if (!parsed) {
+    return res.status(502).json({ error: lastErr?.message ?? 'Vision API error' });
+  }
+
+  // ── Шаг 2: если фон — фото/текстура, воссоздаём его через отдельный запрос ──
+  if (parsed.background?.type === 'image') {
+    const bgPrompt = `Посмотри на это изображение карусели. Игнорируй весь текст, иконки и элементы переднего плана. Смотри ТОЛЬКО на фон (задний слой).
+
+Воссоздай этот фон максимально точно как CSS. Верни ТОЛЬКО JSON:
+
+Если фон — однородный цвет или почти однородный:
+{"type":"solid","color":"#точный_hex"}
+
+Если фон — градиент или плавный переход цветов:
+{"type":"gradient","from":"#hex_начало","to":"#hex_конец","direction":"to bottom"}
+
+Если фон — сложная фотография, пейзаж, портрет, сцена (нельзя передать градиентом):
+{"type":"image"}
+
+Верни ТОЛЬКО JSON. Без пояснений.`;
+
+    for (const model of VISION_MODELS) {
+      try {
+        const { text: bgText } = await callOpenRouter({
+          apiKey: OPENROUTER_API_KEY,
+          model,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'image_url', image_url: { url: `data:${mime_type};base64,${image_data}` } },
+              { type: 'text', text: bgPrompt },
+            ],
+          }],
+          temperature: 0.05,
+          max_tokens: 200,
+        });
+        if (!bgText) continue;
+        const bgParsed = parseJsonResponse(bgText);
+        if (bgParsed?.type && bgParsed.type !== 'image') {
+          // Заменяем фон результатом второго запроса
+          parsed.background = bgParsed;
+        }
+        // Если вернул type='image' — оставляем как есть, фронт сам подставит скриншот
+        break;
+      } catch (err) {
+        console.error(`analyze-carousel step2 bg error with ${model}:`, err.message);
+        if (err.message?.includes('429')) await new Promise(r => setTimeout(r, 1000));
+      }
+    }
+  }
+
+  return res.status(200).json(parsed);
 }
