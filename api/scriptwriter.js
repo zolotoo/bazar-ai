@@ -45,6 +45,8 @@ export default async function handler(req, res) {
       return handleImproveScript(req, res);
     case 'quick-generate':
       return handleQuickGenerate(req, res);
+    case 'analyze-carousel':
+      return handleAnalyzeCarousel(req, res);
     default:
       return res.status(400).json({ error: 'Unknown action' });
   }
@@ -924,6 +926,71 @@ async function handleQuickGenerate(req, res) {
     return res.status(200).json({ success: true, script: rawText.trim() });
   } catch (err) {
     console.error('scriptwriter quick-generate error:', err);
+    return res.status(502).json({ error: 'OpenRouter API error', details: err.message });
+  }
+}
+
+// ─── analyze-carousel ─────────────────────────────────────────────────────────
+// Принимает base64-картинку слайда карусели, возвращает JSON с фоном и элементами.
+
+async function handleAnalyzeCarousel(req, res) {
+  const { image_data, mime_type = 'image/jpeg' } = req.body;
+
+  if (!image_data) return res.status(400).json({ error: 'image_data required' });
+
+  const prompt = `Ты дизайн-аналитик. Проанализируй слайд карусели Instagram и верни ТОЛЬКО валидный JSON без markdown.
+
+Формат:
+{
+  "background": {
+    "type": "solid",
+    "color": "#hex"
+  },
+  "elements": [
+    {
+      "type": "text",
+      "text": "текст блока",
+      "x": 8,
+      "y": 8,
+      "fontSize": 48,
+      "fontWeight": 700,
+      "color": "#hex",
+      "textAlign": "left",
+      "width": 80
+    }
+  ]
+}
+
+Правила:
+- background.type = "solid" если однородный/почти однородный фон, "gradient" если заметный переход (добавь from, to, direction).
+- Все координаты x, y — в % от ширины/высоты (0–90).
+- fontSize — как если бы слайд был 1080px шириной (диапазон 24–120).
+- fontWeight: 400 (обычный) или 700 (жирный).
+- Верни максимум 5 текстовых элементов, только самые важные.
+- НЕ включай фото/иконки/линии — только текст.
+- Верни ТОЛЬКО JSON, без пояснений.`;
+
+  try {
+    const { text } = await callOpenRouter({
+      apiKey: OPENROUTER_API_KEY,
+      model: MODELS.FLASH,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'image_url', image_url: { url: `data:${mime_type};base64,${image_data}` } },
+            { type: 'text', text: prompt },
+          ],
+        },
+      ],
+      temperature: 0.1,
+      max_tokens: 800,
+    });
+
+    const parsed = parseJsonResponse(text);
+    return res.status(200).json(parsed);
+  } catch (err) {
+    console.error('analyze-carousel error:', err);
     return res.status(502).json({ error: 'OpenRouter API error', details: err.message });
   }
 }

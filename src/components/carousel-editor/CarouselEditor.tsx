@@ -5,6 +5,7 @@ import {
   ChevronLeft, ChevronRight, Download, Plus, Trash2,
   ArrowLeft, PenLine, LayoutTemplate, Type, Image as ImageIcon,
   Bold, Italic, AlignLeft, AlignCenter, AlignRight,
+  Sparkles, Loader2,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { SlideCanvas } from './SlideCanvas';
@@ -158,10 +159,12 @@ function FreeEditor({ onBack }: { onBack: () => void }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
   const [activePanel, setActivePanel] = useState<'add' | 'bg' | 'text' | 'image' | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const bgImageInputRef = useRef<HTMLInputElement>(null);
+  const aiInputRef = useRef<HTMLInputElement>(null);
 
   const slide = slides[currentIdx];
 
@@ -261,6 +264,61 @@ function FreeEditor({ onBack }: { onBack: () => void }) {
     };
     reader.readAsDataURL(file);
   }, [onUpdateBackground]);
+
+  const handleAiGenerate = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+      const [meta, base64] = dataUrl.split(',');
+      const mimeType = meta.match(/:(.*?);/)?.[1] ?? 'image/jpeg';
+
+      setAiLoading(true);
+      setSelectedId(null);
+      try {
+        const res = await fetch('/api/scriptwriter', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'analyze-carousel', image_data: base64, mime_type: mimeType }),
+        });
+        if (!res.ok) throw new Error(`API ${res.status}`);
+        const data = await res.json();
+
+        const { background, elements = [] } = data as {
+          background: import('./types').SlideBackground;
+          elements: Array<{
+            type: string; text: string; x: number; y: number;
+            fontSize: number; fontWeight: number; color: string;
+            textAlign: string; width: number;
+          }>;
+        };
+
+        const newSlide = createDefaultSlide();
+        newSlide.background = background ?? { type: 'solid', color: '#f5f5f4' };
+        newSlide.elements = elements
+          .filter((el) => el.type === 'text')
+          .map((el) => createDefaultTextElement({
+            text: el.text ?? 'Текст',
+            position: { x: Math.max(0, Math.min(90, el.x ?? 8)), y: Math.max(0, Math.min(90, el.y ?? 8)) },
+            fontSize: Math.max(24, Math.min(120, el.fontSize ?? 48)),
+            fontWeight: el.fontWeight === 400 ? 400 : 700,
+            color: el.color ?? '#1a1a18',
+            textAlign: (['left', 'center', 'right'].includes(el.textAlign) ? el.textAlign : 'left') as 'left' | 'center' | 'right',
+            width: Math.max(20, Math.min(90, el.width ?? 80)),
+          }));
+
+        updateSlide(currentIdx, () => newSlide);
+      } catch (err) {
+        console.error('AI generate error:', err);
+      } finally {
+        setAiLoading(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  }, [currentIdx, updateSlide]);
 
   const exportSlides = useCallback(async () => {
     if (!canvasRef.current) return;
@@ -449,6 +507,8 @@ function FreeEditor({ onBack }: { onBack: () => void }) {
             onAddText={handleAddText}
             onAddImage={() => imageInputRef.current?.click()}
             onBgImage={() => bgImageInputRef.current?.click()}
+            onAiGenerate={() => aiInputRef.current?.click()}
+            aiLoading={aiLoading}
           />
         </div>
       </div>
@@ -470,6 +530,12 @@ function FreeEditor({ onBack }: { onBack: () => void }) {
           label="Фон"
           onClick={() => setActivePanel((p) => p === 'bg' ? null : 'bg')}
           active={activePanel === 'bg'}
+        />
+        <ToolbarBtn
+          icon={aiLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+          label="ИИ"
+          onClick={() => aiInputRef.current?.click()}
+          active={aiLoading}
         />
         {selectedEl?.type === 'text' && (
           <ToolbarBtn icon={<Bold size={16} />} label="Стиль" onClick={() => setActivePanel((p) => p === 'text' ? null : 'text')} active={activePanel === 'text'} />
@@ -503,6 +569,8 @@ function FreeEditor({ onBack }: { onBack: () => void }) {
                 onAddText={handleAddText}
                 onAddImage={() => imageInputRef.current?.click()}
                 onBgImage={() => bgImageInputRef.current?.click()}
+                onAiGenerate={() => aiInputRef.current?.click()}
+                aiLoading={aiLoading}
                 mobilePanel={activePanel}
               />
             </div>
@@ -512,6 +580,7 @@ function FreeEditor({ onBack }: { onBack: () => void }) {
 
       <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleAddImage} />
       <input ref={bgImageInputRef} type="file" accept="image/*" className="hidden" onChange={handleBgImage} />
+      <input ref={aiInputRef} type="file" accept="image/*" className="hidden" onChange={handleAiGenerate} />
     </div>
   );
 }
@@ -553,12 +622,14 @@ interface PropertiesPanelProps {
   onAddText: () => void;
   onAddImage: () => void;
   onBgImage: () => void;
+  onAiGenerate: () => void;
+  aiLoading?: boolean;
   mobilePanel?: 'add' | 'bg' | 'text' | 'image' | null;
 }
 
 function PropertiesPanel({
   slide, selectedEl, onUpdateBackground, onUpdateElement,
-  onDeleteElement, onAddText, onAddImage, onBgImage, mobilePanel,
+  onDeleteElement, onAddText, onAddImage, onBgImage, onAiGenerate, aiLoading, mobilePanel,
 }: PropertiesPanelProps) {
 
   // On desktop: show everything relevant
@@ -592,6 +663,15 @@ function PropertiesPanel({
               Фото
             </button>
           </div>
+          <button
+            onClick={onAiGenerate}
+            disabled={aiLoading}
+            className="w-full flex items-center justify-center gap-1.5 rounded-2xl py-2.5 text-[13px] font-medium transition-all touch-manipulation disabled:opacity-60"
+            style={{ background: 'linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%)', border: '1px solid rgba(99,102,241,0.2)', color: '#4f46e5' }}
+          >
+            {aiLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+            {aiLoading ? 'Анализирую...' : 'ИИ из фото'}
+          </button>
         </div>
       )}
 
