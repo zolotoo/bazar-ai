@@ -102,6 +102,7 @@ function TextElementView({
         cursor: editing ? 'text' : 'text',
         transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined,
         transformOrigin: 'top left',
+        zIndex: el.zIndex ?? 1,
       }}
     >
       {/* Drag handle — only when selected and not editing */}
@@ -269,6 +270,7 @@ function ImageElementView({ el, selected, scale, onSelect, onMove, onResize, con
         top: `${el.position.y}%`,
         width: `${el.size.width}%`,
         cursor: activeDrag ? 'grabbing' : 'grab',
+        zIndex: el.zIndex ?? 1,
       }}
       onPointerDown={(e) => { onSelect(); setActiveDrag(true); drag.onPointerDown(e); }}
       onPointerMove={drag.onPointerMove}
@@ -416,6 +418,7 @@ function ShapeElementView({ el, selected, scale, onSelect, onMove, onResize, con
         top: `${el.position.y}%`,
         width: `${el.size.width}%`,
         cursor: activeDrag ? 'grabbing' : 'grab',
+        zIndex: el.zIndex ?? 1,
       }}
       onPointerDown={(e) => { onSelect(); setActiveDrag(true); drag.onPointerDown(e); }}
       onPointerMove={drag.onPointerMove}
@@ -516,6 +519,7 @@ function PlaceholderElementView({ el, selected, scale, onSelect, onMove, onResiz
         top: `${el.position.y}%`,
         width: `${el.size.width}%`,
         cursor: activeDrag ? 'grabbing' : 'grab',
+        zIndex: el.zIndex ?? 1,
       }}
       onPointerDown={(e) => { onSelect(); setActiveDrag(true); drag.onPointerDown(e); }}
       onPointerMove={drag.onPointerMove}
@@ -634,7 +638,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
         style={{ ...bgStyle, maxWidth: 540 }}
         onClick={() => onSelectElement(null)}
       >
-        {slide.elements.map((el) => {
+        {[...slide.elements].sort((a, b) => (a.zIndex ?? 1) - (b.zIndex ?? 1)).map((el) => {
           if (el.type === 'text') {
             return (
               <TextElementView

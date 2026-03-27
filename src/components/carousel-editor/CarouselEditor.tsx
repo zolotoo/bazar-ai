@@ -308,8 +308,15 @@ function AiPhotoScreen({ onBack, onDone }: { onBack: () => void; onDone: (slides
             fontStyle?: string; rotation?: number; lineHeight?: number; letterSpacing?: number;
             label?: string; borderRadius?: number; height?: number;
             shapeType?: string; fill?: string; stroke?: string; strokeWidth?: number; opacity?: number;
+            zIndex?: number;
           }>;
         };
+
+        // AI теперь возвращает пиксели на холсте 1080×1440 → конвертируем в %
+        const px2x = (px: number) => Math.max(0, Math.min(94, (px / 1080) * 100));
+        const px2y = (px: number) => Math.max(0, Math.min(94, (px / 1440) * 100));
+        const px2w = (px: number) => Math.max(5, Math.min(100, (px / 1080) * 100));
+        const px2h = (px: number) => Math.max(1, Math.min(100, (px / 1440) * 100));
 
         // Маппинг fontFamily от AI к реальным CSS-шрифтам
         const FONT_MAP: Record<string, string> = {
@@ -339,43 +346,45 @@ function AiPhotoScreen({ onBack, onDone }: { onBack: () => void; onDone: (slides
           if (el.type === 'text') {
             return [createDefaultTextElement({
               text: el.text ?? 'Текст',
-              position: { x: Math.max(0, Math.min(90, el.x ?? 8)), y: Math.max(0, Math.min(90, el.y ?? 8)) },
-              fontSize: Math.max(24, Math.min(200, el.fontSize ?? 48)),
+              position: { x: px2x(el.x ?? 86), y: px2y(el.y ?? 115) },
+              fontSize: Math.max(24, Math.min(220, el.fontSize ?? 48)),
               fontWeight: ([400, 700, 800, 900] as number[]).includes(el.fontWeight ?? 0) ? el.fontWeight! : 700,
               color: el.color ?? '#1a1a18',
               textAlign: (['left', 'center', 'right'].includes(el.textAlign ?? '') ? el.textAlign : 'left') as 'left' | 'center' | 'right',
-              width: Math.max(20, Math.min(92, el.width ?? 80)),
+              width: px2w(el.width ?? 900),
               fontFamily: FONT_MAP[el.fontFamily ?? ''] ?? 'Inter, sans-serif',
               fontStyle: el.fontStyle === 'italic' ? 'italic' : 'normal',
               rotation: typeof el.rotation === 'number' ? el.rotation : 0,
               lineHeight: typeof el.lineHeight === 'number' ? Math.max(0.8, Math.min(2.5, el.lineHeight)) : 1.3,
               letterSpacing: typeof el.letterSpacing === 'number' ? Math.max(-0.1, Math.min(0.5, el.letterSpacing)) : 0,
+              zIndex: el.zIndex ?? 2,
             })];
           }
           if (el.type === 'placeholder') {
             return [createDefaultPlaceholderElement({
-              position: { x: Math.max(0, Math.min(90, el.x ?? 10)), y: Math.max(0, Math.min(90, el.y ?? 30)) },
-              size: { width: Math.max(2, Math.min(90, el.width ?? 80)), height: Math.max(0.5, Math.min(90, el.height ?? 45)) },
+              position: { x: px2x(el.x ?? 86), y: px2y(el.y ?? 800) },
+              size: { width: px2w(el.width ?? 908), height: px2h(el.height ?? 500) },
               label: el.label ?? 'Фото',
               borderRadius: el.borderRadius ?? 16,
+              zIndex: el.zIndex ?? 1,
             })];
           }
           if (el.type === 'shape') {
             const validShapeTypes = ['rect', 'circle', 'line', 'arrow'] as const;
             const rawType = el.shapeType ?? 'rect';
-            // pill → rect с большим borderRadius
             const shapeType = validShapeTypes.includes(rawType as typeof validShapeTypes[number])
               ? rawType as typeof validShapeTypes[number]
               : 'rect';
             return [createDefaultShapeElement({
-              position: { x: Math.max(0, Math.min(90, el.x ?? 10)), y: Math.max(0, Math.min(90, el.y ?? 30)) },
-              size: { width: Math.max(2, Math.min(90, el.width ?? 40)), height: Math.max(1, Math.min(90, el.height ?? 10)) },
+              position: { x: px2x(el.x ?? 86), y: px2y(el.y ?? 400) },
+              size: { width: px2w(el.width ?? 400), height: px2h(el.height ?? 140) },
               shapeType,
               fill: el.fill ?? 'transparent',
               stroke: el.stroke ?? '#ffffff',
               strokeWidth: el.strokeWidth ?? 2,
               borderRadius: el.borderRadius ?? 0,
               opacity: typeof el.opacity === 'number' ? el.opacity : 1,
+              zIndex: el.zIndex ?? 1,
             })];
           }
           return [];
@@ -387,18 +396,18 @@ function AiPhotoScreen({ onBack, onDone }: { onBack: () => void; onDone: (slides
           if (el.type !== 'shape') return el;
           const s = el as import('./types').ShapeElement;
           if (s.shapeType !== 'rect' || s.borderRadius < 30) return el;
-          // Это pill/oval — центрируем горизонтально
+          // Pill/oval — центрируем горизонтально
           const centeredX = Math.max(0, (100 - s.size.width) / 2);
           return { ...s, position: { ...s.position, x: centeredX } };
         }).map((el) => {
           if (el.type !== 'text') return el;
           const t = el as import('./types').TextElement;
-          // Ищем pill-shape на том же уровне по Y (±15%)
+          // Ищем pill-shape на том же уровне по Y (±8% в %-пространстве)
           const pill = newSlide.elements.find((e) => {
             if (e.type !== 'shape') return false;
             const s = e as import('./types').ShapeElement;
             return s.shapeType === 'rect' && s.borderRadius >= 30
-              && Math.abs(s.position.y - t.position.y) < 15;
+              && Math.abs(s.position.y - t.position.y) < 8;
           }) as import('./types').ShapeElement | undefined;
           if (!pill) return el;
           // Текст внутри pill — центрируем
@@ -1248,6 +1257,28 @@ function PropertiesPanel({
                 {regenBgLoading ? 'Генерирую...' : 'Перегенерировать'}
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Layer controls — shown whenever an element is selected */}
+      {selectedEl && (
+        <div className="space-y-1">
+          <p className="text-[11px] font-semibold text-[#1a1a18]/35 uppercase tracking-wider">Слой</p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onUpdateElement(selectedEl.id, { zIndex: Math.max(0, (selectedEl.zIndex ?? 1) - 1) } as Partial<SlideElement>)}
+              className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all touch-manipulation"
+            >
+              ↓ Назад
+            </button>
+            <span className="text-[11px] text-slate-400">z: {selectedEl.zIndex ?? 1}</span>
+            <button
+              onClick={() => onUpdateElement(selectedEl.id, { zIndex: (selectedEl.zIndex ?? 1) + 1 } as Partial<SlideElement>)}
+              className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all touch-manipulation"
+            >
+              ↑ Вперёд
+            </button>
           </div>
         </div>
       )}

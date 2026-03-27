@@ -25,6 +25,7 @@ export interface TextElement {
   rotation?: number;      // degrees, 0 = no rotation
   lineHeight?: number;    // e.g. 1.2, 1.4 — CSS line-height multiplier
   letterSpacing?: number; // em units, e.g. -0.02 to 0.3
+  zIndex?: number;        // layer order, higher = on top
 }
 
 export interface ImageElement {
@@ -36,6 +37,7 @@ export interface ImageElement {
   borderRadius: number; // px at 1080 scale
   shadow: 'none' | 'sm' | 'md' | 'lg';
   objectFit: 'cover' | 'contain';
+  zIndex?: number;
 }
 
 export interface ShapeElement {
@@ -49,6 +51,7 @@ export interface ShapeElement {
   strokeWidth: number;
   borderRadius: number;
   opacity: number;
+  zIndex?: number;
 }
 
 export interface PlaceholderElement {
@@ -58,6 +61,7 @@ export interface PlaceholderElement {
   size: Size;
   label: string;
   borderRadius: number;
+  zIndex?: number;
 }
 
 export type SlideElement = TextElement | ImageElement | ShapeElement | PlaceholderElement;
