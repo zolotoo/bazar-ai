@@ -186,7 +186,7 @@ function compressImage(file: File): Promise<{ base64: string; mimeType: string }
   });
 }
 
-function AiPhotoScreen({ onBack, onDone }: { onBack: () => void; onDone: (slides: Slide[]) => void }) {
+function AiPhotoScreen({ onBack, onDone }: { onBack: () => void; onDone: (slides: Slide[], img: { base64: string; mimeType: string }) => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -274,7 +274,7 @@ function AiPhotoScreen({ onBack, onDone }: { onBack: () => void; onDone: (slides
           return [];
         });
 
-        onDone([newSlide]);
+        onDone([newSlide], { base64, mimeType });
       } catch (err) {
         console.error('AI analyze error:', err);
         const msg = err instanceof Error ? err.message : String(err);
@@ -394,13 +394,15 @@ const PRESET_GRADIENTS = [
 
 // ─── Free editor ──────────────────────────────────────────────
 
-function FreeEditor({ onBack, initialSlides }: { onBack: () => void; initialSlides?: Slide[] }) {
+function FreeEditor({ onBack, initialSlides, aiOriginalImage }: { onBack: () => void; initialSlides?: Slide[]; aiOriginalImage?: { base64: string; mimeType: string } }) {
   const [slides, setSlides] = useState<Slide[]>(initialSlides ?? [createDefaultSlide()]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [activePanel, setActivePanel] = useState<'add' | 'bg' | 'text' | 'image' | null>(null);
+  const [regenBgLoading, setRegenBgLoading] = useState(false);
+
   const canvasRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const bgImageInputRef = useRef<HTMLInputElement>(null);
@@ -522,6 +524,28 @@ function FreeEditor({ onBack, initialSlides }: { onBack: () => void; initialSlid
     };
     reader.readAsDataURL(file);
   }, [onUpdateBackground]);
+
+  const handleRegenBg = useCallback(async () => {
+    const img = aiOriginalImage;
+    if (!img) return;
+    setRegenBgLoading(true);
+    try {
+      const res = await fetch('/api/scriptwriter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'analyze-carousel', image_data: img.base64, mime_type: img.mimeType }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.background?.type === 'image' && data.background.src) {
+        onUpdateBackground({ type: 'image', src: data.background.src });
+      }
+    } catch (err) {
+      console.error('Regen bg error:', err);
+    } finally {
+      setRegenBgLoading(false);
+    }
+  }, [aiOriginalImage, onUpdateBackground]);
 
   const handleAddShape = useCallback(() => {
     const el = createDefaultShapeElement();
@@ -759,6 +783,8 @@ function FreeEditor({ onBack, initialSlides }: { onBack: () => void; initialSlid
             onAddText={handleAddText}
             onAddImage={() => imageInputRef.current?.click()}
             onBgImage={() => bgImageInputRef.current?.click()}
+            onRegenBg={aiOriginalImage ? handleRegenBg : undefined}
+            regenBgLoading={regenBgLoading}
             onAddShape={handleAddShape}
           />
         </div>
@@ -815,6 +841,8 @@ function FreeEditor({ onBack, initialSlides }: { onBack: () => void; initialSlid
                 onAddText={handleAddText}
                 onAddImage={() => imageInputRef.current?.click()}
                 onBgImage={() => bgImageInputRef.current?.click()}
+                onRegenBg={aiOriginalImage ? handleRegenBg : undefined}
+                regenBgLoading={regenBgLoading}
                 onAddShape={handleAddShape}
                 mobilePanel={activePanel}
               />
@@ -867,13 +895,15 @@ interface PropertiesPanelProps {
   onAddText: () => void;
   onAddImage: () => void;
   onBgImage: () => void;
+  onRegenBg?: () => void;
+  regenBgLoading?: boolean;
   onAddShape: () => void;
   mobilePanel?: 'add' | 'bg' | 'text' | 'image' | null;
 }
 
 function PropertiesPanel({
   slide, selectedEl, onUpdateBackground, onUpdateElement,
-  onDeleteElement, onAddText, onAddImage, onBgImage, onAddShape, mobilePanel,
+  onDeleteElement, onAddText, onAddImage, onBgImage, onRegenBg, regenBgLoading, onAddShape, mobilePanel,
 }: PropertiesPanelProps) {
 
   // On desktop: show everything relevant
@@ -999,16 +1029,30 @@ function PropertiesPanel({
             </div>
           )}
 
-          {/* Upload bg image */}
-          {slide.background.type !== 'image' && (
-            <button
-              onClick={onBgImage}
-              className="flex items-center gap-1.5 text-[12px] text-slate-500 hover:text-slate-700 transition-colors touch-manipulation"
-            >
-              <ImageIcon size={12} />
-              Загрузить фоновое фото
-            </button>
-          )}
+          {/* Upload / regen bg */}
+          <div className="flex items-center gap-3">
+            {slide.background.type !== 'image' && (
+              <button
+                onClick={onBgImage}
+                className="flex items-center gap-1.5 text-[12px] text-slate-500 hover:text-slate-700 transition-colors touch-manipulation"
+              >
+                <ImageIcon size={12} />
+                Загрузить фоновое фото
+              </button>
+            )}
+            {onRegenBg && (
+              <button
+                onClick={onRegenBg}
+                disabled={regenBgLoading}
+                className="flex items-center gap-1.5 text-[12px] text-violet-500 hover:text-violet-700 transition-colors touch-manipulation disabled:opacity-50"
+              >
+                {regenBgLoading
+                  ? <Loader2 size={12} className="animate-spin" />
+                  : <RefreshCw size={12} />}
+                {regenBgLoading ? 'Генерирую...' : 'Перегенерировать'}
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -1603,9 +1647,11 @@ function TemplateEditor({ onBack }: { onBack: () => void }) {
 export function CarouselEditor() {
   const [mode, setMode] = useState<EditorMode>('home');
   const [aiGeneratedSlides, setAiGeneratedSlides] = useState<Slide[] | null>(null);
+  const [aiOriginalImage, setAiOriginalImage] = useState<{ base64: string; mimeType: string } | null>(null);
 
-  const handleAiDone = useCallback((slides: Slide[]) => {
+  const handleAiDone = useCallback((slides: Slide[], img: { base64: string; mimeType: string }) => {
     setAiGeneratedSlides(slides);
+    setAiOriginalImage(img);
     setMode('create');
   }, []);
 
@@ -1640,8 +1686,9 @@ export function CarouselEditor() {
           {mode === 'home' && <HomeScreen onMode={setMode} />}
           {mode === 'create' && (
             <FreeEditor
-              onBack={() => { setAiGeneratedSlides(null); setMode('home'); }}
+              onBack={() => { setAiGeneratedSlides(null); setAiOriginalImage(null); setMode('home'); }}
               initialSlides={aiGeneratedSlides ?? undefined}
+              aiOriginalImage={aiOriginalImage ?? undefined}
             />
           )}
           {mode === 'template' && <TemplateEditor onBack={() => setMode('home')} />}
