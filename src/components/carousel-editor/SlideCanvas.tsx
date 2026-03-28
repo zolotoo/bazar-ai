@@ -94,9 +94,17 @@ function TextElementView({
 
   const onResizeUp = useCallback(() => { resizing.current = false; }, []);
 
+  // Sync innerHTML when not editing
+  useEffect(() => {
+    if (!editing && textRef.current) {
+      textRef.current.innerHTML = el.text;
+    }
+  }, [el.text, editing]);
+
   // Focus + cursor at end when editing starts
   useEffect(() => {
     if (editing && textRef.current) {
+      textRef.current.innerHTML = el.text; // seed content before focus
       textRef.current.focus();
       const range = document.createRange();
       const sel = window.getSelection();
@@ -105,7 +113,7 @@ function TextElementView({
       sel?.removeAllRanges();
       sel?.addRange(range);
     }
-  }, [editing]);
+  }, [editing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -179,7 +187,6 @@ function TextElementView({
           userSelect: editing ? 'text' : 'none',
           cursor: editing ? 'text' : 'default',
         }}
-        dangerouslySetInnerHTML={editing ? undefined : { __html: el.text }}
         onClick={handleClick}
         onBlur={() => {
           if (textRef.current) onTextChange(textRef.current.innerHTML);
