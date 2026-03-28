@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { toPng } from 'html-to-image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -533,20 +533,21 @@ function FloatBtn({
   return (
     <motion.button
       onClick={onClick}
-      whileTap={{ scale: 0.88 }}
+      whileTap={{ scale: 0.95 }}
       title={label}
-      className="w-14 flex flex-col items-center gap-[3px] px-1 py-2 rounded-2xl touch-manipulation flex-shrink-0 transition-colors"
+      className="flex items-center gap-2 px-3 py-2.5 rounded-2xl touch-manipulation flex-shrink-0 transition-colors w-full"
       style={{
         background: active ? '#1a1a18' : danger ? 'rgba(239,68,68,0.08)' : '#ffffff',
         border: '1px solid rgba(0,0,0,0.07)',
-        boxShadow: '0 2px 14px rgba(0,0,0,0.09), 0 1px 4px rgba(0,0,0,0.06)',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05)',
         color: active ? '#ffffff' : danger ? '#ef4444' : '#1a1a18',
+        minWidth: 104,
       }}
     >
-      {icon}
-      <span style={{ fontSize: 9, fontWeight: 600, lineHeight: 1, opacity: active ? 0.85 : 0.55, letterSpacing: '0.01em' }}>{label}</span>
+      <span className="flex-shrink-0">{icon}</span>
+      <span style={{ fontSize: 12, fontWeight: 500, lineHeight: 1, flex: 1, textAlign: 'left' }}>{label}</span>
       {hasPanel && (
-        <ChevronDown size={8} style={{ opacity: active ? 0.6 : 0.35 }} />
+        <ChevronDown size={11} style={{ opacity: active ? 0.6 : 0.3, flexShrink: 0 }} />
       )}
     </motion.button>
   );
@@ -581,9 +582,10 @@ function FreeEditor({ onBack, initialSlides, initialDraftId, aiOriginalImage, on
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
-  const [activePanel, setActivePanel] = useState<'add' | 'bg' | 'text' | 'image' | 'shape' | null>(null);
+  const [activePanel, setActivePanel] = useState<'add' | 'bg' | 'text' | 'image' | 'shape' | 'shape-picker' | null>(null);
   const [regenBgLoading, setRegenBgLoading] = useState(false);
   const [draftId] = useState<string>(initialDraftId ?? uid2());
+  const [lastSaved, setLastSaved] = useState<number | null>(null);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -591,6 +593,60 @@ function FreeEditor({ onBack, initialSlides, initialDraftId, aiOriginalImage, on
   const replaceRefInputRef = useRef<HTMLInputElement>(null);
   const replacePlaceholderInputRef = useRef<HTMLInputElement>(null);
   const pendingPlaceholderIdRef = useRef<string | null>(null);
+
+  // ─── Undo ────────────────────────────────────────────────────
+  const historyRef = useRef<Slide[][]>([]);
+  const isUndoingRef = useRef(false);
+  const historyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevSlidesRef = useRef<Slide[]>(slides);
+
+  // Capture a debounced snapshot before each change
+  useEffect(() => {
+    if (isUndoingRef.current) {
+      isUndoingRef.current = false;
+      prevSlidesRef.current = slides;
+      return;
+    }
+    const prev = prevSlidesRef.current;
+    prevSlidesRef.current = slides;
+    if (historyTimerRef.current) clearTimeout(historyTimerRef.current);
+    historyTimerRef.current = setTimeout(() => {
+      historyRef.current = [...historyRef.current.slice(-49), JSON.parse(JSON.stringify(prev))];
+    }, 400);
+  }, [slides]);
+
+  const undo = useCallback(() => {
+    if (historyRef.current.length === 0) { toast.info('Нечего отменять'); return; }
+    isUndoingRef.current = true;
+    setSlides(historyRef.current.pop()!);
+    setSelectedId(null);
+    setActivePanel(null);
+  }, []);
+
+  // Ctrl/Cmd+Z
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [undo]);
+
+  // ─── Autosave ─────────────────────────────────────────────────
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(() => {
+      const draft: CarouselDraft = {
+        id: draftId,
+        name: `Автосохранение ${new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`,
+        slides,
+        updatedAt: Date.now(),
+      };
+      saveDraftToStorage(draft);
+      setLastSaved(Date.now());
+    }, 2000);
+  }, [slides, draftId]);
 
   const slide = slides[currentIdx];
 
@@ -755,9 +811,10 @@ function FreeEditor({ onBack, initialSlides, initialDraftId, aiOriginalImage, on
     reader.readAsDataURL(file);
   }, [onUpdateOriginalImage]);
 
-  const handleAddShape = useCallback(() => {
-    const el = createDefaultShapeElement();
+  const handleAddShape = useCallback((shapeType: 'rect' | 'circle' | 'line' | 'arrow' = 'rect') => {
+    const el = createDefaultShapeElement({ shapeType });
     onAddElement(el);
+    setActivePanel(null);
   }, [onAddElement]);
 
   const handleReplacePlaceholder = useCallback((id: string) => {
@@ -827,37 +884,51 @@ function FreeEditor({ onBack, initialSlides, initialDraftId, aiOriginalImage, on
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="px-4 pt-4 pb-3 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+      <div className="px-4 pt-3 pb-3 flex items-center justify-between gap-2" style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 text-[14px] text-[#1a1a18]/50 hover:text-[#1a1a18] transition-colors touch-manipulation"
+          className="flex items-center gap-1.5 text-[14px] text-[#1a1a18]/50 hover:text-[#1a1a18] transition-colors touch-manipulation flex-shrink-0"
         >
           <ArrowLeft size={16} />
           Назад
         </button>
 
-        <div className="flex items-center gap-2">
-          <span className="text-[13px] text-[#1a1a18]/35">
-            {currentIdx + 1} / {slides.length}
+        {/* Autosave status */}
+        {lastSaved && (
+          <span className="text-[11px] text-[#1a1a18]/30 hidden sm:block flex-shrink-0">
+            Сохр. {new Date(lastSaved).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
           </span>
+        )}
+
+        <div className="flex items-center gap-1.5 ml-auto">
+          <span className="text-[12px] text-[#1a1a18]/30 flex-shrink-0">{currentIdx + 1}/{slides.length}</span>
+          {/* Undo */}
           <button
-            onClick={handleSaveDraft}
-            className="flex items-center gap-1.5 rounded-2xl px-3 py-2 text-[13px] font-medium transition-all active:scale-95 touch-manipulation"
+            onClick={undo}
+            title="Отменить (Ctrl+Z)"
+            className="flex items-center justify-center w-8 h-8 rounded-xl transition-all active:scale-95 touch-manipulation"
             style={{ background: '#f1f5f9', color: '#64748b', border: '1px solid rgba(0,0,0,0.07)' }}
           >
-            <BookmarkPlus size={13} />
-            Черновик
+            <span style={{ fontSize: 16, lineHeight: 1 }}>↩</span>
+          </button>
+          <button
+            onClick={handleSaveDraft}
+            className="flex items-center gap-1 rounded-xl px-2.5 py-2 text-[12px] font-medium transition-all active:scale-95 touch-manipulation"
+            style={{ background: '#f1f5f9', color: '#64748b', border: '1px solid rgba(0,0,0,0.07)' }}
+          >
+            <BookmarkPlus size={12} />
+            <span className="hidden sm:inline">Сохранить</span>
           </button>
           <button
             onClick={exportSlides}
             disabled={exporting}
             className={cn(
-              'flex items-center gap-1.5 rounded-2xl px-3 py-2 text-[13px] font-medium text-white transition-all active:scale-95 touch-manipulation',
+              'flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-[12px] font-medium text-white transition-all active:scale-95 touch-manipulation',
               exporting ? 'bg-slate-400 cursor-wait' : 'bg-slate-600 hover:bg-slate-700',
             )}
             style={{ boxShadow: '0 1px 6px rgba(0,0,0,0.15)' }}
           >
-            <Download size={14} />
+            <Download size={13} />
             {exporting ? '...' : 'PNG'}
           </button>
         </div>
@@ -992,7 +1063,7 @@ function FreeEditor({ onBack, initialSlides, initialDraftId, aiOriginalImage, on
           </div>
 
           {/* ── Floating toolbar buttons (right side) ── */}
-          <div className="absolute right-3 top-4 flex flex-col gap-2 z-30">
+          <div className="absolute right-3 top-4 flex flex-col gap-1.5 z-30" style={{ width: 112 }}>
 
             {/* Add */}
             <FloatBtn
@@ -1021,11 +1092,13 @@ function FreeEditor({ onBack, initialSlides, initialDraftId, aiOriginalImage, on
               onClick={() => setActivePanel((p) => p === 'bg' ? null : 'bg')}
             />
 
-            {/* Shape — direct action, no panel */}
+            {/* Shape — opens picker panel */}
             <FloatBtn
               icon={<Box size={18} />}
               label="Фигура"
-              onClick={handleAddShape}
+              active={activePanel === 'shape-picker'}
+              hasPanel
+              onClick={() => setActivePanel((p) => p === 'shape-picker' ? null : 'shape-picker')}
             />
 
             {/* Text props */}
@@ -1081,7 +1154,7 @@ function FreeEditor({ onBack, initialSlides, initialDraftId, aiOriginalImage, on
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 exit={{ opacity: 0, x: 10, scale: 0.96 }}
                 transition={{ duration: 0.16, ease: [0.25, 0.46, 0.45, 0.94] }}
-                className="absolute right-[70px] top-4 z-20 w-52 max-h-[calc(100%-32px)] overflow-y-auto rounded-[20px] custom-scrollbar-light"
+                className="absolute right-[124px] top-4 z-20 w-52 max-h-[calc(100%-32px)] overflow-y-auto rounded-[20px] custom-scrollbar-light"
                 style={{
                   background: '#ffffff',
                   border: '1px solid rgba(0,0,0,0.07)',
@@ -1133,8 +1206,8 @@ interface PropertiesPanelProps {
   regenBgLoading?: boolean;
   onReplaceRef?: () => void;
   aiOriginalImage?: { base64: string; mimeType: string };
-  onAddShape: () => void;
-  mobilePanel: 'add' | 'bg' | 'text' | 'image' | 'shape';
+  onAddShape: (type?: 'rect' | 'circle' | 'line' | 'arrow') => void;
+  mobilePanel: 'add' | 'bg' | 'text' | 'image' | 'shape' | 'shape-picker';
 }
 
 function PropertiesPanel({
@@ -1147,9 +1220,35 @@ function PropertiesPanel({
   const showText = mobilePanel === 'text';
   const showImage = mobilePanel === 'image';
   const showShape = mobilePanel === 'shape';
+  const showShapePicker = mobilePanel === 'shape-picker';
 
   return (
     <div className="p-4 space-y-5">
+      {/* Shape picker */}
+      {showShapePicker && (
+        <div className="space-y-2">
+          <p className="text-[11px] font-semibold text-[#1a1a18]/35 uppercase tracking-wider">Добавить фигуру</p>
+          <div className="grid grid-cols-2 gap-2">
+            {([
+              { type: 'rect' as const, label: 'Прямоугольник', icon: <Square size={22} /> },
+              { type: 'circle' as const, label: 'Круг', icon: <CircleIcon size={22} /> },
+              { type: 'line' as const, label: 'Линия', icon: <Minus size={22} /> },
+              { type: 'arrow' as const, label: 'Стрелка', icon: <span style={{ fontSize: 22, lineHeight: 1 }}>→</span> },
+            ]).map(({ type, label, icon }) => (
+              <button
+                key={type}
+                onClick={() => { onAddShape(type); }}
+                className="flex flex-col items-center gap-2 py-4 rounded-2xl transition-all touch-manipulation hover:scale-[1.02] active:scale-95"
+                style={{ background: '#f1f5f9', border: '1px solid rgba(0,0,0,0.07)' }}
+              >
+                <span className="text-slate-600">{icon}</span>
+                <span className="text-[11px] text-slate-600 font-medium">{label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Add elements */}
       {showAdd && (
         <div className="space-y-2">
@@ -1173,7 +1272,7 @@ function PropertiesPanel({
             </button>
           </div>
           <button
-            onClick={onAddShape}
+            onClick={() => onAddShape()}
             className="w-full flex items-center justify-center gap-1.5 rounded-2xl py-2.5 text-[13px] font-medium text-slate-700 transition-all touch-manipulation"
             style={{ background: '#f1f5f9', border: '1px solid rgba(0,0,0,0.07)' }}
           >
@@ -1393,30 +1492,60 @@ function PropertiesPanel({
 
 // ─── Text props ──────────────────────────────────────────────
 
-const FONT_SIZES = [24, 36, 48, 64, 80];
-
 const FONT_FAMILIES = [
   { label: 'Inter', value: 'Inter, sans-serif' },
-  { label: 'Montserrat', value: 'Montserrat, sans-serif' },
+  { label: 'Montserrat', value: "'Montserrat', sans-serif" },
+  { label: 'Russo One', value: "'Russo One', sans-serif" },
+  { label: 'Oswald', value: "'Oswald', sans-serif" },
+  { label: 'Unbounded', value: "'Unbounded', sans-serif" },
+  { label: 'Jost', value: "'Jost', sans-serif" },
+  { label: 'Comfortaa', value: "'Comfortaa', sans-serif" },
+  { label: 'Forum', value: "'Forum', serif" },
   { label: 'Playfair', value: "'Playfair Display', serif" },
-  { label: 'Roboto', value: 'Roboto, sans-serif' },
-  { label: 'Bebas', value: "'Bebas Neue', cursive" },
-  { label: 'Raleway', value: 'Raleway, sans-serif' },
+  { label: 'Exo 2', value: "'Exo 2', sans-serif" },
+  { label: 'Nunito', value: "'Nunito', sans-serif" },
+  { label: 'Roboto', value: "'Roboto', sans-serif" },
 ];
+
+// ─── Font-specific spacing memory ────────────────────────────
+
+const FONT_SPACING_KEY = 'carousel_font_spacing';
+
+function getFontSpacing(fontFamily: string): { lineHeight?: number; letterSpacing?: number } {
+  try {
+    const all = JSON.parse(localStorage.getItem(FONT_SPACING_KEY) || '{}');
+    return all[fontFamily] || {};
+  } catch { return {}; }
+}
+
+function saveFontSpacing(fontFamily: string, lineHeight: number, letterSpacing: number) {
+  try {
+    const all = JSON.parse(localStorage.getItem(FONT_SPACING_KEY) || '{}');
+    all[fontFamily] = { lineHeight, letterSpacing };
+    localStorage.setItem(FONT_SPACING_KEY, JSON.stringify(all));
+  } catch {}
+}
 
 function TextPropsPanel({ el, onUpdate }: { el: TextElement; onUpdate: (u: Partial<TextElement>) => void }) {
   return (
     <div className="space-y-3">
       <p className="text-[11px] font-semibold text-[#1a1a18]/35 uppercase tracking-wider">Текст</p>
 
-      {/* Font family */}
+      {/* Font family — scrollable pills */}
       <div className="space-y-1">
         <p className="text-[11px] text-slate-400">Шрифт</p>
-        <div className="flex gap-1.5 overflow-x-auto pb-1">
+        <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
           {FONT_FAMILIES.map((f) => (
             <button
               key={f.value}
-              onClick={() => onUpdate({ fontFamily: f.value })}
+              onClick={() => {
+                const spacing = getFontSpacing(f.value);
+                onUpdate({
+                  fontFamily: f.value,
+                  ...(spacing.lineHeight !== undefined ? { lineHeight: spacing.lineHeight } : {}),
+                  ...(spacing.letterSpacing !== undefined ? { letterSpacing: spacing.letterSpacing } : {}),
+                });
+              }}
               className={cn(
                 'flex-shrink-0 px-2.5 py-1.5 text-[12px] rounded-xl transition-all touch-manipulation',
                 (el.fontFamily ?? 'Inter, sans-serif') === f.value ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
@@ -1429,61 +1558,64 @@ function TextPropsPanel({ el, onUpdate }: { el: TextElement; onUpdate: (u: Parti
         </div>
       </div>
 
-      {/* Font size */}
+      {/* Font size — slider + number */}
       <div className="space-y-1">
-        <p className="text-[11px] text-slate-400">Размер</p>
-        <div className="flex gap-1 flex-wrap">
-          {FONT_SIZES.map((size) => (
-            <button
-              key={size}
-              onClick={() => onUpdate({ fontSize: size })}
-              className={cn(
-                'px-2 py-1 text-[11px] rounded-xl transition-all touch-manipulation',
-                el.fontSize === size ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
-              )}
-            >
-              {size}
-            </button>
-          ))}
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] text-slate-400">Размер</p>
+          <div className="flex items-center gap-1">
+            <input
+              type="number"
+              min={8} max={300}
+              value={el.fontSize}
+              onChange={(e) => onUpdate({ fontSize: Math.max(8, Math.min(300, Number(e.target.value))) })}
+              className="w-12 text-[11px] text-center rounded-lg border border-slate-200 py-0.5 outline-none"
+            />
+            <span className="text-[10px] text-slate-400">px</span>
+          </div>
         </div>
+        <input
+          type="range" min={8} max={300} step={1} value={el.fontSize}
+          onChange={(e) => onUpdate({ fontSize: Number(e.target.value) })}
+          className="w-full h-1 accent-slate-600"
+        />
       </div>
 
-      {/* Style */}
-      <div className="flex items-center gap-1.5">
+      {/* Style + text align */}
+      <div className="flex items-center gap-1.5 flex-wrap">
         <button
           onClick={() => onUpdate({ fontWeight: el.fontWeight === 700 ? 400 : 700 })}
-          className={cn(
-            'p-2 rounded-xl transition-all touch-manipulation',
-            el.fontWeight === 700 ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-500',
-          )}
-        >
-          <Bold size={14} />
-        </button>
+          className={cn('p-2 rounded-xl transition-all touch-manipulation', el.fontWeight === 700 ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-500')}
+        ><Bold size={14} /></button>
         <button
           onClick={() => onUpdate({ fontStyle: el.fontStyle === 'italic' ? 'normal' : 'italic' })}
-          className={cn(
-            'p-2 rounded-xl transition-all touch-manipulation',
-            el.fontStyle === 'italic' ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-500',
-          )}
-        >
-          <Italic size={14} />
-        </button>
+          className={cn('p-2 rounded-xl transition-all touch-manipulation', el.fontStyle === 'italic' ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-500')}
+        ><Italic size={14} /></button>
         <div className="w-px h-5 bg-slate-200 mx-0.5" />
         {(['left', 'center', 'right'] as const).map((align) => {
           const Icon = align === 'left' ? AlignLeft : align === 'center' ? AlignCenter : AlignRight;
           return (
-            <button
-              key={align}
-              onClick={() => onUpdate({ textAlign: align })}
-              className={cn(
-                'p-2 rounded-xl transition-all touch-manipulation',
-                el.textAlign === align ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-500',
-              )}
-            >
-              <Icon size={14} />
-            </button>
+            <button key={align} onClick={() => onUpdate({ textAlign: align })}
+              className={cn('p-2 rounded-xl transition-all touch-manipulation', el.textAlign === align ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-500')}
+            ><Icon size={14} /></button>
           );
         })}
+      </div>
+
+      {/* Align to slide */}
+      <div className="space-y-1">
+        <p className="text-[11px] text-slate-400">Выравнивание на слайде</p>
+        <div className="flex gap-1">
+          {([
+            { label: '|←', title: 'По левому краю', x: 0 },
+            { label: '↔', title: 'По центру', x: (100 - el.width) / 2 },
+            { label: '→|', title: 'По правому краю', x: 100 - el.width },
+          ] as const).map(({ label, title, x }) => (
+            <button key={title} title={title}
+              onClick={() => onUpdate({ position: { ...el.position, x: Math.max(0, x) } })}
+              className="flex-1 py-1.5 text-[11px] rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all touch-manipulation"
+            >{label}</button>
+          ))}
+        </div>
       </div>
 
       {/* Color */}
@@ -1491,54 +1623,49 @@ function TextPropsPanel({ el, onUpdate }: { el: TextElement; onUpdate: (u: Parti
         <p className="text-[11px] text-slate-400">Цвет текста</p>
         <div className="flex gap-1.5 flex-wrap items-center">
           {['#1a1a18', '#ffffff', '#e11d48', '#2563eb', '#059669', '#d97706'].map((c) => (
-            <button
-              key={c}
-              onClick={() => onUpdate({ color: c })}
-              className={cn(
-                'w-6 h-6 rounded-lg border-2 transition-all touch-manipulation',
-                el.color === c ? 'border-slate-500 scale-110' : 'border-slate-100',
-              )}
+            <button key={c} onClick={() => onUpdate({ color: c })}
+              className={cn('w-6 h-6 rounded-lg border-2 transition-all touch-manipulation', el.color === c ? 'border-slate-500 scale-110' : 'border-slate-100')}
               style={{ backgroundColor: c }}
             />
           ))}
           <label className="w-6 h-6 rounded-lg border-2 border-dashed border-slate-200 cursor-pointer flex items-center justify-center">
             <span className="text-[9px] text-slate-400">+</span>
-            <input
-              type="color"
-              className="sr-only"
-              value={el.color}
-              onChange={(e) => onUpdate({ color: e.target.value })}
-            />
+            <input type="color" className="sr-only" value={el.color} onChange={(e) => onUpdate({ color: e.target.value })} />
           </label>
         </div>
       </div>
 
       {/* Width */}
       <div className="space-y-1">
-        <p className="text-[11px] text-slate-400">Ширина блока</p>
-        <input
-          type="range" min={20} max={95} value={el.width}
+        <p className="text-[11px] text-slate-400">Ширина блока: {el.width}%</p>
+        <input type="range" min={20} max={95} value={el.width}
           onChange={(e) => onUpdate({ width: Number(e.target.value) })}
           className="w-full h-1 accent-slate-600"
         />
       </div>
 
-      {/* Line height */}
+      {/* Line height — with font memory */}
       <div className="space-y-1">
-        <p className="text-[11px] text-slate-400">Межстрочный интервал: {(el.lineHeight ?? 1.3).toFixed(1)}</p>
-        <input
-          type="range" min={0.8} max={2.0} step={0.1} value={el.lineHeight ?? 1.3}
-          onChange={(e) => onUpdate({ lineHeight: Number(e.target.value) })}
+        <p className="text-[11px] text-slate-400">Межстрочный: {(el.lineHeight ?? 1.3).toFixed(2)}</p>
+        <input type="range" min={0.8} max={2.5} step={0.05} value={el.lineHeight ?? 1.3}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            onUpdate({ lineHeight: v });
+            saveFontSpacing(el.fontFamily ?? 'Inter, sans-serif', v, el.letterSpacing ?? 0);
+          }}
           className="w-full h-1 accent-slate-600"
         />
       </div>
 
-      {/* Letter spacing */}
+      {/* Letter spacing — with font memory */}
       <div className="space-y-1">
-        <p className="text-[11px] text-slate-400">Межбуквенный интервал: {(el.letterSpacing ?? 0).toFixed(2)}</p>
-        <input
-          type="range" min={-0.05} max={0.3} step={0.01} value={el.letterSpacing ?? 0}
-          onChange={(e) => onUpdate({ letterSpacing: Number(e.target.value) })}
+        <p className="text-[11px] text-slate-400">Межбуквенный: {(el.letterSpacing ?? 0).toFixed(3)}</p>
+        <input type="range" min={-0.05} max={0.3} step={0.005} value={el.letterSpacing ?? 0}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            onUpdate({ letterSpacing: v });
+            saveFontSpacing(el.fontFamily ?? 'Inter, sans-serif', el.lineHeight ?? 1.3, v);
+          }}
           className="w-full h-1 accent-slate-600"
         />
       </div>
