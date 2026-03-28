@@ -359,13 +359,6 @@ function TextElementView({ el, selected, editing, scale, onSelect, onStartEdit, 
           {/* Left/right edges */}
           <Handle dir="e" pos={EDGE_POS.e} onPointerDown={(e) => startResize('e', e)} onPointerMove={onResizeMove} onPointerUp={onResizeUp} />
           <Handle dir="w" pos={EDGE_POS.w} onPointerDown={(e) => startResize('w', e)} onPointerMove={onResizeMove} onPointerUp={onResizeUp} />
-          {/* Double-click hint */}
-          <div
-            className="absolute -top-7 left-0 px-2 py-0.5 rounded-lg text-[10px] text-white/70 pointer-events-none select-none"
-            style={{ background: 'rgba(26,26,26,0.75)', backdropFilter: 'blur(4px)', whiteSpace: 'nowrap' }}
-          >
-            Двойной клик — редактировать
-          </div>
         </>
       )}
     </div>
@@ -646,17 +639,20 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
 
     const scale = containerWidth / 1080;
 
-    const bgStyle: React.CSSProperties = {};
+    const bgLayerStyle: React.CSSProperties = {};
     if (slide.background.type === 'solid') {
-      bgStyle.backgroundColor = slide.background.color;
+      bgLayerStyle.backgroundColor = slide.background.color;
     } else if (slide.background.type === 'gradient') {
-      bgStyle.background = `linear-gradient(${slide.background.direction}, ${slide.background.from}, ${slide.background.to})`;
+      bgLayerStyle.background = `linear-gradient(${slide.background.direction}, ${slide.background.from}, ${slide.background.to})`;
     } else if (slide.background.type === 'image') {
-      bgStyle.backgroundImage = `url(${slide.background.src})`;
-      bgStyle.backgroundSize = 'cover';
-      bgStyle.backgroundPosition = 'center';
-      const br = slide.background.brightness ?? 1;
-      if (br !== 1) bgStyle.filter = `brightness(${br})`;
+      const bg = slide.background;
+      const zoom = bg.zoom ?? 1;
+      bgLayerStyle.backgroundImage = `url(${bg.src})`;
+      bgLayerStyle.backgroundRepeat = 'no-repeat';
+      bgLayerStyle.backgroundSize = zoom <= 1 ? 'cover' : `${Math.round(zoom * 100)}%`;
+      bgLayerStyle.backgroundPosition = `${bg.panX ?? 50}% ${bg.panY ?? 50}%`;
+      const br = bg.brightness ?? 1;
+      if (br !== 1) bgLayerStyle.filter = `brightness(${br})`;
     }
 
     return (
@@ -666,10 +662,15 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
           if (typeof ref === 'function') ref(node);
           else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
         }}
-        className={cn('aspect-[3/4] w-full relative overflow-hidden select-none', className)}
-        style={{ ...bgStyle, maxWidth: 540 }}
+        className={cn('aspect-[4/5] w-full relative select-none', className)}
+        style={{ maxWidth: 540 }}
         onClick={() => onSelectElement(null)}
       >
+        {/* Background layer — clipped to slide boundary separately from elements */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ ...bgLayerStyle, overflow: 'hidden', borderRadius: 'inherit' }}
+        />
         {[...slide.elements].sort((a, b) => ((a as any).zIndex ?? 1) - ((b as any).zIndex ?? 1)).map((el) => {
           if (el.type === 'text') {
             return (

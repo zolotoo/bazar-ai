@@ -84,6 +84,9 @@ export interface ImageBackground {
   type: 'image';
   src: string;
   brightness?: number; // 0.3 – 2.0, default 1
+  panX?: number;       // 0-100, default 50 (center)
+  panY?: number;       // 0-100, default 50 (center)
+  zoom?: number;       // 1.0+, default 1.0 (cover fit)
 }
 
 export type SlideBackground = SolidBackground | GradientBackground | ImageBackground;

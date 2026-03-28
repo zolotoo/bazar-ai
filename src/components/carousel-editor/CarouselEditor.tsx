@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { toPng } from 'html-to-image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ChevronLeft, ChevronRight, Download, Plus, Trash2,
+  ChevronLeft, ChevronRight, ChevronDown, Download, Plus, Trash2,
   ArrowLeft, PenLine, LayoutTemplate, Type, Image as ImageIcon,
   Bold, Italic, AlignLeft, AlignCenter, AlignRight,
   Loader2, Camera, Sparkles, Box, Copy, Minus, Circle as CircleIcon,
@@ -185,7 +185,7 @@ function HomeScreen({ onMode, onLoadDraft }: { onMode: (m: EditorMode) => void; 
               {[
                 { n: '1', text: 'Выбери режим — с нуля, по шаблону или по фото' },
                 { n: '2', text: 'Добавляй слайды, текст и фото' },
-                { n: '3', text: 'Скачивай готовые PNG 1080×1440' },
+                { n: '3', text: 'Скачивай готовые PNG 1080×1350' },
               ].map((step) => (
                 <div key={step.n} className="flex items-start gap-3">
                   <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -314,7 +314,7 @@ function AiPhotoScreen({ onBack, onDone }: { onBack: () => void; onDone: (slides
 
         // AI теперь возвращает пиксели на холсте 1080×1440 → конвертируем в %
         const px2x = (px: number) => Math.max(0, Math.min(94, (px / 1080) * 100));
-        const px2y = (px: number) => Math.max(0, Math.min(94, (px / 1440) * 100));
+        const px2y = (px: number) => Math.max(0, Math.min(94, (px / 1350) * 100));
         const px2w = (px: number) => Math.max(5, Math.min(100, (px / 1080) * 100));
         const px2h = (px: number) => Math.max(1, Math.min(100, (px / 1440) * 100));
 
@@ -521,20 +521,21 @@ function AiPhotoScreen({ onBack, onDone }: { onBack: () => void; onDone: (slides
 // ─── Floating toolbar button ─────────────────────────────────
 
 function FloatBtn({
-  icon, label, active, onClick, danger,
+  icon, label, active, onClick, danger, hasPanel,
 }: {
   icon: React.ReactNode;
   label: string;
   active?: boolean;
   onClick: () => void;
   danger?: boolean;
+  hasPanel?: boolean;
 }) {
   return (
     <motion.button
       onClick={onClick}
       whileTap={{ scale: 0.88 }}
       title={label}
-      className="w-11 h-11 rounded-2xl flex items-center justify-center touch-manipulation flex-shrink-0 transition-colors"
+      className="w-14 flex flex-col items-center gap-[3px] px-1 py-2 rounded-2xl touch-manipulation flex-shrink-0 transition-colors"
       style={{
         background: active ? '#1a1a18' : danger ? 'rgba(239,68,68,0.08)' : '#ffffff',
         border: '1px solid rgba(0,0,0,0.07)',
@@ -543,6 +544,10 @@ function FloatBtn({
       }}
     >
       {icon}
+      <span style={{ fontSize: 9, fontWeight: 600, lineHeight: 1, opacity: active ? 0.85 : 0.55, letterSpacing: '0.01em' }}>{label}</span>
+      {hasPanel && (
+        <ChevronDown size={8} style={{ opacity: active ? 0.6 : 0.35 }} />
+      )}
     </motion.button>
   );
 }
@@ -786,8 +791,8 @@ function FreeEditor({ onBack, initialSlides, initialDraftId, aiOriginalImage }: 
         setCurrentIdx(i);
         await new Promise((r) => setTimeout(r, 150));
         const dataUrl = await toPng(canvasRef.current, {
-          width: 1080, height: 1440, pixelRatio: 2,
-          style: { width: '1080px', height: '1440px', maxWidth: '1080px' },
+          width: 1080, height: 1350, pixelRatio: 2,
+          style: { width: '1080px', height: '1350px', maxWidth: '1080px' },
         });
         const link = document.createElement('a');
         link.download = `slide-${i + 1}.png`;
@@ -930,9 +935,9 @@ function FreeEditor({ onBack, initialSlides, initialDraftId, aiOriginalImage }: 
             </div>
 
             {/* Canvas */}
-            <div className="w-full max-w-sm relative">
+            <div className="w-full max-w-sm relative" style={{ padding: 6 }}>
               <div
-                className="w-full overflow-hidden"
+                className="w-full"
                 style={{ borderRadius: 20, boxShadow: '0 4px 32px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.08)' }}
               >
                 <SlideCanvas
@@ -946,6 +951,7 @@ function FreeEditor({ onBack, initialSlides, initialDraftId, aiOriginalImage }: 
                   onUpdateElement={onUpdateElement}
                   onUpdateTextContent={onUpdateTextContent}
                   onReplacePlaceholder={handleReplacePlaceholder}
+                  className="rounded-[20px]"
                 />
               </div>
 
@@ -979,6 +985,7 @@ function FreeEditor({ onBack, initialSlides, initialDraftId, aiOriginalImage }: 
               icon={<Plus size={18} />}
               label="Добавить"
               active={activePanel === 'add'}
+              hasPanel
               onClick={() => setActivePanel((p) => p === 'add' ? null : 'add')}
             />
 
@@ -996,10 +1003,11 @@ function FreeEditor({ onBack, initialSlides, initialDraftId, aiOriginalImage }: 
               }
               label="Фон"
               active={activePanel === 'bg'}
+              hasPanel
               onClick={() => setActivePanel((p) => p === 'bg' ? null : 'bg')}
             />
 
-            {/* Shape (always visible) */}
+            {/* Shape — direct action, no panel */}
             <FloatBtn
               icon={<Box size={18} />}
               label="Фигура"
@@ -1012,6 +1020,7 @@ function FreeEditor({ onBack, initialSlides, initialDraftId, aiOriginalImage }: 
                 icon={<Type size={18} />}
                 label="Текст"
                 active={activePanel === 'text'}
+                hasPanel
                 onClick={() => setActivePanel((p) => p === 'text' ? null : 'text')}
               />
             )}
@@ -1022,6 +1031,7 @@ function FreeEditor({ onBack, initialSlides, initialDraftId, aiOriginalImage }: 
                 icon={<ImageIcon size={18} />}
                 label="Фото"
                 active={activePanel === 'image'}
+                hasPanel
                 onClick={() => setActivePanel((p) => p === 'image' ? null : 'image')}
               />
             )}
@@ -1032,11 +1042,12 @@ function FreeEditor({ onBack, initialSlides, initialDraftId, aiOriginalImage }: 
                 icon={<Box size={18} />}
                 label="Стиль"
                 active={activePanel === 'shape'}
+                hasPanel
                 onClick={() => setActivePanel((p) => p === 'shape' ? null : 'shape')}
               />
             )}
 
-            {/* Delete */}
+            {/* Delete — direct action */}
             {selectedEl && (
               <FloatBtn
                 icon={<Trash2 size={16} />}
@@ -1056,7 +1067,7 @@ function FreeEditor({ onBack, initialSlides, initialDraftId, aiOriginalImage }: 
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 exit={{ opacity: 0, x: 10, scale: 0.96 }}
                 transition={{ duration: 0.16, ease: [0.25, 0.46, 0.45, 0.94] }}
-                className="absolute right-[58px] top-4 z-20 w-52 max-h-[calc(100%-32px)] overflow-y-auto rounded-[20px] custom-scrollbar-light"
+                className="absolute right-[70px] top-4 z-20 w-52 max-h-[calc(100%-32px)] overflow-y-auto rounded-[20px] custom-scrollbar-light"
                 style={{
                   background: '#ffffff',
                   border: '1px solid rgba(0,0,0,0.07)',
@@ -1202,13 +1213,13 @@ function PropertiesPanel({
             ))}
           </div>
 
-          {/* Current bg image preview + replace + brightness */}
+          {/* Current bg image preview + replace + sliders */}
           {slide.background.type === 'image' && slide.background.src && (
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <div
                   className="w-10 rounded-lg overflow-hidden border border-slate-200 flex-shrink-0"
-                  style={{ aspectRatio: '3/4', backgroundImage: `url(${slide.background.src})`, backgroundSize: 'cover', filter: `brightness(${slide.background.brightness ?? 1})` }}
+                  style={{ aspectRatio: '4/5', backgroundImage: `url(${slide.background.src})`, backgroundSize: 'cover', filter: `brightness(${slide.background.brightness ?? 1})` }}
                 />
                 <button
                   onClick={onBgImage}
@@ -1218,16 +1229,55 @@ function PropertiesPanel({
                   Заменить фото
                 </button>
               </div>
-              {/* Brightness slider */}
-              <div className="flex flex-col gap-1">
+              {/* Brightness */}
+              <div className="flex flex-col gap-0.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-medium text-[#1a1a18]/40 uppercase tracking-wider">Яркость</span>
-                  <span className="text-[11px] text-slate-400">{Math.round((slide.background.brightness ?? 1) * 100)}%</span>
+                  <span className="text-[10px] font-medium text-[#1a1a18]/40 uppercase tracking-wider">Яркость</span>
+                  <span className="text-[10px] text-slate-400">{Math.round((slide.background.brightness ?? 1) * 100)}%</span>
                 </div>
                 <input
                   type="range" min="0.2" max="2" step="0.05"
                   value={slide.background.brightness ?? 1}
                   onChange={(e) => onUpdateBackground({ ...slide.background, brightness: parseFloat(e.target.value) } as import('./types').ImageBackground)}
+                  className="w-full accent-slate-600"
+                />
+              </div>
+              {/* Zoom */}
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-medium text-[#1a1a18]/40 uppercase tracking-wider">Масштаб</span>
+                  <span className="text-[10px] text-slate-400">{Math.round((slide.background.zoom ?? 1) * 100)}%</span>
+                </div>
+                <input
+                  type="range" min="1" max="3" step="0.05"
+                  value={slide.background.zoom ?? 1}
+                  onChange={(e) => onUpdateBackground({ ...slide.background, zoom: parseFloat(e.target.value) } as import('./types').ImageBackground)}
+                  className="w-full accent-slate-600"
+                />
+              </div>
+              {/* Pan X */}
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-medium text-[#1a1a18]/40 uppercase tracking-wider">← Позиция X →</span>
+                  <span className="text-[10px] text-slate-400">{slide.background.panX ?? 50}%</span>
+                </div>
+                <input
+                  type="range" min="0" max="100" step="1"
+                  value={slide.background.panX ?? 50}
+                  onChange={(e) => onUpdateBackground({ ...slide.background, panX: parseInt(e.target.value) } as import('./types').ImageBackground)}
+                  className="w-full accent-slate-600"
+                />
+              </div>
+              {/* Pan Y */}
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-medium text-[#1a1a18]/40 uppercase tracking-wider">↑ Позиция Y ↓</span>
+                  <span className="text-[10px] text-slate-400">{slide.background.panY ?? 50}%</span>
+                </div>
+                <input
+                  type="range" min="0" max="100" step="1"
+                  value={slide.background.panY ?? 50}
+                  onChange={(e) => onUpdateBackground({ ...slide.background, panY: parseInt(e.target.value) } as import('./types').ImageBackground)}
                   className="w-full accent-slate-600"
                 />
               </div>
