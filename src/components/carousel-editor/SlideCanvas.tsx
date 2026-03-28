@@ -1,52 +1,202 @@
 import { useRef, useState, useCallback, useEffect, forwardRef } from 'react';
 import { cn } from '../../utils/cn';
-import type { Slide, SlideElement, TextElement, ImageElement, ShapeElement, PlaceholderElement } from './types';
+import type { Slide, SlideElement, TextElement, ImageElement, ShapeElement, PlaceholderElement, Position, Size } from './types';
 import { SHADOW_MAP } from './types';
 
-// ─── Shared drag logic ───────────────────────────────────────
+// ─── Move hook ───────────────────────────────────────────────
 
 function useDrag(
-  getPosition: () => { x: number; y: number },
+  getPosition: () => Position,
   onMove: (x: number, y: number) => void,
   containerRef: React.RefObject<HTMLDivElement | null>,
 ) {
-  const dragging = useRef(false);
+  const active = useRef(false);
   const offset = useRef({ x: 0, y: 0 });
-  const startPos = useRef({ x: 0, y: 0 });
+  const startPt = useRef({ x: 0, y: 0 });
   const hasMoved = useRef(false);
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    dragging.current = true;
+    active.current = true;
     hasMoved.current = false;
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
     const pos = getPosition();
-    const elX = (pos.x / 100) * rect.width;
-    const elY = (pos.y / 100) * rect.height;
-    offset.current = { x: e.clientX - rect.left - elX, y: e.clientY - rect.top - elY };
-    startPos.current = { x: e.clientX, y: e.clientY };
+    offset.current = { x: e.clientX - rect.left - (pos.x / 100) * rect.width, y: e.clientY - rect.top - (pos.y / 100) * rect.height };
+    startPt.current = { x: e.clientX, y: e.clientY };
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   }, [getPosition, containerRef]);
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
-    if (!dragging.current) return;
-    const dx = Math.abs(e.clientX - startPos.current.x);
-    const dy = Math.abs(e.clientY - startPos.current.y);
-    if (dx > 3 || dy > 3) hasMoved.current = true;
+    if (!active.current) return;
+    if (Math.abs(e.clientX - startPt.current.x) > 3 || Math.abs(e.clientY - startPt.current.y) > 3) hasMoved.current = true;
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
     const x = ((e.clientX - rect.left - offset.current.x) / rect.width) * 100;
     const y = ((e.clientY - rect.top - offset.current.y) / rect.height) * 100;
-    onMove(Math.max(0, Math.min(94, x)), Math.max(0, Math.min(94, y)));
+    onMove(Math.max(0, Math.min(93, x)), Math.max(0, Math.min(93, y)));
   }, [onMove, containerRef]);
 
-  const onPointerUp = useCallback(() => {
-    dragging.current = false;
-  }, []);
+  const onPointerUp = useCallback(() => { active.current = false; }, []);
 
   return { onPointerDown, onPointerMove, onPointerUp, hasMoved };
+}
+
+// ─── Canva-style selection handle ────────────────────────────
+
+type HandleDir = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
+
+const CURSORS: Record<HandleDir, string> = {
+  nw: 'nwse-resize', n: 'ns-resize', ne: 'nesw-resize', e: 'ew-resize',
+  se: 'nwse-resize', s: 'ns-resize', sw: 'nesw-resize', w: 'ew-resize',
+};
+
+const C = 12;  // corner handle size px
+const EL = 20; // edge handle long side
+const ES = 6;  // edge handle short side
+const OFF = -C / 2;
+
+const CORNER_POS: Record<string, React.CSSProperties> = {
+  nw: { top: OFF, left: OFF, width: C, height: C },
+  ne: { top: OFF, right: OFF, width: C, height: C },
+  sw: { bottom: OFF, left: OFF, width: C, height: C },
+  se: { bottom: OFF, right: OFF, width: C, height: C },
+};
+const EDGE_POS: Record<string, React.CSSProperties> = {
+  n:  { top: -ES/2, left: '50%', width: EL, height: ES, transform: 'translateX(-50%)' },
+  s:  { bottom: -ES/2, left: '50%', width: EL, height: ES, transform: 'translateX(-50%)' },
+  e:  { right: -ES/2, top: '50%', width: ES, height: EL, transform: 'translateY(-50%)' },
+  w:  { left: -ES/2, top: '50%', width: ES, height: EL, transform: 'translateY(-50%)' },
+};
+
+function Handle({ pos, dir, onPointerDown, onPointerMove, onPointerUp }: {
+  pos: React.CSSProperties;
+  dir: HandleDir;
+  onPointerDown: (e: React.PointerEvent) => void;
+  onPointerMove: (e: React.PointerEvent) => void;
+  onPointerUp: () => void;
+}) {
+  const isEdge = dir === 'n' || dir === 's' || dir === 'e' || dir === 'w';
+  return (
+    <div
+      className="absolute touch-none select-none"
+      style={{
+        background: '#ffffff',
+        border: '2px solid rgba(99,102,241,0.9)',
+        borderRadius: isEdge ? 5 : 3,
+        boxShadow: '0 1px 4px rgba(0,0,0,0.22)',
+        cursor: CURSORS[dir],
+        zIndex: 25,
+        ...pos,
+      }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+    />
+  );
+}
+
+// ─── Shared resize logic (single axis ref) ───────────────────
+
+type ResizeStart = { x: number; y: number; px: number; py: number; w: number; h: number };
+
+function makeResizeHandlers(
+  containerRef: React.RefObject<HTMLDivElement | null>,
+  resizingDir: React.MutableRefObject<HandleDir | null>,
+  resizeStart: React.MutableRefObject<ResizeStart>,
+  getEl: () => { position: Position; size: Size },
+  onUpdate: (pos: Position, size: Size) => void,
+) {
+  const startResize = (dir: HandleDir, e: React.PointerEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    resizingDir.current = dir;
+    const { position: p, size: s } = getEl();
+    resizeStart.current = { x: e.clientX, y: e.clientY, px: p.x, py: p.y, w: s.width, h: s.height };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const onResizeMove = (e: React.PointerEvent) => {
+    const dir = resizingDir.current;
+    if (!dir) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const r = resizeStart.current;
+    const dw = ((e.clientX - r.x) / rect.width) * 100;
+    const dh = ((e.clientY - r.y) / rect.height) * 100;
+
+    let nx = r.px, ny = r.py, nw = r.w, nh = r.h;
+
+    // East side
+    if (dir === 'e' || dir === 'se' || dir === 'ne') nw = Math.max(5, nw + dw);
+    // West side (position shifts, width changes inversely)
+    if (dir === 'w' || dir === 'sw' || dir === 'nw') { nx = r.px + dw; nw = Math.max(5, r.w - dw); }
+    // South side
+    if (dir === 's' || dir === 'se' || dir === 'sw') nh = Math.max(5, nh + dh);
+    // North side (position shifts, height changes inversely)
+    if (dir === 'n' || dir === 'ne' || dir === 'nw') { ny = r.py + dh; nh = Math.max(5, r.h - dh); }
+
+    onUpdate(
+      { x: Math.max(0, Math.min(90, nx)), y: Math.max(0, Math.min(90, ny)) },
+      { width: Math.min(95, nw), height: Math.min(95, nh) },
+    );
+  };
+
+  const onResizeUp = () => { resizingDir.current = null; };
+
+  return { startResize, onResizeMove, onResizeUp };
+}
+
+// ─── Selection border ────────────────────────────────────────
+
+function SelectionBorder() {
+  return (
+    <div
+      className="absolute pointer-events-none"
+      style={{
+        inset: -2,
+        border: '1.5px solid rgba(99,102,241,0.8)',
+        borderRadius: 3,
+        zIndex: 15,
+      }}
+    />
+  );
+}
+
+// ─── Image handles (8-directional) ──────────────────────────────────────────
+
+function ImageHandles({ el, containerRef, onUpdate }: {
+  el: ImageElement;
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  onUpdate: (pos: Position, size: Size) => void;
+}) {
+  const resizingDir = useRef<HandleDir | null>(null);
+  const resizeStart = useRef<ResizeStart>({ x: 0, y: 0, px: 0, py: 0, w: 0, h: 0 });
+  const getEl = useCallback(() => ({ position: el.position, size: el.size }), [el.position, el.size]);
+  const { startResize, onResizeMove, onResizeUp } = makeResizeHandlers(containerRef, resizingDir, resizeStart, getEl, onUpdate);
+
+  const dirs: { dir: HandleDir; pos: React.CSSProperties }[] = [
+    { dir: 'nw', pos: CORNER_POS.nw }, { dir: 'ne', pos: CORNER_POS.ne },
+    { dir: 'sw', pos: CORNER_POS.sw }, { dir: 'se', pos: CORNER_POS.se },
+    { dir: 'n',  pos: EDGE_POS.n  }, { dir: 's',  pos: EDGE_POS.s  },
+    { dir: 'w',  pos: EDGE_POS.w  }, { dir: 'e',  pos: EDGE_POS.e  },
+  ];
+
+  return (
+    <>
+      {dirs.map(({ dir, pos }) => (
+        <Handle
+          key={dir}
+          dir={dir}
+          pos={pos}
+          onPointerDown={(e) => startResize(dir, e)}
+          onPointerMove={onResizeMove}
+          onPointerUp={onResizeUp}
+        />
+      ))}
+    </>
+  );
 }
 
 // ─── Text element ────────────────────────────────────────────
@@ -60,51 +210,54 @@ interface TextElementProps {
   onStartEdit: () => void;
   onStopEdit: () => void;
   onTextChange: (text: string) => void;
-  onMove: (x: number, y: number) => void;
-  onWidthChange: (w: number) => void;
+  onUpdate: (updates: Partial<TextElement>) => void;
   containerRef: React.RefObject<HTMLDivElement | null>;
 }
 
-function TextElementView({
-  el, selected, editing, scale,
-  onSelect, onStartEdit, onStopEdit, onTextChange, onMove, onWidthChange, containerRef,
-}: TextElementProps) {
+function TextElementView({ el, selected, editing, scale, onSelect, onStartEdit, onStopEdit, onTextChange, onUpdate, containerRef }: TextElementProps) {
   const textRef = useRef<HTMLDivElement>(null);
-  const drag = useDrag(() => el.position, onMove, containerRef);
 
-  // Width resize via bottom-right handle
-  const resizing = useRef(false);
-  const resizeStart = useRef({ x: 0, w: 0 });
+  const drag = useDrag(
+    () => el.position,
+    (x, y) => onUpdate({ position: { x, y } }),
+    containerRef,
+  );
 
-  const onResizeDown = useCallback((e: React.PointerEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    resizing.current = true;
-    resizeStart.current = { x: e.clientX, w: el.width };
+  // Width-only resize (text height is always auto)
+  const resizingDir = useRef<HandleDir | null>(null);
+  const resizeStart = useRef<ResizeStart>({ x: 0, y: 0, px: 0, py: 0, w: 0, h: 0 });
+
+  const startResize = useCallback((dir: HandleDir, e: React.PointerEvent) => {
+    e.stopPropagation(); e.preventDefault();
+    resizingDir.current = dir;
+    resizeStart.current = { x: e.clientX, y: e.clientY, px: el.position.x, py: el.position.y, w: el.width, h: 0 };
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }, [el.width]);
+  }, [el.position.x, el.position.y, el.width]);
 
   const onResizeMove = useCallback((e: React.PointerEvent) => {
-    if (!resizing.current) return;
+    const dir = resizingDir.current;
+    if (!dir) return;
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const dx = ((e.clientX - resizeStart.current.x) / rect.width) * 100;
-    onWidthChange(Math.max(10, Math.min(98, resizeStart.current.w + dx)));
-  }, [onWidthChange, containerRef]);
+    const r = resizeStart.current;
+    const dw = ((e.clientX - r.x) / rect.width) * 100;
+    let nx = r.px, nw = r.w;
+    if (dir === 'e' || dir === 'se' || dir === 'ne') nw = Math.max(10, nw + dw);
+    if (dir === 'w' || dir === 'sw' || dir === 'nw') { nx = r.px + dw; nw = Math.max(10, r.w - dw); }
+    onUpdate({ position: { x: Math.max(0, Math.min(90, nx)), y: el.position.y }, width: Math.min(98, nw) });
+  }, [containerRef, onUpdate, el.position.y]);
 
-  const onResizeUp = useCallback(() => { resizing.current = false; }, []);
+  const onResizeUp = useCallback(() => { resizingDir.current = null; }, []);
 
-  // Sync innerHTML when not editing
+  // Sync content when not editing
   useEffect(() => {
-    if (!editing && textRef.current) {
-      textRef.current.innerHTML = el.text;
-    }
+    if (!editing && textRef.current) textRef.current.innerHTML = el.text;
   }, [el.text, editing]);
 
-  // Focus + cursor at end when editing starts
+  // Seed + focus when editing starts
   useEffect(() => {
     if (editing && textRef.current) {
-      textRef.current.innerHTML = el.text; // seed content before focus
+      textRef.current.innerHTML = el.text;
       textRef.current.focus();
       const range = document.createRange();
       const sel = window.getSelection();
@@ -115,15 +268,21 @@ function TextElementView({
     }
   }, [editing]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const handleBodyDown = useCallback((e: React.PointerEvent) => {
+    if (editing) return;
+    onSelect();
+    drag.onPointerDown(e);
+  }, [editing, onSelect, drag]);
+
   const handleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!drag.hasMoved.current) {
-      onSelect();
-      onStartEdit();
-    }
-  }, [onSelect, onStartEdit, drag.hasMoved]);
+    if (!drag.hasMoved.current) onSelect();
+  }, [onSelect, drag.hasMoved]);
 
-  const HANDLE = 14; // handle size px
+  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onStartEdit();
+  }, [onStartEdit]);
 
   return (
     <div
@@ -134,37 +293,27 @@ function TextElementView({
         width: `${el.width}%`,
         transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined,
         transformOrigin: 'top left',
-        zIndex: el.zIndex ?? 1,
+        zIndex: (el as any).zIndex ?? 1,
+        cursor: editing ? 'text' : 'grab',
       }}
+      onPointerDown={handleBodyDown}
+      onPointerMove={drag.onPointerMove}
+      onPointerUp={drag.onPointerUp}
     >
-      {/* Selection outline */}
-      {selected && (
-        <div
-          className="absolute inset-0 pointer-events-none rounded-sm"
-          style={{ outline: '2px solid rgba(99,102,241,0.7)', outlineOffset: 2 }}
-        />
-      )}
+      {/* Selection border */}
+      {selected && <SelectionBorder />}
 
-      {/* Inline format toolbar — shown when editing */}
+      {/* Inline format toolbar when editing */}
       {editing && (
         <div
           className="absolute -top-9 left-0 flex items-center gap-0.5 px-1.5 py-1 rounded-xl z-40 select-none touch-none"
-          style={{ background: 'rgba(30,30,35,0.92)', backdropFilter: 'blur(8px)', boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}
+          style={{ background: 'rgba(26,26,26,0.92)', backdropFilter: 'blur(8px)', boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}
           onMouseDown={(e) => e.preventDefault()}
         >
-          <button
-            className="px-2 py-0.5 text-white rounded-lg text-[12px] font-bold hover:bg-white/20 transition-colors"
-            onMouseDown={(e) => { e.preventDefault(); document.execCommand('bold'); }}
-          >B</button>
-          <button
-            className="px-2 py-0.5 text-white rounded-lg text-[12px] italic hover:bg-white/20 transition-colors"
-            onMouseDown={(e) => { e.preventDefault(); document.execCommand('italic'); }}
-          >I</button>
+          <button className="px-2 py-0.5 text-white rounded-lg text-[12px] font-bold hover:bg-white/20 transition-colors" onMouseDown={(e) => { e.preventDefault(); document.execCommand('bold'); }}>B</button>
+          <button className="px-2 py-0.5 text-white rounded-lg text-[12px] italic hover:bg-white/20 transition-colors" onMouseDown={(e) => { e.preventDefault(); document.execCommand('italic'); }}>I</button>
           <div className="w-px h-3 bg-white/20 mx-0.5" />
-          <button
-            className="px-1.5 py-0.5 text-white rounded-lg text-[10px] hover:bg-white/20 transition-colors"
-            onMouseDown={(e) => { e.preventDefault(); document.execCommand('removeFormat'); }}
-          >✕</button>
+          <button className="px-1.5 py-0.5 text-white rounded-lg text-[10px] hover:bg-white/20 transition-colors" onMouseDown={(e) => { e.preventDefault(); document.execCommand('removeFormat'); }}>✕</button>
         </div>
       )}
 
@@ -185,9 +334,10 @@ function TextElementView({
           letterSpacing: el.letterSpacing ? `${el.letterSpacing}em` : undefined,
           minHeight: el.fontSize * scale,
           userSelect: editing ? 'text' : 'none',
-          cursor: editing ? 'text' : 'default',
+          cursor: editing ? 'text' : 'grab',
         }}
         onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
         onBlur={() => {
           if (textRef.current) onTextChange(textRef.current.innerHTML);
           onStopEdit();
@@ -198,43 +348,24 @@ function TextElementView({
         }}
       />
 
-      {/* Corner handles — visible when selected and not editing */}
+      {/* Canva-style resize handles — shown when selected and not editing */}
       {selected && !editing && (
         <>
-          {/* Top-left — move handle */}
+          {/* 4 corners */}
+          <Handle dir="nw" pos={CORNER_POS.nw} onPointerDown={(e) => startResize('nw', e)} onPointerMove={onResizeMove} onPointerUp={onResizeUp} />
+          <Handle dir="ne" pos={CORNER_POS.ne} onPointerDown={(e) => startResize('ne', e)} onPointerMove={onResizeMove} onPointerUp={onResizeUp} />
+          <Handle dir="sw" pos={CORNER_POS.sw} onPointerDown={(e) => startResize('sw', e)} onPointerMove={onResizeMove} onPointerUp={onResizeUp} />
+          <Handle dir="se" pos={CORNER_POS.se} onPointerDown={(e) => startResize('se', e)} onPointerMove={onResizeMove} onPointerUp={onResizeUp} />
+          {/* Left/right edges */}
+          <Handle dir="e" pos={EDGE_POS.e} onPointerDown={(e) => startResize('e', e)} onPointerMove={onResizeMove} onPointerUp={onResizeUp} />
+          <Handle dir="w" pos={EDGE_POS.w} onPointerDown={(e) => startResize('w', e)} onPointerMove={onResizeMove} onPointerUp={onResizeUp} />
+          {/* Double-click hint */}
           <div
-            className="absolute touch-none"
-            style={{
-              top: -HANDLE / 2, left: -HANDLE / 2,
-              width: HANDLE, height: HANDLE,
-              borderRadius: '50%',
-              background: 'rgba(99,102,241,1)',
-              border: '2px solid white',
-              cursor: 'grab',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
-              zIndex: 30,
-            }}
-            onPointerDown={drag.onPointerDown}
-            onPointerMove={drag.onPointerMove}
-            onPointerUp={drag.onPointerUp}
-          />
-          {/* Bottom-right — width resize handle */}
-          <div
-            className="absolute touch-none"
-            style={{
-              bottom: -HANDLE / 2, right: -HANDLE / 2,
-              width: HANDLE, height: HANDLE,
-              borderRadius: '50%',
-              background: 'rgba(99,102,241,1)',
-              border: '2px solid white',
-              cursor: 'ew-resize',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
-              zIndex: 30,
-            }}
-            onPointerDown={onResizeDown}
-            onPointerMove={onResizeMove}
-            onPointerUp={onResizeUp}
-          />
+            className="absolute -top-7 left-0 px-2 py-0.5 rounded-lg text-[10px] text-white/70 pointer-events-none select-none"
+            style={{ background: 'rgba(26,26,26,0.75)', backdropFilter: 'blur(4px)', whiteSpace: 'nowrap' }}
+          >
+            Двойной клик — редактировать
+          </div>
         </>
       )}
     </div>
@@ -248,87 +379,22 @@ interface ImageElementProps {
   selected: boolean;
   scale: number;
   onSelect: () => void;
-  onMove: (x: number, y: number) => void;
-  onResize: (w: number, h: number) => void;
+  onUpdate: (updates: Partial<ImageElement>) => void;
   containerRef: React.RefObject<HTMLDivElement | null>;
 }
 
-function ImageElementView({ el, selected, scale, onSelect, onMove, onResize, containerRef }: ImageElementProps) {
-  const drag = useDrag(() => el.position, onMove, containerRef);
-  const [activeDrag, setActiveDrag] = useState(false);
-
-  // Corner resize (both dimensions)
-  const resizeDragging = useRef(false);
-  const resizeStart = useRef({ x: 0, y: 0, w: 0, h: 0 });
-
-  const handleResizeDown = useCallback((e: React.PointerEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    resizeDragging.current = true;
-    resizeStart.current = { x: e.clientX, y: e.clientY, w: el.size.width, h: el.size.height };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }, [el.size]);
-
-  const handleResizeMove = useCallback((e: React.PointerEvent) => {
-    if (!resizeDragging.current) return;
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const dx = ((e.clientX - resizeStart.current.x) / rect.width) * 100;
-    const dy = ((e.clientY - resizeStart.current.y) / rect.height) * 100;
-    onResize(
-      Math.max(8, Math.min(90, resizeStart.current.w + dx)),
-      Math.max(8, Math.min(90, resizeStart.current.h + dy)),
-    );
-  }, [onResize, containerRef]);
-
-  const handleResizeUp = useCallback(() => { resizeDragging.current = false; }, []);
-
-  // Right-edge resize (width only)
-  const resizeWDragging = useRef(false);
-  const resizeWStart = useRef({ x: 0, w: 0 });
-
-  const handleResizeWDown = useCallback((e: React.PointerEvent) => {
-    e.stopPropagation(); e.preventDefault();
-    resizeWDragging.current = true;
-    resizeWStart.current = { x: e.clientX, w: el.size.width };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }, [el.size.width]);
-
-  const handleResizeWMove = useCallback((e: React.PointerEvent) => {
-    if (!resizeWDragging.current) return;
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const dx = ((e.clientX - resizeWStart.current.x) / rect.width) * 100;
-    onResize(Math.max(8, Math.min(90, resizeWStart.current.w + dx)), el.size.height);
-  }, [onResize, containerRef, el.size.height]);
-
-  const handleResizeWUp = useCallback(() => { resizeWDragging.current = false; }, []);
-
-  // Bottom-edge resize (height only)
-  const resizeHDragging = useRef(false);
-  const resizeHStart = useRef({ y: 0, h: 0 });
-
-  const handleResizeHDown = useCallback((e: React.PointerEvent) => {
-    e.stopPropagation(); e.preventDefault();
-    resizeHDragging.current = true;
-    resizeHStart.current = { y: e.clientY, h: el.size.height };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }, [el.size.height]);
-
-  const handleResizeHMove = useCallback((e: React.PointerEvent) => {
-    if (!resizeHDragging.current) return;
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const dy = ((e.clientY - resizeHStart.current.y) / rect.height) * 100;
-    onResize(el.size.width, Math.max(8, Math.min(90, resizeHStart.current.h + dy)));
-  }, [onResize, containerRef, el.size.width]);
-
-  const handleResizeHUp = useCallback(() => { resizeHDragging.current = false; }, []);
+function ImageElementView({ el, selected, scale, onSelect, onUpdate, containerRef }: ImageElementProps) {
+  const [dragging, setDragging] = useState(false);
+  const drag = useDrag(
+    () => el.position,
+    (x, y) => onUpdate({ position: { x, y } }),
+    containerRef,
+  );
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    onSelect();
-  }, [onSelect]);
+    if (!drag.hasMoved.current) onSelect();
+  }, [onSelect, drag.hasMoved]);
 
   return (
     <div
@@ -337,15 +403,14 @@ function ImageElementView({ el, selected, scale, onSelect, onMove, onResize, con
         left: `${el.position.x}%`,
         top: `${el.position.y}%`,
         width: `${el.size.width}%`,
-        cursor: activeDrag ? 'grabbing' : 'grab',
-        zIndex: el.zIndex ?? 1,
+        cursor: dragging ? 'grabbing' : 'grab',
+        zIndex: (el as any).zIndex ?? 1,
       }}
-      onPointerDown={(e) => { onSelect(); setActiveDrag(true); drag.onPointerDown(e); }}
+      onPointerDown={(e) => { onSelect(); setDragging(true); drag.onPointerDown(e); }}
       onPointerMove={drag.onPointerMove}
-      onPointerUp={() => { setActiveDrag(false); drag.onPointerUp(); }}
+      onPointerUp={() => { setDragging(false); drag.onPointerUp(); }}
       onClick={handleClick}
     >
-      {/* Image */}
       <div
         style={{
           width: '100%',
@@ -356,52 +421,16 @@ function ImageElementView({ el, selected, scale, onSelect, onMove, onResize, con
           position: 'relative',
         }}
       >
-        <img
-          src={el.src}
-          alt=""
-          draggable={false}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: el.objectFit }}
-        />
+        <img src={el.src} alt="" draggable={false} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: el.objectFit }} />
       </div>
 
-      {/* Selection ring */}
-      {selected && (
-        <div
-          className="absolute inset-0 pointer-events-none rounded-sm"
-          style={{ outline: '2px solid rgba(99,102,241,0.7)', outlineOffset: 2 }}
-        />
-      )}
+      {selected && <SelectionBorder />}
 
-      {/* Right-edge handle (width) */}
       {selected && (
-        <div
-          className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-7 rounded-full bg-indigo-400 touch-none z-10 border-2 border-white"
-          style={{ cursor: 'e-resize' }}
-          onPointerDown={handleResizeWDown}
-          onPointerMove={handleResizeWMove}
-          onPointerUp={handleResizeWUp}
-        />
-      )}
-
-      {/* Bottom-edge handle (height) */}
-      {selected && (
-        <div
-          className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-7 h-3 rounded-full bg-indigo-400 touch-none z-10 border-2 border-white"
-          style={{ cursor: 's-resize' }}
-          onPointerDown={handleResizeHDown}
-          onPointerMove={handleResizeHMove}
-          onPointerUp={handleResizeHUp}
-        />
-      )}
-
-      {/* Corner handle (both) */}
-      {selected && (
-        <div
-          className="absolute -bottom-1.5 -right-1.5 w-4 h-4 rounded-full bg-indigo-500 touch-none z-10 border-2 border-white"
-          style={{ cursor: 'se-resize' }}
-          onPointerDown={handleResizeDown}
-          onPointerMove={handleResizeMove}
-          onPointerUp={handleResizeUp}
+        <ImageHandles
+          el={el}
+          containerRef={containerRef}
+          onUpdate={(pos, size) => onUpdate({ position: pos, size })}
         />
       )}
     </div>
@@ -415,50 +444,29 @@ interface ShapeElementProps {
   selected: boolean;
   scale: number;
   onSelect: () => void;
-  onMove: (x: number, y: number) => void;
-  onResize: (w: number, h: number) => void;
+  onUpdate: (updates: Partial<ShapeElement>) => void;
   containerRef: React.RefObject<HTMLDivElement | null>;
 }
 
-function ShapeElementView({ el, selected, scale, onSelect, onMove, onResize, containerRef }: ShapeElementProps) {
-  const drag = useDrag(() => el.position, onMove, containerRef);
-  const [activeDrag, setActiveDrag] = useState(false);
+function ShapeElementView({ el, selected, scale, onSelect, onUpdate, containerRef }: ShapeElementProps) {
+  const [dragging, setDragging] = useState(false);
+  const drag = useDrag(
+    () => el.position,
+    (x, y) => onUpdate({ position: { x, y } }),
+    containerRef,
+  );
 
-  const resizeDragging = useRef(false);
-  const resizeStart = useRef({ x: 0, y: 0, w: 0, h: 0 });
-
-  const handleResizeDown = useCallback((e: React.PointerEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    resizeDragging.current = true;
-    resizeStart.current = { x: e.clientX, y: e.clientY, w: el.size.width, h: el.size.height };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }, [el.size]);
-
-  const handleResizeMove = useCallback((e: React.PointerEvent) => {
-    if (!resizeDragging.current) return;
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const dx = ((e.clientX - resizeStart.current.x) / rect.width) * 100;
-    const dy = ((e.clientY - resizeStart.current.y) / rect.height) * 100;
-    onResize(
-      Math.max(4, Math.min(90, resizeStart.current.w + dx)),
-      Math.max(4, Math.min(90, resizeStart.current.h + dy)),
-    );
-  }, [onResize, containerRef]);
-
-  const handleResizeUp = useCallback(() => { resizeDragging.current = false; }, []);
+  const resizingDir = useRef<HandleDir | null>(null);
+  const resizeStart = useRef<ResizeStart>({ x: 0, y: 0, px: 0, py: 0, w: 0, h: 0 });
+  const getEl = useCallback(() => ({ position: el.position, size: el.size }), [el.position, el.size]);
+  const { startResize, onResizeMove, onResizeUp } = makeResizeHandlers(containerRef, resizingDir, resizeStart, getEl, (pos, size) => onUpdate({ position: pos, size }));
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     if (!drag.hasMoved.current) onSelect();
   }, [onSelect, drag.hasMoved]);
 
-  const shapeStyle: React.CSSProperties = {
-    width: '100%',
-    opacity: el.opacity,
-  };
-
+  const shapeStyle: React.CSSProperties = { width: '100%', opacity: el.opacity };
   if (el.shapeType === 'line') {
     shapeStyle.height = Math.max(el.strokeWidth * scale, 1);
     shapeStyle.background = el.stroke;
@@ -478,6 +486,13 @@ function ShapeElementView({ el, selected, scale, onSelect, onMove, onResize, con
 
   const arrowHeadSize = Math.max(el.strokeWidth * scale * 3, 8);
 
+  const dirs: { dir: HandleDir; pos: React.CSSProperties }[] = [
+    { dir: 'nw', pos: CORNER_POS.nw }, { dir: 'ne', pos: CORNER_POS.ne },
+    { dir: 'sw', pos: CORNER_POS.sw }, { dir: 'se', pos: CORNER_POS.se },
+    { dir: 'n', pos: EDGE_POS.n }, { dir: 's', pos: EDGE_POS.s },
+    { dir: 'w', pos: EDGE_POS.w }, { dir: 'e', pos: EDGE_POS.e },
+  ];
+
   return (
     <div
       className="absolute touch-none"
@@ -485,46 +500,32 @@ function ShapeElementView({ el, selected, scale, onSelect, onMove, onResize, con
         left: `${el.position.x}%`,
         top: `${el.position.y}%`,
         width: `${el.size.width}%`,
-        cursor: activeDrag ? 'grabbing' : 'grab',
-        zIndex: el.zIndex ?? 1,
+        cursor: dragging ? 'grabbing' : 'grab',
+        zIndex: (el as any).zIndex ?? 1,
       }}
-      onPointerDown={(e) => { onSelect(); setActiveDrag(true); drag.onPointerDown(e); }}
+      onPointerDown={(e) => { onSelect(); setDragging(true); drag.onPointerDown(e); }}
       onPointerMove={drag.onPointerMove}
-      onPointerUp={() => { setActiveDrag(false); drag.onPointerUp(); }}
+      onPointerUp={() => { setDragging(false); drag.onPointerUp(); }}
       onClick={handleClick}
     >
       {el.shapeType === 'arrow' ? (
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center', opacity: el.opacity }}>
           <div style={{ flex: 1, height: Math.max(el.strokeWidth * scale, 1), background: el.stroke, borderRadius: 2 }} />
-          <div style={{
-            width: 0, height: 0,
-            borderTop: `${arrowHeadSize / 2}px solid transparent`,
-            borderBottom: `${arrowHeadSize / 2}px solid transparent`,
-            borderLeft: `${arrowHeadSize}px solid ${el.stroke}`,
-          }} />
+          <div style={{ width: 0, height: 0, borderTop: `${arrowHeadSize / 2}px solid transparent`, borderBottom: `${arrowHeadSize / 2}px solid transparent`, borderLeft: `${arrowHeadSize}px solid ${el.stroke}` }} />
         </div>
       ) : (
         <div style={shapeStyle} />
       )}
 
-      {/* Selection ring */}
-      {selected && (
-        <div
-          className="absolute inset-0 pointer-events-none rounded-sm"
-          style={{ outline: '2px solid rgba(99,102,241,0.7)', outlineOffset: 2 }}
-        />
-      )}
+      {selected && <SelectionBorder />}
 
-      {/* Resize handle */}
-      {selected && (
-        <div
-          className="absolute -bottom-1.5 -right-1.5 w-4 h-4 rounded-full bg-indigo-500 touch-none z-10 border-2 border-white"
-          style={{ cursor: 'se-resize' }}
-          onPointerDown={handleResizeDown}
-          onPointerMove={handleResizeMove}
-          onPointerUp={handleResizeUp}
+      {selected && dirs.map(({ dir, pos }) => (
+        <Handle key={dir} dir={dir} pos={pos}
+          onPointerDown={(e) => startResize(dir, e)}
+          onPointerMove={onResizeMove}
+          onPointerUp={onResizeUp}
         />
-      )}
+      ))}
     </div>
   );
 }
@@ -536,48 +537,35 @@ interface PlaceholderElementProps {
   selected: boolean;
   scale: number;
   onSelect: () => void;
-  onMove: (x: number, y: number) => void;
-  onResize: (w: number, h: number) => void;
+  onUpdate: (updates: Partial<PlaceholderElement>) => void;
   onReplace: (id: string) => void;
   containerRef: React.RefObject<HTMLDivElement | null>;
 }
 
-function PlaceholderElementView({ el, selected, scale, onSelect, onMove, onResize, onReplace, containerRef }: PlaceholderElementProps) {
-  const drag = useDrag(() => el.position, onMove, containerRef);
-  const [activeDrag, setActiveDrag] = useState(false);
+function PlaceholderElementView({ el, selected, scale, onSelect, onUpdate, onReplace, containerRef }: PlaceholderElementProps) {
+  const [dragging, setDragging] = useState(false);
+  const drag = useDrag(
+    () => el.position,
+    (x, y) => onUpdate({ position: { x, y } }),
+    containerRef,
+  );
 
-  const resizeDragging = useRef(false);
-  const resizeStart = useRef({ x: 0, y: 0, w: 0, h: 0 });
-
-  const handleResizeDown = useCallback((e: React.PointerEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    resizeDragging.current = true;
-    resizeStart.current = { x: e.clientX, y: e.clientY, w: el.size.width, h: el.size.height };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }, [el.size]);
-
-  const handleResizeMove = useCallback((e: React.PointerEvent) => {
-    if (!resizeDragging.current) return;
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const dx = ((e.clientX - resizeStart.current.x) / rect.width) * 100;
-    const dy = ((e.clientY - resizeStart.current.y) / rect.height) * 100;
-    onResize(
-      Math.max(8, Math.min(90, resizeStart.current.w + dx)),
-      Math.max(8, Math.min(90, resizeStart.current.h + dy)),
-    );
-  }, [onResize, containerRef]);
-
-  const handleResizeUp = useCallback(() => { resizeDragging.current = false; }, []);
+  const resizingDir = useRef<HandleDir | null>(null);
+  const resizeStart = useRef<ResizeStart>({ x: 0, y: 0, px: 0, py: 0, w: 0, h: 0 });
+  const getEl = useCallback(() => ({ position: el.position, size: el.size }), [el.position, el.size]);
+  const { startResize, onResizeMove, onResizeUp } = makeResizeHandlers(containerRef, resizingDir, resizeStart, getEl, (pos, size) => onUpdate({ position: pos, size }));
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!drag.hasMoved.current) {
-      onSelect();
-      onReplace(el.id);
-    }
+    if (!drag.hasMoved.current) { onSelect(); onReplace(el.id); }
   }, [onSelect, onReplace, el.id, drag.hasMoved]);
+
+  const dirs: { dir: HandleDir; pos: React.CSSProperties }[] = [
+    { dir: 'nw', pos: CORNER_POS.nw }, { dir: 'ne', pos: CORNER_POS.ne },
+    { dir: 'sw', pos: CORNER_POS.sw }, { dir: 'se', pos: CORNER_POS.se },
+    { dir: 'n', pos: EDGE_POS.n }, { dir: 's', pos: EDGE_POS.s },
+    { dir: 'w', pos: EDGE_POS.w }, { dir: 'e', pos: EDGE_POS.e },
+  ];
 
   return (
     <div
@@ -586,15 +574,14 @@ function PlaceholderElementView({ el, selected, scale, onSelect, onMove, onResiz
         left: `${el.position.x}%`,
         top: `${el.position.y}%`,
         width: `${el.size.width}%`,
-        cursor: activeDrag ? 'grabbing' : 'grab',
-        zIndex: el.zIndex ?? 1,
+        cursor: dragging ? 'grabbing' : 'pointer',
+        zIndex: (el as any).zIndex ?? 1,
       }}
-      onPointerDown={(e) => { onSelect(); setActiveDrag(true); drag.onPointerDown(e); }}
+      onPointerDown={(e) => { onSelect(); setDragging(true); drag.onPointerDown(e); }}
       onPointerMove={drag.onPointerMove}
-      onPointerUp={() => { setActiveDrag(false); drag.onPointerUp(); }}
+      onPointerUp={() => { setDragging(false); drag.onPointerUp(); }}
       onClick={handleClick}
     >
-      {/* Placeholder block */}
       <div
         style={{
           width: '100%',
@@ -606,46 +593,23 @@ function PlaceholderElementView({ el, selected, scale, onSelect, onMove, onResiz
           position: 'relative',
         }}
       >
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 4,
-          }}
-        >
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
           <svg width={Math.max(16, 24 * scale)} height={Math.max(16, 24 * scale)} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5">
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <circle cx="8.5" cy="8.5" r="1.5" />
-            <path d="M21 15l-5-5L5 21" />
+            <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" />
           </svg>
-          <span style={{ fontSize: Math.max(8, 11 * scale), color: 'rgba(255,255,255,0.55)', textAlign: 'center', lineHeight: 1.2, padding: '0 4px' }}>
-            {el.label}
-          </span>
+          <span style={{ fontSize: Math.max(8, 11 * scale), color: 'rgba(255,255,255,0.55)', textAlign: 'center', lineHeight: 1.2, padding: '0 4px' }}>{el.label}</span>
         </div>
       </div>
 
-      {/* Selection ring */}
-      {selected && (
-        <div
-          className="absolute inset-0 pointer-events-none rounded-sm"
-          style={{ outline: '2px solid rgba(99,102,241,0.7)', outlineOffset: 2 }}
-        />
-      )}
+      {selected && <SelectionBorder />}
 
-      {/* Resize handle */}
-      {selected && (
-        <div
-          className="absolute -bottom-1.5 -right-1.5 w-4 h-4 rounded-full bg-indigo-500 touch-none z-10 border-2 border-white"
-          style={{ cursor: 'se-resize' }}
-          onPointerDown={handleResizeDown}
-          onPointerMove={handleResizeMove}
-          onPointerUp={handleResizeUp}
+      {selected && dirs.map(({ dir, pos }) => (
+        <Handle key={dir} dir={dir} pos={pos}
+          onPointerDown={(e) => startResize(dir, e)}
+          onPointerMove={onResizeMove}
+          onPointerUp={onResizeUp}
         />
-      )}
+      ))}
     </div>
   );
 }
@@ -673,11 +637,11 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
     useEffect(() => {
       const el = containerRef.current;
       if (!el) return;
-      const observer = new ResizeObserver((entries) => {
-        for (const entry of entries) setContainerWidth(entry.contentRect.width);
+      const ro = new ResizeObserver((entries) => {
+        for (const e of entries) setContainerWidth(e.contentRect.width);
       });
-      observer.observe(el);
-      return () => observer.disconnect();
+      ro.observe(el);
+      return () => ro.disconnect();
     }, []);
 
     const scale = containerWidth / 1080;
@@ -706,7 +670,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
         style={{ ...bgStyle, maxWidth: 540 }}
         onClick={() => onSelectElement(null)}
       >
-        {[...slide.elements].sort((a, b) => (a.zIndex ?? 1) - (b.zIndex ?? 1)).map((el) => {
+        {[...slide.elements].sort((a, b) => ((a as any).zIndex ?? 1) - ((b as any).zIndex ?? 1)).map((el) => {
           if (el.type === 'text') {
             return (
               <TextElementView
@@ -719,8 +683,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
                 onStartEdit={() => onStartEditText(el.id)}
                 onStopEdit={onStopEditText}
                 onTextChange={(html) => onUpdateTextContent(el.id, html)}
-                onMove={(x, y) => onUpdateElement(el.id, { position: { x, y } })}
-                onWidthChange={(w) => onUpdateElement(el.id, { width: w } as Partial<TextElement>)}
+                onUpdate={(u) => onUpdateElement(el.id, u)}
                 containerRef={containerRef}
               />
             );
@@ -733,8 +696,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
                 selected={selectedId === el.id}
                 scale={scale}
                 onSelect={() => onSelectElement(el.id)}
-                onMove={(x, y) => onUpdateElement(el.id, { position: { x, y } })}
-                onResize={(w, h) => onUpdateElement(el.id, { size: { width: w, height: h } } as Partial<ImageElement>)}
+                onUpdate={(u) => onUpdateElement(el.id, u as Partial<SlideElement>)}
                 containerRef={containerRef}
               />
             );
@@ -747,8 +709,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
                 selected={selectedId === el.id}
                 scale={scale}
                 onSelect={() => onSelectElement(el.id)}
-                onMove={(x, y) => onUpdateElement(el.id, { position: { x, y } })}
-                onResize={(w, h) => onUpdateElement(el.id, { size: { width: w, height: h } } as Partial<ShapeElement>)}
+                onUpdate={(u) => onUpdateElement(el.id, u as Partial<SlideElement>)}
                 containerRef={containerRef}
               />
             );
@@ -761,8 +722,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
                 selected={selectedId === el.id}
                 scale={scale}
                 onSelect={() => onSelectElement(el.id)}
-                onMove={(x, y) => onUpdateElement(el.id, { position: { x, y } })}
-                onResize={(w, h) => onUpdateElement(el.id, { size: { width: w, height: h } } as Partial<PlaceholderElement>)}
+                onUpdate={(u) => onUpdateElement(el.id, u as Partial<SlideElement>)}
                 onReplace={onReplacePlaceholder}
                 containerRef={containerRef}
               />
