@@ -1661,18 +1661,9 @@ export function VideoDetailPage({ video, onBack, onRefreshData, autoTranscribe }
                         type="button"
                         onClick={() => row.value && window.open(row.value, '_blank')}
                         disabled={!row.value?.trim()}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 min-h-[36px] rounded-xl text-[11px] font-semibold transition-all touch-manipulation disabled:opacity-35 disabled:pointer-events-none"
-                        style={{
-                          background: row.value?.trim()
-                            ? 'linear-gradient(135deg, rgba(10,132,255,0.15) 0%, rgba(10,132,255,0.1) 100%)'
-                            : 'rgba(148,163,184,0.08)',
-                          border: row.value?.trim()
-                            ? '1px solid rgba(10,132,255,0.3)'
-                            : '1px solid rgba(148,163,184,0.2)',
-                          color: row.value?.trim() ? '#0A84FF' : '#94a3b8',
-                        }}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 min-h-[36px] rounded-xl bg-white/78 border border-white/70 hover:bg-white text-slate-600 text-[11px] font-medium shadow-glass-sm transition-all touch-manipulation disabled:opacity-35 disabled:pointer-events-none"
                       >
-                        <ExternalLink className="w-3 h-3" />
+                        <ExternalLink className="w-3 h-3 text-slate-400" />
                         Открыть
                       </button>
                       {isAdminOrOwner && (
@@ -1680,12 +1671,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData, autoTranscribe }
                           type="button"
                           onClick={() => removeLinkRow(row.id)}
                           disabled={links.length <= 1}
-                          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 min-h-[36px] rounded-xl text-[11px] font-semibold transition-all touch-manipulation disabled:opacity-35 disabled:pointer-events-none"
-                          style={{
-                            background: 'linear-gradient(135deg, rgba(255,59,48,0.12) 0%, rgba(255,59,48,0.08) 100%)',
-                            border: '1px solid rgba(255,59,48,0.25)',
-                            color: '#FF3B30',
-                          }}
+                          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 min-h-[36px] rounded-xl bg-white/78 border border-white/70 hover:bg-red-50 hover:border-red-200/60 text-slate-500 hover:text-red-500 text-[11px] font-medium shadow-glass-sm transition-all touch-manipulation disabled:opacity-35 disabled:pointer-events-none"
                         >
                           <Trash2 className="w-3 h-3" />
                           Удалить
@@ -1759,12 +1745,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData, autoTranscribe }
                         type="button"
                         onClick={() => removeResponsibleRow(row.id)}
                         disabled={responsibles.length <= 1}
-                        className="w-full flex items-center justify-center gap-1.5 py-1.5 min-h-[36px] rounded-xl text-[11px] font-semibold transition-all touch-manipulation disabled:opacity-35 disabled:pointer-events-none"
-                        style={{
-                          background: 'linear-gradient(135deg, rgba(255,59,48,0.12) 0%, rgba(255,59,48,0.08) 100%)',
-                          border: '1px solid rgba(255,59,48,0.25)',
-                          color: '#FF3B30',
-                        }}
+                        className="w-full flex items-center justify-center gap-1.5 py-1.5 min-h-[36px] rounded-xl bg-white/78 border border-white/70 hover:bg-red-50 hover:border-red-200/60 text-slate-500 hover:text-red-500 text-[11px] font-medium shadow-glass-sm transition-all touch-manipulation disabled:opacity-35 disabled:pointer-events-none"
                       >
                         <Trash2 className="w-3 h-3" />
                         Удалить
