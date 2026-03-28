@@ -6,13 +6,14 @@ import { useAuth } from '../hooks/useAuth';
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  typing?: boolean;
 }
 
 const STORAGE_KEY = (userId: string) => `riri_chat_${userId}`;
 const MAX_STORED = 60;
+const TYPING_SPEED_MS = 12; // ms per character
 
 const iosSpringSoft = { type: 'spring' as const, stiffness: 340, damping: 32 };
-
 const msgAnim = {
   initial: { opacity: 0, y: 12, scale: 0.97 },
   animate: { opacity: 1, y: 0, scale: 1 },
@@ -43,21 +44,21 @@ function RiriOrb({ size = 48, floating = false, className }: { size?: number; fl
   );
 }
 
-// ─── Streaming cursor ─────────────────────────────────────────────────────────
+// ─── Typing cursor ────────────────────────────────────────────────────────────
 
-function StreamingCursor() {
+function TypingCursor() {
   return (
     <motion.span
-      className="inline-block w-[2px] h-[15px] bg-slate-400 rounded-full ml-[2px] align-middle"
+      className="inline-block w-[2px] h-[14px] bg-slate-400 rounded-full ml-[2px] align-middle"
       animate={{ opacity: [1, 0, 1] }}
-      transition={{ duration: 0.7, repeat: Infinity, ease: 'easeInOut' }}
+      transition={{ duration: 0.65, repeat: Infinity, ease: 'easeInOut' }}
     />
   );
 }
 
 // ─── Bubbles ──────────────────────────────────────────────────────────────────
 
-function RiriBubble({ text, streaming }: { text: string; streaming?: boolean }) {
+function RiriBubble({ text, typing }: { text: string; typing?: boolean }) {
   return (
     <motion.div {...msgAnim} className="flex gap-2.5 items-start max-w-[85%]">
       <RiriOrb size={26} className="mt-0.5 flex-shrink-0" />
@@ -71,7 +72,7 @@ function RiriBubble({ text, streaming }: { text: string; streaming?: boolean }) 
       >
         <p className="text-[15px] text-[#1a1a18] leading-[1.55] whitespace-pre-wrap">
           {text}
-          {streaming && <StreamingCursor />}
+          {typing && <TypingCursor />}
         </p>
       </div>
     </motion.div>
@@ -83,10 +84,7 @@ function UserBubble({ text }: { text: string }) {
     <motion.div {...msgAnim} className="flex justify-end">
       <div
         className="px-3.5 py-2.5 rounded-[18px] rounded-tr-[6px] max-w-[80%]"
-        style={{
-          background: '#1a1a18',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-        }}
+        style={{ background: '#1a1a18', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
       >
         <p className="text-[15px] text-white/90 leading-[1.55] whitespace-pre-wrap">{text}</p>
       </div>
@@ -94,7 +92,7 @@ function UserBubble({ text }: { text: string }) {
   );
 }
 
-function TypingIndicator() {
+function ThinkingIndicator() {
   return (
     <motion.div {...msgAnim} className="flex gap-2.5 items-start">
       <RiriOrb size={26} className="mt-0.5 flex-shrink-0" />
@@ -135,12 +133,11 @@ export function RiriChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [streamingText, setStreamingText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { user } = useAuth();
 
-  // Загружаем историю из localStorage при монтировании
+  // Загружаем историю из localStorage
   useEffect(() => {
     if (!user?.id) return;
     try {
@@ -148,105 +145,89 @@ export function RiriChatPage() {
       if (stored) {
         const parsed = JSON.parse(stored) as Message[];
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setMessages(parsed);
+          setMessages(parsed.map(m => ({ ...m, typing: false })));
         }
       }
     } catch { /* игнорируем */ }
   }, [user?.id]);
 
-  // Сохраняем историю при каждом изменении
+  // Сохраняем историю (только завершённые сообщения)
   useEffect(() => {
     if (!user?.id || messages.length === 0) return;
+    const finished = messages.filter(m => !m.typing);
+    if (finished.length === 0) return;
     try {
-      const toStore = messages.slice(-MAX_STORED);
-      localStorage.setItem(STORAGE_KEY(user.id), JSON.stringify(toStore));
+      localStorage.setItem(STORAGE_KEY(user.id), JSON.stringify(finished.slice(-MAX_STORED)));
     } catch { /* игнорируем */ }
   }, [messages, user?.id]);
 
+  // Авто-скролл
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, loading, streamingText]);
+  }, [messages]);
+
+  // Эффект печатающей машинки
+  const typeMessage = useCallback((fullText: string) => {
+    let i = 0;
+    // Добавляем пустое сообщение с флагом typing
+    setMessages(prev => [...prev, { role: 'assistant', content: '', typing: true }]);
+
+    const tick = () => {
+      i++;
+      const chunk = fullText.slice(0, i);
+      const done = i >= fullText.length;
+      setMessages(prev => {
+        const next = [...prev];
+        next[next.length - 1] = { role: 'assistant', content: chunk, typing: !done };
+        return next;
+      });
+      if (!done) {
+        typingTimerRef.current = setTimeout(tick, TYPING_SPEED_MS);
+      }
+    };
+
+    typingTimerRef.current = setTimeout(tick, TYPING_SPEED_MS);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    };
+  }, []);
 
   const sendMessage = useCallback(async (text?: string) => {
     const msg = (text ?? input).trim();
     if (!msg || loading || !user?.id) return;
 
-    const userMsg: Message = { role: 'user', content: msg };
-    const nextMessages = [...messages, userMsg];
-    setMessages(nextMessages);
+    setMessages(prev => [...prev, { role: 'user', content: msg }]);
     setInput('');
     setLoading(true);
-    setStreamingText('');
 
     try {
+      const historyForApi = messages
+        .filter(m => !m.typing)
+        .slice(-10)
+        .map(({ role, content }) => ({ role, content }));
+
       const res = await fetch('/api/riri-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id,
-          message: msg,
-          history: messages.slice(-10),
-        }),
+        body: JSON.stringify({ userId: user.id, message: msg, history: historyForApi }),
       });
 
-      if (!res.ok || !res.body) {
-        throw new Error('No response body');
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let fullText = '';
-      let buffer = '';
-
+      const data = await res.json();
+      const replyText = data.text || data.error || 'Что-то пошло не так. Попробуй ещё раз.';
       setLoading(false);
-      setStreamingText('');
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const raw = line.slice(6).trim();
-          if (!raw) continue;
-          try {
-            const chunk = JSON.parse(raw);
-            if (chunk.delta) {
-              fullText += chunk.delta;
-              setStreamingText(fullText);
-            }
-            if (chunk.done || chunk.error) {
-              const finalText = chunk.error
-                ? 'Что-то пошло не так. Попробуй ещё раз.'
-                : fullText;
-              setStreamingText('');
-              setMessages(prev => [...prev, { role: 'assistant', content: finalText }]);
-            }
-          } catch { /* битый чанк */ }
-        }
-      }
-
-      // Страховка: если done не пришёл
-      if (fullText && streamingText) {
-        setStreamingText('');
-        setMessages(prev => {
-          const last = prev[prev.length - 1];
-          if (last?.role === 'assistant') return prev;
-          return [...prev, { role: 'assistant', content: fullText }];
-        });
-      }
+      typeMessage(replyText);
     } catch {
       setLoading(false);
-      setStreamingText('');
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Что-то пошло не так. Попробуй ещё раз.' }]);
+      typeMessage('Что-то пошло не так. Попробуй ещё раз.');
     }
-  }, [input, loading, user?.id, messages, streamingText]);
+  }, [input, loading, user?.id, messages, typeMessage]);
+
+  const isTyping = messages.some(m => m.typing);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -255,8 +236,7 @@ export function RiriChatPage() {
     }
   };
 
-  const isWelcome = messages.length === 0 && !loading && !streamingText;
-  const isStreaming = streamingText.length > 0;
+  const isWelcome = messages.length === 0 && !loading;
 
   return (
     <div className="flex flex-col h-full overflow-hidden" style={{ background: '#f5f6f8' }}>
@@ -281,10 +261,7 @@ export function RiriChatPage() {
       </div>
 
       {/* Messages */}
-      <div
-        ref={scrollRef}
-        className="flex-1 min-h-0 overflow-y-auto px-4 custom-scrollbar-light"
-      >
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 custom-scrollbar-light">
         <AnimatePresence>
           {isWelcome ? (
             <motion.div
@@ -324,10 +301,9 @@ export function RiriChatPage() {
               {messages.map((msg, i) =>
                 msg.role === 'user'
                   ? <UserBubble key={i} text={msg.content} />
-                  : <RiriBubble key={i} text={msg.content} />
+                  : <RiriBubble key={i} text={msg.content} typing={msg.typing} />
               )}
-              {loading && <TypingIndicator />}
-              {isStreaming && <RiriBubble text={streamingText} streaming />}
+              {loading && <ThinkingIndicator />}
             </div>
           )}
         </AnimatePresence>
@@ -344,26 +320,25 @@ export function RiriChatPage() {
           }}
         >
           <textarea
-            ref={inputRef}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Спроси что-нибудь..."
             rows={1}
-            disabled={loading || isStreaming}
+            disabled={loading || isTyping}
             className="w-full resize-none border-0 bg-transparent px-4 pt-3.5 pb-1 text-[15px] text-[#1a1a18] placeholder:text-[#1a1a18]/35 focus:outline-none min-h-[50px] max-h-32 leading-relaxed"
           />
           <div className="flex items-center px-3 pb-3 pt-1">
             <div className="ml-auto">
               <button
                 onClick={() => sendMessage()}
-                disabled={!input.trim() || loading || isStreaming}
+                disabled={!input.trim() || loading || isTyping}
                 className="w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90 disabled:opacity-30"
                 style={{
-                  background: input.trim() && !loading && !isStreaming
+                  background: input.trim() && !loading && !isTyping
                     ? 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)'
                     : 'rgba(15,23,42,0.12)',
-                  boxShadow: input.trim() && !loading && !isStreaming
+                  boxShadow: input.trim() && !loading && !isTyping
                     ? '0 4px 12px rgba(15,23,42,0.25), inset 0 1px 0 rgba(255,255,255,0.1)'
                     : 'none',
                 }}

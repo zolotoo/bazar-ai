@@ -1,12 +1,12 @@
-// Vercel Serverless — RiRi AI Assistant: streaming SSE + mem0 + OpenRouter Gemini Flash
+// Vercel Serverless — RiRi AI Assistant: mem0 + OpenRouter Gemini Flash
 
+import { callOpenRouter, MODELS } from '../lib/openRouter.js';
 import { RIRI_SYSTEM_PROMPT } from '../lib/ririKnowledge.js';
 import { logApiCall } from '../lib/logApiCall.js';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const MEM0_API_KEY = process.env.MEM0_API_KEY;
 const MEM0_BASE = 'https://api.mem0.ai/v1';
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 async function mem0Search(userId, query) {
   if (!MEM0_API_KEY) return [];
@@ -59,83 +59,29 @@ export default async function handler(req, res) {
       systemContent += `\n\nЧто ты знаешь об этом пользователе:\n${memories.join('\n')}`;
     }
 
-    const llmMessages = [
+    const messages = [
       { role: 'system', content: systemContent },
       ...history.slice(-10),
       { role: 'user', content: message },
     ];
 
-    // Streaming SSE
-    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
-
-    const upstream = await fetch(OPENROUTER_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: llmMessages,
-        temperature: 0.7,
-        max_tokens: 1200,
-        stream: true,
-      }),
+    const { text } = await callOpenRouter({
+      apiKey: OPENROUTER_API_KEY,
+      model: MODELS.FLASH,
+      messages,
+      temperature: 0.7,
+      max_tokens: 1200,
     });
 
-    if (!upstream.ok) {
-      const err = await upstream.text();
-      res.write(`data: ${JSON.stringify({ error: err })}\n\n`);
-      res.end();
-      return;
-    }
+    // Сохраняем в mem0 без ожидания
+    mem0Add(userId, [
+      { role: 'user', content: message },
+      { role: 'assistant', content: text },
+    ]);
 
-    let fullText = '';
-    const reader = upstream.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop(); // неполная строка остаётся в буфере
-
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const raw = line.slice(6).trim();
-        if (raw === '[DONE]') continue;
-        try {
-          const chunk = JSON.parse(raw);
-          const delta = chunk?.choices?.[0]?.delta?.content;
-          if (delta) {
-            fullText += delta;
-            res.write(`data: ${JSON.stringify({ delta })}\n\n`);
-          }
-        } catch { /* пропускаем битые чанки */ }
-      }
-    }
-
-    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-    res.end();
-
-    // Сохраняем в mem0 после завершения
-    if (fullText) {
-      mem0Add(userId, [
-        { role: 'user', content: message },
-        { role: 'assistant', content: fullText },
-      ]);
-    }
+    return res.status(200).json({ success: true, text });
   } catch (err) {
     console.error('RiRi chat error:', err);
-    try {
-      res.write(`data: ${JSON.stringify({ error: 'Что-то пошло не так. Попробуй ещё раз.' })}\n\n`);
-      res.end();
-    } catch { res.status(500).end(); }
+    return res.status(500).json({ error: 'Что-то пошло не так. Попробуй ещё раз.' });
   }
 }
