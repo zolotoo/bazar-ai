@@ -447,7 +447,8 @@ function convertAiSlideData(data: {
   const { background, elements = [] } = data;
   let resolvedBg: import('./types').SlideBackground;
   if (background?.type === 'image' && background.src) {
-    resolvedBg = { type: 'image', src: background.src };
+    // zoom: 1.15 — кадрируем края (убирает ники/подписи снизу из AI-фона)
+    resolvedBg = { type: 'image', src: background.src, zoom: 1.15 };
   } else if (background?.type === 'gradient' && background.from && background.to) {
     resolvedBg = { type: 'gradient', from: background.from, to: background.to, direction: background.direction ?? 'to bottom' };
   } else {
@@ -1157,7 +1158,7 @@ function FreeEditor({ onBack, initialSlides, initialDraftId, aiOriginalImage, on
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.background?.type === 'image' && data.background.src) {
-        onUpdateBackground({ type: 'image', src: data.background.src });
+        onUpdateBackground({ type: 'image', src: data.background.src, zoom: 1.15 });
       }
     } catch (err) {
       console.error('Regen bg error:', err);
