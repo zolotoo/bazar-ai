@@ -499,7 +499,7 @@ function convertAiSlideData(data: {
     return [];
   });
 
-  // Smart post-processing: центрируем pill-кнопки
+  // Smart post-processing 1: центрируем pill-кнопки
   slide.elements = slide.elements.map((el) => {
     if (el.type !== 'shape') return el;
     const s = el as import('./types').ShapeElement;
@@ -517,6 +517,40 @@ function convertAiSlideData(data: {
     const pillCenterX = pill.position.x + pill.size.width / 2;
     return { ...t, position: { ...t.position, x: Math.max(0, pillCenterX - t.width / 2) }, textAlign: 'center' as const };
   });
+
+  // Smart post-processing 2: сдвигаем текст вверх если он перекрывает placeholder
+  const placeholders = slide.elements.filter(e => e.type === 'placeholder') as import('./types').PlaceholderElement[];
+  if (placeholders.length > 0) {
+    slide.elements = slide.elements.map((el) => {
+      if (el.type !== 'text') return el;
+      const t = el as import('./types').TextElement;
+      // Приблизительная высота текстового блока в % (fontSize в px / 1440 * 100)
+      const textHeightPct = (t.fontSize * 1.4 * 3) / 1440 * 100; // ~3 строки запас
+      const tTop = t.position.y;
+      const tBottom = tTop + textHeightPct;
+
+      for (const ph of placeholders) {
+        const phTop = ph.position.y;
+        const phBottom = phTop + ph.size.height;
+        const phLeft = ph.position.x;
+        const phRight = phLeft + ph.size.width;
+        const tLeft = t.position.x;
+        const tRight = tLeft + t.width;
+
+        // Проверяем X-пересечение
+        const xOverlap = tLeft < phRight && tRight > phLeft;
+        // Проверяем Y-пересечение
+        const yOverlap = tTop < phBottom && tBottom > phTop;
+
+        if (xOverlap && yOverlap) {
+          // Текст перекрывает фото — сдвигаем его выше placeholder
+          const newY = Math.max(0, phTop - textHeightPct - 2);
+          return { ...t, position: { ...t.position, y: newY } };
+        }
+      }
+      return el;
+    });
+  }
 
   return slide;
 }
