@@ -1187,9 +1187,9 @@ export function VideoDetailPage({ video, onBack, onRefreshData, autoTranscribe }
 
   return (
     <div className="h-full overflow-hidden flex flex-col bg-[#f5f6f8]">
-      <div className="w-full h-full p-4 md:p-6 pb-28 md:pb-6 flex flex-col overflow-y-auto min-h-0">
-        {/* Header — на мобильных компактнее */}
-        <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-shrink-0 rounded-card-xl bg-white/78 backdrop-blur-glass-xl border border-white/65 shadow-glass p-4 sticky top-0 z-10">
+      {/* Header — вне скролла, всегда видна кнопка Назад */}
+      <div className="flex-shrink-0 px-4 pt-4 md:px-6 md:pt-6">
+        <div className="mb-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-shrink-0 rounded-card-xl bg-white/78 backdrop-blur-glass-xl border border-white/65 shadow-glass p-4">
           <div className="flex items-center gap-4">
             <button
               onClick={onBack}
@@ -1293,7 +1293,10 @@ export function VideoDetailPage({ video, onBack, onRefreshData, autoTranscribe }
             )}
           </div>
         </div>
+      </div>
 
+      {/* Scrollable content */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-6 pt-4 pb-28 md:pb-6">
         {/* Main content — на мобильных колонка, на десктопе 3 колонки */}
         <div className="flex flex-col md:flex-row md:flex-1 gap-4 md:min-h-0 md:overflow-hidden">
           {/* Left: видео 9:16 + папка + статистика */}
