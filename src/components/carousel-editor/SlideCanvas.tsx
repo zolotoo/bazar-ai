@@ -233,6 +233,19 @@ function TextElementView({ el, selected, editing, scale, onSelect, onStartEdit, 
   const textRef = useRef<HTMLDivElement>(null);
   const savedRangeRef = useRef<Range | null>(null);
 
+  // Непрерывно отслеживаем выделение пока идёт редактирование
+  useEffect(() => {
+    if (!editing) return;
+    const track = () => {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && textRef.current?.contains(sel.anchorNode)) {
+        savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+      }
+    };
+    document.addEventListener('selectionchange', track);
+    return () => document.removeEventListener('selectionchange', track);
+  }, [editing]);
+
   const saveSelection = useCallback(() => {
     const sel = window.getSelection();
     if (sel && sel.rangeCount > 0) savedRangeRef.current = sel.getRangeAt(0).cloneRange();
@@ -341,12 +354,7 @@ function TextElementView({ el, selected, editing, scale, onSelect, onStartEdit, 
         <div
           className="absolute left-0 z-40 select-none"
           style={{ bottom: 'calc(100% + 6px)' }}
-          onPointerDown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            // Сохраняем выделение сразу при касании тулбара
-            saveSelection();
-          }}
+          onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
           onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
         >
           <div
