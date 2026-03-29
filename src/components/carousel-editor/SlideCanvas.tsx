@@ -3,11 +3,50 @@ import { cn } from '../../utils/cn';
 import type { Slide, SlideElement, TextElement, ImageElement, ShapeElement, PlaceholderElement, Position, Size } from './types';
 import { SHADOW_MAP } from './types';
 
+// ─── Snap helper ─────────────────────────────────────────────
+
+function buildSnapFn(dragEl: SlideElement, allEls: SlideElement[], snapDist: number) {
+  let dw = 0, dh = 0;
+  if (dragEl.type === 'text') { dw = (dragEl as TextElement).width; dh = 8; }
+  else if ('size' in dragEl) { dw = (dragEl as any).size.width; dh = (dragEl as any).size.height; }
+
+  const xTargets = [0, 50, 100];
+  const yTargets = [0, 50, 100];
+  for (const el of allEls) {
+    if (el.id === dragEl.id) continue;
+    const ex = el.position.x, ey = el.position.y;
+    let ew = 0, eh = 0;
+    if (el.type === 'text') { ew = (el as TextElement).width; eh = 8; }
+    else if ('size' in el) { ew = (el as any).size.width; eh = (el as any).size.height; }
+    xTargets.push(ex, ex + ew / 2, ex + ew);
+    yTargets.push(ey, ey + eh / 2, ey + eh);
+  }
+
+  return (rawX: number, rawY: number): { x: number; y: number } => {
+    const cx = rawX + dw / 2, rx = rawX + dw;
+    const cy = rawY + dh / 2, by = rawY + dh;
+    let sx = rawX, sy = rawY;
+
+    for (const t of xTargets) {
+      if (Math.abs(rawX - t) < snapDist) { sx = t; break; }
+      if (Math.abs(cx - t) < snapDist) { sx = t - dw / 2; break; }
+      if (Math.abs(rx - t) < snapDist) { sx = t - dw; break; }
+    }
+    for (const t of yTargets) {
+      if (Math.abs(rawY - t) < snapDist) { sy = t; break; }
+      if (Math.abs(cy - t) < snapDist) { sy = t - dh / 2; break; }
+      if (Math.abs(by - t) < snapDist) { sy = t - dh; break; }
+    }
+    return { x: sx, y: sy };
+  };
+}
+
 // ─── Move hook ───────────────────────────────────────────────
 
 interface DragCallbacks {
   onStart?: () => void;
   onEnd?: () => void;
+  snapPos?: (x: number, y: number) => { x: number; y: number };
 }
 
 function useDrag(
@@ -42,9 +81,10 @@ function useDrag(
     if (Math.abs(e.clientX - startPt.current.x) > 3 || Math.abs(e.clientY - startPt.current.y) > 3) hasMoved.current = true;
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const x = ((e.clientX - rect.left - offset.current.x) / rect.width) * 100;
-    const y = ((e.clientY - rect.top - offset.current.y) / rect.height) * 100;
-    onMove(Math.max(0, Math.min(93, x)), Math.max(0, Math.min(93, y)));
+    const rawX = ((e.clientX - rect.left - offset.current.x) / rect.width) * 100;
+    const rawY = ((e.clientY - rect.top - offset.current.y) / rect.height) * 100;
+    const snapped = cbsRef.current?.snapPos?.(rawX, rawY) ?? { x: rawX, y: rawY };
+    onMove(Math.max(0, Math.min(93, snapped.x)), Math.max(0, Math.min(93, snapped.y)));
   }, [onMove, containerRef]);
 
   const onPointerUp = useCallback(() => {
@@ -227,9 +267,10 @@ interface TextElementProps {
   onDragStart?: () => void;
   onDragEnd?: () => void;
   onDragMove?: (x: number, y: number) => void;
+  snapPos?: (x: number, y: number) => { x: number; y: number };
 }
 
-function TextElementView({ el, selected, editing, scale, onSelect, onStartEdit, onStopEdit, onTextChange, onUpdate, containerRef, onDragStart, onDragEnd, onDragMove }: TextElementProps) {
+function TextElementView({ el, selected, editing, scale, onSelect, onStartEdit, onStopEdit, onTextChange, onUpdate, containerRef, onDragStart, onDragEnd, onDragMove, snapPos }: TextElementProps) {
   const textRef = useRef<HTMLDivElement>(null);
   const savedRangeRef = useRef<Range | null>(null);
 
@@ -258,7 +299,7 @@ function TextElementView({ el, selected, editing, scale, onSelect, onStartEdit, 
     () => el.position,
     (x, y) => { onUpdate({ position: { x, y } }); onDragMove?.(x, y); },
     containerRef,
-    { onStart: onDragStart, onEnd: onDragEnd },
+    { onStart: onDragStart, onEnd: onDragEnd, snapPos },
   );
 
   // Width-only resize (text height is always auto)
@@ -486,15 +527,16 @@ interface ImageElementProps {
   onDragStart?: () => void;
   onDragEnd?: () => void;
   onDragMove?: (x: number, y: number) => void;
+  snapPos?: (x: number, y: number) => { x: number; y: number };
 }
 
-function ImageElementView({ el, selected, scale, onSelect, onUpdate, containerRef, onDragStart, onDragEnd, onDragMove }: ImageElementProps) {
+function ImageElementView({ el, selected, scale, onSelect, onUpdate, containerRef, onDragStart, onDragEnd, onDragMove, snapPos }: ImageElementProps) {
   const [dragging, setDragging] = useState(false);
   const drag = useDrag(
     () => el.position,
     (x, y) => { onUpdate({ position: { x, y } }); onDragMove?.(x, y); },
     containerRef,
-    { onStart: onDragStart, onEnd: onDragEnd },
+    { onStart: onDragStart, onEnd: onDragEnd, snapPos },
   );
 
   const handleClick = useCallback((e: React.MouseEvent) => {
@@ -555,15 +597,16 @@ interface ShapeElementProps {
   onDragStart?: () => void;
   onDragEnd?: () => void;
   onDragMove?: (x: number, y: number) => void;
+  snapPos?: (x: number, y: number) => { x: number; y: number };
 }
 
-function ShapeElementView({ el, selected, scale, onSelect, onUpdate, containerRef, onDragStart, onDragEnd, onDragMove }: ShapeElementProps) {
+function ShapeElementView({ el, selected, scale, onSelect, onUpdate, containerRef, onDragStart, onDragEnd, onDragMove, snapPos }: ShapeElementProps) {
   const [dragging, setDragging] = useState(false);
   const drag = useDrag(
     () => el.position,
     (x, y) => { onUpdate({ position: { x, y } }); onDragMove?.(x, y); },
     containerRef,
-    { onStart: onDragStart, onEnd: onDragEnd },
+    { onStart: onDragStart, onEnd: onDragEnd, snapPos },
   );
 
   const resizingDir = useRef<HandleDir | null>(null);
@@ -653,15 +696,16 @@ interface PlaceholderElementProps {
   onDragStart?: () => void;
   onDragEnd?: () => void;
   onDragMove?: (x: number, y: number) => void;
+  snapPos?: (x: number, y: number) => { x: number; y: number };
 }
 
-function PlaceholderElementView({ el, selected, scale, onSelect, onUpdate, onReplace, containerRef, onDragStart, onDragEnd, onDragMove }: PlaceholderElementProps) {
+function PlaceholderElementView({ el, selected, scale, onSelect, onUpdate, onReplace, containerRef, onDragStart, onDragEnd, onDragMove, snapPos }: PlaceholderElementProps) {
   const [dragging, setDragging] = useState(false);
   const drag = useDrag(
     () => el.position,
     (x, y) => { onUpdate({ position: { x, y } }); onDragMove?.(x, y); },
     containerRef,
-    { onStart: onDragStart, onEnd: onDragEnd },
+    { onStart: onDragStart, onEnd: onDragEnd, snapPos },
   );
 
   const resizingDir = useRef<HandleDir | null>(null);
@@ -827,7 +871,8 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
         }}
         className={cn('aspect-[4/5] w-full relative select-none', className)}
         style={{ maxWidth: 540 }}
-        onClick={() => onSelectElement(null)}
+        onPointerDown={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+        onClick={(e) => { if (e.target === e.currentTarget) onSelectElement(null); }}
       >
         {/* Background layer — clipped to slide boundary separately from elements */}
         <div
@@ -848,6 +893,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
             onDragStart: () => setDraggingId(el.id),
             onDragEnd: () => { setDraggingId(null); setDraggingPos(null); },
             onDragMove: (x: number, y: number) => setDraggingPos({ x, y }),
+            snapPos: buildSnapFn(el, slide.elements, SNAP_DIST),
           };
           if (el.type === 'text') {
             return (

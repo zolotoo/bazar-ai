@@ -41,7 +41,7 @@ function getDrafts(): CarouselDraft[] {
 
 function saveDraftToStorage(draft: CarouselDraft): void {
   const all = getDrafts().filter((d) => d.id !== draft.id);
-  localStorage.setItem('carousel_drafts', JSON.stringify([draft, ...all].slice(0, 20)));
+  localStorage.setItem('carousel_drafts', JSON.stringify([draft, ...all].slice(0, 3)));
 }
 
 function deleteDraftFromStorage(id: string): void {
@@ -1105,13 +1105,15 @@ function FreeEditor({ onBack, initialSlides, initialDraftId, aiOriginalImage, on
   }, [slide.elements]);
 
   const handleSaveDraft = useCallback(() => {
+    const now = Date.now();
     const draft: CarouselDraft = {
       id: draftId,
       name: `Черновик ${new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`,
       slides,
-      updatedAt: Date.now(),
+      updatedAt: now,
     };
     saveDraftToStorage(draft);
+    setLastSaved(now);
     toast.success('Черновик сохранён');
   }, [draftId, slides]);
 
