@@ -1,19 +1,27 @@
-import { useRef, useState, useCallback, useEffect, forwardRef } from 'react';
+import { useRef, useState, useCallback, useEffect, useMemo, forwardRef } from 'react';
 import { cn } from '../../utils/cn';
 import type { Slide, SlideElement, TextElement, ImageElement, ShapeElement, PlaceholderElement, Position, Size } from './types';
 import { SHADOW_MAP } from './types';
 
 // ─── Move hook ───────────────────────────────────────────────
 
+interface DragCallbacks {
+  onStart?: () => void;
+  onEnd?: () => void;
+}
+
 function useDrag(
   getPosition: () => Position,
   onMove: (x: number, y: number) => void,
   containerRef: React.RefObject<HTMLDivElement | null>,
+  cbs?: DragCallbacks,
 ) {
   const active = useRef(false);
   const offset = useRef({ x: 0, y: 0 });
   const startPt = useRef({ x: 0, y: 0 });
   const hasMoved = useRef(false);
+  const cbsRef = useRef(cbs);
+  cbsRef.current = cbs;
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     e.stopPropagation();
@@ -26,6 +34,7 @@ function useDrag(
     offset.current = { x: e.clientX - rect.left - (pos.x / 100) * rect.width, y: e.clientY - rect.top - (pos.y / 100) * rect.height };
     startPt.current = { x: e.clientX, y: e.clientY };
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    cbsRef.current?.onStart?.();
   }, [getPosition, containerRef]);
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
@@ -38,7 +47,10 @@ function useDrag(
     onMove(Math.max(0, Math.min(93, x)), Math.max(0, Math.min(93, y)));
   }, [onMove, containerRef]);
 
-  const onPointerUp = useCallback(() => { active.current = false; }, []);
+  const onPointerUp = useCallback(() => {
+    active.current = false;
+    cbsRef.current?.onEnd?.();
+  }, []);
 
   return { onPointerDown, onPointerMove, onPointerUp, hasMoved };
 }
@@ -212,15 +224,33 @@ interface TextElementProps {
   onTextChange: (text: string) => void;
   onUpdate: (updates: Partial<TextElement>) => void;
   containerRef: React.RefObject<HTMLDivElement | null>;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
+  onDragMove?: (x: number, y: number) => void;
 }
 
-function TextElementView({ el, selected, editing, scale, onSelect, onStartEdit, onStopEdit, onTextChange, onUpdate, containerRef }: TextElementProps) {
+function TextElementView({ el, selected, editing, scale, onSelect, onStartEdit, onStopEdit, onTextChange, onUpdate, containerRef, onDragStart, onDragEnd, onDragMove }: TextElementProps) {
   const textRef = useRef<HTMLDivElement>(null);
+  const savedRangeRef = useRef<Range | null>(null);
+
+  const saveSelection = useCallback(() => {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+  }, []);
+
+  const restoreSelection = useCallback(() => {
+    if (!textRef.current || !savedRangeRef.current) return;
+    textRef.current.focus();
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(savedRangeRef.current);
+  }, []);
 
   const drag = useDrag(
     () => el.position,
-    (x, y) => onUpdate({ position: { x, y } }),
+    (x, y) => { onUpdate({ position: { x, y } }); onDragMove?.(x, y); },
     containerRef,
+    { onStart: onDragStart, onEnd: onDragEnd },
   );
 
   // Width-only resize (text height is always auto)
@@ -341,9 +371,13 @@ function TextElementView({ el, selected, editing, scale, onSelect, onStartEdit, 
                   onMouseDown={(e) => { e.preventDefault(); document.execCommand('foreColor', false, c); }}
                 />
               ))}
-              <label style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }} title="Свой цвет">
+              <label
+                style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                title="Свой цвет"
+                onMouseDown={(e) => { e.preventDefault(); saveSelection(); }}
+              >
                 <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.5)', lineHeight: 1 }}>+</span>
-                <input type="color" className="sr-only" onChange={(e) => { document.execCommand('foreColor', false, e.target.value); }} />
+                <input type="color" className="sr-only" onChange={(e) => { restoreSelection(); document.execCommand('foreColor', false, e.target.value); }} />
               </label>
             </div>
 
@@ -442,14 +476,18 @@ interface ImageElementProps {
   onSelect: () => void;
   onUpdate: (updates: Partial<ImageElement>) => void;
   containerRef: React.RefObject<HTMLDivElement | null>;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
+  onDragMove?: (x: number, y: number) => void;
 }
 
-function ImageElementView({ el, selected, scale, onSelect, onUpdate, containerRef }: ImageElementProps) {
+function ImageElementView({ el, selected, scale, onSelect, onUpdate, containerRef, onDragStart, onDragEnd, onDragMove }: ImageElementProps) {
   const [dragging, setDragging] = useState(false);
   const drag = useDrag(
     () => el.position,
-    (x, y) => onUpdate({ position: { x, y } }),
+    (x, y) => { onUpdate({ position: { x, y } }); onDragMove?.(x, y); },
     containerRef,
+    { onStart: onDragStart, onEnd: onDragEnd },
   );
 
   const handleClick = useCallback((e: React.MouseEvent) => {
@@ -507,14 +545,18 @@ interface ShapeElementProps {
   onSelect: () => void;
   onUpdate: (updates: Partial<ShapeElement>) => void;
   containerRef: React.RefObject<HTMLDivElement | null>;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
+  onDragMove?: (x: number, y: number) => void;
 }
 
-function ShapeElementView({ el, selected, scale, onSelect, onUpdate, containerRef }: ShapeElementProps) {
+function ShapeElementView({ el, selected, scale, onSelect, onUpdate, containerRef, onDragStart, onDragEnd, onDragMove }: ShapeElementProps) {
   const [dragging, setDragging] = useState(false);
   const drag = useDrag(
     () => el.position,
-    (x, y) => onUpdate({ position: { x, y } }),
+    (x, y) => { onUpdate({ position: { x, y } }); onDragMove?.(x, y); },
     containerRef,
+    { onStart: onDragStart, onEnd: onDragEnd },
   );
 
   const resizingDir = useRef<HandleDir | null>(null);
@@ -601,14 +643,18 @@ interface PlaceholderElementProps {
   onUpdate: (updates: Partial<PlaceholderElement>) => void;
   onReplace: (id: string) => void;
   containerRef: React.RefObject<HTMLDivElement | null>;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
+  onDragMove?: (x: number, y: number) => void;
 }
 
-function PlaceholderElementView({ el, selected, scale, onSelect, onUpdate, onReplace, containerRef }: PlaceholderElementProps) {
+function PlaceholderElementView({ el, selected, scale, onSelect, onUpdate, onReplace, containerRef, onDragStart, onDragEnd, onDragMove }: PlaceholderElementProps) {
   const [dragging, setDragging] = useState(false);
   const drag = useDrag(
     () => el.position,
-    (x, y) => onUpdate({ position: { x, y } }),
+    (x, y) => { onUpdate({ position: { x, y } }); onDragMove?.(x, y); },
     containerRef,
+    { onStart: onDragStart, onEnd: onDragEnd },
   );
 
   const resizingDir = useRef<HandleDir | null>(null);
@@ -694,6 +740,48 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
   ({ slide, selectedId, editingTextId, onSelectElement, onStartEditText, onStopEditText, onUpdateElement, onUpdateTextContent, onReplacePlaceholder, className }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [containerWidth, setContainerWidth] = useState(540);
+    const [draggingId, setDraggingId] = useState<string | null>(null);
+    const [draggingPos, setDraggingPos] = useState<{ x: number; y: number } | null>(null);
+
+    // ── Snap guides ────────────────────────────────────────────
+    const SNAP_DIST = 1.8; // % threshold for showing a guide
+    const guides = useMemo(() => {
+      if (!draggingId || !draggingPos) return { v: [] as number[], h: [] as number[] };
+      const dragEl = slide.elements.find(e => e.id === draggingId);
+      if (!dragEl) return { v: [] as number[], h: [] as number[] };
+
+      const dx = draggingPos.x, dy = draggingPos.y;
+      let dw = 0, dh = 0;
+      if (dragEl.type === 'text') { dw = (dragEl as TextElement).width; dh = 8; }
+      else if ('size' in dragEl) { dw = (dragEl as ImageElement).size.width; dh = (dragEl as ImageElement).size.height; }
+
+      const dCX = dx + dw / 2, dCY = dy + dh / 2, dR = dx + dw, dB = dy + dh;
+
+      const vSet = new Set<number>();
+      const hSet = new Set<number>();
+
+      const snapV = (ref: number, target: number) => { if (Math.abs(ref - target) < SNAP_DIST) vSet.add(target); };
+      const snapH = (ref: number, target: number) => { if (Math.abs(ref - target) < SNAP_DIST) hSet.add(target); };
+
+      // Canvas center & edges
+      [dx, dCX, dR].forEach(v => snapV(v, 50));
+      [dy, dCY, dB].forEach(v => snapH(v, 50));
+
+      // Other elements
+      for (const el of slide.elements) {
+        if (el.id === draggingId) continue;
+        const ex = el.position.x, ey = el.position.y;
+        let ew = 0, eh = 0;
+        if (el.type === 'text') { ew = (el as TextElement).width; eh = 8; }
+        else if ('size' in el) { ew = (el as ImageElement).size.width; eh = (el as ImageElement).size.height; }
+        const eCX = ex + ew / 2, eCY = ey + eh / 2, eR = ex + ew, eB = ey + eh;
+
+        [dx, dCX, dR].forEach(v => { [ex, eCX, eR].forEach(t => snapV(v, t)); });
+        [dy, dCY, dB].forEach(v => { [ey, eCY, eB].forEach(t => snapH(v, t)); });
+      }
+
+      return { v: [...vSet], h: [...hSet] };
+    }, [draggingId, draggingPos, slide.elements]);
 
     useEffect(() => {
       const el = containerRef.current;
@@ -739,7 +827,29 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
           className="absolute inset-0 pointer-events-none"
           style={{ ...bgLayerStyle, overflow: 'hidden', borderRadius: 'inherit' }}
         />
+
+        {/* ── Snap guide lines ── */}
+        {draggingId && guides.v.map((x) => (
+          <div key={`v${x}`} className="absolute inset-y-0 pointer-events-none" style={{ left: `${x}%`, width: 1, background: 'rgba(99,102,241,0.75)', zIndex: 200 }}>
+            <div style={{ position: 'absolute', top: '50%', left: -14, transform: 'translateY(-50%)', background: 'rgba(99,102,241,0.9)', color: '#fff', fontSize: 8, fontWeight: 700, padding: '1px 3px', borderRadius: 3, whiteSpace: 'nowrap' }}>
+              {x === 50 ? '⊕' : `${Math.round(x)}%`}
+            </div>
+          </div>
+        ))}
+        {draggingId && guides.h.map((y) => (
+          <div key={`h${y}`} className="absolute inset-x-0 pointer-events-none" style={{ top: `${y}%`, height: 1, background: 'rgba(99,102,241,0.75)', zIndex: 200 }}>
+            <div style={{ position: 'absolute', left: '50%', top: -10, transform: 'translateX(-50%)', background: 'rgba(99,102,241,0.9)', color: '#fff', fontSize: 8, fontWeight: 700, padding: '1px 3px', borderRadius: 3, whiteSpace: 'nowrap' }}>
+              {y === 50 ? '⊕' : `${Math.round(y)}%`}
+            </div>
+          </div>
+        ))}
+
         {[...slide.elements].sort((a, b) => ((a as any).zIndex ?? 1) - ((b as any).zIndex ?? 1)).map((el) => {
+          const dragProps = {
+            onDragStart: () => setDraggingId(el.id),
+            onDragEnd: () => { setDraggingId(null); setDraggingPos(null); },
+            onDragMove: (x: number, y: number) => setDraggingPos({ x, y }),
+          };
           if (el.type === 'text') {
             return (
               <TextElementView
@@ -754,6 +864,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
                 onTextChange={(html) => onUpdateTextContent(el.id, html)}
                 onUpdate={(u) => onUpdateElement(el.id, u)}
                 containerRef={containerRef}
+                {...dragProps}
               />
             );
           }
@@ -767,6 +878,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
                 onSelect={() => onSelectElement(el.id)}
                 onUpdate={(u) => onUpdateElement(el.id, u as Partial<SlideElement>)}
                 containerRef={containerRef}
+                {...dragProps}
               />
             );
           }
@@ -780,6 +892,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
                 onSelect={() => onSelectElement(el.id)}
                 onUpdate={(u) => onUpdateElement(el.id, u as Partial<SlideElement>)}
                 containerRef={containerRef}
+                {...dragProps}
               />
             );
           }
@@ -794,6 +907,7 @@ export const SlideCanvas = forwardRef<HTMLDivElement, SlideCanvasProps>(
                 onUpdate={(u) => onUpdateElement(el.id, u as Partial<SlideElement>)}
                 onReplace={onReplacePlaceholder}
                 containerRef={containerRef}
+                {...dragProps}
               />
             );
           }

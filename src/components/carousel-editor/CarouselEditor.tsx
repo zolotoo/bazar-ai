@@ -1501,6 +1501,23 @@ function FreeEditor({ onBack, initialSlides, initialDraftId, aiOriginalImage, on
               />
             )}
 
+            {/* Copy to all slides */}
+            {selectedEl && slides.length > 1 && (
+              <FloatBtn
+                icon={<Copy size={16} />}
+                label="На все слайды"
+                onClick={() => {
+                  const elJson = JSON.stringify(selectedEl);
+                  setSlides((prev) => prev.map((s, i) => {
+                    if (i === currentIdx) return s;
+                    const clone = { ...JSON.parse(elJson), id: `${selectedEl.id}-copy-${i}` };
+                    return { ...s, elements: [...s.elements, clone] };
+                  }));
+                  toast.success(`Скопировано на ${slides.length - 1} слайд${slides.length - 1 > 1 ? 'а' : ''}`);
+                }}
+              />
+            )}
+
             {/* Delete — direct action */}
             {selectedEl && (
               <FloatBtn
