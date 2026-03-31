@@ -220,7 +220,7 @@ export const VideoGradientCard = ({
                   "absolute inset-0 w-full h-full object-cover transition-opacity duration-300",
                   "opacity-100"
                 )}
-                loading={priority || !isMobile ? "eager" : "lazy"}
+                loading="eager"
                 decoding="async"
                 fetchPriority={priority ? "high" : "auto"}
                 onLoad={(e) => {

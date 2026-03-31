@@ -353,7 +353,7 @@ export const SidebarProject = ({
         transition={{ duration: 0.2, ease: 'easeInOut' }}
         style={{ display: open || !animate ? 'inline-block' : 'none' }}
         className={cn(
-          "flex-1 text-sm font-medium truncate font-heading tracking-[-0.01em]",
+          "flex-1 text-sm font-semibold truncate font-heading tracking-[-0.01em]",
           isActive ? "text-slate-800" : "text-slate-700"
         )}
       >
