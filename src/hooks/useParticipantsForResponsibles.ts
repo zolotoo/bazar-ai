@@ -6,7 +6,7 @@ import { useProjectMembers } from './useProjectMembers';
  * Участники для выбора ответственного: члены проекта + уникальные значения из исходников.
  * Роли (labels) берутся из responsiblesTemplate проекта.
  */
-export function useParticipantsForResponsibles(projectId: string | null) {
+export function useParticipantsForResponsibles(projectId: string | null, ownerUserId?: string | null) {
   const { members } = useProjectMembers(projectId);
   const [valuesFromRefs, setValuesFromRefs] = useState<string[]>([]);
 
@@ -40,6 +40,13 @@ export function useParticipantsForResponsibles(projectId: string | null) {
 
   const participants = useMemo(() => {
     const set = new Set<string>();
+    // Добавляем владельца проекта (он не в project_members)
+    if (ownerUserId) {
+      const uid = ownerUserId;
+      const isEmail = uid.startsWith('email-');
+      const name = isEmail ? uid.replace('email-', '') : `@${uid.replace('tg-@', '').replace('tg-', '')}`;
+      if (name) set.add(name);
+    }
     for (const m of members) {
       const uid = m.user_id || '';
       const isEmail = uid.startsWith('email-');
@@ -50,7 +57,7 @@ export function useParticipantsForResponsibles(projectId: string | null) {
       if (v) set.add(v);
     }
     return [...set].sort((a, b) => a.localeCompare(b, 'ru'));
-  }, [members, valuesFromRefs]);
+  }, [members, valuesFromRefs, ownerUserId]);
 
   return participants;
 }

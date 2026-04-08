@@ -214,7 +214,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData, autoTranscribe }
   const radarUserId = user?.id || 'anonymous';
   const { profiles: radarProfiles, addProfile: addRadarProfile } = useRadar(currentProjectId, radarUserId);
   const { members: projectMembersList } = useProjectMembers(currentProjectId);
-  const participants = useParticipantsForResponsibles(currentProjectId);
+  const participants = useParticipantsForResponsibles(currentProjectId, currentProject?.owner_id);
   const isAdminOrOwner = !!user?.id && (
     user.id === currentProject?.owner_id ||
     projectMembersList.some(m => m.user_id === user.id && m.role === 'admin' && m.status === 'active')
@@ -373,8 +373,13 @@ export function VideoDetailPage({ video, onBack, onRefreshData, autoTranscribe }
     await updateProject(currentProject.id, { responsiblesTemplate: newTemplate });
     const success = await updateVideoResponsible(video.id, responsibles.map(({ id, value }) => ({ templateId: id, value })));
     setIsSavingResponsible(false);
-    if (success) toast.success('Ответственные сохранены');
-    else toast.error('Ошибка сохранения ответственных. Примените миграцию add_video_links_responsibles_json.sql.');
+    if (success) {
+      toast.success('Ответственные сохранены');
+      // Обновляем данные чтобы таймер появился
+      if (onRefreshData) await onRefreshData();
+    } else {
+      toast.error('Ошибка сохранения ответственных. Примените миграцию add_video_links_responsibles_json.sql.');
+    }
   };
 
   // Обновить данные видео (перезагрузка из БД / API)
@@ -1693,7 +1698,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData, autoTranscribe }
             </div>
 
             {/* Ответственные — динамические пункты с переименованием и добавлением */}
-            <div className="rounded-card-xl p-3 shadow-glass bg-glass-white/80 backdrop-blur-glass-xl border border-white/[0.35] space-y-3">
+            <div className="rounded-card-xl p-3 shadow-glass bg-glass-white/80 border border-white/[0.35] space-y-3 relative z-10 overflow-visible">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-slate-400 font-medium">Ответственные</span>
                 <div className="flex items-center gap-1">
