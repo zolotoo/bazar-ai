@@ -7,6 +7,8 @@ import { useResponsiblesStats } from '../hooks/useResponsiblesAnalytics';
 import { useRefsForLinking, reelsWithoutLinkedRef } from '../hooks/useRefsForLinking';
 import { useParticipantsForResponsibles } from '../hooks/useParticipantsForResponsibles';
 import { useInboxVideos } from '../hooks/useInboxVideos';
+import { useAuth } from '../hooks/useAuth';
+import { useProjectMembers } from '../hooks/useProjectMembers';
 import { useTokenBalance } from '../contexts/TokenBalanceContext';
 import { getTokenCost } from '../constants/tokenCosts';
 import { CoinBadge } from './ui/CoinBadge';
@@ -20,7 +22,7 @@ import {
   Award, Film, X, CalendarDays, Calendar, AlertCircle,
   ArrowUpRight, ArrowDownRight, Mic, Sparkles,
   LayoutGrid, List, Clock, ChevronRight, ChevronLeft, Users, Link2, Unlink, UserPlus,
-  FileText, Check, ChevronDown, Trophy, Copy,
+  FileText, Check, ChevronDown, Trophy, Copy, Shield,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -1297,6 +1299,12 @@ export function Analytics() {
   const [responsiblePickerRefId, setResponsiblePickerRefId] = useState<string | null>(null);
 
   const { deduct, canAfford } = useTokenBalance();
+  const { user } = useAuth();
+  const { members: projectMembersList } = useProjectMembers(currentProjectId);
+  const isAdminOrOwner = !!user?.id && (
+    user.id === currentProject?.owner_id ||
+    projectMembersList.some(m => m.user_id === user.id && m.role === 'admin' && m.status === 'active')
+  );
 
   const [subView, setSubView] = useState<SubView>('overview');
   const [period, setPeriod] = useState<Period>('week');
@@ -1703,24 +1711,33 @@ export function Analytics() {
               </div>
             </div>
             <div className="mt-3 flex items-center gap-2">
-              <select
-                value={currentProject?.project_manager_id || ''}
-                onChange={async (e) => {
-                  if (!currentProjectId) return;
-                  const val = e.target.value || undefined;
-                  try {
-                    await updateProject(currentProjectId, { project_manager_id: val || (null as any) });
-                    toast.success(val ? 'Проджект назначен' : 'Проджект убран');
-                  } catch { toast.error('Ошибка сохранения'); }
-                }}
-                className="flex-1 px-3 py-2.5 rounded-2xl border border-slate-200/80 bg-white/90 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-200/50 appearance-none cursor-pointer"
-                style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'%3E%3Cpath d=\'m6 9 6 6 6-6\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center' }}
-              >
-                <option value="">Не выбран</option>
-                {participants.map(p => (
-                  <option key={p} value={`tg-${p.replace(/^@/, '')}`}>{p}</option>
-                ))}
-              </select>
+              {isAdminOrOwner ? (
+                <select
+                  value={currentProject?.project_manager_id || ''}
+                  onChange={async (e) => {
+                    if (!currentProjectId) return;
+                    const val = e.target.value || undefined;
+                    try {
+                      await updateProject(currentProjectId, { project_manager_id: val || (null as any) });
+                      toast.success(val ? 'Проджект назначен' : 'Проджект убран');
+                    } catch { toast.error('Ошибка сохранения'); }
+                  }}
+                  className="flex-1 px-3 py-2.5 rounded-2xl border border-slate-200/80 bg-white/90 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-200/50 appearance-none cursor-pointer"
+                  style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'%3E%3Cpath d=\'m6 9 6 6 6-6\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center' }}
+                >
+                  <option value="">Не выбран</option>
+                  {participants.map(p => (
+                    <option key={p} value={`tg-${p.replace(/^@/, '')}`}>{p}</option>
+                  ))}
+                </select>
+              ) : (
+                <p className="flex-1 px-3 py-2.5 text-sm text-slate-700">
+                  {currentProject?.project_manager_id
+                    ? `@${currentProject.project_manager_id.replace(/^tg-/, '')}`
+                    : <span className="text-slate-400">Не назначен</span>
+                  }
+                </p>
+              )}
             </div>
           </div>
 
@@ -2029,18 +2046,20 @@ export function Analytics() {
            * │              │  Просмотры чарт  │ Роликов  │
            * │  HERO        │  (rows 1-2)      ├──────────┤  row 2
            * │  Кубок+месяц │                  │ Ср.просм │
-           * │  (rows 1-3)  ├──────────────────┼──────────┤  row 3
+           * │  (rows 1-4)  ├──────────────────┼──────────┤  row 3
            * │              │  Лучший недели   │ Вчера    │
-           * └──────────────┴──────────────────┴──────────┘
+           * │              ├──────────────────┴──────────┤  row 4
+           * │              │  Проджект                   │
+           * └──────────────┴─────────────────────────────┘
            * cols: 5fr  7fr  4fr
            */}
           <div
             className="grid gap-3"
-            style={{ gridTemplateColumns: '5fr 7fr 4fr', gridTemplateRows: 'auto auto auto' }}
+            style={{ gridTemplateColumns: '5fr 7fr 4fr', gridTemplateRows: 'auto auto auto auto' }}
           >
             {/* ── LEFT HERO: кубок + сумма просмотров за месяц ─────────────── */}
             <div
-              style={{ gridRow: '1 / 4' }}
+              style={{ gridRow: '1 / 5' }}
               className={cn(CARD, "relative overflow-hidden flex flex-col items-center justify-between p-4 min-h-[280px]")}
               // Dark-gold gradient background
               css-ignore="true"
@@ -2204,6 +2223,48 @@ export function Analytics() {
                   <p className="text-[10px] text-indigo-400 font-medium leading-tight">Обнови,<br/>чтобы<br/>увидеть</p>
                 </button>
               )}
+            </motion.div>
+
+            {/* ── ROW 4: Проджект-менеджер ──────────────────────────────────── */}
+            <motion.div
+              className={cn(CARD, "p-3 flex flex-col justify-between")}
+              style={{ gridColumn: '2 / 4' }}
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+            >
+              <div className="flex items-center gap-1 mb-1.5">
+                <Shield className="w-3 h-3 text-violet-500" />
+                <p className="text-[9px] font-bold text-violet-500 uppercase tracking-wider">Проджект</p>
+              </div>
+              {isAdminOrOwner ? (
+                <select
+                  value={currentProject?.project_manager_id || ''}
+                  onChange={async (e) => {
+                    if (!currentProjectId) return;
+                    const val = e.target.value || undefined;
+                    try {
+                      await updateProject(currentProjectId, { project_manager_id: val || (null as any) });
+                      toast.success(val ? 'Проджект назначен' : 'Проджект убран');
+                    } catch { toast.error('Ошибка сохранения'); }
+                  }}
+                  className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200/80 bg-white/90 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-200/50 appearance-none cursor-pointer"
+                  style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'%3E%3Cpath d=\'m6 9 6 6 6-6\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}
+                >
+                  <option value="">Не выбран</option>
+                  {participants.map(p => (
+                    <option key={p} value={`tg-${p.replace(/^@/, '')}`}>{p}</option>
+                  ))}
+                </select>
+              ) : (
+                <p className="text-sm font-semibold text-slate-700 truncate">
+                  {currentProject?.project_manager_id
+                    ? `@${currentProject.project_manager_id.replace(/^tg-/, '')}`
+                    : <span className="text-slate-400 font-normal text-xs">Не назначен</span>
+                  }
+                </p>
+              )}
+              <p className="text-[9px] text-slate-400 mt-1">
+                Получает уведомления о просрочках
+              </p>
             </motion.div>
           </div>
 

@@ -810,6 +810,10 @@ export function Workspace(_props?: WorkspaceProps) {
       responsibles: (selectedVideo as any).responsibles,
       is_manual: !!(selectedVideo as any).is_manual || isScriptOnlyFeedCard(selectedVideo),
       caption: (selectedVideo as any).caption,
+      // Таймер ответственного
+      responsible_assigned_at: (selectedVideo as any).responsible_assigned_at,
+      responsible_timer_done: (selectedVideo as any).responsible_timer_done,
+      responsible_timer_done_at: (selectedVideo as any).responsible_timer_done_at,
     },
     onBack: () => { setSelectedVideo(null); setAutoTranscribeVideoId(null); },
     onRefreshData: async () => { await refetchInboxVideos(); },

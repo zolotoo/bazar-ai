@@ -1168,8 +1168,16 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
         return false;
       }
 
+      const now = new Date().toISOString();
       setVideos(prev => prev.map(v =>
-        v.id === videoId ? { ...v, responsibles: payload } as any : v
+        v.id === videoId ? {
+          ...v,
+          responsibles: payload,
+          responsible_assigned_at: hasAnyResponsible ? now : null,
+          responsible_timer_done: false,
+          responsible_timer_done_at: null,
+          responsible_notified_at: null,
+        } as any : v
       ));
       return true;
     } catch (err) {
