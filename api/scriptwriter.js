@@ -1380,10 +1380,6 @@ async function handleAnalyzeCarouselFromUrl(req, res) {
 
   console.log('analyze-carousel-from-url: code =', code, '| bg_slide =', background_slide_index, '| regen_first =', regen_first_bg, '| translate =', translate);
 
-  const prompt = translate
-    ? CAROUSEL_ANALYSIS_PROMPT + '\n\nВАЖНО: Переведи весь текст всех текстовых элементов на русский язык. Сохраняй смысл, стиль и форматирование — меняй только язык текста в поле "text". Структуру JSON не меняй.'
-    : CAROUSEL_ANALYSIS_PROMPT;
-
   let slideUrls = [];
   try {
     slideUrls = await fetchInstagramSlideUrls(code);
@@ -1412,7 +1408,7 @@ async function handleAnalyzeCarouselFromUrl(req, res) {
       if (!img) return null;
       console.log(`Analyzing slide ${idx + 1}/${slideUrls.length}`);
       try {
-        return await analyzeOneSlide(img.base64, img.mimeType, prompt, VISION_MODELS, { skipBgGen: true });
+        return await analyzeOneSlide(img.base64, img.mimeType, CAROUSEL_ANALYSIS_PROMPT, VISION_MODELS, { skipBgGen: true });
       } catch (err) {
         console.error(`Slide ${idx + 1} vision error:`, err.message);
         return null;
@@ -1487,6 +1483,50 @@ async function handleAnalyzeCarouselFromUrl(req, res) {
     if (sharedBackground) parsed.background = sharedBackground;
     return parsed;
   }).filter(Boolean);
+
+  // ── Шаг 5 (опционально): перевод текстов на русский ──────────
+  if (translate && slides.length > 0) {
+    // Собираем все уникальные тексты со всех слайдов
+    const allTexts = [];
+    for (const slide of slides) {
+      for (const el of slide.elements || []) {
+        if (el.type === 'text' && el.text) allTexts.push(el.text);
+      }
+    }
+    if (allTexts.length > 0) {
+      try {
+        console.log(`Translating ${allTexts.length} text elements...`);
+        const translateMessages = [{
+          role: 'user',
+          content: `Переведи каждую строку на русский язык. Верни ТОЛЬКО JSON-массив строк в том же порядке, без пояснений.\n\n${JSON.stringify(allTexts)}`,
+        }];
+        const { text: translateRaw } = await callOpenRouter({
+          apiKey: OPENROUTER_API_KEY,
+          model: 'google/gemini-2.5-flash',
+          messages: translateMessages,
+          temperature: 0.1,
+          max_tokens: 2000,
+        });
+        const translated = parseJsonResponse(translateRaw);
+        if (Array.isArray(translated) && translated.length === allTexts.length) {
+          let idx = 0;
+          for (const slide of slides) {
+            for (const el of slide.elements || []) {
+              if (el.type === 'text' && el.text) {
+                el.originalText = el.text;
+                el.text = translated[idx] || el.text;
+                idx++;
+              }
+            }
+          }
+          console.log('Translation done');
+        }
+      } catch (err) {
+        console.error('Translation error (non-fatal):', err.message);
+        // Не ломаем ответ — просто оставляем оригинальные тексты
+      }
+    }
+  }
 
   console.log(`Done: ${slides.length}/${slideUrls.length} slides`);
   if (slides.length === 0) return res.status(502).json({ error: 'Не удалось проанализировать слайды' });
