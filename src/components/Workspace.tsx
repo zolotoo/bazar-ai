@@ -1631,6 +1631,14 @@ export function Workspace(_props?: WorkspaceProps) {
                       setDescriptionModalText(video.title || 'Нет описания');
                       setCardMenuVideoId(null);
                     }}
+                    responsibleNickname={(() => {
+                      const resps = (video as any).responsibles;
+                      if (!resps || !Array.isArray(resps)) return undefined;
+                      const first = resps.find((r: any) => r.value?.trim());
+                      return first?.value?.trim() || undefined;
+                    })()}
+                    responsibleAssignedAt={(video as any).responsible_assigned_at || undefined}
+                    responsibleTimerDone={(video as any).responsible_timer_done || false}
                     onTranscribeClick={!isScriptOnlyFeedCard(video) && video.url ? () => {
                       setAutoTranscribeVideoId(video.id);
                       setSelectedVideo(video);

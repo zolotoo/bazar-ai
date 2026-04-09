@@ -1720,52 +1720,6 @@ export function VideoDetailPage({ video, onBack, onRefreshData, autoTranscribe }
                 </div>
               </div>
 
-              {/* Таймер ответственного — 24ч на обработку */}
-              {(() => {
-                const hasResp = responsibles.some(r => r.value.trim() !== '');
-                const userId = user?.id || '';
-                const isCurrentUserResponsible = responsibles.some(r => {
-                  const v = r.value.trim().toLowerCase().replace(/^@/, '');
-                  const u = userId.toLowerCase().replace(/^tg-/, '').replace(/^@/, '');
-                  return v && u && v === u;
-                });
-                const isProjectManager = currentProject?.project_manager_id
-                  ? userId.toLowerCase() === currentProject.project_manager_id.toLowerCase()
-                  : false;
-                return hasResp ? (
-                  <ResponsibleTimer
-                    assignedAt={video.responsible_assigned_at ?? null}
-                    timerDone={video.responsible_timer_done}
-                    hasResponsible={hasResp}
-                    canComplete={isCurrentUserResponsible || isProjectManager || isAdminOrOwner}
-                    onComplete={async () => {
-                      const ok = await markVideoTimerDone(video.id);
-                      if (ok) {
-                        toast.success('Видео отмечено как готовое');
-                        // Отправляем уведомление проджекту
-                        if (currentProjectId) {
-                          try {
-                            await fetch('/api/project', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                action: 'timer-completed',
-                                videoId: video.id,
-                                projectId: currentProjectId,
-                                completedBy: userId,
-                                videoTitle: video.caption || video.title || 'Без названия',
-                              }),
-                            });
-                          } catch {}
-                        }
-                      } else {
-                        toast.error('Ошибка');
-                      }
-                    }}
-                  />
-                ) : null;
-              })()}
-
               <div className="space-y-2">
                 {responsibles.map((row) => (
                   <div
@@ -1777,6 +1731,49 @@ export function VideoDetailPage({ video, onBack, onRefreshData, autoTranscribe }
                       boxShadow: '0 2px 8px rgba(15,23,42,0.05)',
                     }}
                   >
+                    {/* Таймер для конкретного ответственного */}
+                    {row.value.trim() !== '' && video.responsible_assigned_at && (
+                      <ResponsibleTimer
+                        assignedAt={video.responsible_assigned_at ?? null}
+                        timerDone={video.responsible_timer_done}
+                        hasResponsible={true}
+                        canComplete={(() => {
+                          const userId = user?.id || '';
+                          const v = row.value.trim().toLowerCase().replace(/^@/, '');
+                          const u = userId.toLowerCase().replace(/^tg-/, '').replace(/^@/, '');
+                          const isThisResp = v && u && v === u;
+                          const isPM = currentProject?.project_manager_id
+                            ? userId.toLowerCase() === currentProject.project_manager_id.toLowerCase()
+                            : false;
+                          return isThisResp || isPM || isAdminOrOwner;
+                        })()}
+                        onComplete={async () => {
+                          const userId = user?.id || '';
+                          const ok = await markVideoTimerDone(video.id);
+                          if (ok) {
+                            toast.success('Видео отмечено как готовое');
+                            if (currentProjectId) {
+                              try {
+                                await fetch('/api/project', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    action: 'timer-completed',
+                                    videoId: video.id,
+                                    projectId: currentProjectId,
+                                    completedBy: userId,
+                                    videoTitle: video.caption || video.title || 'Без названия',
+                                  }),
+                                });
+                              } catch {}
+                            }
+                          } else {
+                            toast.error('Ошибка');
+                          }
+                        }}
+                        compact={false}
+                      />
+                    )}
                     {/* Label + person picker */}
                     <div className="flex gap-1.5">
                       <input

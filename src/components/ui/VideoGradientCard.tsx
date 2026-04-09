@@ -3,7 +3,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { cn } from "../../utils/cn";
 import { proxyImageUrl, PLACEHOLDER_270x360 } from "../../utils/imagePlaceholder";
-import { Sparkles, MoreVertical, ArrowRight, Eye, Heart, Loader2, AlertCircle, MessageCircle, TrendingUp, BookOpen, PenLine, Calendar, Mic } from "lucide-react";
+import { Sparkles, MoreVertical, ArrowRight, Eye, Heart, Loader2, AlertCircle, MessageCircle, TrendingUp, BookOpen, PenLine, Calendar, Mic, Clock, User, Check } from "lucide-react";
 
 export interface VideoGradientCardProps {
   thumbnailUrl?: string;
@@ -40,6 +40,12 @@ export interface VideoGradientCardProps {
   isManual?: boolean;
   /** Кнопка быстрой транскрибации — появляется при наведении */
   onTranscribeClick?: () => void;
+  /** Никнейм ответственного (первый заполненный) */
+  responsibleNickname?: string;
+  /** ISO-строка: когда ответственный назначен */
+  responsibleAssignedAt?: string;
+  /** Таймер уже остановлен */
+  responsibleTimerDone?: boolean;
 }
 
 function formatShortDate(dateStr?: string): string {
@@ -51,6 +57,24 @@ function formatShortDate(dateStr?: string): string {
     : new Date(dateStr);
   if (isNaN(d.getTime())) return '';
   return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }).replace('.', '');
+}
+
+function formatTimerRemaining(assignedAt: string): string {
+  const deadline = new Date(assignedAt).getTime() + 24 * 3600000;
+  const ms = deadline - Date.now();
+  if (ms <= 0) return 'Просрочено';
+  const hours = Math.floor(ms / 3600000);
+  const minutes = Math.floor((ms % 3600000) / 60000);
+  if (hours > 0) return `${hours}ч ${minutes}м`;
+  return `${minutes}м`;
+}
+
+function getTimerColor(assignedAt: string): 'overdue' | 'warning' | 'normal' {
+  const deadline = new Date(assignedAt).getTime() + 24 * 3600000;
+  const ms = deadline - Date.now();
+  if (ms <= 0) return 'overdue';
+  if (ms < 4 * 3600000) return 'warning';
+  return 'normal';
 }
 
 function formatNumber(num?: number): string {
@@ -88,6 +112,9 @@ export const VideoGradientCard = ({
   priority = false,
   isManual = false,
   onTranscribeClick,
+  responsibleNickname,
+  responsibleAssignedAt,
+  responsibleTimerDone,
 }: VideoGradientCardProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
@@ -425,6 +452,46 @@ export const VideoGradientCard = ({
                 </div>
               )}
             </div>
+
+            {/* Ответственный + таймер — маленькие бейджи */}
+            {responsibleNickname && (
+              <div className="flex items-center gap-1 md:gap-1.5 mb-1.5 flex-wrap">
+                {/* Никнейм ответственного */}
+                <div className="px-1.5 py-0.5 md:px-2 md:py-0.5 rounded-pill md:backdrop-blur-[20px] md:backdrop-saturate-[180%] flex items-center gap-1 border border-white/35 bg-black/36 md:bg-white/20 shadow-[0_4px_14px_rgba(0,0,0,0.16),inset_0_1px_0_rgba(255,255,255,0.18)]">
+                  <User className="w-2 h-2 md:w-2.5 md:h-2.5 flex-shrink-0" strokeWidth={2} />
+                  <span className="text-[9px] md:text-[10px] font-semibold text-white/90 whitespace-nowrap truncate max-w-[80px]">{responsibleNickname}</span>
+                </div>
+                {/* Таймер */}
+                {responsibleAssignedAt && (
+                  responsibleTimerDone ? (
+                    <div className="px-1.5 py-0.5 md:px-2 md:py-0.5 rounded-pill flex items-center gap-0.5 border border-emerald-400/40 bg-emerald-500/30">
+                      <Check className="w-2 h-2 md:w-2.5 md:h-2.5 flex-shrink-0 text-emerald-200" strokeWidth={2.5} />
+                      <span className="text-[9px] md:text-[10px] font-semibold text-emerald-100 whitespace-nowrap">Готово</span>
+                    </div>
+                  ) : (
+                    <div className={cn(
+                      "px-1.5 py-0.5 md:px-2 md:py-0.5 rounded-pill flex items-center gap-0.5 border",
+                      getTimerColor(responsibleAssignedAt) === 'overdue' && "border-red-400/40 bg-red-500/35",
+                      getTimerColor(responsibleAssignedAt) === 'warning' && "border-amber-400/40 bg-amber-500/30",
+                      getTimerColor(responsibleAssignedAt) === 'normal' && "border-white/35 bg-black/36 md:bg-white/20 shadow-[0_4px_14px_rgba(0,0,0,0.16),inset_0_1px_0_rgba(255,255,255,0.18)]",
+                    )}>
+                      <Clock className={cn(
+                        "w-2 h-2 md:w-2.5 md:h-2.5 flex-shrink-0",
+                        getTimerColor(responsibleAssignedAt) === 'overdue' && "text-red-200",
+                        getTimerColor(responsibleAssignedAt) === 'warning' && "text-amber-200",
+                        getTimerColor(responsibleAssignedAt) === 'normal' && "text-white/80",
+                      )} strokeWidth={2} />
+                      <span className={cn(
+                        "text-[9px] md:text-[10px] font-semibold whitespace-nowrap",
+                        getTimerColor(responsibleAssignedAt) === 'overdue' && "text-red-100",
+                        getTimerColor(responsibleAssignedAt) === 'warning' && "text-amber-100",
+                        getTimerColor(responsibleAssignedAt) === 'normal' && "text-white/90",
+                      )}>{formatTimerRemaining(responsibleAssignedAt)}</span>
+                    </div>
+                  )
+                )}
+              </div>
+            )}
 
             {/* Нижние бейджи: папка + сценарий — всегда два в ряд */}
             {!isManual && (
