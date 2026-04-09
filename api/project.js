@@ -536,7 +536,16 @@ async function handleTimerCompleted(req, res, supabase) {
     await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatRow.chat_id, text, parse_mode: 'HTML' }),
+      body: JSON.stringify({
+        chat_id: chatRow.chat_id,
+        text,
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [[
+            { text: `👏 Поблагодарить @${cleanName}`, callback_data: `thank:${cleanName}` },
+          ]],
+        },
+      }),
     });
 
     return res.status(200).json({ success: true });

@@ -14,6 +14,56 @@ export default async function handler(req, res) {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
   const update = req.body;
 
+  // Обработка нажатия inline-кнопки благодарности
+  if (update?.callback_query) {
+    const cb = update.callback_query;
+    const callbackData = cb.data || '';
+
+    if (callbackData.startsWith('thank:')) {
+      const responsibleUsername = callbackData.slice('thank:'.length).toLowerCase();
+      const fromUsername = cb.from?.username || null;
+      const fromName = cb.from?.first_name || (fromUsername ? `@${fromUsername}` : 'Проджект-менеджер');
+
+      // Подтверждаем нажатие кнопки
+      await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callback_query_id: cb.id, text: '🌟 Благодарность отправлена!' }),
+      });
+
+      // Находим chat_id ответственного
+      const { data: respChat } = await supabase
+        .from('telegram_chats')
+        .select('chat_id')
+        .eq('username', responsibleUsername)
+        .maybeSingle();
+
+      if (respChat?.chat_id) {
+        const thankText = `🌟 <b>Тебя благодарит ${fromUsername ? `@${fromUsername}` : fromName}!</b>\n\nОтличная работа! Видео сделано — команда это ценит 🙏`;
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: respChat.chat_id, text: thankText, parse_mode: 'HTML' }),
+        });
+      }
+
+      // Убираем кнопку из оригинального сообщения
+      if (cb.message?.message_id && cb.message?.chat?.id) {
+        await fetch(`https://api.telegram.org/bot${botToken}/editMessageReplyMarkup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: cb.message.chat.id,
+            message_id: cb.message.message_id,
+            reply_markup: { inline_keyboard: [] },
+          }),
+        });
+      }
+    }
+
+    return res.status(200).json({ ok: true });
+  }
+
   if (!update || !update.message) {
     return res.status(200).json({ ok: true });
   }
