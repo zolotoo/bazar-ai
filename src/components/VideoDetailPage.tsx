@@ -2296,22 +2296,21 @@ export function VideoDetailPage({ video, onBack, onRefreshData, autoTranscribe }
 
       {/* ИИ-хук модал */}
       {showAiHookModal && createPortal(
-        <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isGeneratingAiHook && setShowAiHookModal(false)} />
-          <div className="relative z-10 w-full sm:max-w-2xl max-h-[90dvh] flex flex-col rounded-t-2xl sm:rounded-2xl bg-[#0f0f14] border border-white/10 shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-[35000] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm" onClick={() => !isGeneratingAiHook && setShowAiHookModal(false)}>
+          <div className="relative w-full sm:max-w-2xl max-h-[90dvh] flex flex-col rounded-t-2xl sm:rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 flex-shrink-0">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-lg bg-violet-600/20 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-violet-400" />
+                <div className="w-7 h-7 rounded-lg bg-violet-100 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-violet-600" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-semibold text-white">ИИ-хук</h2>
-                  <p className="text-[11px] text-white/40">Топ-10 хуков из вирусных видео, адаптированных под ваш сценарий</p>
+                  <h2 className="text-sm font-semibold text-slate-800">ИИ-хук</h2>
+                  <p className="text-[11px] text-slate-400">Топ-10 хуков из вирусных видео, адаптированных под ваш сценарий</p>
                 </div>
               </div>
               {!isGeneratingAiHook && (
-                <button onClick={() => setShowAiHookModal(false)} className="p-1.5 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-colors">
+                <button onClick={() => setShowAiHookModal(false)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
                   <X className="w-4 h-4" />
                 </button>
               )}
@@ -2322,26 +2321,26 @@ export function VideoDetailPage({ video, onBack, onRefreshData, autoTranscribe }
               {isGeneratingAiHook ? (
                 <div className="flex flex-col items-center justify-center py-16 gap-4">
                   <div className="relative">
-                    <div className="w-12 h-12 rounded-full border-2 border-violet-500/30 border-t-violet-500 animate-spin" />
-                    <Sparkles className="w-5 h-5 text-violet-400 absolute inset-0 m-auto" />
+                    <div className="w-12 h-12 rounded-full border-2 border-violet-200 border-t-violet-500 animate-spin" />
+                    <Sparkles className="w-5 h-5 text-violet-500 absolute inset-0 m-auto" />
                   </div>
                   <div className="text-center">
-                    <p className="text-white/80 text-sm font-medium">Ищем вирусные хуки...</p>
-                    <p className="text-white/40 text-xs mt-1">Анализируем базу и адаптируем под ваш сценарий</p>
+                    <p className="text-slate-700 text-sm font-medium">Ищем вирусные хуки...</p>
+                    <p className="text-slate-400 text-xs mt-1">Анализируем базу и адаптируем под ваш сценарий</p>
                   </div>
                 </div>
               ) : aiHookResults.map((hook, idx) => (
-                <div key={idx} className="rounded-xl border border-white/[0.08] bg-white/[0.04] overflow-hidden">
+                <div key={idx} className="rounded-xl border border-slate-200 overflow-hidden">
                   {/* Адаптированный хук — главный */}
                   <div className="p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[10px] font-semibold text-violet-400 uppercase tracking-wider">Адаптация #{idx + 1}</span>
-                          <span className="text-[10px] text-white/30 bg-white/[0.06] px-2 py-0.5 rounded-full">{hook.views} просмотров</span>
-                          <span className="text-[10px] text-white/30 bg-white/[0.06] px-2 py-0.5 rounded-full">{hook.niche}</span>
+                          <span className="text-[10px] font-semibold text-violet-600 uppercase tracking-wider">#{idx + 1}</span>
+                          <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{hook.views} просм.</span>
+                          <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{hook.niche}</span>
                         </div>
-                        <p className="text-white text-sm leading-relaxed font-medium">{hook.adapted}</p>
+                        <p className="text-slate-800 text-sm leading-relaxed font-medium">{hook.adapted}</p>
                       </div>
                       <button
                         onClick={() => {
@@ -2349,27 +2348,23 @@ export function VideoDetailPage({ video, onBack, onRefreshData, autoTranscribe }
                           setCopiedAiHookIdx(idx);
                           setTimeout(() => setCopiedAiHookIdx(null), 2000);
                         }}
-                        className="flex-shrink-0 p-2 rounded-lg bg-violet-600/20 hover:bg-violet-600/40 text-violet-400 transition-colors"
+                        className="flex-shrink-0 p-2 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-600 transition-colors"
                       >
                         {copiedAiHookIdx === idx ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                       </button>
                     </div>
                     {/* Объяснение */}
-                    <p className="mt-3 text-[12px] text-white/50 leading-relaxed border-t border-white/[0.06] pt-3">{hook.explanation}</p>
+                    <p className="mt-3 text-[12px] text-slate-500 leading-relaxed border-t border-slate-100 pt-3">{hook.explanation}</p>
                   </div>
                   {/* Оригинал + ссылка */}
-                  <div className="px-4 py-3 bg-white/[0.03] border-t border-white/[0.06] flex items-start justify-between gap-3">
+                  <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex items-start justify-between gap-3">
                     <div className="flex-1">
-                      <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1">Оригинал</p>
-                      <p className="text-[12px] text-white/50 leading-relaxed">{hook.original}</p>
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Оригинал</p>
+                      <p className="text-[12px] text-slate-500 leading-relaxed">{hook.original}</p>
                     </div>
                     {hook.url && (
-                      <a
-                        href={hook.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-shrink-0 flex items-center gap-1 text-[11px] text-violet-400/70 hover:text-violet-400 transition-colors"
-                      >
+                      <a href={hook.url} target="_blank" rel="noopener noreferrer"
+                        className="flex-shrink-0 flex items-center gap-1 text-[11px] text-violet-500 hover:text-violet-700 transition-colors">
                         <ExternalLink className="w-3 h-3" />
                         {hook.owner_username ? `@${hook.owner_username}` : 'Видео'}
                       </a>
