@@ -4,6 +4,51 @@ import { callOpenRouter, MODELS, MODELS_FALLBACK } from '../lib/openRouter.js';
 import { logApiCall } from '../lib/logApiCall.js';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const JINA_API_KEY = process.env.JINA_API_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Embed текст через Jina API → vector(1024)
+async function jinaEmbed(text) {
+  if (!JINA_API_KEY) return null;
+  try {
+    const res = await fetch('https://api.jina.ai/v1/embeddings', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${JINA_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'jina-embeddings-v3', input: [text], task: 'retrieval.query' }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.data?.[0]?.embedding ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// Поиск похожих хуков в Supabase pgvector
+async function matchViralHooks(embedding, { niche = null, minViews = 100000, limit = 7 } = {}) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !embedding) return [];
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/match_viral_hooks`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query_embedding: embedding,
+        match_count: limit,
+        filter_niche: niche,
+        min_view_count: minViews,
+      }),
+    });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch {
+    return [];
+  }
+}
 
 const CAROUSEL_ANALYSIS_PROMPT = `Ты дизайн-аналитик. Твоя задача — точно воссоздать слайд карусели в редакторе.
 
@@ -796,7 +841,7 @@ ${structureHint}${refHint}
   }
 }
 
-// ── Шаг 2: Генерация 5 вариантов хуков ──────────────────────────────────────
+// ── Шаг 2: Генерация 5 вариантов хуков (с RAG из вирусных видео) ─────────────
 
 async function handleGenerateHooks(req, res) {
   const { prompt, topic, answers, structure_analysis, reference_transcript, feedback, previous_hooks } = req.body;
@@ -804,6 +849,27 @@ async function handleGenerateHooks(req, res) {
     return res.status(400).json({ error: 'prompt and topic are required' });
   }
   if (!OPENROUTER_API_KEY) return res.status(500).json({ error: 'OPENROUTER_API_KEY not configured' });
+
+  // RAG: embed тему → ищем похожие хуки из вирусных видео
+  let viralHooksHint = '';
+  try {
+    const embedding = await jinaEmbed(topic.trim());
+    if (embedding) {
+      const viralHooks = await matchViralHooks(embedding, { minViews: 100000, limit: 7 });
+      if (viralHooks?.length) {
+        viralHooksHint = '\n\nПРИМЕРЫ РЕАЛЬНЫХ ВИРУСНЫХ ХУКОВ из видео с 100k+ просмотров по похожей теме:\n';
+        viralHooks.forEach((h, i) => {
+          const views = h.view_count >= 1_000_000
+            ? `${(h.view_count / 1_000_000).toFixed(1)}М`
+            : `${Math.round(h.view_count / 1000)}К`;
+          viralHooksHint += `${i + 1}. [${views} просмотров] ${h.content}\n`;
+        });
+        viralHooksHint += '\nПроанализируй эти хуки — какие приёмы делают их цепляющими. Используй те же механики в своих хуках, но под тему пользователя.';
+      }
+    }
+  } catch {
+    // RAG не критичен — продолжаем без него
+  }
 
   let structureHint = '';
   if (structure_analysis) {
@@ -831,7 +897,7 @@ async function handleGenerateHooks(req, res) {
 ---
 ${prompt.trim()}
 ---
-${structureHint}
+${structureHint}${viralHooksHint}
 
 ТЕМА: «${topic.trim()}»${answersText}${refHint}${feedbackHint}
 
@@ -847,11 +913,13 @@ ${structureHint}
 }`;
 
   try {
-    const rawText = await callWithFallback(
-      [MODELS.PRO_3, MODELS.FLASH],
-      [{ role: 'user', content: userText }],
-      { temperature: 0.6, response_format: { type: 'json_object' } }
-    );
+    const { text: rawText } = await callOpenRouter({
+      apiKey: OPENROUTER_API_KEY,
+      model: MODELS.CLAUDE_SONNET_35,
+      messages: [{ role: 'user', content: userText }],
+      temperature: 0.7,
+      response_format: { type: 'json_object' },
+    });
     if (!rawText) return res.status(502).json({ error: 'Empty response' });
     const parsed = parseJsonResponse(rawText);
     return res.status(200).json({ success: true, hooks: parsed.hooks || [] });
