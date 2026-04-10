@@ -81,7 +81,13 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ success: true, text });
   } catch (err) {
-    console.error('RiRi chat error:', err);
-    return res.status(500).json({ error: 'Что-то пошло не так. Попробуй ещё раз.' });
+    console.error('RiRi chat error:', err?.message || err);
+    const isKeyMissing = !OPENROUTER_API_KEY;
+    const msg = isKeyMissing
+      ? 'API ключ не настроен'
+      : err?.message?.includes('401') || err?.message?.includes('403')
+        ? 'Ошибка авторизации API'
+        : 'Что-то пошло не так. Попробуй ещё раз.';
+    return res.status(500).json({ error: msg, detail: err?.message?.slice(0, 200) });
   }
 }
