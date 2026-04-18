@@ -2,7 +2,6 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import { AuthProvider } from './hooks/useAuth'
-import { Analytics } from '@vercel/analytics/react'
 import './styles/index.css'
 
 console.log('Main.tsx loaded');
