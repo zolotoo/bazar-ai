@@ -74,6 +74,27 @@ jobs:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
           VITE_OPENAI_API_KEY: ${{ secrets.VITE_OPENAI_API_KEY }}
 
+      - name: Prepare captain-definition in dist
+        run: |
+          echo '{"schemaVersion":2,"dockerfilePath":"./Dockerfile.frontend"}' > captain-definition
+          cp captain-definition dist/captain-definition
+          cp nginx.conf dist/nginx.conf
+          cp Dockerfile.frontend dist/Dockerfile.frontend
+          
+          echo "=== dist/ contents ==="
+          ls -la dist/
+          echo "=== captain-definition content ==="
+          cat dist/captain-definition
+
+      - name: Create deployment archive
+        run: |
+          cd dist
+          tar -czf ../frontend.tar.gz .
+          cd ..
+          
+          echo "=== Archive contents (checking captain-definition) ==="
+          tar -tzf frontend.tar.gz | grep captain || echo "❌ captain-definition NOT in archive!"
+
       - name: Get CapRover token
         id: auth
         run: |
@@ -90,25 +111,8 @@ jobs:
           fi
           echo "token=$TOKEN" >> $GITHUB_OUTPUT
 
-      - name: Create captain-definition for frontend
-        run: |
-          echo '{"schemaVersion":2,"dockerfilePath":"./Dockerfile.frontend"}' > captain-definition
-
-      - name: Package frontend for CapRover
-        run: |
-          cp captain-definition dist/captain-definition
-          cp nginx.conf dist/nginx.conf
-          cp Dockerfile.frontend dist/Dockerfile.frontend
-          cd dist
-          tar -czf /tmp/frontend.tar.gz \
-            captain-definition \
-            nginx.conf \
-            Dockerfile.frontend \
-            index.html \
-            $(ls | grep -v "captain-definition\|nginx.conf\|Dockerfile.frontend\|index.html")
-
       - name: Deploy frontend to CapRover
         run: |
           curl -X POST http://95.182.100.126:3000/api/v2/user/apps/appData/riri-fe-dev \
             -H "x-captain-auth: ${{ steps.auth.outputs.token }}" \
-            -F "sourceFile=@/tmp/frontend.tar.gz"
+            -F "sourceFile=@frontend.tar.gz"
