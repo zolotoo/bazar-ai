@@ -32,7 +32,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 const SESSION_KEY = 'riri-session';
-const BOT_TOKEN = '8183756206:AAGo-jl6BMBfAzejVt1MNVUD5TQPegxQOhc';
+const BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
 
 const saveSession = (token: string) => {
   setCookie(SESSION_KEY, token, 30);
