@@ -7,6 +7,7 @@ import { RiriChatPage } from './components/RiriChatPage';
 import { OnboardingModal } from './components/OnboardingModal';
 import { History } from './components/History';
 import { AIScriptwriter } from './components/AIScriptwriter';
+import { CompetitorAnalysisPage } from './components/CompetitorAnalysis';
 import { RadarPage } from './components/RadarPage';
 import { ProfilePage } from './components/ProfilePage';
 import { Analytics } from './components/Analytics';
@@ -30,7 +31,7 @@ import type { Project } from './hooks/useProjects';
 import { 
   Settings, Search, LayoutGrid, User, LogOut,
   Radar, Plus, X, Palette, Sparkles, Trash2, Users, Menu, BarChart2, Activity,
-  Image as ImageIcon, MessageCircleHeart
+  Image as ImageIcon, MessageCircleHeart, Telescope
 } from 'lucide-react';
 import { GlassFolderIcon } from './components/ui/GlassFolderIcons';
 import { MobileBottomBar, type MobileTabId } from './components/ui/MobileBottomBar';
@@ -38,7 +39,7 @@ import { cn } from './utils/cn';
 import { Toaster, toast } from 'sonner';
 
 
-type ViewMode = 'dashboard' | 'workspace' | 'canvas' | 'history' | 'profile' | 'scriptwriter' | 'analytics' | 'usage' | 'carousel-editor' | 'radar';
+type ViewMode = 'dashboard' | 'workspace' | 'canvas' | 'history' | 'profile' | 'scriptwriter' | 'analytics' | 'usage' | 'carousel-editor' | 'radar' | 'competitor';
 type SearchTab = 'search' | 'link' | 'radar';
 
 // Цвета для проектов
@@ -384,7 +385,7 @@ function AppContent() {
     if (typeof window === 'undefined') return 'dashboard';
     try {
       const v = localStorage.getItem('app_view_mode');
-      if (v === 'dashboard' || v === 'workspace' || v === 'canvas' || v === 'history' || v === 'profile' || v === 'scriptwriter' || v === 'analytics' || v === 'radar') return v;
+      if (v === 'dashboard' || v === 'workspace' || v === 'canvas' || v === 'history' || v === 'profile' || v === 'scriptwriter' || v === 'analytics' || v === 'radar' || v === 'competitor') return v;
     } catch { /* ignore */ }
     return 'dashboard';
   });
@@ -664,6 +665,12 @@ function AppContent() {
                   onClick={() => setViewMode('analytics')}
                   isActive={viewMode === 'analytics'}
                 />
+                <SidebarLink
+                  icon={<Telescope className="w-4 h-4" strokeWidth={2.5} />}
+                  label="Анализ конкурента"
+                  onClick={() => setViewMode('competitor')}
+                  isActive={viewMode === 'competitor'}
+                />
                 {/* ИИ-сценарист скрыт — функция перенесена в окно работы с видео */}
                 <SidebarLink
                   icon={<ImageIcon className="w-4 h-4" strokeWidth={2.5} />}
@@ -811,6 +818,7 @@ function AppContent() {
             {viewMode === 'profile' && <ProfilePage />}
             {viewMode === 'usage' && isAdmin && <UsageStats />}
             {viewMode === 'carousel-editor' && <CarouselEditor projectId={currentProjectId} userId={user?.id} />}
+            {viewMode === 'competitor' && <CompetitorAnalysisPage />}
           </motion.div>
         </AnimatePresence>
       </div>
