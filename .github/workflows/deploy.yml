@@ -16,25 +16,30 @@ jobs:
           RESPONSE=$(curl -s -L -X POST http://95.182.100.126:3000/api/v2/login \
             -H "Content-Type: application/json" \
             -d "{\"password\":\"${{ secrets.CAPROVER_PASSWORD }}\"}")
+          
           TOKEN=$(echo $RESPONSE | jq -r '.data.token // empty')
-          if [ -z "$TOKEN" ] || [ "$TOKEN" == "null" ]; then exit 1; fi
+          
+          if [ -z "$TOKEN" ] || [ "$TOKEN" == "null" ]; then
+            echo "Error: Failed to get token"
+            echo "Response: $RESPONSE"
+            exit 1
+          fi
           echo "token=$TOKEN" >> $GITHUB_OUTPUT
 
-      - name: Package and Deploy Backend
+      - name: Create captain-definition for backend
         run: |
-          # Создаем конфиг в корне
-          echo '{"schemaVersion":2,"dockerfilePath":"Dockerfile.backend"}' > captain-definition
-          
-          # Упаковываем только нужное без префиксов ./
+          echo '{"schemaVersion":2,"dockerfilePath":"./Dockerfile.backend"}' > captain-definition
+
+      - name: Package backend
+        run: |
           tar -czf /tmp/backend.tar.gz \
-            api \
-            lib \
-            server.js \
-            package.json \
-            package-lock.json \
-            Dockerfile.backend \
-            captain-definition
-            
+            --exclude='./node_modules' \
+            --exclude='./.git' \
+            --exclude='./dist' \
+            -C . .
+
+      - name: Deploy backend to CapRover
+        run: |
           curl -X POST http://95.182.100.126:3000/api/v2/user/apps/appData/riri-be-dev \
             -H "x-captain-auth: ${{ steps.auth.outputs.token }}" \
             -F "sourceFile=@/tmp/backend.tar.gz"
@@ -53,30 +58,18 @@ jobs:
         run: npm ci
 
       - name: Build frontend
+        run: |
+          echo "Checking environment variables..."
+          if [ -z "$VITE_SUPABASE_URL" ]; then echo "❌ VITE_SUPABASE_URL is MISSING"; else echo "✅ VITE_SUPABASE_URL is set"; fi
+          if [ -z "$VITE_SUPABASE_ANON_KEY" ]; then echo "❌ VITE_SUPABASE_ANON_KEY is MISSING"; else echo "✅ VITE_SUPABASE_ANON_KEY is set"; fi
+          
+          npm run build
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_TELEGRAM_BOT_TOKEN: ${{ secrets.VITE_TELEGRAM_BOT_TOKEN }}
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
           VITE_OPENAI_API_KEY: ${{ secrets.VITE_OPENAI_API_KEY }}
-        run: |
-          npm run build
-
-      - name: Prepare and Package Frontend
-        run: |
-          # 1. Создаем конфиг в корне
-          echo '{"schemaVersion":2,"dockerfilePath":"Dockerfile.frontend"}' > captain-definition
-          
-          # 2. Упаковываем файлы ЯВНО перечисляя их (это уберет ./ из путей)
-          tar -czf /tmp/frontend.tar.gz \
-            dist \
-            nginx.conf \
-            Dockerfile.frontend \
-            captain-definition
-          
-          # 3. Диагностика (теперь путей с ./ быть не должно)
-          echo "📂 Final archive structure:"
-          tar -tf /tmp/frontend.tar.gz
 
       - name: Get CapRover token
         id: auth
@@ -84,9 +77,27 @@ jobs:
           RESPONSE=$(curl -s -L -X POST http://95.182.100.126:3000/api/v2/login \
             -H "Content-Type: application/json" \
             -d "{\"password\":\"${{ secrets.CAPROVER_PASSWORD }}\"}")
+          
           TOKEN=$(echo $RESPONSE | jq -r '.data.token // empty')
-          if [ -z "$TOKEN" ] || [ "$TOKEN" == "null" ]; then exit 1; fi
+          
+          if [ -z "$TOKEN" ] || [ "$TOKEN" == "null" ]; then
+            echo "Error: Failed to get token"
+            echo "Response: $RESPONSE"
+            exit 1
+          fi
           echo "token=$TOKEN" >> $GITHUB_OUTPUT
+
+      - name: Create captain-definition for frontend
+        run: |
+          echo '{"schemaVersion":2,"dockerfilePath":"./Dockerfile.frontend"}' > captain-definition
+
+      - name: Package frontend (with built dist/)
+        run: |
+          tar -czf /tmp/frontend.tar.gz \
+            dist/ \
+            nginx.conf \
+            Dockerfile.frontend \
+            captain-definition
 
       - name: Deploy frontend to CapRover
         run: |
