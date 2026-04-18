@@ -22,8 +22,19 @@ jobs:
 
       - name: Package and Deploy Backend
         run: |
-          echo '{"schemaVersion":2,"dockerfilePath":"./Dockerfile.backend"}' > captain-definition
-          tar -czf /tmp/backend.tar.gz --exclude='./node_modules' --exclude='./.git' --exclude='./dist' -C . .
+          # Создаем конфиг в корне
+          echo '{"schemaVersion":2,"dockerfilePath":"Dockerfile.backend"}' > captain-definition
+          
+          # Упаковываем только нужное без префиксов ./
+          tar -czf /tmp/backend.tar.gz \
+            api \
+            lib \
+            server.js \
+            package.json \
+            package-lock.json \
+            Dockerfile.backend \
+            captain-definition
+            
           curl -X POST http://95.182.100.126:3000/api/v2/user/apps/appData/riri-be-dev \
             -H "x-captain-auth: ${{ steps.auth.outputs.token }}" \
             -F "sourceFile=@/tmp/backend.tar.gz"
@@ -49,24 +60,21 @@ jobs:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
           VITE_OPENAI_API_KEY: ${{ secrets.VITE_OPENAI_API_KEY }}
         run: |
-          echo "🚀 Building frontend..."
           npm run build
-          echo "📂 Contents of dist/:"
-          ls -la dist/
 
       - name: Prepare and Package Frontend
         run: |
-          # 1. Создаем чистую папку для деплоя
-          mkdir deploy_fe
-          cp -r dist deploy_fe/
-          cp nginx.conf deploy_fe/
-          cp Dockerfile.frontend deploy_fe/
-          echo '{"schemaVersion":2,"dockerfilePath":"Dockerfile.frontend"}' > deploy_fe/captain-definition
+          # 1. Создаем конфиг в корне
+          echo '{"schemaVersion":2,"dockerfilePath":"Dockerfile.frontend"}' > captain-definition
           
-          # 2. Упаковываем файлы ИЗНУТРИ папки, чтобы они были в корне архива
-          cd deploy_fe && tar -czf /tmp/frontend.tar.gz .
+          # 2. Упаковываем файлы ЯВНО перечисляя их (это уберет ./ из путей)
+          tar -czf /tmp/frontend.tar.gz \
+            dist \
+            nginx.conf \
+            Dockerfile.frontend \
+            captain-definition
           
-          # 3. Диагностика архива
+          # 3. Диагностика (теперь путей с ./ быть не должно)
           echo "📂 Final archive structure:"
           tar -tf /tmp/frontend.tar.gz
 
