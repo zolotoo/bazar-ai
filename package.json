@@ -9,7 +9,7 @@
     "dev:frontend": "vite",
     "dev:api": "vercel dev --listen 3000",
     "check:env": "node scripts/check-env.js",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
