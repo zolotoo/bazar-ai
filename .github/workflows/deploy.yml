@@ -33,10 +33,13 @@ jobs:
       - name: Package backend
         run: |
           tar -czf /tmp/backend.tar.gz \
-            --exclude='./node_modules' \
-            --exclude='./.git' \
-            --exclude='./dist' \
-            -C . .
+            captain-definition \
+            Dockerfile.backend \
+            server.js \
+            package.json \
+            package-lock.json \
+            api \
+            lib
 
       - name: Deploy backend to CapRover
         run: |
@@ -91,13 +94,18 @@ jobs:
         run: |
           echo '{"schemaVersion":2,"dockerfilePath":"./Dockerfile.frontend"}' > captain-definition
 
-      - name: Package frontend (with built dist/)
+      - name: Package frontend for CapRover
         run: |
+          cp captain-definition dist/captain-definition
+          cp nginx.conf dist/nginx.conf
+          cp Dockerfile.frontend dist/Dockerfile.frontend
+          cd dist
           tar -czf /tmp/frontend.tar.gz \
-            dist/ \
+            captain-definition \
             nginx.conf \
             Dockerfile.frontend \
-            captain-definition
+            index.html \
+            $(ls | grep -v "captain-definition\|nginx.conf\|Dockerfile.frontend\|index.html")
 
       - name: Deploy frontend to CapRover
         run: |
