@@ -504,6 +504,8 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
     isManual?: boolean;
     /** Текст сценария (для ручных видео) */
     script_text?: string;
+    /** Если true — не показывать модалку дублей, просто обновить существующее видео */
+    skipDuplicatePrompt?: boolean;
   }): Promise<AddVideoResult> => {
     const userId = getUserId();
     const isManual = !!video.isManual;
@@ -532,21 +534,26 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
       existingUserVideos = await findExistingSavedVideos(shortcode, targetProjectId, userId);
 
       if (existingUserVideos.length > 0) {
-        const duplicateChoice = await requestDuplicateVideoChoice({
-          isOpen: true,
-          scopeLabel: targetProjectId ? 'project' : 'app',
-          title: video.title,
-          ownerUsername: video.ownerUsername || existingUserVideos[0]?.owner_username || undefined,
-        });
-
-        if (duplicateChoice === 'cancel') {
-          toast.info('Видео уже есть', {
-            description: 'Существующую запись оставили без изменений',
+        if (video.skipDuplicatePrompt) {
+          // Явное добавление по ссылке — обновляем без модалки (включая папку)
+          shouldCreateCopy = false;
+        } else {
+          const duplicateChoice = await requestDuplicateVideoChoice({
+            isOpen: true,
+            scopeLabel: targetProjectId ? 'project' : 'app',
+            title: video.title,
+            ownerUsername: video.ownerUsername || existingUserVideos[0]?.owner_username || undefined,
           });
-          return null;
-        }
 
-        shouldCreateCopy = duplicateChoice === 'copy';
+          if (duplicateChoice === 'cancel') {
+            toast.info('Видео уже есть', {
+              description: 'Существующую запись оставили без изменений',
+            });
+            return null;
+          }
+
+          shouldCreateCopy = duplicateChoice === 'copy';
+        }
       }
     }
     

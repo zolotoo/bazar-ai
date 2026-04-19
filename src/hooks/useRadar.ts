@@ -37,6 +37,9 @@ export interface RadarReel extends InstagramSearchResult {
 const STORAGE_KEY = 'radar_profiles';
 const STORAGE_MIGRATED_KEY = 'radar_profiles_migrated';
 
+// Глобальный флаг — предотвращает одновременный запуск refreshAll из RadarPage и SearchPanel
+let _globalRadarRefreshInProgress = false;
+
 /** Извлекает чистый username из строки (может быть ссылкой на профиль Instagram) */
 function extractInstagramUsername(input: string): string {
   const urlMatch = input.match(/instagram\.com\/([^\/\?@#\s]+)/);
@@ -103,28 +106,28 @@ async function saveReelToInbox(reel: RadarReel, projectId: string, userId: strin
     
     const needsTranscription = !globalVideo?.transcript_status || globalVideo.transcript_status === 'error';
     
-    // 2. Проверяем, есть ли уже у ПОЛЬЗОВАТЕЛЯ это видео В ДАННОМ ПРОЕКТЕ
-    // Один shortcode может быть в разных проектах — у каждого своя запись
+    // 2. Проверяем, есть ли уже в проекте это видео У ЛЮБОГО УЧАСТНИКА
+    // Один shortcode может быть в разных проектах, но внутри проекта дублей быть не должно
     let existingUserVideo = null;
     if (shortcode) {
       let query = supabase
         .from('saved_videos')
-        .select('id')
-        .eq('user_id', userId)
+        .select('id, user_id')
         .eq('shortcode', shortcode);
       if (projectId) {
+        // Проверяем по всему проекту — не только по текущему пользователю
         query = query.eq('project_id', projectId);
       } else {
-        query = query.is('project_id', null);
+        query = query.is('project_id', null).eq('user_id', userId);
       }
       const { data } = await query.maybeSingle();
       existingUserVideo = data;
     }
 
     if (existingUserVideo) {
-      console.log('[Radar] User already has this video in this project:', existingUserVideo.id);
-      
-      // Обновляем статистику и копируем транскрибацию из глобальной таблицы
+      console.log('[Radar] Video already in project:', existingUserVideo.id, 'owner:', existingUserVideo.user_id);
+
+      // Обновляем статистику — если чужое видео, обновим только если позволяет RLS
       await supabase
         .from('saved_videos')
         .update({
@@ -135,7 +138,7 @@ async function saveReelToInbox(reel: RadarReel, projectId: string, userId: strin
           transcript_text: globalVideo?.transcript_text,
         })
         .eq('id', existingUserVideo.id);
-      
+
       return { updated: true, id: existingUserVideo.id, globalVideoId: globalVideo?.id, needsTranscription: false };
     }
 
@@ -685,43 +688,49 @@ export function useRadar(
 
   // Обновить все профили текущего проекта
   const refreshAll = useCallback(async () => {
-    console.log('[Radar] refreshAll called:', { 
-      loading, 
+    console.log('[Radar] refreshAll called:', {
+      loading,
       profilesCount: projectProfiles.length,
       userId,
       currentProjectId,
       profiles: projectProfiles.map(p => p.username)
     });
-    
+
+    if (_globalRadarRefreshInProgress) {
+      console.log('[Radar] Global refresh already in progress, skip');
+      return;
+    }
+
     if (loading) {
       console.log('[Radar] Already loading, skip');
       return;
     }
-    
+
     if (projectProfiles.length === 0) {
       console.log('[Radar] No profiles to refresh');
       return;
     }
-    
+
     if (!userId) {
       console.error('[Radar] No userId for refreshAll');
       return;
     }
-    
+
+    _globalRadarRefreshInProgress = true;
     setLoading(true);
     setStats({ newVideos: 0, updatedVideos: 0 });
-    
-    for (const profile of projectProfiles) {
-      console.log('[Radar] Fetching reels for:', profile.username);
-      // fetchUserReels теперь сам считает статистику из полученных данных — доп. вызова не нужно
-      await fetchUserReels(profile.username, profile.projectId);
-      
-      // Небольшая задержка между запросами
-      await new Promise(r => setTimeout(r, 1000));
+
+    try {
+      for (const profile of projectProfiles) {
+        console.log('[Radar] Fetching reels for:', profile.username);
+        await fetchUserReels(profile.username, profile.projectId);
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    } finally {
+      _globalRadarRefreshInProgress = false;
+      setLoading(false);
+      console.log('[Radar] refreshAll completed');
     }
-    
-    setLoading(false);
-    console.log('[Radar] refreshAll completed');
   }, [projectProfiles, loading, fetchUserReels, userId, currentProjectId]);
 
   // Очистить профили текущего проекта

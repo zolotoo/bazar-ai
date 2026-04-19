@@ -196,7 +196,8 @@ export function Workspace(_props?: WorkspaceProps) {
   }, [currentProjectId]);
   
   const { videos: inboxVideos, folderCounts, removeVideo: removeInboxVideo, restoreVideo, updateVideoFolder, loadMore, hasMore, loadingMore, refetch: refetchInboxVideos, refreshThumbnail, saveThumbnailFromUrl, addVideoToInbox, duplicateVideoPrompt, resolveDuplicateVideoPrompt } = useInboxVideos({
-    folderId: selectedFolderId,
+    // null (Все видео) → undefined → без фильтра по папке → показываем все видео
+    folderId: selectedFolderId ?? undefined,
     sortBy,
   });
   const { addAction, undoLastAction, canUndo } = useActionHistory();
@@ -1512,6 +1513,7 @@ export function Workspace(_props?: WorkspaceProps) {
                                 projectId: currentProjectId || undefined,
                                 folderId: reelAddToFolderId || undefined,
                                 takenAt: data.taken_at,
+                                skipDuplicatePrompt: true,
                               });
                               if (!savedVideo) {
                                 return;
