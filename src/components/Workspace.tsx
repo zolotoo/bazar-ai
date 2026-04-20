@@ -1945,11 +1945,13 @@ export function Workspace(_props?: WorkspaceProps) {
                           <button onClick={() => setSelectedCarousel(c)} className="w-full text-left">
                             <div className="aspect-[3/4] min-h-[140px] relative bg-slate-100 overflow-hidden">
                               <img
-                                src={proxyImageUrl(c.thumbnail_url || c.slide_urls?.[0] || undefined, c.shortcode)}
+                                src={proxyImageUrl(c.thumbnail_url || c.slide_urls?.[0] || undefined)}
                                 alt=""
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                 onError={(e) => {
-                                  (e.target as HTMLImageElement).src = PLACEHOLDER_270x360;
+                                  const el = e.target as HTMLImageElement;
+                                  el.onerror = null;
+                                  el.src = PLACEHOLDER_270x360;
                                   if (c.shortcode && refreshCarouselThumbnail) refreshCarouselThumbnail(c.id, c.shortcode);
                                 }}
                               />
