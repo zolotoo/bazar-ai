@@ -1501,6 +1501,10 @@ export function Workspace(_props?: WorkspaceProps) {
                             const data = await res.json();
                             if (data.success && !data.is_carousel) {
                               const captionText = typeof data.caption === 'string' ? data.caption : 'Видео из Instagram';
+                              // Если picker папки не выбран — дефолт к текущей выбранной папке в сайдбаре
+                              const targetFolderId = reelAddToFolderId !== null
+                                ? reelAddToFolderId
+                                : (selectedFolderId ?? undefined);
                               const savedVideo = await addVideoToInbox({
                                 title: captionText,
                                 previewUrl: data.thumbnail_url || '',
@@ -1511,7 +1515,7 @@ export function Workspace(_props?: WorkspaceProps) {
                                 ownerUsername: data.owner?.username,
                                 shortcode: data.shortcode,
                                 projectId: currentProjectId || undefined,
-                                folderId: reelAddToFolderId || undefined,
+                                folderId: targetFolderId,
                                 takenAt: data.taken_at,
                                 skipDuplicatePrompt: true,
                               });
