@@ -22,37 +22,6 @@ function formatNumber(num?: number): string {
   return num.toString();
 }
 
-// Расчёт коэффициента виральности
-function calculateViralCoefficient(views?: number, takenAt?: string | number | Date): number {
-  if (!views || views < 30000 || !takenAt) return 0;
-  
-  let videoDate: Date;
-  
-  if (takenAt instanceof Date) {
-    videoDate = takenAt;
-  } else if (typeof takenAt === 'string') {
-    if (takenAt.includes('T') || takenAt.includes('-')) {
-      videoDate = new Date(takenAt);
-    } else {
-      videoDate = new Date(Number(takenAt) * 1000);
-    }
-  } else if (typeof takenAt === 'number') {
-    videoDate = takenAt > 1e12 ? new Date(takenAt) : new Date(takenAt * 1000);
-  } else {
-    return 0;
-  }
-  
-  if (isNaN(videoDate.getTime())) return 0;
-  
-  const today = new Date();
-  const diffTime = today.getTime() - videoDate.getTime();
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  
-  if (diffDays <= 0) return 0;
-  
-  return Math.round((views / (diffDays * 1000)) * 100) / 100;
-}
-
 function VideoCard({
   video,
   onDragStart,
@@ -64,7 +33,7 @@ function VideoCard({
 }) {
   const videoData = video as any;
   const thumbnailUrl = proxyImageUrl(video.previewUrl, PLACEHOLDER_320x400);
-  const viralCoef = calculateViralCoefficient(videoData.view_count, videoData.taken_at || videoData.receivedAt);
+  const viralMult: number | null = videoData.viral_multiplier ?? null;
   return (
     <div
       draggable
@@ -103,11 +72,14 @@ function VideoCard({
             <div
               className={cn(
                 'px-2 py-0.5 rounded-full backdrop-blur-md flex items-center gap-1 shadow-lg',
-                viralCoef > 10 ? 'bg-emerald-500 text-white' : viralCoef > 5 ? 'bg-amber-500 text-white' : viralCoef > 0 ? 'bg-white/90 text-slate-700' : 'bg-slate-200/90 text-slate-500'
+                viralMult === null ? 'bg-slate-200/90 text-slate-500' :
+                viralMult >= 5 ? 'bg-emerald-500 text-white' :
+                viralMult >= 2 ? 'bg-amber-500 text-white' :
+                'bg-white/90 text-slate-700'
               )}
             >
               <TrendingUp className="w-2.5 h-2.5" />
-              <span className="text-[10px] font-bold">{viralCoef > 0 ? viralCoef : '-'}</span>
+              <span className="text-[10px] font-bold">{viralMult !== null ? `${viralMult.toFixed(1)}x` : '—'}</span>
             </div>
           </div>
         </div>
