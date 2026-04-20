@@ -66,9 +66,10 @@ export default async function handler(req, res) {
       upsert: true
     }).then(({ error }) => {
         if (!error) {
-             // Обновляем ссылку в таблице videos для консистентности
              const { data: urlData } = supabase.storage.from('thumbnails').getPublicUrl(path);
-             supabase.from('videos').update({ thumbnail_url: urlData.publicUrl }).eq('shortcode', shortcode).then();
+             const publicUrl = urlData.publicUrl;
+             supabase.from('videos').update({ thumbnail_url: publicUrl }).eq('shortcode', shortcode).then();
+             supabase.from('saved_carousels').update({ thumbnail_url: publicUrl }).eq('shortcode', shortcode).then();
         }
     });
 

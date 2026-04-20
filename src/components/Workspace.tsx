@@ -11,7 +11,7 @@ import { PresenceIndicator } from './ui/PresenceIndicator';
 import { Sparkles, FileText, Trash2, ExternalLink, Plus, Inbox, FolderOpen, Settings, GripVertical, X, Palette, Eye, Heart, ChevronDown, ChevronRight, Undo2, Images, Link2, Loader2, MessageCircle, BookOpen, TrendingUp, PenLine, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../utils/cn';
-import { proxyImageUrl } from '../utils/imagePlaceholder';
+import { proxyImageUrl, PLACEHOLDER_270x360 } from '../utils/imagePlaceholder';
 import { VideoGradientCard } from './ui/VideoGradientCard';
 import { VideoDetailPage } from './VideoDetailPage';
 import { CarouselDetailPage } from './CarouselDetailPage';
@@ -1945,10 +1945,13 @@ export function Workspace(_props?: WorkspaceProps) {
                           <button onClick={() => setSelectedCarousel(c)} className="w-full text-left">
                             <div className="aspect-[3/4] min-h-[140px] relative bg-slate-100 overflow-hidden">
                               <img
-                                src={proxyImageUrl(c.thumbnail_url || c.slide_urls?.[0] || undefined)}
+                                src={proxyImageUrl(c.thumbnail_url || c.slide_urls?.[0] || undefined, c.shortcode)}
                                 alt=""
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                onError={() => { if (c.shortcode && refreshCarouselThumbnail) refreshCarouselThumbnail(c.id, c.shortcode); }}
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = PLACEHOLDER_270x360;
+                                  if (c.shortcode && refreshCarouselThumbnail) refreshCarouselThumbnail(c.id, c.shortcode);
+                                }}
                               />
                               {/* Градиент */}
                               <div className="absolute inset-0 pointer-events-none z-[1]" style={{ background: 'linear-gradient(to top, rgba(10,12,18,0.9) 0%, rgba(22,26,36,0.58) 30%, rgba(30,34,42,0.2) 56%, rgba(255,255,255,0.04) 100%)' }} />
