@@ -88,9 +88,10 @@ export function Workspace(_props?: WorkspaceProps) {
   const [sortBy, setSortBy] = useState<'viral' | 'views' | 'likes' | 'date' | 'recent' | 'views_from_avg'>('viral');
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [showCarouselSortDropdown, setShowCarouselSortDropdown] = useState(false);
+  // v2 = фильтр по x-множителю виральности (старые значения были "K/день" и несовместимы по шкале)
   const [sortFilterMinViral, setSortFilterMinViral] = useState(() => {
     try {
-      const v = localStorage.getItem('workspace_sortFilterMinViral');
+      const v = localStorage.getItem('workspace_sortFilterMinViral_v2');
       return v ? Math.max(0, parseFloat(v) || 0) : 0;
     } catch { return 0; }
   });
@@ -103,7 +104,7 @@ export function Workspace(_props?: WorkspaceProps) {
   const [selectedFolderId, setSelectedFolderIdState] = useState<string | null>(null); // null = все видео (кроме "не подходит")
   
   useEffect(() => {
-    try { localStorage.setItem('workspace_sortFilterMinViral', String(sortFilterMinViral)); } catch { /* ignore */ }
+    try { localStorage.setItem('workspace_sortFilterMinViral_v2', String(sortFilterMinViral)); } catch { /* ignore */ }
   }, [sortFilterMinViral]);
   useEffect(() => {
     try { localStorage.setItem('workspace_sortFilterMinViews', String(sortFilterMinViews)); } catch { /* ignore */ }
@@ -1311,7 +1312,7 @@ export function Workspace(_props?: WorkspaceProps) {
                       <p className="text-slate-500 text-xs md:text-sm tabular-nums mt-1">
                         {feedVideos.length} видео
                         {' • '}
-                        {sortBy === 'viral' && `виральность${sortFilterMinViral > 0 ? ` ≥${sortFilterMinViral}` : ''}`}
+                        {sortBy === 'viral' && `виральность${sortFilterMinViral > 0 ? ` ≥${sortFilterMinViral}x` : ''}`}
                         {sortBy === 'views' && `просмотры${sortFilterMinViews > 0 ? ` ≥${formatNumber(sortFilterMinViews)}` : ''}`}
                         {sortBy === 'views_from_avg' && `от среднего${sortFilterMinViews > 0 ? ` (≥${formatNumber(sortFilterMinViews)})` : ''}`}
                         {sortBy === 'likes' && 'лайки'}
@@ -1344,6 +1345,7 @@ export function Workspace(_props?: WorkspaceProps) {
                     onChange={(e) => setSortFilterMinViral(Math.max(0, parseFloat(e.target.value) || 0))}
                     className="w-14 px-2 py-1 rounded-lg border border-white/60 text-slate-800 text-sm bg-white/85 outline-none focus:ring-2 focus:ring-slate-200/70"
                   />
+                  <span className="text-slate-500">x</span>
                 </label>
                 <label className="flex items-center gap-1.5 text-xs text-slate-600 bg-white/62 border border-white/55 rounded-pill px-3 py-1.5 backdrop-blur-glass shadow-glass-sm">
                   просмотры ≥

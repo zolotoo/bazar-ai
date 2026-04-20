@@ -26,7 +26,7 @@ import type { ProjectTemplateItem, ProjectStyle, DescriptionTemplate } from '../
 import { useVideoComments } from '../hooks/useVideoComments';
 import { useParticipantsForResponsibles } from '../hooks/useParticipantsForResponsibles';
 import { useProjectMembers } from '../hooks/useProjectMembers';
-import { calculateViralMultiplier, getOrUpdateProfileStats } from '../services/profileStatsService';
+import { calculateViralMultiplier, getOrUpdateProfileStats, getProfileStats } from '../services/profileStatsService';
 import { isRussian } from '../utils/language';
 import { TokenBadge } from './ui/TokenBadge';
 import { getTokenCost } from '../constants/tokenCosts';
@@ -668,21 +668,25 @@ export function VideoDetailPage({ video, onBack, onRefreshData, autoTranscribe }
     checkGlobalData();
   }, [video.id, video.url, video.transcript_text, video.translation_text, transcript, translation]);
   
-  // Загружаем статистику профиля при открытии
+  // Подгружаем только кешированную статистику профиля (из БД, без RapidAPI).
+  // Парсинг профиля через RapidAPI запускает только кнопка "Полный расчёт виральности".
   useEffect(() => {
     const loadProfileStats = async () => {
       if (!video.owner_username) return;
-      
-      const stats = await getOrUpdateProfileStats(video.owner_username, false);
+      const stats = await getProfileStats(video.owner_username);
       if (stats) {
-        const mult = calculateViralMultiplier(video.view_count || 0, stats);
-        setViralMultiplier(mult);
         setProfileStats(stats);
+        // Если виральности ещё не было в БД, но статистика профиля уже появилась —
+        // посчитаем локально, чтобы показать значение сразу.
+        if ((video as any).viral_multiplier == null) {
+          const mult = calculateViralMultiplier(video.view_count || 0, stats);
+          if (mult !== null) setViralMultiplier(mult);
+        }
       }
     };
 
     loadProfileStats();
-  }, [video.owner_username, video.view_count]);
+  }, [video.owner_username, video.view_count, video.id]);
   
   // Расчет точной виральности (принудительное обновление статистики)
   const handleCalculateViral = async () => {
