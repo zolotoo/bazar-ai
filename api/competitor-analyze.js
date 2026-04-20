@@ -252,19 +252,39 @@ async function handleTick(req, res) {
     return res.status(200).json({ status: 'fetching_user' });
   }
 
-  // Фаза пользователя
+  // Фаза пользователя: каждый тик делает ОДИН шаг и сразу отдаёт статус.
+  // Так снижаем риск словить таймаут Vercel (60s) посреди LLM-вызова и «повиснуть» в
+  // analyzing_user / generating_ideas. Если шаг падает — пишем error_message, UI показывает.
+
   if (status === 'transcribing_user') {
     await pollAndSaveTranscripts(sb, baseUrl, 'user_reel_snapshots', analysisId);
     const { data: snaps } = await sb.from('user_reel_snapshots').select('*').eq('analysis_id', analysisId);
-    const pending = snaps.filter((s) => s.transcript_id && !s.transcript_text);
-    // Идём дальше даже если часть не готова — минимум 6 транскриптов достаточно
-    const ready = snaps.filter((s) => s.transcript_text).length;
+    const pending = (snaps || []).filter((s) => s.transcript_id && !s.transcript_text);
+    const ready = (snaps || []).filter((s) => s.transcript_text).length;
+    // Идём дальше, если готовы все или минимум 6 транскриптов
     if (pending.length === 0 || ready >= 6) {
       await updateStatus(sb, analysisId, 'analyzing_user', 'Думаю о твоём стиле…');
-      const tone = await analyzeUserTone(openrouterKey, snaps, analysis.user_username || '');
+      return res.status(200).json({ status: 'analyzing_user' });
+    }
+    return res.status(200).json({ status, pending: pending.length });
+  }
+
+  if (status === 'analyzing_user') {
+    try {
+      const { data: snaps } = await sb.from('user_reel_snapshots').select('*').eq('analysis_id', analysisId);
+      const tone = await analyzeUserTone(openrouterKey, snaps || [], analysis.user_username || '');
       await sb.from('competitor_analyses').update({ user_tone_profile: tone || {} }).eq('id', analysisId);
       await updateStatus(sb, analysisId, 'generating_ideas', 'Склеиваю идеи…');
+      return res.status(200).json({ status: 'generating_ideas' });
+    } catch (e) {
+      await updateStatus(sb, analysisId, 'error', null, `Не получилось проанализировать стиль: ${e.message}`);
+      return res.status(200).json({ status: 'error', error: e.message });
+    }
+  }
 
+  if (status === 'generating_ideas') {
+    try {
+      const { data: snaps } = await sb.from('user_reel_snapshots').select('*').eq('analysis_id', analysisId);
       const { data: hooks } = await sb
         .from('competitor_hooks')
         .select('*')
@@ -272,23 +292,20 @@ async function handleTick(req, res) {
         .order('view_count', { ascending: false });
       const ideas = await generateIdeas(openrouterKey, {
         competitorHooks: hooks || [],
-        toneProfile: tone || {},
+        toneProfile: analysis.user_tone_profile || {},
         userSnapshots: snaps || [],
         competitorUsername: analysis.competitor_username,
         userUsername: analysis.user_username || '',
       });
       await sb
         .from('competitor_analyses')
-        .update({ generated_ideas: ideas || { ideas: [] }, status: 'ready', status_message: null })
+        .update({ generated_ideas: ideas || { ideas: [] }, status: 'ready', status_message: null, updated_at: new Date().toISOString() })
         .eq('id', analysisId);
       return res.status(200).json({ status: 'ready' });
+    } catch (e) {
+      await updateStatus(sb, analysisId, 'error', null, `Не получилось собрать идеи: ${e.message}`);
+      return res.status(200).json({ status: 'error', error: e.message });
     }
-    return res.status(200).json({ status, pending: pending.length });
-  }
-
-  if (status === 'analyzing_user' || status === 'generating_ideas') {
-    // Следующий тик завершит. Возвращаем.
-    return res.status(200).json({ status });
   }
 
   return res.status(200).json({ status });

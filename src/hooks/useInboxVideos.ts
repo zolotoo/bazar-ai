@@ -227,13 +227,14 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
     }
   }, [sortBy]);
 
-  // Подсчёт видео по папкам (для бейджей) — отдельный лёгкий запрос
+  // Подсчёт видео по папкам — через RPC с GROUP BY на стороне БД.
+  // Раньше грузили все folder_id и считали на клиенте, но PostgREST режет до 1000 строк,
+  // поэтому в больших проектах (>1000 видео) счётчики занижались.
   const fetchFolderCounts = useCallback(async () => {
     const userId = getUserId();
     try {
-      let query = supabase.from('saved_videos').select('folder_id');
+      let userIds: string[] = [userId];
       if (currentProjectId) {
-        query = query.eq('project_id', currentProjectId);
         const { data: membersData } = await supabase
           .from('project_members')
           .select('user_id')
@@ -246,19 +247,17 @@ export function useInboxVideos(options?: UseInboxVideosOptions) {
             .select('owner_id')
             .eq('id', currentProjectId)
             .single();
-          const allUserIds = [...new Set([...membersData!.map(m => m.user_id), projectData?.owner_id].filter(Boolean))];
-          query = query.in('user_id', allUserIds);
-        } else {
-          query = query.eq('user_id', userId);
+          userIds = [...new Set([...membersData!.map(m => m.user_id), projectData?.owner_id].filter(Boolean) as string[])];
         }
-      } else {
-        query = query.is('project_id', null).eq('user_id', userId);
       }
-      const { data } = await query;
+      const { data, error } = await supabase.rpc('count_saved_videos_by_folder', {
+        p_project_id: currentProjectId ?? null,
+        p_user_ids: userIds,
+      });
+      if (error) throw error;
       const counts: Record<string, number> = {};
-      (data || []).forEach((row: { folder_id: string | null }) => {
-        const key = row.folder_id ?? '__null__';
-        counts[key] = (counts[key] || 0) + 1;
+      (data || []).forEach((row: { folder_key: string; cnt: number }) => {
+        counts[row.folder_key] = Number(row.cnt) || 0;
       });
       setFolderCounts(counts);
     } catch {
