@@ -32,6 +32,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 const SESSION_KEY = 'riri-session';
+const BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
 
 const saveSession = (token: string) => {
   setCookie(SESSION_KEY, token, 30);
@@ -287,24 +288,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return false;
       }
 
-      // Отправляем код через серверный endpoint (работает без VPN в России)
-      const sendResponse = await fetch('/api/send-telegram-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: cleanUsername, code }),
-      });
+      // 1) Look up chat_id from permanent storage
+      let chatId: number | null = null;
+
+      const { data: chatRow } = await supabase
+        .from('telegram_chats')
+        .select('chat_id')
+        .eq('username', cleanUsername)
+        .maybeSingle();
+
+      if (chatRow?.chat_id) {
+        chatId = chatRow.chat_id;
+      }
+
+      // 2) Fallback: getUpdates (and persist if found)
+      if (!chatId) {
+        try {
+          const updatesResponse = await fetch(
+            `https://api.telegram.org/bot${BOT_TOKEN}/getUpdates`
+          );
+          const updatesData = await updatesResponse.json();
+
+          if (updatesData.ok && updatesData.result) {
+            for (const update of updatesData.result) {
+              const from = update.message?.from;
+              if (from?.username?.toLowerCase() === cleanUsername) {
+                chatId = from.id;
+                // Persist for future logins
+                await supabase.from('telegram_chats').upsert(
+                  {
+                    username: cleanUsername,
+                    chat_id: chatId,
+                    first_name: from.first_name || null,
+                    last_name: from.last_name || null,
+                    updated_at: new Date().toISOString(),
+                  },
+                  { onConflict: 'username' }
+                );
+                break;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('[Auth] getUpdates fallback failed:', e);
+        }
+      }
+
+      if (!chatId) {
+        setError(
+          'Я не могу найти тебя :(\n' +
+          'Напиши @ririai_bot - /start\n' +
+          'И нажми «Получить код» заново'
+        );
+        return false;
+      }
+
+      const message = `🔐 Привет! Вот твой код для входа:\n\n<b>${code}</b>\n\nОн действует 10 минут.`;
+      const sendResponse = await fetch(
+        `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: 'HTML' }),
+        }
+      );
       const sendData = await sendResponse.json();
 
-      if (!sendResponse.ok) {
-        if (sendData.error === 'chat_not_found') {
-          setError(
-            'Я не могу найти тебя :(\n' +
-            'Напиши @ririai_bot - /start\n' +
-            'И нажми «Получить код» заново'
-          );
-        } else {
-          setError('Не получилось отправить код. Попробуй ещё раз');
-        }
+      if (!sendData.ok) {
+        setError('Не получилось отправить код. Попробуй ещё раз');
         return false;
       }
 
