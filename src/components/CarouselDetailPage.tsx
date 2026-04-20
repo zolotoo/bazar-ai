@@ -164,6 +164,7 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
         const mult = calculateCarouselViralMultiplier(carousel.like_count || 0, stats);
         setViralMultiplier(mult);
         await updateCarouselViralMultiplier(carousel.id, mult);
+        if (onRefreshData) await onRefreshData();
         toast.success('Виральность рассчитана', {
           description: mult ? `В ${mult.toFixed(1)}x раз ${mult >= 1 ? 'больше' : 'меньше'} среднего` : 'Нет данных для сравнения',
         });

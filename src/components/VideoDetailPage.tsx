@@ -712,6 +712,7 @@ export function VideoDetailPage({ video, onBack, onRefreshData, autoTranscribe }
           .from('saved_videos')
           .update({ viral_multiplier: mult })
           .eq('id', video.id);
+        if (onRefreshData) await onRefreshData();
         toast.success('Виральность рассчитана', {
           description: mult ? `В ${mult.toFixed(1)}x раз ${mult >= 1 ? 'больше' : 'меньше'} среднего` : 'Нет данных для сравнения',
         });
