@@ -338,8 +338,8 @@ async function saveSelectedReels(sb, analysisId, reels, bottom3Baseline, isFallb
   if (!rows.length) return;
   const { error } = await sb.from('competitor_hooks').upsert(rows, { onConflict: 'analysis_id,shortcode' });
   if (error) {
-    console.error('[saveSelectedReels] upsert failed', { analysisId, count: rows.length, error });
-    throw new Error(`competitor_hooks upsert failed: ${error.message}`);
+    console.error('[saveSelectedReels] upsert failed', { analysisId, count: rows.length, error, sampleRow: rows[0] });
+    throw new Error(`competitor_hooks upsert failed: ${error.message}; sampleRow=${JSON.stringify(rows[0])}`);
   }
 }
 
