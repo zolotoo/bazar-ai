@@ -206,6 +206,12 @@ export function CompetitorAnalysisPage({ onNavigateToScriptwriter }: { onNavigat
               <ResultView
                 analysis={activeAnalysis}
                 onBack={resetFlow}
+                onAddAnother={() => {
+                  setActiveAnalysisId(null);
+                  setCompetitorInput('');
+                  setUserInput('');
+                  setStep('competitor-input');
+                }}
                 onUseIdea={(idea) => {
                   try {
                     sessionStorage.setItem('riri:competitor-idea', JSON.stringify({

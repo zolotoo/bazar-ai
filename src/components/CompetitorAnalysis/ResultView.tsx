@@ -1,15 +1,21 @@
-import { useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowLeft, ExternalLink, Flame, Sparkles, Eye, Lightbulb, Volume2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  ArrowLeft, ExternalLink, Flame, Sparkles, Eye, Lightbulb, Volume2,
+  Copy, Check, TrendingUp, ChevronDown, Wand2, Zap, Telescope,
+} from 'lucide-react';
 import { GlassCard } from './GlassCard';
 import { RiriOrb } from './RiriOrb';
 import { supabase } from '../../utils/supabase';
+import { cn } from '../../utils/cn';
+import { toast } from 'sonner';
 import type { CompetitorAnalysis, CompetitorHook, GeneratedIdea, UserToneProfile } from '../../hooks/useCompetitorAnalysis';
 
-export function ResultView({ analysis, onBack, onUseIdea }: {
+export function ResultView({ analysis, onBack, onUseIdea, onAddAnother }: {
   analysis: CompetitorAnalysis;
   onBack: () => void;
   onUseIdea?: (idea: GeneratedIdea) => void;
+  onAddAnother?: () => void;
 }) {
   const [hooks, setHooks] = useState<CompetitorHook[]>([]);
   const [loadingHooks, setLoadingHooks] = useState(true);
@@ -34,6 +40,13 @@ export function ResultView({ analysis, onBack, onUseIdea }: {
 
   const ideas = (liveAnalysis.generated_ideas?.ideas || []) as GeneratedIdea[];
   const tone = liveAnalysis.user_tone_profile || {};
+
+  // индексация хуков по shortcode, чтобы идеи могли ссылаться на источник
+  const hooksByShortcode = useMemo(() => {
+    const m = new Map<string, CompetitorHook>();
+    hooks.forEach((h) => { if (h.shortcode) m.set(h.shortcode, h); });
+    return m;
+  }, [hooks]);
 
   // Полим аналитику, пока идей нет, и дотикиваем пайплайн на бэке
   useEffect(() => {
@@ -62,7 +75,7 @@ export function ResultView({ analysis, onBack, onUseIdea }: {
     return () => { cancelled = true; clearInterval(interval); };
   }, [analysis.id, ideas.length]);
 
-  // Если идей ещё нет — автоскроллим вниз, чтобы лоадер был в поле зрения
+  // автоскролл к лоадеру
   useEffect(() => {
     if (ideas.length === 0 && ideasRef.current) {
       const t = setTimeout(() => {
@@ -72,54 +85,159 @@ export function ResultView({ analysis, onBack, onUseIdea }: {
     }
   }, [ideas.length]);
 
+  const topHook = hooks[0];
+  const avg = liveAnalysis.competitor_avg_views || 0;
+  const maxMult = hooks.reduce((m, h) => Math.max(m, h.viral_multiplier || 0), 0);
+  const isFallback = !!hooks[0]?.is_fallback;
+
   return (
     <div>
       <button onClick={onBack} className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 transition-colors mb-5">
         <ArrowLeft className="w-4 h-4" /> К списку разборов
       </button>
 
+      {/* ─── HERO ─────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-400 font-medium">
         <Sparkles className="w-3.5 h-3.5" /> RIRI AI · Разбор
       </div>
-      <h1 className="mt-1 text-[24px] md:text-[30px] font-semibold text-[#1a1a18] tracking-tight">
-        @{analysis.competitor_username}
+      <h1 className="mt-1 text-[24px] md:text-[32px] font-semibold text-[#1a1a18] tracking-tight leading-tight">
+        @{liveAnalysis.competitor_username}
         <span className="text-slate-400 font-normal"> → </span>
-        @{analysis.user_username}
+        @{liveAnalysis.user_username}
       </h1>
-      {analysis.competitor_avg_views && (
-        <p className="text-sm text-slate-500 mt-1">
-          У конкурента ~{Math.round(analysis.competitor_avg_views).toLocaleString('ru-RU')} просмотров в среднем
-        </p>
-      )}
 
-      {/* Два блока рядом: хуки + tone */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-        <HooksPanel hooks={hooks} loading={loadingHooks} isFallback={hooks[0]?.is_fallback} />
-        <TonePanel username={analysis.user_username || ''} tone={tone} />
+      {/* KPI-плитки — конкурент vs ты */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-5">
+        <Kpi
+          label="В среднем просмотров"
+          value={avg ? formatViews(avg) : '—'}
+          hint="у конкурента"
+        />
+        <Kpi
+          label="Топ залётного"
+          value={topHook?.view_count ? formatViews(topHook.view_count) : '—'}
+          hint={maxMult ? `x${Math.round(maxMult)} к обычному` : undefined}
+          accent="orange"
+        />
+        <Kpi
+          label="Виральных роликов"
+          value={isFallback ? '0' : String(hooks.length)}
+          hint={isFallback ? 'топ-3 по просмотрам' : 'из 24 последних'}
+        />
+        <Kpi
+          label="Идей под тебя"
+          value={ideas.length ? String(ideas.length) : '…'}
+          hint="готовы к съёмке"
+          accent="violet"
+        />
       </div>
 
-      {/* 10 идей */}
-      <div className="mt-8" ref={ideasRef}>
-        <div className="flex items-center gap-2 mb-3 px-1">
-          <Lightbulb className="w-4 h-4 text-slate-500" strokeWidth={2.5} />
-          <h2 className="text-[16px] font-semibold text-[#1a1a18]">Идеи для сценариев</h2>
-          <span className="text-xs text-slate-400">({ideas.length})</span>
+      {/* Инсайт-строка */}
+      {tone.summary && (
+        <div className="mt-4 rounded-2xl bg-gradient-to-br from-amber-50 via-white to-indigo-50 border border-slate-100 p-4 md:p-5">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center">
+              <Zap className="w-4 h-4 text-amber-500" strokeWidth={2.5} />
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-slate-400 font-medium mb-1">
+                Твой стиль
+              </p>
+              <p className="text-[14px] text-[#1a1a18] leading-relaxed">
+                {tone.summary}
+              </p>
+            </div>
+          </div>
         </div>
+      )}
+
+      {/* ─── Два блока рядом: хуки + tone (детали) ─────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+        <HooksPanel hooks={hooks} loading={loadingHooks} isFallback={isFallback} />
+        <TonePanel tone={tone} />
+      </div>
+
+      {/* ─── Идеи ───────────────────────────────────────────────────── */}
+      <div className="mt-10" ref={ideasRef}>
+        <div className="flex items-center justify-between mb-4 px-1">
+          <div className="flex items-center gap-2">
+            <Lightbulb className="w-5 h-5 text-amber-500" strokeWidth={2.5} />
+            <h2 className="text-[18px] md:text-[20px] font-semibold text-[#1a1a18]">
+              Идеи под твой голос
+            </h2>
+            {ideas.length > 0 && (
+              <span className="text-sm text-slate-400">· {ideas.length}</span>
+            )}
+          </div>
+          {ideas.length > 0 && (
+            <span className="hidden md:inline text-xs text-slate-400">
+              Тапни «В сценарист» — RiRi соберёт полный сценарий за 30 сек
+            </span>
+          )}
+        </div>
+
         {ideas.length === 0 ? (
           <IdeasLoader status={liveAnalysis.status} />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {ideas.map((idea, i) => (
-              <IdeaCard key={i} idea={idea} index={i} onUse={onUseIdea} />
+              <IdeaCard
+                key={i}
+                idea={idea}
+                index={i}
+                sourceHook={idea.based_on_competitor_shortcode
+                  ? hooksByShortcode.get(idea.based_on_competitor_shortcode) || null
+                  : null}
+                onUse={onUseIdea}
+              />
             ))}
           </div>
         )}
       </div>
+
+      {/* ─── Что делать дальше ──────────────────────────────────────── */}
+      {ideas.length > 0 && (
+        <NextSteps
+          onAddAnother={onAddAnother}
+          hasIdeas={ideas.length > 0}
+        />
+      )}
     </div>
   );
 }
 
-function HooksPanel({ hooks, loading, isFallback }: { hooks: CompetitorHook[]; loading: boolean; isFallback?: boolean }) {
+/* ═══════════════════════════════════════════════════════════════════ */
+
+function Kpi({ label, value, hint, accent }: {
+  label: string; value: string; hint?: string; accent?: 'orange' | 'violet';
+}) {
+  const accentColor =
+    accent === 'orange' ? 'text-orange-600' :
+    accent === 'violet' ? 'text-violet-600' : 'text-[#1a1a18]';
+  return (
+    <div className="rounded-2xl bg-white border border-slate-100 p-3 md:p-4 shadow-[0_1px_4px_rgba(0,0,0,0.02)]">
+      <p className="text-[10.5px] uppercase tracking-wide text-slate-400 font-medium leading-none">
+        {label}
+      </p>
+      <p className={cn('mt-2 text-[20px] md:text-[24px] font-semibold leading-none', accentColor)}>
+        {value}
+      </p>
+      {hint && <p className="mt-1.5 text-[11px] text-slate-400 leading-tight">{hint}</p>}
+    </div>
+  );
+}
+
+function formatViews(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}k`;
+  return String(Math.round(n));
+}
+
+/* ─── Хуки ───────────────────────────────────────────────────────── */
+
+function HooksPanel({ hooks, loading, isFallback }: {
+  hooks: CompetitorHook[]; loading: boolean; isFallback?: boolean;
+}) {
   return (
     <GlassCard className="p-5">
       <div className="flex items-center gap-2 mb-3">
@@ -127,6 +245,11 @@ function HooksPanel({ hooks, loading, isFallback }: { hooks: CompetitorHook[]; l
         <h3 className="text-[15px] font-semibold text-[#1a1a18]">
           {isFallback ? 'Топ-3 по просмотрам' : 'Залётные хуки'}
         </h3>
+        {!isFallback && !loading && hooks.length > 0 && (
+          <span className="ml-auto text-[11px] text-slate-400">
+            {hooks.length} {hooks.length === 1 ? 'штука' : 'штук'}
+          </span>
+        )}
       </div>
       {loading ? (
         <p className="text-sm text-slate-400">Загружаю…</p>
@@ -144,51 +267,74 @@ function HooksPanel({ hooks, loading, isFallback }: { hooks: CompetitorHook[]; l
 }
 
 function HookRow({ hook }: { hook: CompetitorHook }) {
-  const mult = hook.viral_multiplier ? `x${Math.round(hook.viral_multiplier)}` : null;
+  const [copied, setCopied] = useState(false);
+  const text = hook.hook_text || (hook.transcript_text ? hook.transcript_text.slice(0, 140) : '');
+  const mult = hook.viral_multiplier ? Math.round(hook.viral_multiplier) : null;
+
+  const copy = () => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast.success('Хук скопирован');
+    setTimeout(() => setCopied(false), 1500);
+  };
+
   return (
-    <div className="rounded-xl border border-slate-100 p-3 bg-slate-50/40 hover:bg-white transition-colors">
+    <div className="group rounded-xl border border-slate-100 p-3 bg-slate-50/40 hover:bg-white hover:border-slate-200 transition-all">
       <div className="flex items-start gap-3">
         {hook.thumbnail_url ? (
-          <img
-            src={hook.thumbnail_url}
-            alt=""
-            className="w-14 h-14 rounded-lg object-cover flex-shrink-0 bg-slate-200"
-            loading="lazy"
-          />
+          <div className="relative flex-shrink-0">
+            <img
+              src={hook.thumbnail_url}
+              alt=""
+              className="w-16 h-20 rounded-lg object-cover bg-slate-200"
+              loading="lazy"
+            />
+            {mult && mult >= 3 && (
+              <div className="absolute -top-1.5 -right-1.5 bg-orange-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 shadow-sm">
+                x{mult}
+              </div>
+            )}
+          </div>
         ) : (
-          <div className="w-14 h-14 rounded-lg bg-slate-100 flex-shrink-0" />
+          <div className="w-16 h-20 rounded-lg bg-slate-100 flex-shrink-0" />
         )}
         <div className="flex-1 min-w-0">
           <p className="text-[13.5px] text-[#1a1a18] leading-snug line-clamp-3">
-            {hook.hook_text
-              || (hook.transcript_text ? hook.transcript_text.slice(0, 140) : null)
-              || <span className="text-slate-400 italic">Без речи (музыкальный ролик)</span>}
+            {text || <span className="text-slate-400 italic">Без речи (музыкальный ролик)</span>}
           </p>
-          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
             <span className="inline-flex items-center gap-1 text-[11px] text-slate-500">
               <Eye className="w-3 h-3" />
               {hook.view_count?.toLocaleString('ru-RU') || '—'}
             </span>
-            {mult && (
-              <span className="inline-flex items-center gap-0.5 text-[11px] font-medium text-orange-600 bg-orange-50 rounded-full px-2 py-0.5">
-                <Flame className="w-2.5 h-2.5" /> {mult}
-              </span>
-            )}
             {hook.niche && (
               <span className="text-[11px] text-slate-500 bg-slate-100 rounded-full px-2 py-0.5">
                 {hook.niche}
               </span>
             )}
-            {hook.url && (
-              <a
-                href={hook.url}
-                target="_blank"
-                rel="noreferrer"
-                className="ml-auto text-slate-400 hover:text-slate-700"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-            )}
+            <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              {text && (
+                <button
+                  onClick={copy}
+                  className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+                  title="Скопировать хук"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
+              )}
+              {hook.url && (
+                <a
+                  href={hook.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+                  title="Открыть в Instagram"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -196,7 +342,9 @@ function HookRow({ hook }: { hook: CompetitorHook }) {
   );
 }
 
-function TonePanel({ tone }: { username: string; tone: UserToneProfile }) {
+/* ─── Tone ──────────────────────────────────────────────────────── */
+
+function TonePanel({ tone }: { tone: UserToneProfile }) {
   const isEmpty = !tone || Object.keys(tone).length === 0;
   return (
     <GlassCard className="p-5">
@@ -208,9 +356,6 @@ function TonePanel({ tone }: { username: string; tone: UserToneProfile }) {
         <p className="text-sm text-slate-400">Анализирую…</p>
       ) : (
         <div className="space-y-3 text-[13px]">
-          {tone.summary && (
-            <p className="text-slate-600 leading-relaxed">{tone.summary}</p>
-          )}
           {tone.voice && (
             <TagRow
               title="Подача"
@@ -230,7 +375,7 @@ function TonePanel({ tone }: { username: string; tone: UserToneProfile }) {
           {tone.structure && (
             <div>
               <p className="text-[11px] uppercase tracking-wide text-slate-400 mb-1">Структура ролика</p>
-              <p className="text-slate-700">{tone.structure}</p>
+              <p className="text-slate-700 leading-relaxed">{tone.structure}</p>
             </div>
           )}
           {tone.stop_words && tone.stop_words.length > 0 && (
@@ -250,11 +395,12 @@ function TagRow({ title, tags, variant }: { title: string; tags: string[]; varia
         {tags.map((t, i) => (
           <span
             key={i}
-            className={
+            className={cn(
+              'text-[12px] rounded-full px-2.5 py-1',
               variant === 'danger'
-                ? 'text-[12px] bg-red-50 text-red-600 rounded-full px-2.5 py-1'
-                : 'text-[12px] bg-slate-100 text-slate-700 rounded-full px-2.5 py-1'
-            }
+                ? 'bg-red-50 text-red-600'
+                : 'bg-slate-100 text-slate-700'
+            )}
           >
             {t}
           </span>
@@ -263,6 +409,8 @@ function TagRow({ title, tags, variant }: { title: string; tags: string[]; varia
     </div>
   );
 }
+
+/* ─── Loader ───────────────────────────────────────────────────── */
 
 function IdeasLoader({ status }: { status: string }) {
   const label =
@@ -274,11 +422,9 @@ function IdeasLoader({ status }: { status: string }) {
 
   return (
     <GlassCard className="relative overflow-hidden p-8 md:p-10">
-      {/* мягкий фоновый градиент-свечение */}
       <motion.div
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-60"
-        initial={{ background: 'radial-gradient(600px 200px at 20% 50%, rgba(250,204,21,0.12), transparent 60%)' }}
         animate={{
           background: [
             'radial-gradient(600px 200px at 20% 50%, rgba(250,204,21,0.12), transparent 60%)',
@@ -291,8 +437,6 @@ function IdeasLoader({ status }: { status: string }) {
 
       <div className="relative flex flex-col items-center text-center">
         <RiriOrb size={72} floating />
-
-        {/* Большой, мерцающий бренд */}
         <motion.div
           className="mt-5 text-[34px] md:text-[44px] font-bold tracking-tight leading-none bg-clip-text text-transparent bg-[linear-gradient(110deg,#1a1a18_35%,#cbd5e1_50%,#1a1a18_65%)] bg-[length:200%_100%]"
           animate={{ backgroundPosition: ['200% 0%', '-200% 0%'] }}
@@ -300,8 +444,6 @@ function IdeasLoader({ status }: { status: string }) {
         >
           RiRi AI
         </motion.div>
-
-        {/* подпись-этап */}
         <div className="mt-3 flex items-center gap-2 text-[13px] text-slate-500">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
@@ -316,12 +458,9 @@ function IdeasLoader({ status }: { status: string }) {
             {label}…
           </motion.span>
         </div>
-
         <p className="mt-2 text-xs text-slate-400 max-w-sm">
           Генерю 10 идей под твой голос. Обычно 40–90 секунд — страницу обновлять не надо.
         </p>
-
-        {/* скелетоны идей для живости */}
         <div className="mt-6 w-full grid grid-cols-1 md:grid-cols-2 gap-3">
           {[0, 1, 2, 3].map((i) => (
             <motion.div
@@ -342,35 +481,244 @@ function IdeasLoader({ status }: { status: string }) {
   );
 }
 
-function IdeaCard({ idea, index, onUse }: { idea: GeneratedIdea; index: number; onUse?: (idea: GeneratedIdea) => void }) {
+/* ─── Idea card ──────────────────────────────────────────────── */
+
+function IdeaCard({ idea, index, sourceHook, onUse }: {
+  idea: GeneratedIdea;
+  index: number;
+  sourceHook: CompetitorHook | null;
+  onUse?: (idea: GeneratedIdea) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const diff = idea.difficulty;
+  const diffLabel = diff === 'easy' ? 'Просто снять' : diff === 'medium' ? 'Средне' : diff === 'hard' ? 'Сложно' : null;
+  const diffColor = diff === 'easy' ? 'emerald' : diff === 'medium' ? 'amber' : diff === 'hard' ? 'rose' : 'slate';
+
+  const copyHook = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(idea.adapted_hook || '');
+    setCopied(true);
+    toast.success('Хук скопирован');
+    setTimeout(() => setCopied(false), 1500);
+  };
+
   return (
-    <GlassCard className="p-4 flex flex-col">
-      <div className="flex items-start gap-2 mb-2">
-        <span className="text-[11px] font-mono text-slate-400 mt-0.5">#{index + 1}</span>
-        <h3 className="text-[14.5px] font-semibold text-[#1a1a18] leading-snug flex-1">{idea.title}</h3>
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, delay: index * 0.04 }}
+      className="relative rounded-2xl bg-white border border-slate-100 shadow-[0_1px_6px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:border-slate-200 transition-all flex flex-col overflow-hidden"
+    >
+      {/* top meta strip */}
+      <div className="flex items-center gap-2 px-4 pt-3.5 pb-2 flex-wrap">
+        <span className="text-[11px] font-mono text-slate-400">#{index + 1}</span>
+        {idea.format && (
+          <span className="inline-flex items-center gap-1 text-[11px] bg-slate-100 text-slate-600 rounded-full px-2 py-0.5">
+            {idea.format}
+          </span>
+        )}
+        {idea.hook_pattern && (
+          <span className="inline-flex items-center gap-1 text-[11px] bg-indigo-50 text-indigo-600 rounded-full px-2 py-0.5">
+            {idea.hook_pattern}
+          </span>
+        )}
+        {diffLabel && (
+          <span className={cn(
+            'inline-flex items-center gap-1 text-[11px] rounded-full px-2 py-0.5 ml-auto',
+            diffColor === 'emerald' && 'bg-emerald-50 text-emerald-700',
+            diffColor === 'amber' && 'bg-amber-50 text-amber-700',
+            diffColor === 'rose' && 'bg-rose-50 text-rose-700',
+          )}>
+            {diffLabel}
+          </span>
+        )}
       </div>
-      <div className="mb-2.5">
-        <p className="text-[11px] uppercase tracking-wide text-slate-400 mb-1">Хук</p>
-        <p className="text-[13px] text-[#1a1a18] leading-relaxed">{idea.adapted_hook}</p>
+
+      {/* title */}
+      <div className="px-4">
+        <h3 className="text-[15px] md:text-[16px] font-semibold text-[#1a1a18] leading-snug">
+          {idea.title}
+        </h3>
       </div>
-      {idea.structure_outline && (
-        <div className="mb-2.5">
-          <p className="text-[11px] uppercase tracking-wide text-slate-400 mb-1">Структура</p>
-          <p className="text-[12.5px] text-slate-600 leading-relaxed whitespace-pre-line">{idea.structure_outline}</p>
+
+      {/* adapted hook — главный акцент */}
+      <div className="mx-4 mt-3 rounded-xl bg-gradient-to-br from-amber-50/70 to-white border border-amber-100/80 p-3">
+        <div className="flex items-start gap-2">
+          <Wand2 className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" strokeWidth={2.5} />
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] uppercase tracking-wide text-amber-600/80 font-semibold leading-none mb-1">
+              Твой хук
+            </p>
+            <p className="text-[13.5px] text-[#1a1a18] leading-relaxed">
+              {idea.adapted_hook}
+            </p>
+          </div>
+          <button
+            onClick={copyHook}
+            className="p-1 rounded-md hover:bg-white/80 text-slate-400 hover:text-slate-700 transition-colors flex-shrink-0"
+            title="Скопировать"
+          >
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+          </button>
         </div>
-      )}
-      {idea.why_it_works && (
-        <p className="text-[12px] text-slate-500 italic leading-relaxed mb-3">«{idea.why_it_works}»</p>
-      )}
-      {onUse && (
-        <button
-          onClick={() => onUse(idea)}
-          className="mt-auto inline-flex items-center justify-center gap-2 min-h-[38px] rounded-xl bg-slate-600 hover:bg-slate-700 text-white text-[13px] font-medium shadow-glass transition-all active:scale-[0.97]"
+      </div>
+
+      {/* Source hook mini-ref */}
+      {sourceHook && (
+        <a
+          href={sourceHook.url || undefined}
+          target="_blank"
+          rel="noreferrer"
+          className="mx-4 mt-2.5 flex items-center gap-2 text-[11.5px] text-slate-500 hover:text-slate-800 transition-colors group/src"
         >
-          <Sparkles className="w-3.5 h-3.5" strokeWidth={2.5} />
-          В сценарист
+          {sourceHook.thumbnail_url && (
+            <img
+              src={sourceHook.thumbnail_url}
+              alt=""
+              className="w-6 h-8 rounded-md object-cover bg-slate-100 flex-shrink-0"
+              loading="lazy"
+            />
+          )}
+          <span className="inline-flex items-center gap-1 truncate">
+            <TrendingUp className="w-3 h-3 text-orange-500 flex-shrink-0" strokeWidth={2.5} />
+            <span>По мотивам</span>
+            <span className="font-medium text-slate-700">
+              {sourceHook.view_count?.toLocaleString('ru-RU')} просмотров
+            </span>
+            {sourceHook.viral_multiplier && sourceHook.viral_multiplier >= 3 && (
+              <span className="text-orange-600 font-semibold">· x{Math.round(sourceHook.viral_multiplier)}</span>
+            )}
+          </span>
+          {sourceHook.url && (
+            <ExternalLink className="w-3 h-3 text-slate-300 group-hover/src:text-slate-600 transition-colors" />
+          )}
+        </a>
+      )}
+
+      {/* expandable body */}
+      <div className="px-4 mt-3">
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="w-full flex items-center justify-between text-[11.5px] text-slate-500 hover:text-slate-700 transition-colors py-1.5"
+        >
+          <span>{expanded ? 'Свернуть' : 'Структура и почему зайдёт'}</span>
+          <motion.div animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
+            <ChevronDown className="w-3.5 h-3.5" />
+          </motion.div>
+        </button>
+        <AnimatePresence initial={false}>
+          {expanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="pb-2 space-y-2.5">
+                {idea.structure_outline && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-slate-400 mb-1">
+                      Структура
+                    </p>
+                    <p className="text-[12.5px] text-slate-700 leading-relaxed whitespace-pre-line">
+                      {idea.structure_outline}
+                    </p>
+                  </div>
+                )}
+                {idea.why_it_works && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-slate-400 mb-1">
+                      Почему зайдёт
+                    </p>
+                    <p className="text-[12px] text-slate-500 italic leading-relaxed">
+                      «{idea.why_it_works}»
+                    </p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* CTA */}
+      <div className="mt-3 px-3 pb-3">
+        {onUse && (
+          <button
+            onClick={() => onUse(idea)}
+            className="w-full inline-flex items-center justify-center gap-2 min-h-[42px] rounded-xl bg-slate-900 hover:bg-black text-white text-[13.5px] font-semibold shadow-[0_2px_8px_rgba(15,23,42,0.18)] transition-all active:scale-[0.98]"
+          >
+            <Sparkles className="w-4 h-4" strokeWidth={2.5} />
+            Превратить в сценарий
+          </button>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+/* ─── Что делать дальше ─────────────────────────────────────── */
+
+function NextSteps({ onAddAnother, hasIdeas }: { onAddAnother?: () => void; hasIdeas: boolean }) {
+  return (
+    <div className="mt-10 mb-4">
+      <div className="flex items-center gap-2 mb-4 px-1">
+        <Telescope className="w-4 h-4 text-slate-500" strokeWidth={2.5} />
+        <h2 className="text-[16px] font-semibold text-[#1a1a18]">Что дальше</h2>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {hasIdeas && (
+          <NextStepCard
+            icon={<Sparkles className="w-4 h-4 text-amber-500" strokeWidth={2.5} />}
+            title="Выбери 2–3 идеи на неделю"
+            desc="Не хватайся за все 10 сразу. Бери ту, что резонирует и её легче снять — остальные не пропадут, разбор сохранён."
+          />
+        )}
+        {onAddAnother && (
+          <NextStepCard
+            icon={<Telescope className="w-4 h-4 text-indigo-500" strokeWidth={2.5} />}
+            title="Добавь ещё конкурента"
+            desc="Чем больше залётных хуков в твоей базе — тем точнее RiRi попадает в тебя. Разбери 2–3 аккаунтов из ниши."
+            cta="Новый разбор"
+            onClick={onAddAnother}
+          />
+        )}
+        <NextStepCard
+          icon={<Lightbulb className="w-4 h-4 text-emerald-500" strokeWidth={2.5} />}
+          title="После съёмки — верни результат"
+          desc="Через неделю заглянешь в аналитику: залетело или нет. Это сигнал для RiRi — какие хуки тебе ближе."
+        />
+      </div>
+    </div>
+  );
+}
+
+function NextStepCard({ icon, title, desc, cta, onClick }: {
+  icon: React.ReactNode; title: string; desc: string; cta?: string; onClick?: () => void;
+}) {
+  return (
+    <div className="rounded-2xl bg-white border border-slate-100 p-4 flex flex-col">
+      <div className="flex items-start gap-3">
+        <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center flex-shrink-0">
+          {icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-[14px] font-semibold text-[#1a1a18] leading-snug">{title}</h3>
+          <p className="text-[12.5px] text-slate-500 mt-1 leading-relaxed">{desc}</p>
+        </div>
+      </div>
+      {cta && onClick && (
+        <button
+          onClick={onClick}
+          className="mt-3 self-start inline-flex items-center gap-1.5 text-[12.5px] font-medium text-slate-700 hover:text-black transition-colors"
+        >
+          {cta} →
         </button>
       )}
-    </GlassCard>
+    </div>
   );
 }

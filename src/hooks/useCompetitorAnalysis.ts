@@ -50,6 +50,9 @@ export interface GeneratedIdea {
   structure_outline: string;
   why_it_works: string;
   based_on_competitor_shortcode?: string;
+  format?: string;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  hook_pattern?: string;
 }
 
 export interface CompetitorAnalysis {
