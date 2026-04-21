@@ -237,7 +237,10 @@ async function handleTick(req, res) {
     await pollAndSaveTranscripts(sb, baseUrl, 'competitor_hooks', analysisId);
     const { data: hooks } = await sb.from('competitor_hooks').select('*').eq('analysis_id', analysisId);
     const pending = hooks.filter((h) => h.transcript_id && !h.transcript_text);
-    if (pending.length === 0) {
+    const ready = hooks.filter((h) => h.transcript_text).length;
+    // Идём дальше если все готовы, или если хотя бы 3 хука транскрибированы
+    // и зависло мало (max 3 stuck) — не блокируем пайплайн на парочке медленных
+    if (pending.length === 0 || (ready >= 3 && pending.length <= 3)) {
       await updateStatus(sb, analysisId, 'extracting_hooks', 'Собираю хуки…');
       await extractHooksForAnalysis(sb, openrouterKey, analysisId, hooks);
       await updateStatus(sb, analysisId, 'fetching_user', 'Готово — ждём твой аккаунт.');
