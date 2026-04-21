@@ -424,13 +424,27 @@ async function extractHooksForAnalysis(sb, openrouterKey, analysisId, hooks) {
       view_count: h.view_count,
     }));
   if (!items.length) return;
-  const results = await extractHooksBatch(openrouterKey, items);
-  for (const r of results) {
+  console.log('[extractHooksForAnalysis] items:', items.length, 'analysisId:', analysisId);
+  const CHUNK = 5;
+  const allResults = [];
+  for (let i = 0; i < items.length; i += CHUNK) {
+    const chunk = items.slice(i, i + CHUNK);
+    try {
+      const results = await extractHooksBatch(openrouterKey, chunk);
+      console.log(`[extractHooksForAnalysis] chunk ${i / CHUNK + 1}: input=${chunk.length} output=${results?.length || 0}`);
+      if (Array.isArray(results)) allResults.push(...results);
+    } catch (e) {
+      console.error('[extractHooksForAnalysis] chunk failed', { i, error: e?.message });
+    }
+  }
+  console.log('[extractHooksForAnalysis] total results:', allResults.length);
+  for (const r of allResults) {
     if (!r?.shortcode) continue;
-    await sb
+    const { error: updErr } = await sb
       .from('competitor_hooks')
       .update({ hook_text: r.hook || '', niche: r.niche || null })
       .eq('analysis_id', analysisId)
       .eq('shortcode', r.shortcode);
+    if (updErr) console.error('[extractHooksForAnalysis] update failed', { shortcode: r.shortcode, error: updErr });
   }
 }
