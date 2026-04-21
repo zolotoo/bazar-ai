@@ -84,15 +84,6 @@ function calcViralMultiplier(views: number, avgBottom3: number): number | null {
   return Math.round((views / avgBottom3) * 10) / 10;
 }
 
-/** Усиливает viralCoef на основе множителя залётности */
-function applyMultiplier(coef: number, mult: number | null): number {
-  if (mult === null || mult < 1) return coef * 0.1;
-  if (mult >= 4) return coef * 5;
-  if (mult >= 3) return coef * 3;
-  if (mult >= 2) return coef * 1.3;
-  return coef * 0.1;
-}
-
 // ─── Grey Sphere ──────────────────────────────────────────────────────────────
 
 function GreySphere({ size = 56 }: { size?: number }) {
@@ -392,9 +383,8 @@ function ReelCard({ reel, onClick, layout, avgBottom3Views }: {
 
   // Grid — точно тот же VideoGradientCard что и в ленте, с виральностью
   if (layout === 'grid') {
-    const viralCoefRaw = calcViralCoef(views, reel.taken_at ?? null);
+    const viralCoef = calcViralCoef(views, reel.taken_at ?? null);
     const viralMult = calcViralMultiplier(views, avgBottom3Views);
-    const viralCoef = applyMultiplier(viralCoefRaw, viralMult);
     return (
       <VideoGradientCard
         thumbnailUrl={reel.thumbnail_url ?? undefined}
@@ -543,7 +533,6 @@ function ReelDetailModal({ reel, onClose, getReelSnapshots, allReels, avgBottom3
   }, [refs, folders]);
   const viralCoef = calcViralCoef(views, reel.taken_at ?? null);
   const viralMult = calcViralMultiplier(views, avgBottom3Views);
-  const finalViralCoef = applyMultiplier(viralCoef, viralMult);
 
   // Rankings среди всех роликов проекта
   const sortedByViews = useMemo(() =>
@@ -776,9 +765,9 @@ function ReelDetailModal({ reel, onClose, getReelSnapshots, allReels, avgBottom3
                     <div className="flex items-center gap-2">
                       <span className={cn(
                         "text-sm font-bold",
-                        finalViralCoef > 10 ? "text-emerald-600" : finalViralCoef > 5 ? "text-amber-600" : "text-slate-600"
+                        viralCoef > 10 ? "text-emerald-600" : viralCoef > 5 ? "text-amber-600" : "text-slate-600"
                       )}>
-                        {Math.round(finalViralCoef)}K/день
+                        {viralCoef.toFixed(1)}
                       </span>
                       {viralMult !== null && viralMult !== undefined && (
                         <span className={cn(

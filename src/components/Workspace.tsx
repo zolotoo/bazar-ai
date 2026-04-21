@@ -17,7 +17,7 @@ import { VideoDetailPage } from './VideoDetailPage';
 import { CarouselDetailPage } from './CarouselDetailPage';
 import { useCarousels, type SavedCarousel } from '../hooks/useCarousels';
 import { useTokenBalance } from '../contexts/TokenBalanceContext';
-import { calculateViralMultiplier, applyViralMultiplierToCoefficient, getProfileStats, calculateCarouselViralMultiplier } from '../services/profileStatsService';
+import { calculateViralMultiplier, getProfileStats, calculateCarouselViralMultiplier } from '../services/profileStatsService';
 import { dialogScale, dialogSlideUp, backdropFade, iosSpringSoft } from '../utils/motionPresets';
 import { TokenBadge } from './ui/TokenBadge';
 import { GlassFolderIcon } from './ui/GlassFolderIcons';
@@ -539,10 +539,9 @@ export function Workspace(_props?: WorkspaceProps) {
   // Фильтрация и сортировка видео
   const getSortedVideos = (videos: ZoneVideo[]): ZoneVideo[] => {
     const withViral = (v: ZoneVideo) => {
-      const coef = calculateViralCoefficient(v.view_count, v.taken_at || v.created_at);
-      const profile = v.owner_username ? profileStatsCache.get(v.owner_username.toLowerCase()) : null;
-      const mult = calculateViralMultiplier(v.view_count || 0, profile);
-      return applyViralMultiplierToCoefficient(coef, mult);
+      // Виральность — чистый K/день коэф, без умножения на профильный множитель.
+      // Множитель «x от просмотров» — отдельный бейдж.
+      return calculateViralCoefficient(v.view_count, v.taken_at || v.created_at);
     };
     
     let filtered = videos;
@@ -1596,7 +1595,6 @@ export function Workspace(_props?: WorkspaceProps) {
                   ? profileStatsCache.get(video.owner_username.toLowerCase()) 
                   : null;
                 const viralMult = calculateViralMultiplier(video.view_count || 0, profileStats);
-                const finalViralCoef = applyViralMultiplierToCoefficient(viralCoef, viralMult);
                 
                 // Бейдж папки — всегда показываем (если выбрана папка, показываем её имя)
                 const folderBadge = {
@@ -1615,7 +1613,7 @@ export function Workspace(_props?: WorkspaceProps) {
                     viewCount={video.view_count}
                     likeCount={video.like_count}
                     commentCount={video.comment_count}
-                    viralCoef={finalViralCoef}
+                    viralCoef={viralCoef}
                     viralMultiplier={viralMult}
                     folderBadge={folderBadge}
                     isManual={isScriptOnlyFeedCard(video)}

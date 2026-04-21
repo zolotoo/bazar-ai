@@ -14,7 +14,7 @@ import { useTokenBalance } from '../contexts/TokenBalanceContext';
 import { getTokenCost } from '../constants/tokenCosts';
 import { TokenBadge } from './ui/TokenBadge';
 import { proxyImageUrl, PLACEHOLDER_200x356 } from '../utils/imagePlaceholder';
-import { calculateViralMultiplier, applyViralMultiplierToCoefficient } from '../services/profileStatsService';
+import { calculateViralMultiplier } from '../services/profileStatsService';
 import { VideoGradientCard } from './ui/VideoGradientCard';
 import { useInboxVideos } from '../hooks/useInboxVideos';
 import type { InstagramSearchResult } from '../services/videoService';
@@ -181,12 +181,9 @@ export function RadarPage() {
         return db - da;
       }
       case 'viral': {
-        const profileStats = getProfileStats(selectedProfile || '') || null;
         const ca = calculateViralCoefficient(a.view_count, a.taken_at as any);
         const cb = calculateViralCoefficient(b.view_count, b.taken_at as any);
-        const ma = calculateViralMultiplier(a.view_count || 0, profileStats);
-        const mb = calculateViralMultiplier(b.view_count || 0, profileStats);
-        return applyViralMultiplierToCoefficient(cb, mb) - applyViralMultiplierToCoefficient(ca, ma);
+        return cb - ca;
       }
       default: return 0;
     }
@@ -264,7 +261,6 @@ export function RadarPage() {
                 const profileStats = getProfileStats(selectedProfile) || null;
                 const viralCoef = calculateViralCoefficient(reel.view_count, reel.taken_at as any);
                 const viralMult = calculateViralMultiplier(reel.view_count || 0, profileStats);
-                const finalViralCoef = applyViralMultiplierToCoefficient(viralCoef, viralMult);
                 const thumb = proxyImageUrl(reel.thumbnail_url || reel.display_url, PLACEHOLDER_200x356);
                 const dateText = formatVideoDate(reel.taken_at as any);
                 const caption = typeof reel.caption === 'string' ? reel.caption : '';
@@ -279,7 +275,7 @@ export function RadarPage() {
                     likeCount={reel.like_count}
                     commentCount={reel.comment_count}
                     date={dateText}
-                    viralCoef={finalViralCoef}
+                    viralCoef={viralCoef}
                     viralMultiplier={viralMult}
                     onClick={() => reel.url && window.open(reel.url, '_blank')}
                     onDragStart={() => {}}

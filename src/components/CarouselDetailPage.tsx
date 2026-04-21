@@ -9,6 +9,7 @@ import { cn } from '../utils/cn';
 import { proxyImageUrl } from '../utils/imagePlaceholder';
 import { toast } from 'sonner';
 import { useCarousels, type SavedCarousel } from '../hooks/useCarousels';
+import { calculateCarouselViralMultiplier, getOrUpdateProfileStats } from '../services/profileStatsService';
 import { useProjectContext } from '../contexts/ProjectContext';
 import { useTokenBalance } from '../contexts/TokenBalanceContext';
 import { useAuth } from '../hooks/useAuth';
@@ -137,6 +138,8 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
   const [showClarifyModal, setShowClarifyModal] = useState(false);
   const [lastRefinedPrompt, setLastRefinedPrompt] = useState('');
   const [showCopyStylesModal, setShowCopyStylesModal] = useState(false);
+  const [viralMultiplier, setViralMultiplier] = useState<number | null>(null);
+  const [isCalculatingViral, setIsCalculatingViral] = useState(false);
 
   const { currentProject, currentProjectId, updateProject, updateProjectStyle, addProjectStyle, refetch: refetchProjects, selectProject, carouselFoldersList } = useProjectContext();
   const { user } = useAuth();
@@ -182,6 +185,51 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
       setPopoverRect(null);
     }
   }, [showStylePickerPopover]);
+
+  // Загружаем множитель залётности из кэша профиля (если уже парсили ранее — без RapidAPI)
+  useEffect(() => {
+    const loadStats = async () => {
+      if (!carousel.owner_username) return;
+      const { getProfileStats } = await import('../services/profileStatsService');
+      const stats = await getProfileStats(carousel.owner_username);
+      if (stats) {
+        const mult = calculateCarouselViralMultiplier(carousel.like_count || 0, stats);
+        if (mult !== null) setViralMultiplier(mult);
+      }
+    };
+    loadStats();
+  }, [carousel.owner_username, carousel.like_count, carousel.id]);
+
+  const handleCalculateViral = async () => {
+    if (!carousel.owner_username) {
+      toast.error('Нет информации об авторе карусели');
+      return;
+    }
+    const cost = getTokenCost('calculate_viral');
+    if (!canAfford(cost)) {
+      toast.error('Недостаточно коинов');
+      return;
+    }
+    setIsCalculatingViral(true);
+    try {
+      const stats = await getOrUpdateProfileStats(carousel.owner_username, true);
+      if (stats) {
+        await deduct(cost, { action: 'calculate_viral', section: 'carousels', label: 'Рассчитать виральность карусели' });
+        const mult = calculateCarouselViralMultiplier(carousel.like_count || 0, stats);
+        setViralMultiplier(mult);
+        toast.success('Виральность рассчитана', {
+          description: mult ? `В ${mult.toFixed(1)}x раз ${mult >= 1 ? 'больше' : 'меньше'} среднего` : 'Нет данных для сравнения',
+        });
+      } else {
+        toast.error('Не удалось получить статистику профиля');
+      }
+    } catch (err) {
+      console.error('Error calculating carousel viral:', err);
+      toast.error('Ошибка расчёта виральности');
+    } finally {
+      setIsCalculatingViral(false);
+    }
+  };
 
   // Папки каруселей — отдельные от папок рилсов; для старых каруселей folder_id мог быть из папок рилсов — показываем по нему имя из folders
   const folderConfigs = (currentProjectId ? carouselFoldersList(currentProjectId) : [])
@@ -821,7 +869,47 @@ export function CarouselDetailPage({ carousel, onBack, onRefreshData }: Carousel
               <div className="col-span-2 flex items-center gap-1.5 text-slate-600">
                 <Sparkles className="w-4 h-4 text-slate-400" />
                 Виральность: <span className="font-medium">{calculateCarouselViralCoefficient(carousel.like_count, carousel.taken_at).toFixed(1)}</span>
+                {viralMultiplier !== null && (
+                  <span
+                    className={cn(
+                      'ml-1 text-xs px-2 py-0.5 rounded-full font-semibold',
+                      viralMultiplier >= 4 ? 'bg-red-100 text-red-700' :
+                      viralMultiplier >= 3 ? 'bg-amber-100 text-amber-700' :
+                      viralMultiplier >= 2 ? 'bg-lime-100 text-lime-700' :
+                      viralMultiplier >= 1.5 ? 'bg-green-100 text-green-700' :
+                      'bg-slate-100 text-slate-600'
+                    )}
+                    title={`В ${viralMultiplier.toFixed(1)}x раз ${viralMultiplier >= 1 ? 'больше' : 'меньше'} среднего по лайкам у автора`}
+                  >
+                    {viralMultiplier.toFixed(1)}x
+                  </span>
+                )}
               </div>
+              {carousel.owner_username && (
+                <button
+                  type="button"
+                  onClick={handleCalculateViral}
+                  disabled={isCalculatingViral || !canAfford(getTokenCost('calculate_viral'))}
+                  className={cn(
+                    'col-span-2 mt-1 w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
+                    'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60',
+                    'disabled:opacity-50 disabled:cursor-not-allowed'
+                  )}
+                >
+                  {isCalculatingViral ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Расчёт...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3 h-3" />
+                      Полный расчёт виральности
+                      <TokenBadge tokens={getTokenCost('calculate_viral')} />
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
 

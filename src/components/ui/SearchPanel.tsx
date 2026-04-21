@@ -24,7 +24,7 @@ import { IncomingVideo } from '../../types';
 import { cn } from '../../utils/cn';
 import { proxyImageUrl, PLACEHOLDER_200x356, PLACEHOLDER_200x267 } from '../../utils/imagePlaceholder';
 import { supabase } from '../../utils/supabase';
-import { calculateViralMultiplier, applyViralMultiplierToCoefficient } from '../../services/profileStatsService';
+import { calculateViralMultiplier } from '../../services/profileStatsService';
 import { FolderPlus, Star, Sparkles as SparklesIcon, FileText, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { TokenBadge } from './TokenBadge';
@@ -1643,11 +1643,7 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
                         case 'viral':
                           const coefA = calculateViralCoefficient(a.view_count, a.taken_at);
                           const coefB = calculateViralCoefficient(b.view_count, b.taken_at);
-                          const multA = calculateViralMultiplier(a.view_count || 0, profileStats || null);
-                          const multB = calculateViralMultiplier(b.view_count || 0, profileStats || null);
-                          const finalCoefA = applyViralMultiplierToCoefficient(coefA, multA);
-                          const finalCoefB = applyViralMultiplierToCoefficient(coefB, multB);
-                          return finalCoefB - finalCoefA;
+                          return coefB - coefA;
                         default:
                           return 0;
                       }
@@ -1672,7 +1668,6 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
                         const dateText = formatVideoDate(reel.taken_at);
                         // Рассчитываем множитель залётности относительно среднего автора
                         const viralMult = calculateViralMultiplier(reel.view_count || 0, profileStats || null);
-                        const finalViralCoef = applyViralMultiplierToCoefficient(viralCoef, viralMult);
                         
                         return (
                           <VideoGradientCard
@@ -1684,7 +1679,7 @@ const match = linkPreview.url.match(/\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/);
                             likeCount={reel.like_count}
                             commentCount={reel.comment_count}
                             date={dateText || '-'}
-                            viralCoef={finalViralCoef}
+                            viralCoef={viralCoef}
                             viralMultiplier={viralMult}
                             onClick={() => setSelectedVideo(reel)}
                             onDragStart={(e) => handleDragStart(e, reel)}

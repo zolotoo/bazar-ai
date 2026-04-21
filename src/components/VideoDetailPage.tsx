@@ -26,7 +26,7 @@ import type { ProjectTemplateItem, ProjectStyle, DescriptionTemplate } from '../
 import { useVideoComments } from '../hooks/useVideoComments';
 import { useParticipantsForResponsibles } from '../hooks/useParticipantsForResponsibles';
 import { useProjectMembers } from '../hooks/useProjectMembers';
-import { calculateViralMultiplier, getOrUpdateProfileStats, applyViralMultiplierToCoefficient } from '../services/profileStatsService';
+import { calculateViralMultiplier, getOrUpdateProfileStats } from '../services/profileStatsService';
 import { isRussian } from '../utils/language';
 import { TokenBadge } from './ui/TokenBadge';
 import { getTokenCost } from '../constants/tokenCosts';
@@ -483,9 +483,6 @@ export function VideoDetailPage({ video, onBack, onRefreshData, autoTranscribe }
   };
 
   const viralCoef = calculateViralCoefficient(video.view_count, video.taken_at);
-  
-  // Применяем множитель к коэффициенту виральности
-  const finalViralCoef = applyViralMultiplierToCoefficient(viralCoef, viralMultiplier);
   
   // Получить папки из проекта
   const folderConfigs = currentProject?.folders
@@ -1598,9 +1595,9 @@ export function VideoDetailPage({ video, onBack, onRefreshData, autoTranscribe }
                   <div className="flex items-center gap-2">
                     <span className={cn(
                       "text-sm font-bold",
-                      finalViralCoef > 10 ? "text-emerald-600" : finalViralCoef > 5 ? "text-amber-600" : "text-slate-600"
+                      viralCoef > 10 ? "text-emerald-600" : viralCoef > 5 ? "text-amber-600" : "text-slate-600"
                     )}>
-                      {Math.round(finalViralCoef)}K/день
+                      {viralCoef.toFixed(1)}
                     </span>
                     {viralMultiplier !== null && viralMultiplier !== undefined && (
                       <span 
