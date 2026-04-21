@@ -15,8 +15,7 @@ import {
   getBaseUrl,
   fetchReels,
   fetchReelInfo,
-  startTranscribe,
-  checkTranscribe,
+  transcribeWithGemini,
   pickVirals,
   pickTopByViews,
   upsertRadarProfile,
@@ -117,9 +116,8 @@ async function handleStart(req, res) {
     }
 
     await saveSelectedReels(sb, analysisId, virals, stats.avgBottom3, false);
-    await kickoffCompetitorTranscriptions(sb, baseUrl, analysisId);
     await updateStatus(sb, analysisId, 'transcribing_competitor', 'Слушаю виральные ролики…');
-
+    // Транскрипция идёт в tick батчами — возвращаемся моментально.
     return res.status(200).json({ analysisId, status: 'transcribing_competitor' });
   } catch (e) {
     await updateStatus(sb, analysisId, 'error', null, e.message);
@@ -147,7 +145,6 @@ async function handleForceFallback(req, res) {
   }
   const bottom3 = analysis.competitor_avg_bottom3_views || avgBottom3(reels.map((r) => r.view_count || 0));
   await saveSelectedReels(sb, analysisId, top3, bottom3, true);
-  await kickoffCompetitorTranscriptions(sb, baseUrl, analysisId);
   await updateStatus(sb, analysisId, 'transcribing_competitor', 'Слушаю топ-3 ролика…');
   return res.status(200).json({ analysisId, status: 'transcribing_competitor' });
 }
@@ -209,9 +206,8 @@ async function handleStartUser(req, res) {
       if (upErr) console.error('[start-user] user_reel_snapshots upsert failed', upErr, r.shortcode);
     }
 
-    await kickoffUserTranscriptions(sb, baseUrl, analysisId);
     await updateStatus(sb, analysisId, 'transcribing_user', 'Слушаю тебя…');
-
+    // Транскрипция идёт в tick батчами.
     return res.status(200).json({ analysisId, status: 'transcribing_user' });
   } catch (e) {
     await updateStatus(sb, analysisId, 'error', null, e.message);
@@ -232,21 +228,19 @@ async function handleTick(req, res) {
   if (!analysis) return res.status(404).json({ error: 'not found' });
   const status = analysis.status;
 
-  // Фаза конкурента: проверяем транскрипции → извлекаем хуки
+  // Фаза конкурента: в tick батчами транскрибируем недостающее (≤5 за раз),
+  // когда всё готово — извлекаем хуки и движемся в fetching_user.
   if (status === 'transcribing_competitor') {
-    await pollAndSaveTranscripts(sb, baseUrl, 'competitor_hooks', analysisId);
+    const processed = await transcribeBatch(sb, baseUrl, 'competitor_hooks', analysisId, 5);
     const { data: hooks } = await sb.from('competitor_hooks').select('*').eq('analysis_id', analysisId);
-    const pending = hooks.filter((h) => h.transcript_id && !h.transcript_text);
-    const ready = hooks.filter((h) => h.transcript_text).length;
-    // Идём дальше если все готовы, или если хотя бы 3 хука транскрибированы
-    // и зависло мало (max 3 stuck) — не блокируем пайплайн на парочке медленных
-    if (pending.length === 0 || (ready >= 3 && pending.length <= 3)) {
+    const pending = (hooks || []).filter((h) => h.transcript_text == null).length;
+    if (pending === 0) {
       await updateStatus(sb, analysisId, 'extracting_hooks', 'Собираю хуки…');
       await extractHooksForAnalysis(sb, openrouterKey, analysisId, hooks);
       await updateStatus(sb, analysisId, 'fetching_user', 'Готово — ждём твой аккаунт.');
       return res.status(200).json({ status: 'fetching_user' });
     }
-    return res.status(200).json({ status, pending: pending.length });
+    return res.status(200).json({ status, processed, pending });
   }
 
   if (status === 'extracting_hooks') {
@@ -261,16 +255,14 @@ async function handleTick(req, res) {
   // analyzing_user / generating_ideas. Если шаг падает — пишем error_message, UI показывает.
 
   if (status === 'transcribing_user') {
-    await pollAndSaveTranscripts(sb, baseUrl, 'user_reel_snapshots', analysisId);
+    const processed = await transcribeBatch(sb, baseUrl, 'user_reel_snapshots', analysisId, 5);
     const { data: snaps } = await sb.from('user_reel_snapshots').select('*').eq('analysis_id', analysisId);
-    const pending = (snaps || []).filter((s) => s.transcript_id && !s.transcript_text);
-    const ready = (snaps || []).filter((s) => s.transcript_text).length;
-    // Идём дальше, если готовы все или минимум 6 транскриптов
-    if (pending.length === 0 || ready >= 6) {
+    const pending = (snaps || []).filter((s) => s.transcript_text == null).length;
+    if (pending === 0) {
       await updateStatus(sb, analysisId, 'analyzing_user', 'Думаю о твоём стиле…');
       return res.status(200).json({ status: 'analyzing_user' });
     }
-    return res.status(200).json({ status, pending: pending.length });
+    return res.status(200).json({ status, processed, pending });
   }
 
   if (status === 'analyzing_user') {
@@ -358,61 +350,46 @@ async function saveSelectedReels(sb, analysisId, reels, bottom3Baseline, isFallb
   }
 }
 
-async function kickoffCompetitorTranscriptions(sb, baseUrl, analysisId) {
-  const { data: hooks } = await sb
-    .from('competitor_hooks')
-    .select('id, shortcode, url, transcript_id, video_url')
-    .eq('analysis_id', analysisId);
-  await Promise.all((hooks || []).map((h) => kickoffOne(sb, baseUrl, 'competitor_hooks', h)));
-}
-
-async function kickoffUserTranscriptions(sb, baseUrl, analysisId) {
-  const { data: snaps } = await sb
-    .from('user_reel_snapshots')
-    .select('id, shortcode, url, transcript_id, video_url')
-    .eq('analysis_id', analysisId);
-  await Promise.all((snaps || []).map((s) => kickoffOne(sb, baseUrl, 'user_reel_snapshots', s)));
+/**
+ * Берёт до `limit` записей без transcript_text и транскрибирует их параллельно.
+ * Возвращает число обработанных. Rate-limit-safe: один tick = один батч.
+ */
+async function transcribeBatch(sb, baseUrl, table, analysisId, limit) {
+  const { data: rows } = await sb
+    .from(table)
+    .select('id, shortcode, url, transcript_text, video_url')
+    .eq('analysis_id', analysisId)
+    .is('transcript_text', null)
+    .limit(limit);
+  if (!rows?.length) return 0;
+  await Promise.all(rows.map((r) => kickoffOne(sb, baseUrl, table, r)));
+  return rows.length;
 }
 
 async function kickoffOne(sb, baseUrl, table, row) {
-  if (row.transcript_id) return;
+  // Гоним транскрипт синхронно через Gemini Flash — никаких transcript_id/polling.
+  // Если уже есть transcript_text — пропускаем (идемпотентно при retry).
+  if (row.transcript_text) return;
+  const openrouterKey = process.env.OPENROUTER_API_KEY;
   try {
     let videoUrl = row.video_url;
     if (!videoUrl) {
       videoUrl = await fetchReelInfo(baseUrl, row.url);
-      if (!videoUrl) return;
+      if (!videoUrl) {
+        await sb.from(table).update({ transcript_text: '' }).eq('id', row.id);
+        return;
+      }
       await sb.from(table).update({ video_url: videoUrl }).eq('id', row.id);
     }
-    const transcriptId = await startTranscribe(baseUrl, videoUrl);
-    if (!transcriptId) return;
-    await sb.from(table).update({ transcript_id: transcriptId }).eq('id', row.id);
+    const transcript = await transcribeWithGemini(openrouterKey, videoUrl);
+    await sb.from(table).update({ transcript_text: transcript || '' }).eq('id', row.id);
   } catch (e) {
     console.warn('[kickoff] failed', table, row.shortcode, e.message);
+    // Всё равно помечаем пустым, чтобы не блокировать пайплайн
+    await sb.from(table).update({ transcript_text: '' }).eq('id', row.id);
   }
 }
 
-async function pollAndSaveTranscripts(sb, baseUrl, table, analysisId) {
-  const { data: rows } = await sb
-    .from(table)
-    .select('id, transcript_id, transcript_text')
-    .eq('analysis_id', analysisId);
-  const pending = (rows || []).filter((r) => r.transcript_id && !r.transcript_text);
-  await Promise.all(
-    pending.map(async (r) => {
-      try {
-        const result = await checkTranscribe(baseUrl, r.transcript_id);
-        if (result.status === 'completed' && result.text) {
-          await sb.from(table).update({ transcript_text: result.text }).eq('id', r.id);
-        } else if (result.status === 'error') {
-          // Помечаем пустой строкой, чтобы не зависать на этой записи
-          await sb.from(table).update({ transcript_text: '' }).eq('id', r.id);
-        }
-      } catch (e) {
-        console.warn('[poll]', r.transcript_id, e.message);
-      }
-    })
-  );
-}
 
 async function extractHooksForAnalysis(sb, openrouterKey, analysisId, hooks) {
   const items = (hooks || [])
