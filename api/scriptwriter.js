@@ -50,6 +50,34 @@ async function matchViralHooks(embedding, { niche = null, minViews = 100000, lim
   }
 }
 
+// Поиск похожих фрагментов сценария по part_type ('hook' | 'body' | 'cta').
+// Используется для retrieval body/cta при генерации полного сценария — Sonnet получает
+// конкретные удачные формулировки тел и концовок виральных видео как fewer-shot examples.
+async function matchViralParts(embedding, partType, { niche = null, minViews = 50000, limit = 5 } = {}) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !embedding) return [];
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/match_viral_parts`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query_embedding: embedding,
+        filter_part_type: partType,
+        match_count: limit,
+        filter_niche: niche,
+        min_view_count: minViews,
+      }),
+    });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch {
+    return [];
+  }
+}
+
 // Поиск похожих структурных скелетов (Этап 1: video_skeletons)
 async function matchSkeletons(embedding, {
   niche = null,
@@ -1934,8 +1962,8 @@ async function handleGenerateFullScript(req, res) {
   else if (length_preference === 30) { minSeconds = 20; maxSeconds = 40; }
   else if (length_preference === 60) { minSeconds = 40; maxSeconds = 90; }
 
-  // 3. Параллельно: 5 скелетов + 5 хуков
-  const [skeletons, hooks] = await Promise.all([
+  // 3. Параллельно retrieval всех 4 слоёв: скелеты (структура) + хуки/тела/концовки (тексты)
+  const [skeletons, hooks, bodies, ctas] = await Promise.all([
     matchSkeletons(embedding, {
       niche,
       minViews: min_views,
@@ -1944,6 +1972,16 @@ async function handleGenerateFullScript(req, res) {
       limit: 5,
     }),
     matchViralHooks(embedding, {
+      niche,
+      minViews: min_views,
+      limit: 5,
+    }),
+    matchViralParts(embedding, 'body', {
+      niche,
+      minViews: min_views,
+      limit: 5,
+    }),
+    matchViralParts(embedding, 'cta', {
       niche,
       minViews: min_views,
       limit: 5,
@@ -1978,6 +2016,14 @@ async function handleGenerateFullScript(req, res) {
   const hooksText = hooks?.length
     ? hooks.map((h, i) => `${i + 1}. [${formatViews(h.view_count || 0)}] ${h.content}`).join('\n')
     : 'Дополнительных хуков по теме не найдено.';
+
+  const bodiesText = bodies?.length
+    ? bodies.map((b, i) => `${i + 1}. [${formatViews(b.view_count || 0)} | @${b.owner_username || '?'}] ${(b.content || '').slice(0, 600)}`).join('\n\n')
+    : 'Тел виральных видео по теме не найдено.';
+
+  const ctasText = ctas?.length
+    ? ctas.map((c, i) => `${i + 1}. [${formatViews(c.view_count || 0)}] ${c.content}`).join('\n')
+    : 'Концовок виральных видео по теме не найдено.';
 
   const toneSection = tone_profile
     ? `ПРОФИЛЬ ГОЛОСА АВТОРА:
@@ -2019,6 +2065,12 @@ ${skeletonsText}
 
 5 ВИРУСНЫХ ХУКОВ ПО ПОХОЖИМ ТЕМАМ (для inspiration языка хука, не копировать):
 ${hooksText}
+
+5 ВИРУСНЫХ ТЕЛ ПО ПОХОЖИМ ТЕМАМ (как разворачивают тему в нише — формулировки, переходы, ритм):
+${bodiesText}
+
+5 ВИРУСНЫХ КОНЦОВОК ПО ПОХОЖИМ ТЕМАМ (как закрывают видео в нише):
+${ctasText}
 
 ${ctaSection}
 
@@ -2088,6 +2140,8 @@ ${ctaSection}
       retrieved: {
         skeletons_count: skeletons.length,
         hooks_count: hooks?.length || 0,
+        bodies_count: bodies?.length || 0,
+        ctas_count: ctas?.length || 0,
       },
     });
   } catch (err) {
