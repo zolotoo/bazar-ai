@@ -50,6 +50,43 @@ async function matchViralHooks(embedding, { niche = null, minViews = 100000, lim
   }
 }
 
+// Поиск похожих структурных скелетов (Этап 1: video_skeletons)
+async function matchSkeletons(embedding, {
+  niche = null,
+  minViews = 50000,
+  minSeconds = null,
+  maxSeconds = null,
+  formatType = null,
+  freshnessDays = null,
+  limit = 5,
+} = {}) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !embedding) return [];
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/match_skeletons`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query_embedding: embedding,
+        match_count: limit,
+        filter_niche: niche,
+        min_view_count: minViews,
+        min_total_seconds: minSeconds,
+        max_total_seconds: maxSeconds,
+        filter_format_type: formatType,
+        freshness_days: freshnessDays,
+      }),
+    });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch {
+    return [];
+  }
+}
+
 const CAROUSEL_ANALYSIS_PROMPT = `Ты дизайн-аналитик. Твоя задача — точно воссоздать слайд карусели в редакторе.
 
 ВАЖНО: Холст редактора = 1080px ширина × 1440px высота (соотношение 3:4, портрет).
@@ -207,6 +244,8 @@ export default async function handler(req, res) {
       return handleRefineCarousel(req, res);
     case 'generate-ai-hook':
       return handleGenerateAiHook(req, res);
+    case 'generate-full-script':
+      return handleGenerateFullScript(req, res);
     default:
       return res.status(400).json({ error: 'Unknown action' });
   }
@@ -1860,6 +1899,199 @@ ${hooksListText}
     return res.status(200).json({ success: true, hooks: parsed.hooks || [] });
   } catch (err) {
     console.error('generate-ai-hook error:', err);
+    return res.status(502).json({ error: 'OpenRouter API error', details: err.message });
+  }
+}
+
+// Этап 2: полный сценарий за один проход (хук+тело+концовка), 5 вариантов JARVIS-style.
+// Каждый вариант = адаптация одного из retrieved скелетов. Хук опционально pinned.
+async function handleGenerateFullScript(req, res) {
+  const {
+    topic,
+    reference_transcript,
+    hook_text,
+    niche = null,
+    tone_profile = null,
+    length_preference = null, // 15 | 30 | 60 | null
+    cta_intent = null,        // 'soft_loop' | 'save_bait' | 'comment_bait' | 'profile_visit' | null
+    min_views = 50000,
+  } = req.body;
+
+  if (!OPENROUTER_API_KEY) return res.status(500).json({ error: 'OPENROUTER_API_KEY not configured' });
+
+  // Запрос: idea > reference_transcript > hook_text
+  const queryText = topic?.trim() || reference_transcript?.trim() || hook_text?.trim();
+  if (!queryText) return res.status(400).json({ error: 'Нет идеи, референса или хука для генерации' });
+
+  // 1. Embed запрос
+  const embedding = await jinaEmbed(queryText);
+  if (!embedding) return res.status(502).json({ error: 'Embedding failed' });
+
+  // 2. Фильтр длины (опционально)
+  let minSeconds = null;
+  let maxSeconds = null;
+  if (length_preference === 15) { minSeconds = 10; maxSeconds = 22; }
+  else if (length_preference === 30) { minSeconds = 20; maxSeconds = 40; }
+  else if (length_preference === 60) { minSeconds = 40; maxSeconds = 90; }
+
+  // 3. Параллельно: 5 скелетов + 5 хуков
+  const [skeletons, hooks] = await Promise.all([
+    matchSkeletons(embedding, {
+      niche,
+      minViews: min_views,
+      minSeconds,
+      maxSeconds,
+      limit: 5,
+    }),
+    matchViralHooks(embedding, {
+      niche,
+      minViews: min_views,
+      limit: 5,
+    }),
+  ]);
+
+  if (!skeletons?.length) {
+    return res.status(200).json({
+      success: false,
+      variants: [],
+      message: 'В базе пока нет похожих скелетов. Попробуй другую тему или подожди пока база наполнится.',
+    });
+  }
+
+  // 4. Сериализация retrieved для промпта
+  const formatViews = (vc) => vc >= 1_000_000
+    ? `${(vc / 1_000_000).toFixed(1)}М`
+    : `${Math.round(vc / 1000)}К`;
+
+  const skeletonsText = skeletons.map((s, i) => {
+    const sectionsStr = Array.isArray(s.sections)
+      ? s.sections.map(sec => `${sec.start_sec}-${sec.end_sec}s ${sec.type}: ${sec.purpose || ''}`).join(' | ')
+      : '';
+    const transitionsStr = Array.isArray(s.key_transitions) ? s.key_transitions.join('; ') : '';
+    return `СКЕЛЕТ ${i + 1} | ${s.total_seconds}с | ${s.format_type} | хук: ${s.hook_type} | CTA: ${s.cta_type} | темп: ${s.pacing}
+Структура: ${s.structure_summary}
+Секции: ${sectionsStr}
+Переходы: ${transitionsStr}
+Источник: @${s.owner_username || '?'} (${formatViews(s.view_count || 0)} views)`;
+  }).join('\n\n');
+
+  const hooksText = hooks?.length
+    ? hooks.map((h, i) => `${i + 1}. [${formatViews(h.view_count || 0)}] ${h.content}`).join('\n')
+    : 'Дополнительных хуков по теме не найдено.';
+
+  const toneSection = tone_profile
+    ? `ПРОФИЛЬ ГОЛОСА АВТОРА:
+${typeof tone_profile === 'string' ? tone_profile : JSON.stringify(tone_profile, null, 2)}
+
+Каждое предложение должно звучать так, как сказал бы именно этот автор. Используй его словарь, темп, типичные обороты.`
+    : 'ПРОФИЛЬ ГОЛОСА: не задан, используй живой разговорный русский без канцеляризмов.';
+
+  const ctaSection = cta_intent
+    ? `ЦЕЛЬ КОНЦОВКИ (CTA intent): ${cta_intent}
+- soft_loop: возврат к хуку с новым смыслом, без явного призыва
+- save_bait: ценность которую захочется пересмотреть/сохранить
+- comment_bait: вопрос или провокация для комментария
+- profile_visit: лёгкий призыв зайти в профиль за продолжением`
+    : 'CTA: используй cta_type из каждого скелета.';
+
+  const hookSection = hook_text?.trim()
+    ? `ВЫБРАННЫЙ ХУК (используй его в КАЖДОМ варианте без изменений в первой строке):
+"""
+${hook_text.trim()}
+"""`
+    : '';
+
+  const userPrompt = `Ты сценарист коротких видео для Instagram Reels / TikTok / YouTube Shorts.
+Сгенерируй 5 РАЗНЫХ вариантов полного сценария (хук + тело + концовка) на основе идеи автора, используя структурные скелеты вирусных видео и tone профиль.
+
+ИДЕЯ:
+"""
+${queryText.slice(0, 2500)}
+"""
+
+${hookSection}
+
+${toneSection}
+
+5 СТРУКТУРНЫХ СКЕЛЕТОВ ИЗ ВИРУСНЫХ ВИДЕО (используй каждый как каркас, по одному на вариант):
+
+${skeletonsText}
+
+5 ВИРУСНЫХ ХУКОВ ПО ПОХОЖИМ ТЕМАМ (для inspiration языка хука, не копировать):
+${hooksText}
+
+${ctaSection}
+
+ПРАВИЛА:
+1. 5 вариантов = 5 разных скелетов выше. Каждый вариант — адаптация ОДНОГО скелета по индексу 1..5.
+2. Длина hook+body+ending в словах ≈ total_seconds × 2.5 (±20%).
+3. Hook = 1-3 предложения, цепляют с первой секунды.
+4. Body = непрерывный текст основной части, разверни идею по структуре скелета.
+5. Ending — по cta_type скелета (или по cta_intent если задан). Для soft_loop концовка возвращает к хуку с новым смыслом.
+6. Shot list — для каждой секции скелета: что говорится / что показывается в кадре.
+7. Запрещены generic-фразы: "в современном мире", "не стоит недооценивать", "интересно но...", "представьте себе", "согласитесь" и подобный AI-канцелярит.
+8. Если задан ВЫБРАННЫЙ ХУК — он должен идти первой строкой каждого варианта без изменений.
+
+Верни СТРОГО JSON без markdown:
+{
+  "variants": [
+    {
+      "skeleton_index": 1,
+      "total_seconds": <число>,
+      "format_type": "...",
+      "hook": "...",
+      "body": "...",
+      "ending": "...",
+      "shot_list": [
+        {"section": "hook", "speech": "...", "on_screen": "..."},
+        {"section": "context", "speech": "...", "on_screen": "..."}
+      ],
+      "source_reference": {
+        "owner_username": "...",
+        "view_count": <число>,
+        "url": "..."
+      }
+    }
+  ]
+}`;
+
+  try {
+    const { text: rawText } = await callOpenRouter({
+      apiKey: OPENROUTER_API_KEY,
+      model: MODELS.CLAUDE_SONNET_35,
+      messages: [{ role: 'user', content: userPrompt }],
+      temperature: 0.7,
+      max_tokens: 6000,
+      response_format: { type: 'json_object' },
+    });
+    if (!rawText) return res.status(502).json({ error: 'Empty response' });
+    const parsed = parseJsonResponse(rawText);
+
+    // Дополним source_reference из retrieved-скелетов на случай если модель не вернула
+    const variants = Array.isArray(parsed.variants) ? parsed.variants.map((v) => {
+      const idx = Number(v.skeleton_index);
+      const sk = idx >= 1 && idx <= skeletons.length ? skeletons[idx - 1] : null;
+      const ref = v.source_reference || {};
+      return {
+        ...v,
+        source_reference: sk ? {
+          owner_username: ref.owner_username || sk.owner_username || null,
+          view_count: ref.view_count || sk.view_count || null,
+          url: ref.url || sk.url || null,
+        } : ref,
+      };
+    }) : [];
+
+    return res.status(200).json({
+      success: true,
+      variants,
+      retrieved: {
+        skeletons_count: skeletons.length,
+        hooks_count: hooks?.length || 0,
+      },
+    });
+  } catch (err) {
+    console.error('generate-full-script error:', err);
     return res.status(502).json({ error: 'OpenRouter API error', details: err.message });
   }
 }
