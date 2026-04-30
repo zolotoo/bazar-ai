@@ -28,6 +28,7 @@ export type TokenAction =
   | 'sw_improve'
   | 'sw_validate_reel'
   | 'sw_quick'
+  | 'sw_full_script'
   | 'analytics_sync_12'
   | 'analytics_sync_24'
   | 'analytics_sync_36'
@@ -58,6 +59,7 @@ const TOKEN_COSTS: Record<Exclude<TokenAction, 'radar_refresh_all'>, number> = {
   sw_improve: 5,        // 1 Gemini — улучшение по комментариям
   sw_validate_reel: 2,  // 1 RapidAPI — проверка рилса при обучении
   sw_quick: 8,          // 1-2 Gemini — полный сценарий за один запрос
+  sw_full_script: 12,   // Sonnet + Jina embed + RAG скелетов — 5 вариантов сценария (хук+тело+концовка)
   analytics_sync_12: 5,   // 1 RapidAPI страница (12 роликов)
   analytics_sync_24: 10,  // 2 RapidAPI страницы (24 ролика)
   analytics_sync_36: 15,  // 3 RapidAPI страницы (36 роликов)
